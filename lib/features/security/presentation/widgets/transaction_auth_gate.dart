@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bip39_mnemonic/bip39_mnemonic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,25 +10,27 @@ import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
 
-import '../../features/security/domain/entities/app_pin_status.dart';
-import '../../features/security/domain/entities/account_security_profile.dart';
-import '../../features/security/presentation/providers/security_provider.dart';
-import '../../features/security/presentation/widgets/pin_entry_scaffold.dart';
-import '../security/biometric_service.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_typography.dart';
+import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
+import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
+import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
+import 'package:kerosene/features/security/presentation/widgets/pin_entry_scaffold.dart';
+import 'package:kerosene/core/security/biometric_service.dart';
+import 'package:kerosene/core/theme/app_spacing.dart';
+import 'package:kerosene/core/theme/app_typography.dart';
 
 class TransactionAuthResult {
   final bool isAuthenticated;
   final String? confirmationPassphrase;
   final String? totpCode;
   final String? passkeyAssertionJson;
+  final String? appPin;
 
   const TransactionAuthResult._({
     required this.isAuthenticated,
     this.confirmationPassphrase,
     this.totpCode,
     this.passkeyAssertionJson,
+    this.appPin,
   });
 
   const TransactionAuthResult.cancelled() : this._(isAuthenticated: false);
@@ -36,11 +39,13 @@ class TransactionAuthResult {
     String? confirmationPassphrase,
     String? totpCode,
     String? passkeyAssertionJson,
+    String? appPin,
   }) : this._(
           isAuthenticated: true,
           confirmationPassphrase: confirmationPassphrase,
           totpCode: totpCode,
           passkeyAssertionJson: passkeyAssertionJson,
+          appPin: appPin,
         );
 }
 
@@ -69,8 +74,8 @@ class TransactionAuthGate {
       context,
       effectiveProfile.appPin,
     );
-    if (appPinOutcome == _DeviceAuthOutcome.rejected ||
-        appPinOutcome == _DeviceAuthOutcome.unavailable ||
+    if (appPinOutcome?.status == _DeviceAuthStatus.rejected ||
+        appPinOutcome?.status == _DeviceAuthStatus.unavailable ||
         !context.mounted) {
       onCancelled?.call();
       return const TransactionAuthResult.cancelled();
@@ -78,20 +83,22 @@ class TransactionAuthGate {
 
     if (effectiveProfile.requiresPasskey && !needsManualFactors) {
       onAuthenticated?.call();
-      return const TransactionAuthResult.success();
+      return TransactionAuthResult.success(
+        appPin: appPinOutcome?.appPin,
+      );
     }
 
     if (!effectiveProfile.requiresPasskey) {
       final deviceAuthOutcome =
-          appPinOutcome == _DeviceAuthOutcome.authenticated
-              ? _DeviceAuthOutcome.authenticated
+          appPinOutcome?.status == _DeviceAuthStatus.authenticated
+              ? appPinOutcome!
               : await _showDevicePinFallback(
                   context,
                   BiometricService(),
                 );
 
-      if (deviceAuthOutcome == _DeviceAuthOutcome.rejected ||
-          (deviceAuthOutcome == _DeviceAuthOutcome.unavailable &&
+      if (deviceAuthOutcome.status == _DeviceAuthStatus.rejected ||
+          (deviceAuthOutcome.status == _DeviceAuthStatus.unavailable &&
               !allowDeviceAuthUnavailable) ||
           !context.mounted) {
         onCancelled?.call();
@@ -101,9 +108,11 @@ class TransactionAuthGate {
 
     final TransactionAuthResult result;
     if (!needsManualFactors) {
-      result = const TransactionAuthResult.success();
+      result = TransactionAuthResult.success(
+        appPin: appPinOutcome?.appPin,
+      );
     } else if (effectiveProfile.requiresShamirShares) {
-      result = await showModalBottomSheet<TransactionAuthResult>(
+      final shamirResult = await showModalBottomSheet<TransactionAuthResult>(
             context: context,
             backgroundColor: Colors.transparent,
             isScrollControlled: true,
@@ -111,8 +120,18 @@ class TransactionAuthGate {
                 _ShamirAuthorizationSheet(profile: effectiveProfile),
           ) ??
           const TransactionAuthResult.cancelled();
+      if (shamirResult.isAuthenticated) {
+        result = TransactionAuthResult.success(
+          confirmationPassphrase: shamirResult.confirmationPassphrase,
+          totpCode: shamirResult.totpCode,
+          passkeyAssertionJson: shamirResult.passkeyAssertionJson,
+          appPin: appPinOutcome?.appPin,
+        );
+      } else {
+        result = const TransactionAuthResult.cancelled();
+      }
     } else {
-      result = await showModalBottomSheet<TransactionAuthResult>(
+      final factorResult = await showModalBottomSheet<TransactionAuthResult>(
             context: context,
             backgroundColor: Colors.transparent,
             isScrollControlled: true,
@@ -120,6 +139,16 @@ class TransactionAuthGate {
                 _FactorAuthorizationSheet(profile: effectiveProfile),
           ) ??
           const TransactionAuthResult.cancelled();
+      if (factorResult.isAuthenticated) {
+        result = TransactionAuthResult.success(
+          confirmationPassphrase: factorResult.confirmationPassphrase,
+          totpCode: factorResult.totpCode,
+          passkeyAssertionJson: factorResult.passkeyAssertionJson,
+          appPin: appPinOutcome?.appPin,
+        );
+      } else {
+        result = const TransactionAuthResult.cancelled();
+      }
     }
 
     if (result.isAuthenticated) {
@@ -188,20 +217,20 @@ class TransactionAuthGate {
       final localizedReason = context.tr.authReasonTransactionConfirm;
       final canUseDeviceAuth = await bio.canAuthenticate();
       if (!context.mounted) {
-        return _DeviceAuthOutcome.rejected;
+        return _DeviceAuthOutcome.rejectedOutcome;
       }
       if (!canUseDeviceAuth) {
-        return _DeviceAuthOutcome.unavailable;
+        return _DeviceAuthOutcome.unavailableOutcome;
       }
 
       final didAuthenticate = await bio.authenticate(
         localizedReason: localizedReason,
       );
       return didAuthenticate
-          ? _DeviceAuthOutcome.authenticated
-          : _DeviceAuthOutcome.rejected;
+          ? _DeviceAuthOutcome.authenticatedWithoutPin
+          : _DeviceAuthOutcome.rejectedOutcome;
     } catch (_) {
-      return _DeviceAuthOutcome.unavailable;
+      return _DeviceAuthOutcome.unavailableOutcome;
     }
   }
 
@@ -210,9 +239,30 @@ class TransactionAuthGate {
     AppPinStatus status,
   ) async {
     if (!status.configured) {
-      return null;
+      // PIN not yet configured on this device — offer inline setup so the
+      // user can create a PIN and continue the transaction in one step.
+      return _showAppPinSetup(context, status);
     }
     return _showAppPinAuthorization(context, status);
+  }
+
+  static Future<_DeviceAuthOutcome?> _showAppPinSetup(
+    BuildContext context,
+    AppPinStatus status,
+  ) async {
+    final result = await showGeneralDialog<_DeviceAuthOutcome>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black,
+      pageBuilder: (context, _, __) {
+        return _TransactionPinSetupScreen(status: status);
+      },
+      transitionDuration: KeroseneMotion.short,
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    );
+    return result ?? _DeviceAuthOutcome.rejectedOutcome;
   }
 
   static Future<_DeviceAuthOutcome> _showAppPinAuthorization(
@@ -231,11 +281,178 @@ class TransactionAuthGate {
         return FadeTransition(opacity: animation, child: child);
       },
     );
-    return result ?? _DeviceAuthOutcome.rejected;
+    return result ?? _DeviceAuthOutcome.rejectedOutcome;
   }
 }
 
-enum _DeviceAuthOutcome { authenticated, unavailable, rejected }
+class _DeviceAuthOutcome {
+  final _DeviceAuthStatus status;
+  final String? appPin;
+
+  const _DeviceAuthOutcome(this.status, {this.appPin});
+
+  static const authenticatedWithoutPin =
+      _DeviceAuthOutcome(_DeviceAuthStatus.authenticated);
+  static const unavailableOutcome =
+      _DeviceAuthOutcome(_DeviceAuthStatus.unavailable);
+  static const rejectedOutcome = _DeviceAuthOutcome(_DeviceAuthStatus.rejected);
+}
+
+enum _DeviceAuthStatus { authenticated, unavailable, rejected }
+
+// ---------------------------------------------------------------------------
+// PIN Setup (called when no PIN is configured for this device yet)
+// ---------------------------------------------------------------------------
+
+class _TransactionPinSetupScreen extends ConsumerStatefulWidget {
+  final AppPinStatus status;
+
+  const _TransactionPinSetupScreen({required this.status});
+
+  @override
+  ConsumerState<_TransactionPinSetupScreen> createState() =>
+      _TransactionPinSetupScreenState();
+}
+
+class _TransactionPinSetupScreenState
+    extends ConsumerState<_TransactionPinSetupScreen> {
+  bool _busy = false;
+  bool _confirming = false;
+  String _pin = '';
+  String _confirmation = '';
+  String? _error;
+
+  int get _pinLength => widget.status.minPinLength.clamp(4, 8);
+
+  String get _currentInput => _confirming ? _confirmation : _pin;
+
+  set _currentInput(String value) {
+    if (_confirming) {
+      _confirmation = value;
+    } else {
+      _pin = value;
+    }
+  }
+
+  void _appendDigit(String digit) {
+    if (_busy || _currentInput.length >= _pinLength) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _currentInput = _currentInput + digit;
+      _error = null;
+    });
+    if (_currentInput.length == _pinLength) {
+      unawaited(_submit());
+    }
+  }
+
+  void _deleteDigit() {
+    if (_busy || _currentInput.isEmpty) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _currentInput = _currentInput.substring(0, _currentInput.length - 1);
+      _error = null;
+    });
+  }
+
+  Future<void> _submit() async {
+    final input = _currentInput;
+    if (input.length != _pinLength) return;
+
+    if (!_confirming) {
+      setState(() {
+        _confirming = true;
+        _confirmation = '';
+        _error = null;
+      });
+      return;
+    }
+
+    if (_pin != _confirmation) {
+      setState(() {
+        _error = context.tr.securityPinMismatchError;
+        _pin = '';
+        _confirmation = '';
+        _confirming = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    final result = await ref.read(securityRepositoryProvider).configureAppPin(
+          enabled: true,
+          pin: _pin,
+        );
+
+    result.fold(
+      (failure) {
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _error = ErrorTranslator.translate(context.tr, failure.message);
+        });
+      },
+      (_) {
+        ref.invalidate(appPinStatusProvider);
+        if (mounted) {
+          Navigator.of(context).pop(
+            _DeviceAuthOutcome(_DeviceAuthStatus.authenticated, appPin: _pin),
+          );
+        }
+      },
+    );
+
+    if (mounted) setState(() => _busy = false);
+  }
+
+  void _cancel() {
+    Navigator.of(context).pop(_DeviceAuthOutcome.rejectedOutcome);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PinEntryScaffold(
+      instruction: _confirming
+          ? _switch(context,
+              ptBr: 'Confirme o PIN para finalizar o cadastro.',
+              en: 'Confirm your PIN to complete setup.',
+              es: 'Confirma tu PIN para completar la configuración.')
+          : _switch(context,
+              ptBr: 'Crie um PIN de $_pinLength dígitos para esta transação.',
+              en: 'Create a $_pinLength-digit PIN for this transaction.',
+              es: 'Crea un PIN de $_pinLength dígitos para esta transacción.'),
+      valueLength: _currentInput.length,
+      maxLength: _pinLength,
+      error: _error,
+      busy: _busy,
+      onDigit: _appendDigit,
+      onDelete: _deleteDigit,
+      onConfirm: _busy ? null : _submit,
+      footer: TextButton(
+        onPressed: _busy ? null : _cancel,
+        style: TextButton.styleFrom(foregroundColor: Colors.white70),
+        child: Text(_transactionPinCancel(context)),
+      ),
+    );
+  }
+}
+
+String _switch(BuildContext context,
+    {required String ptBr, required String en, required String es}) {
+  return switch (Localizations.localeOf(context).languageCode) {
+    'en' => en,
+    'es' => es,
+    _ => ptBr,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// PIN Authorization (called when PIN is already configured)
+// ---------------------------------------------------------------------------
 
 class _TransactionPinAuthorizationScreen extends ConsumerStatefulWidget {
   final AppPinStatus status;
@@ -311,7 +528,8 @@ class _TransactionPinAuthorizationScreenState
       },
       (_) {
         ref.invalidate(appPinStatusProvider);
-        Navigator.of(context).pop(_DeviceAuthOutcome.authenticated);
+        Navigator.of(context).pop(
+            _DeviceAuthOutcome(_DeviceAuthStatus.authenticated, appPin: _pin));
       },
     );
 
@@ -321,7 +539,7 @@ class _TransactionPinAuthorizationScreenState
   }
 
   void _cancel() {
-    Navigator.of(context).pop(_DeviceAuthOutcome.rejected);
+    Navigator.of(context).pop(_DeviceAuthOutcome.rejectedOutcome);
   }
 
   @override
