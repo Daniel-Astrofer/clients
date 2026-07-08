@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/presentation/widgets/kerosene_logo_loading_view.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
+import 'package:kerosene/features/auth/presentation/screens/server_unavailable_screen.dart';
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -36,13 +38,16 @@ class AppEntryPinGate extends ConsumerWidget {
         }
         return _AppEntryPinLockScreen(status: status);
       },
-      loading: () => const ColoredBox(
-        color: Colors.black,
-        child: SizedBox.expand(),
+      loading: () => const KeroseneLogoLoadingView(
+        status: 'VALIDANDO',
+        detail: 'Confirmando conexão segura',
       ),
-      error: (_, __) => const ColoredBox(
-        color: Colors.black,
-        child: SizedBox.expand(),
+      error: (_, __) => ServerUnavailableScreen(
+        message:
+            'Não foi possível confirmar o PIN do app. Verifique a conexão segura e tente novamente.',
+        onRetryOverride: () async {
+          ref.invalidate(appPinStatusProvider);
+        },
       ),
     );
   }

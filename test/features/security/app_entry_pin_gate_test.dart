@@ -139,6 +139,52 @@ void main() {
     expect(find.text('home ready'), findsOneWidget);
   });
 
+  testWidgets('shows a retryable connection error when PIN status cannot load',
+      (tester) async {
+    var statusLoadCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _AuthenticatedAuthController(),
+          ),
+          appPinStatusProvider.overrideWith((ref) async {
+            statusLoadCount += 1;
+            throw StateError('PIN status unavailable');
+          }),
+          balanceWebSocketServiceProvider.overrideWith((ref) async => null),
+        ],
+        child: const MaterialApp(
+          locale: Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AppEntryPinGate(
+            child: Text('home ready'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Conexão indisponível'), findsOneWidget);
+    expect(
+      find.text(
+        'Não foi possível confirmar o PIN do app. Verifique a conexão segura e tente novamente.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('home ready'), findsNothing);
+
+    await tester.tap(find.text('Tentar Novamente'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(statusLoadCount, 2);
+  });
+
   testWidgets('hides the numeric pad and shows loading while verifying PIN',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));

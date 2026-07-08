@@ -5,6 +5,16 @@ import 'tor_service.dart';
 
 typedef TorApiUrlUpdater = void Function(String url);
 
+const _bootstrapFailureCooldown = Duration(seconds: 30);
+Future<bool>? _bootstrapFuture;
+DateTime? _lastBootstrapFailureAt;
+
+@visibleForTesting
+void resetTorBootstrapStateForTesting() {
+  _bootstrapFuture = null;
+  _lastBootstrapFailureAt = null;
+}
+
 @visibleForTesting
 class TorBootstrapTarget {
   const TorBootstrapTarget({
@@ -47,6 +57,51 @@ int _resolveTargetPort(Uri uri) {
 }
 
 Future<bool> bootstrapTorNetwork({
+  required TorService torService,
+  required TorApiUrlUpdater updateApiUrl,
+}) async {
+  final inFlight = _bootstrapFuture;
+  if (inFlight != null) {
+    final bootstrapped = await inFlight;
+    if (bootstrapped) {
+      updateApiUrl(AppConfig.apiUrl);
+    }
+    return bootstrapped;
+  }
+
+  final lastFailureAt = _lastBootstrapFailureAt;
+  if (lastFailureAt != null) {
+    final elapsed = DateTime.now().difference(lastFailureAt);
+    if (elapsed < _bootstrapFailureCooldown) {
+      AppConfig.isTorEnabled = false;
+      debugPrint(
+        '🧅 Tor bootstrap skipped; previous failure was ${elapsed.inSeconds}s ago.',
+      );
+      return false;
+    }
+  }
+
+  final future = _bootstrapTorNetworkInternal(
+    torService: torService,
+    updateApiUrl: updateApiUrl,
+  );
+  _bootstrapFuture = future;
+  try {
+    final bootstrapped = await future;
+    if (bootstrapped) {
+      _lastBootstrapFailureAt = null;
+    } else {
+      _lastBootstrapFailureAt = DateTime.now();
+    }
+    return bootstrapped;
+  } finally {
+    if (identical(_bootstrapFuture, future)) {
+      _bootstrapFuture = null;
+    }
+  }
+}
+
+Future<bool> _bootstrapTorNetworkInternal({
   required TorService torService,
   required TorApiUrlUpdater updateApiUrl,
 }) async {
