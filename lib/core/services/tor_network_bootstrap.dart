@@ -51,6 +51,8 @@ Future<bool> bootstrapTorNetwork({
   required TorApiUrlUpdater updateApiUrl,
 }) async {
   try {
+    AppConfig.validateReleaseNodeConfiguration();
+
     final target = resolveTorBootstrapTarget(AppConfig.onionBaseUrl);
 
     if (!target.requiresTor) {
@@ -84,6 +86,10 @@ Future<bool> bootstrapTorNetwork({
       '🌐 Unified Tor Relay Active: ${AppConfig.apiUrl} -> ${target.apiUrl}',
     );
     return true;
+  } on StateError catch (error) {
+    AppConfig.isTorEnabled = false;
+    debugPrint('🧅 Mobile node configuration invalid: $error');
+    return false;
   } catch (error, stackTrace) {
     AppConfig.isTorEnabled = false;
     debugPrint('❌ CRITICAL ERROR: Tor or Relay failed to start: $error');
