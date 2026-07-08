@@ -20,6 +20,11 @@ bool _isLoopbackUrl(String baseUrl) {
   return host == '127.0.0.1' || host == 'localhost' || host == '::1';
 }
 
+bool _isOnionUrl(String baseUrl) {
+  final uri = Uri.tryParse(baseUrl);
+  return uri?.host.toLowerCase().endsWith('.onion') ?? false;
+}
+
 Future<void> initializeCookieSupport(Dio dio) async {
   dio.interceptors.add(CookieManager(CookieJar()));
 }
@@ -73,7 +78,9 @@ void configureProxyRouting({
   dio.options.extra['_keroseneRoutingMode'] = routingMode;
 
   if (!shouldProxy) {
-    if (AppConfig.isTorEnabled && _isLoopbackUrl(baseUrl)) {
+    if (_isOnionUrl(baseUrl)) {
+      debugPrint('🧅 ApiClient: Tor route pending for $baseUrl');
+    } else if (AppConfig.isTorEnabled && _isLoopbackUrl(baseUrl)) {
       debugPrint('🧅 ApiClient: Using local Tor relay for $baseUrl');
     } else {
       debugPrint('🌐 ApiClient: Using direct route for $baseUrl');

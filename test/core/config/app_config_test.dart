@@ -22,6 +22,25 @@ void main() {
     expect(AppConfig.activeNodeName, 'localhost');
   });
 
+  test('release builds require explicit node dart-defines', () {
+    expect(
+      () => AppConfig.validateReleaseNodeConfiguration(releaseBuild: false),
+      returnsNormally,
+    );
+
+    if (AppConfig.hasExplicitNodeConfiguration) {
+      expect(
+        () => AppConfig.validateReleaseNodeConfiguration(releaseBuild: true),
+        returnsNormally,
+      );
+    } else {
+      expect(
+        () => AppConfig.validateReleaseNodeConfiguration(releaseBuild: true),
+        throwsStateError,
+      );
+    }
+  });
+
   test('active domain endpoints remain mapped to KFE backend contracts', () {
     expect(AppConfig.authLogin, '/auth/login');
     expect(

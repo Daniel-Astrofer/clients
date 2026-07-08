@@ -8,7 +8,11 @@ import 'balance_websocket_service.dart';
 import '../config/app_config.dart';
 import '../security/secure_storage_service.dart';
 import 'notification_service.dart';
-import 'tor_service.dart';
+
+bool _usesOnionBackend() {
+  final host = Uri.tryParse(AppConfig.onionBaseUrl)?.host.toLowerCase();
+  return host?.endsWith('.onion') ?? false;
+}
 
 Future<void> initializeBackgroundService() async {
   final service = FlutterBackgroundService();
@@ -58,6 +62,13 @@ Future<void> initializeBackgroundService() async {
 }
 
 Future<void> startBackgroundService() async {
+  if (_usesOnionBackend()) {
+    debugPrint(
+      'BackgroundService: Skipping service because Tor is managed in the main isolate.',
+    );
+    return;
+  }
+
   final service = FlutterBackgroundService();
   if (!(await service.isRunning())) {
     await service.startService();
@@ -107,28 +118,10 @@ void onStart(ServiceInstance service) async {
     return;
   }
 
-  // 🧅 MANDATORY: Start Tor network in this isolate
-  bool torReady = false;
-  try {
-    debugPrint('BackgroundService: Starting Tor...');
-    await TorService.instance.start();
-
-    // Start local relay to the .onion backend for the background isolate
-    final host = Uri.parse(AppConfig.onionBaseUrl).host;
-    final int relayPort = await TorService.instance.startRelay(host, 80);
-    AppConfig.apiUrl = 'http://127.0.0.1:$relayPort';
-    torReady = true;
+  if (_usesOnionBackend()) {
     debugPrint(
-      'BackgroundService: Unified Tor Relay Active: ${AppConfig.apiUrl} -> $host',
+      'BackgroundService: Tor-backed websocket disabled in background isolate.',
     );
-  } catch (e) {
-    debugPrint('BackgroundService: Tor start failed: $e');
-  }
-
-  // Do not start the WebSocket if the relay is not ready —
-  // it would connect to the raw .onion address and fail in an infinite loop.
-  if (!torReady) {
-    debugPrint('BackgroundService: Tor relay unavailable. Stopping service.');
     service.stopSelf();
     return;
   }

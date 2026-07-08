@@ -7,6 +7,12 @@ class AppConfig {
   // Production builds should override this with KERO_NODE_*_URL.
   static const String _localFullDefaultOnionUrl =
       'http://exze5uokdpao4lwdodnlsd4pvfm25ntpkwh7xas5fefuzdmiisr4u7yd.onion';
+  static const bool isReleaseBuild = bool.fromEnvironment('dart.vm.product');
+  static const bool _hasNodeISDefine = bool.hasEnvironment('KERO_NODE_IS_URL');
+  static const bool _hasNodeCHDefine = bool.hasEnvironment('KERO_NODE_CH_URL');
+  static const bool _hasNodeSGDefine = bool.hasEnvironment('KERO_NODE_SG_URL');
+  static const bool hasExplicitNodeConfiguration =
+      _hasNodeISDefine && _hasNodeCHDefine && _hasNodeSGDefine;
 
   /// Endereços .onion dos nós remotos
   static const String nodeIS = String.fromEnvironment(
@@ -45,6 +51,24 @@ class AppConfig {
 
   /// URL ativa da API — Aponta para o relay local (configurado no main.dart)
   static String apiUrl = nodeIS;
+
+  static void validateReleaseNodeConfiguration({bool? releaseBuild}) {
+    final shouldValidate = releaseBuild ?? isReleaseBuild;
+    if (!shouldValidate || hasExplicitNodeConfiguration) {
+      return;
+    }
+
+    final missingDefines = <String>[
+      if (!_hasNodeISDefine) 'KERO_NODE_IS_URL',
+      if (!_hasNodeCHDefine) 'KERO_NODE_CH_URL',
+      if (!_hasNodeSGDefine) 'KERO_NODE_SG_URL',
+    ];
+
+    throw StateError(
+      'Release builds must define ${missingDefines.join(', ')} with '
+      '--dart-define. Refusing to use the embedded local-full onion default.',
+    );
+  }
 
   /// Timeout para requisições HTTP (em milissegundos)
   static const int connectionTimeout = 30000;
