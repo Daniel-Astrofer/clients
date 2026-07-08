@@ -251,6 +251,13 @@ class TorService {
     String targetHost,
     int targetPort,
   ) async {
+    final preflightTunnel = await _openSocksTunnel(
+      targetHost: targetHost,
+      targetPort: targetPort,
+      logPrefix: 'TorService [Relay preflight]',
+    );
+    preflightTunnel.close();
+
     final relayServer = await ServerSocket.bind('127.0.0.1', 0);
     final relayPort = relayServer.port;
     _relayServers[key] = relayServer;
@@ -259,136 +266,14 @@ class TorService {
     relayServer.listen((clientSocket) async {
       debugPrint('🧅 Tor Relay: Received connection on 127.0.0.1:$relayPort');
       try {
-        bool established = false;
-        int relayAttempts = 0;
-        const int maxRelayAttempts = 10;
-        bool restartedForStaleDescriptor = false;
-        Socket? torSocket;
-        StreamIterator<Uint8List>? torIter;
-        final readBuffer = <int>[];
-
-        Future<Uint8List> readExact(int count) async {
-          while (readBuffer.length < count) {
-            if (!await torIter!.moveNext()) {
-              throw SocketException(
-                'Stream closed prematurely: expected $count bytes, got ${readBuffer.length}',
-              );
-            }
-            readBuffer.addAll(torIter.current);
-          }
-          final result = Uint8List.fromList(readBuffer.take(count).toList());
-          readBuffer.removeRange(0, count);
-          return result;
-        }
-
-        while (!established && relayAttempts < maxRelayAttempts) {
-          relayAttempts++;
-          await torIter?.cancel();
-          torSocket?.destroy();
-          readBuffer.clear();
-
-          try {
-            int sockAttempts = 0;
-            while (sockAttempts < 5) {
-              try {
-                if (!_isValidPort(_socksPort)) {
-                  throw SocketException(
-                    'Invalid Tor SOCKS5 port before connect: $_socksPort',
-                  );
-                }
-                torSocket = await Socket.connect(
-                  '127.0.0.1',
-                  _socksPort,
-                  timeout: const Duration(seconds: 5),
-                );
-                break;
-              } catch (e) {
-                sockAttempts++;
-                if (sockAttempts >= 5) rethrow;
-                await Future.delayed(const Duration(milliseconds: 1000));
-              }
-            }
-            if (torSocket == null) {
-              throw const SocketException('Could not connect to Tor SOCKS5');
-            }
-            torIter = StreamIterator<Uint8List>(torSocket);
-
-            // SOCKS5 Auth Handshake
-            torSocket.add([0x05, 0x01, 0x00]);
-            await torSocket.flush();
-            final handshakeRes = await readExact(2);
-            if (handshakeRes[0] != 0x05 || handshakeRes[1] != 0x00) {
-              throw SocketException('Tor SOCKS5 Handshake failed');
-            }
-
-            // SOCKS5 CONNECT request
-            final request = <int>[0x05, 0x01, 0x00, 0x03];
-            final domainBytes = utf8.encode(targetHost);
-            request.add(domainBytes.length);
-            request.addAll(domainBytes);
-            request.add((targetPort >> 8) & 0xFF);
-            request.add(targetPort & 0xFF);
-            torSocket.add(request);
-            await torSocket.flush();
-
-            final connectRes = await readExact(4);
-            if (connectRes[1] == 0x00) {
-              final atyp = connectRes[3];
-              if (atyp == 0x01) {
-                await readExact(6);
-              } else if (atyp == 0x03) {
-                final len = (await readExact(1))[0];
-                await readExact(len + 2);
-              } else if (atyp == 0x04) {
-                await readExact(18);
-              }
-              established = true;
-              debugPrint(
-                  '🧅 Tor Relay: Tunnel established to $targetHost:$targetPort');
-            } else {
-              final errorCode = connectRes[1];
-              final errorMsg = _getSocksErrorMessage(errorCode);
-              debugPrint(
-                ' onion TorService [Relay]: SOCKS5 Connect failure to $targetHost:$targetPort: $errorMsg on attempt $relayAttempts/$maxRelayAttempts',
-              );
-              if (errorCode == 0xF2 && !restartedForStaleDescriptor) {
-                restartedForStaleDescriptor = true;
-                final restarted = await _restartTorProxyForStaleDescriptor();
-                if (!restarted) {
-                  throw const SocketException(
-                    'Tor restart failed after stale onion descriptor',
-                  );
-                }
-                relayAttempts = 0;
-                continue;
-              }
-              if (_isTerminalOnionDescriptorError(errorCode)) {
-                relayAttempts = maxRelayAttempts;
-                throw SocketException(
-                  'Tor SOCKS5 to $targetHost refused: $errorMsg',
-                );
-              }
-              if (relayAttempts >= maxRelayAttempts) {
-                throw SocketException(
-                  'Tor SOCKS5 to $targetHost refused after $maxRelayAttempts attempts: $errorMsg',
-                );
-              }
-              await Future.delayed(Duration(seconds: relayAttempts * 3));
-            }
-          } catch (e) {
-            if (relayAttempts >= maxRelayAttempts) rethrow;
-            await Future.delayed(Duration(seconds: relayAttempts * 3));
-          }
-        }
-
-        if (!established || torSocket == null || torIter == null) {
-          throw const SocketException(
-            'Failed to establish SOCKS5 connection after all retries',
-          );
-        }
+        final tunnel = await _openSocksTunnel(
+          targetHost: targetHost,
+          targetPort: targetPort,
+          logPrefix: 'TorService [Relay]',
+        );
 
         // Bi-Directional Pipe
-        final capturedTorSocket = torSocket;
+        final capturedTorSocket = tunnel.socket;
         clientSocket.listen(
           capturedTorSocket.add,
           onDone: () => capturedTorSocket.destroy(),
@@ -398,8 +283,8 @@ class TorService {
           },
         );
 
-        final capturedIter = torIter;
-        final capturedBuffer = List<int>.from(readBuffer);
+        final capturedIter = tunnel.iterator;
+        final capturedBuffer = List<int>.from(tunnel.pendingBytes);
         unawaited(() async {
           try {
             if (capturedBuffer.isNotEmpty) {
@@ -424,6 +309,152 @@ class TorService {
       ' onion TorService [Relay]: Started local proxy server at 127.0.0.1:$relayPort bridging to $targetHost:$targetPort',
     );
     return relayPort;
+  }
+
+  Future<_SocksTunnel> _openSocksTunnel({
+    required String targetHost,
+    required int targetPort,
+    required String logPrefix,
+  }) async {
+    int relayAttempts = 0;
+    const int maxRelayAttempts = 10;
+    bool restartedForStaleDescriptor = false;
+    Socket? torSocket;
+    StreamIterator<Uint8List>? torIter;
+    final readBuffer = <int>[];
+
+    Future<Uint8List> readExact(int count) async {
+      while (readBuffer.length < count) {
+        if (!await torIter!.moveNext()) {
+          throw SocketException(
+            'Stream closed prematurely: expected $count bytes, got ${readBuffer.length}',
+          );
+        }
+        readBuffer.addAll(torIter.current);
+      }
+      final result = Uint8List.fromList(readBuffer.take(count).toList());
+      readBuffer.removeRange(0, count);
+      return result;
+    }
+
+    while (relayAttempts < maxRelayAttempts) {
+      relayAttempts++;
+      await torIter?.cancel();
+      torSocket?.destroy();
+      readBuffer.clear();
+      torIter = null;
+      torSocket = null;
+
+      try {
+        torSocket = await _connectToSocksProxy();
+        torIter = StreamIterator<Uint8List>(torSocket);
+
+        torSocket.add([0x05, 0x01, 0x00]);
+        await torSocket.flush();
+        final handshakeRes = await readExact(2);
+        if (handshakeRes[0] != 0x05 || handshakeRes[1] != 0x00) {
+          throw const SocketException('Tor SOCKS5 handshake failed');
+        }
+
+        final request = <int>[0x05, 0x01, 0x00, 0x03];
+        final domainBytes = utf8.encode(targetHost);
+        if (domainBytes.length > 255) {
+          throw SocketException('SOCKS5 target host is too long: $targetHost');
+        }
+        request.add(domainBytes.length);
+        request.addAll(domainBytes);
+        request.add((targetPort >> 8) & 0xFF);
+        request.add(targetPort & 0xFF);
+        torSocket.add(request);
+        await torSocket.flush();
+
+        final connectRes = await readExact(4);
+        if (connectRes[1] == 0x00) {
+          final atyp = connectRes[3];
+          if (atyp == 0x01) {
+            await readExact(6);
+          } else if (atyp == 0x03) {
+            final len = (await readExact(1))[0];
+            await readExact(len + 2);
+          } else if (atyp == 0x04) {
+            await readExact(18);
+          } else {
+            throw SocketException(
+              'Tor SOCKS5 CONNECT reply has unsupported address type: $atyp',
+            );
+          }
+
+          debugPrint(
+              '🧅 $logPrefix: Tunnel established to $targetHost:$targetPort');
+          return _SocksTunnel(
+            socket: torSocket,
+            iterator: torIter,
+            pendingBytes: List<int>.from(readBuffer),
+          );
+        }
+
+        final errorCode = connectRes[1];
+        final errorMsg = _getSocksErrorMessage(errorCode);
+        debugPrint(
+          ' onion $logPrefix: SOCKS5 Connect failure to $targetHost:$targetPort: $errorMsg on attempt $relayAttempts/$maxRelayAttempts',
+        );
+
+        if (errorCode == 0xF2 && !restartedForStaleDescriptor) {
+          restartedForStaleDescriptor = true;
+          final restarted = await _restartTorProxyForStaleDescriptor();
+          if (!restarted) {
+            throw const SocketException(
+              'Tor restart failed after stale onion descriptor',
+            );
+          }
+          relayAttempts = 0;
+          continue;
+        }
+
+        if (_isTerminalOnionDescriptorError(errorCode)) {
+          relayAttempts = maxRelayAttempts;
+          throw SocketException('Tor SOCKS5 to $targetHost refused: $errorMsg');
+        }
+
+        if (relayAttempts >= maxRelayAttempts) {
+          throw SocketException(
+            'Tor SOCKS5 to $targetHost refused after $maxRelayAttempts attempts: $errorMsg',
+          );
+        }
+      } catch (_) {
+        if (relayAttempts >= maxRelayAttempts) rethrow;
+      }
+
+      await Future.delayed(Duration(seconds: relayAttempts * 3));
+    }
+
+    throw const SocketException(
+      'Failed to establish SOCKS5 connection after all retries',
+    );
+  }
+
+  Future<Socket> _connectToSocksProxy() async {
+    int sockAttempts = 0;
+    while (sockAttempts < 5) {
+      try {
+        if (!_isValidPort(_socksPort)) {
+          throw SocketException(
+            'Invalid Tor SOCKS5 port before connect: $_socksPort',
+          );
+        }
+        return Socket.connect(
+          '127.0.0.1',
+          _socksPort,
+          timeout: const Duration(seconds: 5),
+        );
+      } catch (_) {
+        sockAttempts++;
+        if (sockAttempts >= 5) rethrow;
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+    }
+
+    throw const SocketException('Could not connect to Tor SOCKS5');
   }
 
   /// Maps SOCKS5 error codes (REP) to human readable messages.
@@ -461,6 +492,23 @@ class TorService {
 final torServiceProvider = Provider<TorService>((ref) {
   return TorService.instance;
 });
+
+class _SocksTunnel {
+  const _SocksTunnel({
+    required this.socket,
+    required this.iterator,
+    required this.pendingBytes,
+  });
+
+  final Socket socket;
+  final StreamIterator<Uint8List> iterator;
+  final List<int> pendingBytes;
+
+  void close() {
+    unawaited(iterator.cancel());
+    socket.destroy();
+  }
+}
 
 /// A wrapper class that allows a Socket to be treated as a broadcast stream.
 class BroadcastSocket extends Stream<Uint8List> implements Socket {
