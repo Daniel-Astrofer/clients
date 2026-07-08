@@ -67,49 +67,30 @@ class TorService {
       return _isRunning;
     }
 
-    try {
-      debugPrint('🧅 TorService: Initializing Tor (Arti) via tor package...');
+    debugPrint('🧅 TorService: Initializing Tor (Arti) via tor package...');
 
-      // Initialize and start the Tor proxy
-      await Tor.init();
-      await Tor.instance.start();
+    // Initialize and start the Tor proxy
+    await Tor.init();
+    await Tor.instance.start();
 
-      // The `tor` package picks a free port automatically, but some mobile
-      // builds briefly expose -1 while Arti is still bootstrapping. Never let
-      // an invalid port reach Socket.connect; wait for a real SOCKS port first.
-      _socksPort = await _waitForValidTorPackagePort();
-      if (!_isValidPort(_socksPort)) {
-        throw SocketException(
-          'Tor package did not report a valid SOCKS5 port: $_socksPort',
-        );
-      }
+    // The `tor` package picks a free port automatically, but some mobile
+    // builds briefly expose -1 while Arti is still bootstrapping. Never let
+    // an invalid port reach Socket.connect; wait for a real SOCKS port first.
+    _socksPort = await _waitForValidTorPackagePort();
+    if (!_isValidPort(_socksPort)) {
+      throw SocketException(
+        'Tor package did not report a valid SOCKS5 port: $_socksPort',
+      );
+    }
 
-      _isRunning = Tor.instance.started;
-      if (_isRunning) {
-        await _waitForProxyToBoot(_socksPort, timeoutSeconds: 10);
-        debugPrint(
-          '🧅 TorService: Tor (Arti) running on SOCKS5 port $_socksPort',
-        );
-      } else {
-        debugPrint('🧅 TorService: Tor.instance.started returned false');
-      }
-    } catch (e) {
-      debugPrint('🧅 TorService: Failed to start Tor: $e');
-
-      // Fallback: check if a system Tor is already listening
-      int fallbackPort = 9050;
-      _socksPort = fallbackPort;
-      debugPrint('🧅 TorService: Falling back to port $_socksPort');
-
-      try {
-        await _waitForProxyToBoot(_socksPort, timeoutSeconds: 3);
-        _isRunning = true;
-      } catch (err) {
-        debugPrint(
-          'Tor proxy is NOT answering on $_socksPort. Application may be offline.',
-        );
-        _isRunning = false;
-      }
+    _isRunning = Tor.instance.started;
+    if (_isRunning) {
+      await _waitForProxyToBoot(_socksPort, timeoutSeconds: 10);
+      debugPrint(
+        '🧅 TorService: Tor (Arti) running on SOCKS5 port $_socksPort',
+      );
+    } else {
+      debugPrint('🧅 TorService: Tor.instance.started returned false');
     }
 
     return _isRunning;
@@ -148,12 +129,6 @@ class TorService {
   Future<void> stop() async {
     await _closeRelays();
     if (!_isRunning) return;
-    if (_usesExternalSocksProxy) {
-      _isRunning = false;
-      _startFuture = null;
-      debugPrint('🧅 TorService: External SOCKS5 proxy detached.');
-      return;
-    }
     try {
       await Tor.instance.stop();
     } catch (e) {
@@ -169,15 +144,6 @@ class TorService {
     if (inFlight != null) return inFlight;
 
     _restartFuture = () async {
-      if (_usesExternalSocksProxy) {
-        try {
-          await _waitForProxyToBoot(_socksPort, timeoutSeconds: 10);
-          return true;
-        } catch (_) {
-          return false;
-        }
-      }
-
       debugPrint(
         '🧅 TorService: Restarting Tor proxy after stale onion descriptor.',
       );
