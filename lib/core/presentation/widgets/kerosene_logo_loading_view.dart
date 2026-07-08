@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 
-import 'kerosene_logo.dart';
+const String _loadingLogoAssetPath = 'assets/logo/kerosene-k-logo.png';
 
 class KeroseneLogoLoadingView extends StatefulWidget {
   final String status;
@@ -46,7 +46,7 @@ class _KeroseneLogoLoadingViewState extends State<KeroseneLogoLoadingView>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    precacheImage(const AssetImage(KeroseneLogo.assetPath), context);
+    precacheImage(const AssetImage(_loadingLogoAssetPath), context);
   }
 
   @override
@@ -116,7 +116,7 @@ class KeroseneLogoLoadingMark extends StatelessWidget {
               children: [
                 Opacity(
                   opacity: 0.10,
-                  child: KeroseneLogo(
+                  child: _KeroseneLoadingGlyph(
                     size: logoSize,
                     color: KeroseneBrandTokens.textPrimary,
                   ),
@@ -137,13 +137,13 @@ class KeroseneLogoLoadingMark extends StatelessWidget {
                               sigmaX: 12,
                               sigmaY: 12,
                             ),
-                            child: KeroseneLogo(
+                            child: _KeroseneLoadingGlyph(
                               size: logoSize,
                               color: KeroseneBrandTokens.info,
                             ),
                           ),
                         ),
-                      KeroseneLogo(
+                      _KeroseneLoadingGlyph(
                         size: logoSize,
                         color: foregroundColor,
                       ),
@@ -173,6 +173,60 @@ class KeroseneLogoLoadingMark extends StatelessWidget {
   double _glowOpacity(double value) {
     final pulse = math.sin(value * math.pi * 2);
     return showGlow ? 0.12 + (pulse + 1) * 0.10 : 0.0;
+  }
+}
+
+class _KeroseneLoadingGlyph extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _KeroseneLoadingGlyph({
+    required this.size,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ColorFiltered(
+      colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(color)),
+      child: Image.asset(
+        _loadingLogoAssetPath,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      ),
+    );
+  }
+
+  List<double> _luminanceMaskMatrix(Color color) {
+    final red = color.r * 255;
+    final green = color.g * 255;
+    final blue = color.b * 255;
+    final alpha = color.a;
+
+    return <double>[
+      0,
+      0,
+      0,
+      0,
+      red,
+      0,
+      0,
+      0,
+      0,
+      green,
+      0,
+      0,
+      0,
+      0,
+      blue,
+      0.2126 * alpha,
+      0.7152 * alpha,
+      0.0722 * alpha,
+      0,
+      0,
+    ];
   }
 }
 
