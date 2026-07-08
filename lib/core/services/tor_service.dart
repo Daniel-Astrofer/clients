@@ -19,8 +19,20 @@ class TorService {
   Future<bool>? _startFuture;
   Future<bool>? _restartFuture;
 
+  static const String _externalSocksHost = String.fromEnvironment(
+    'KERO_TOR_SOCKS_HOST',
+    defaultValue: '127.0.0.1',
+  );
+  static const int _externalSocksPort = int.fromEnvironment(
+    'KERO_TOR_SOCKS_PORT',
+    defaultValue: 0,
+  );
+
   bool get isRunning => _isRunning;
   int get socksPort => _socksPort;
+  bool get _usesExternalSocksProxy => _isValidPort(_externalSocksPort);
+  String get _socksHost =>
+      _usesExternalSocksProxy ? _externalSocksHost : '127.0.0.1';
 
   /// Starts the embedded Tor daemon via the `tor` package.
   /// Returns true if Tor is ready.
@@ -38,6 +50,23 @@ class TorService {
   }
 
   Future<bool> _startInternal() async {
+    if (_usesExternalSocksProxy) {
+      _socksPort = _externalSocksPort;
+      try {
+        debugPrint(
+          '🧅 TorService: Using external SOCKS5 proxy at $_externalSocksHost:$_socksPort',
+        );
+        await _waitForProxyToBoot(_socksPort, timeoutSeconds: 10);
+        _isRunning = true;
+      } catch (_) {
+        debugPrint(
+          'Tor external SOCKS5 proxy is NOT answering on $_externalSocksHost:$_socksPort.',
+        );
+        _isRunning = false;
+      }
+      return _isRunning;
+    }
+
     try {
       debugPrint('🧅 TorService: Initializing Tor (Arti) via tor package...');
 
@@ -119,6 +148,12 @@ class TorService {
   Future<void> stop() async {
     await _closeRelays();
     if (!_isRunning) return;
+    if (_usesExternalSocksProxy) {
+      _isRunning = false;
+      _startFuture = null;
+      debugPrint('🧅 TorService: External SOCKS5 proxy detached.');
+      return;
+    }
     try {
       await Tor.instance.stop();
     } catch (e) {
@@ -134,6 +169,15 @@ class TorService {
     if (inFlight != null) return inFlight;
 
     _restartFuture = () async {
+      if (_usesExternalSocksProxy) {
+        try {
+          await _waitForProxyToBoot(_socksPort, timeoutSeconds: 10);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
       debugPrint(
         '🧅 TorService: Restarting Tor proxy after stale onion descriptor.',
       );
@@ -165,7 +209,7 @@ class TorService {
   /// Polls the SOCKS port until a raw TCP connection succeeds.
   Future<void> _waitForProxyToBoot(int port, {int timeoutSeconds = 45}) async {
     debugPrint(
-      '🧅 TorService: Checking if proxy is listening on 127.0.0.1:$port...',
+      '🧅 TorService: Checking if proxy is listening on $_socksHost:$port...',
     );
     final stopwatch = Stopwatch()..start();
     int attempts = 0;
@@ -173,7 +217,7 @@ class TorService {
       attempts++;
       try {
         final socket = await Socket.connect(
-          '127.0.0.1',
+          _socksHost,
           port,
           timeout: const Duration(milliseconds: 1000),
         );
@@ -443,7 +487,7 @@ class TorService {
           );
         }
         return Socket.connect(
-          '127.0.0.1',
+          _socksHost,
           _socksPort,
           timeout: const Duration(seconds: 5),
         );
