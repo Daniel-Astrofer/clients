@@ -97,11 +97,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
 
         return StatementTransactionScrollStack(
           itemCount: visibleTxs.length,
-          itemExtent: homeSize(148),
-          expandedItemExtent: homeSize(430),
+          itemExtent: homeSize(174),
+          expandedItemExtent: homeSize(376),
           expandedIndex: expandedIndex >= 0 ? expandedIndex : null,
-          itemGap: homeSize(10),
-          stackGap: homeSize(104),
+          itemGap: homeSize(12),
+          stackGap: homeSize(114),
           topAnchorOffset: homeSize(10),
           itemBuilder: (context, index) {
             return _buildTransactionTile(
