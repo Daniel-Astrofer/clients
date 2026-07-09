@@ -67,4 +67,24 @@ void main() {
 
     expect(requests, isEmpty);
   });
+
+  test('maps KFE validating receive request status from settlement state', () {
+    expect(
+      RemoteBitcoinAccountsService.receiveRequestStatusFromKfe(
+        const {'status': 'OPEN', 'settlementStatus': 'VALIDATING'},
+      ),
+      'MEMPOOL_SEEN',
+    );
+
+    expect(
+      RemoteBitcoinAccountsService.receiveRequestStatusFromKfe(
+        const {
+          'status': 'OPEN',
+          'settlementStatus': 'VALIDATING',
+          'confirmations': 1,
+        },
+      ),
+      'CONFIRMING',
+    );
+  });
 }

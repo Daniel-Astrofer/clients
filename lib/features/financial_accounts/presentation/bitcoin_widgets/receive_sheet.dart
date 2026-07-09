@@ -16,6 +16,8 @@ class ReceiveSheet extends ConsumerStatefulWidget {
 }
 
 class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
+  static const Duration _receiveStatusPollInterval = Duration(seconds: 2);
+
   final TextEditingController amount = TextEditingController();
   String expiry = '1H';
   bool oneTime = true;
@@ -261,7 +263,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
   void startPolling() {
     poller?.cancel();
     poller = Timer.periodic(
-      KeroseneMotion.notificationHold,
+      _receiveStatusPollInterval,
       (_) => refreshStatus(silent: true),
     );
   }

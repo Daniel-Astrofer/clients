@@ -221,6 +221,10 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
     return const <ReceivingRequestView>[];
   }
 
+  static String receiveRequestStatusFromKfe(Map<String, dynamic> json) {
+    return _receiveRequestStatus(json);
+  }
+
   static BitcoinAccount _accountFromKfeWallet(Map<String, dynamic> wallet) {
     final kind = wallet['kind']?.toString().toUpperCase() ?? 'INTERNAL';
     final isWatchOnly = kind == 'WATCH_ONLY';
@@ -465,7 +469,7 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
       accountId: accountId,
       address: address,
       bip21: bip21,
-      status: _receiveRequestStatus(json['status']?.toString()),
+      status: _receiveRequestStatus(json),
       amountSats: amountSats,
       expiry: (json['expiresAt'] ?? '').toString(),
       oneTime: oneTime,
@@ -487,7 +491,18 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
     );
   }
 
-  String _receiveRequestStatus(String? status) {
+  static String _receiveRequestStatus(Map<String, dynamic> json) {
+    final settlementStatus =
+        (json['settlementStatus'] ?? '').toString().toUpperCase();
+    final confirmations = _intFromJson(json['confirmations']);
+    if (settlementStatus == 'SETTLED') {
+      return 'PAID';
+    }
+    if (settlementStatus == 'VALIDATING') {
+      return confirmations > 0 ? 'CONFIRMING' : 'MEMPOOL_SEEN';
+    }
+
+    final status = json['status']?.toString();
     return switch ((status ?? '').toUpperCase()) {
       'OPEN' => 'ACTIVE',
       'PAID' => 'PAID',
