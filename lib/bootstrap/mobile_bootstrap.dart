@@ -190,16 +190,13 @@ class MyApp extends ConsumerWidget {
         '/settings': (context) => _PrivateMobileRoute(
               child: DeferredPage(
                 loadLibrary: settings.loadLibrary,
-                builder: (_) => settings.SettingsScreen(
-                  showPrimaryNavigation: true,
-                ),
+                builder: (_) => settings.SettingsScreen(),
               ),
             ),
         '/settings/notifications': (context) => _PrivateMobileRoute(
               child: DeferredPage(
                 loadLibrary: settings.loadLibrary,
                 builder: (_) => settings.SettingsScreen(
-                  showPrimaryNavigation: true,
                   openNotificationsPane: true,
                 ),
               ),

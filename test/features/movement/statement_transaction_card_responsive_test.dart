@@ -194,6 +194,65 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('stack expands and collapses following items smoothly', (
+      tester,
+    ) async {
+      configureViewport(tester, regularPortrait);
+
+      Widget buildStack({int? expandedIndex}) {
+        return MaterialApp(
+          home: Scaffold(
+            backgroundColor: Colors.black,
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: 320,
+                child: StatementTransactionScrollStack(
+                  itemCount: 3,
+                  itemExtent: 100,
+                  expandedItemExtent: 180,
+                  itemGap: 10,
+                  stackGap: 70,
+                  collapseStartFraction: 0,
+                  topAnchorOffset: 0,
+                  expandedIndex: expandedIndex,
+                  itemBuilder: (context, index) {
+                    final expanded = index == expandedIndex;
+                    return SizedBox(
+                      key: ValueKey('stack-item-$index'),
+                      height: expanded ? 180 : 100,
+                      child: ColoredBox(
+                        color: expanded ? Colors.white : Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildStack());
+      await tester.pumpAndSettle();
+      final collapsedTop =
+          tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
+
+      await tester.pumpWidget(buildStack(expandedIndex: 0));
+      await tester.pumpAndSettle();
+      final expandedTop =
+          tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
+
+      await tester.pumpWidget(buildStack());
+      await tester.pumpAndSettle();
+      final collapsedAgainTop =
+          tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
+
+      expect(expandedTop, closeTo(collapsedTop + 80, 0.5));
+      expect(collapsedAgainTop, closeTo(collapsedTop, 0.5));
+      expect(takeAllExceptions(tester), isEmpty);
+    });
+
     testWidgets('expanded detail rows copy exact transaction identifiers', (
       tester,
     ) async {

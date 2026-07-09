@@ -433,7 +433,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     final pageHorizontalPadding =
         responsive.isTinyPhone ? homeSize(18) : homeSize(24);
     final navigationClearance =
-        MediaQuery.viewPaddingOf(context).bottom + homeSize(112);
+        MediaQuery.viewPaddingOf(context).bottom + homeSize(32);
 
     final authState = ref.watch(authControllerProvider);
     final walletState = ref.watch(walletProvider);

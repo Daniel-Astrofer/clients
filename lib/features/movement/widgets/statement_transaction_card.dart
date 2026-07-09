@@ -111,7 +111,14 @@ class _StatementTransactionScrollStackState
               _positionedItem(
                 context,
                 index: index,
-                naturalTop: index * step,
+                naturalTop: _naturalTop(
+                  index,
+                  step: step,
+                  expandedIndex: expandedIndex,
+                  expandedExtra: expandedExtra,
+                ),
+                expandedIndex: expandedIndex,
+                expandedExtra: expandedExtra,
                 listTop: listTop,
                 collapseStartTop: collapseStartTop,
                 collapseEndTop: collapseEndTop,
@@ -129,13 +136,20 @@ class _StatementTransactionScrollStackState
   }
 
   List<int> _paintOrder(int? expandedIndex) {
-    return List<int>.generate(widget.itemCount, (index) => index);
+    final order = List<int>.generate(widget.itemCount, (index) => index);
+    if (expandedIndex == null) return order;
+    order
+      ..remove(expandedIndex)
+      ..add(expandedIndex);
+    return order;
   }
 
   Widget _positionedItem(
     BuildContext context, {
     required int index,
     required double naturalTop,
+    required int? expandedIndex,
+    required double expandedExtra,
     required double listTop,
     required double collapseStartTop,
     required double collapseEndTop,
@@ -143,16 +157,41 @@ class _StatementTransactionScrollStackState
     final collapseRange = math.max(1.0, collapseStartTop - collapseEndTop);
     final collapseProgress =
         ((collapseStartTop - listTop) / collapseRange).clamp(0.0, 1.0);
-    final stackedTop = index * widget.stackGap;
+    final stackedTop = _stackedTop(
+      index,
+      expandedIndex: expandedIndex,
+      expandedExtra: expandedExtra,
+    );
     final top = naturalTop + (stackedTop - naturalTop) * collapseProgress;
     return AnimatedPositioned(
-      duration: KeroseneMotion.duration(context, KeroseneMotion.fast),
-      curve: KeroseneMotion.standard,
+      duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
+      curve: KeroseneMotion.entrance,
       left: 0,
       right: 0,
       top: top,
       child: widget.itemBuilder(context, index),
     );
+  }
+
+  double _naturalTop(
+    int index, {
+    required double step,
+    required int? expandedIndex,
+    required double expandedExtra,
+  }) {
+    final baseTop = index * step;
+    if (expandedIndex == null || index <= expandedIndex) return baseTop;
+    return baseTop + expandedExtra;
+  }
+
+  double _stackedTop(
+    int index, {
+    required int? expandedIndex,
+    required double expandedExtra,
+  }) {
+    final baseTop = index * widget.stackGap;
+    if (expandedIndex == null || index <= expandedIndex) return baseTop;
+    return baseTop + expandedExtra;
   }
 
   double _globalTopOfList() {

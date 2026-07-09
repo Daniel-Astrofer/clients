@@ -29,193 +29,122 @@ void main() {
   Widget localizedApp({
     required Widget home,
     Map<String, WidgetBuilder>? routes,
+    String? initialRoute,
   }) {
     return MaterialApp(
       locale: const Locale('pt'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routes: routes ?? const <String, WidgetBuilder>{},
-      home: home,
+      initialRoute: initialRoute,
+      home: initialRoute == null ? home : null,
     );
   }
 
-  Widget navigationSurface(AppPrimaryDestination destination, String label) {
+  Widget routeSurface(String label) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(child: Text(label)),
+    );
+  }
+
+  Widget navigationOverlaySurface(AppPrimaryDestination destination) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          Center(child: Text(label)),
+          const Center(child: Text('route body')),
           AppPrimaryNavigationBar.overlay(currentDestination: destination),
         ],
       ),
     );
   }
 
-  Offset closedButtonCenter(Size size) {
-    return Offset(size.width / 2, size.height - 56);
-  }
-
-  testWidgets('expands centered without overflow on compact screens', (
+  testWidgets('primary navigation overlay no longer renders a nav button', (
     tester,
   ) async {
-    for (final size in const [
-      Size(300, 640),
-      Size(320, 720),
-      Size(360, 780),
-      Size(430, 900),
-    ]) {
-      await setViewport(tester, size);
-      await tester.pumpWidget(
-        localizedApp(
-          home: navigationSurface(AppPrimaryDestination.settings, 'settings'),
-        ),
-      );
+    await setViewport(tester, const Size(430, 900));
+    await tester.pumpWidget(
+      localizedApp(
+        home: navigationOverlaySurface(AppPrimaryDestination.home),
+      ),
+    );
 
-      await tester.tapAt(closedButtonCenter(size));
-      await tester.pumpAndSettle();
-
-      final navSurface = tester.getRect(
-        find.byKey(const ValueKey('appPrimaryNavigationSurface')),
-      );
-      expect(
-        (navSurface.center.dx - size.width / 2).abs(),
-        lessThanOrEqualTo(0.5),
-        reason: 'Primary navigation must open from the horizontal center.',
-      );
-      expect(navSurface.left, greaterThanOrEqualTo(16));
-      expect(navSurface.right, lessThanOrEqualTo(size.width - 16));
-
-      for (final destination in AppPrimaryDestination.values) {
-        final itemRect = tester.getRect(
-          find.byKey(
-            ValueKey('appPrimaryNavigationDestination-${destination.name}'),
-          ),
-        );
-        expect(
-          navSurface.contains(itemRect.topLeft) &&
-              navSurface.contains(itemRect.bottomRight),
-          isTrue,
-          reason: '${destination.name} must stay inside the navigation bar.',
-        );
-      }
-
-      for (final label in ['Início', 'Cartão', 'Histórico', 'Ajustes']) {
-        final labelRect = tester.getRect(find.text(label));
-        expect(
-          navSurface.contains(labelRect.topLeft) &&
-              navSurface.contains(labelRect.bottomRight),
-          isTrue,
-          reason: '$label must stay inside the navigation bar.',
-        );
-      }
-      expect(
-        takeAllExceptions(tester),
-        isEmpty,
-        reason: 'Primary navigation overflowed at $size.',
-      );
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    }
+    expect(
+      find.byKey(const ValueKey('appPrimaryNavigationSurface')),
+      findsNothing,
+    );
+    expect(find.text('Cartão'), findsNothing);
+    expect(find.text('Histórico'), findsNothing);
+    expect(find.text('Ajustes'), findsNothing);
+    expect(takeAllExceptions(tester), isEmpty);
   });
 
-  testWidgets('selecting a destination navigates after the close animation', (
+  testWidgets('navigateTo keeps internal screen elements routing correctly', (
     tester,
   ) async {
-    const size = Size(430, 900);
-    await setViewport(tester, size);
+    await setViewport(tester, const Size(430, 900));
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('pt'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
+      localizedApp(
         initialRoute: AppPrimaryDestination.home.routeName,
+        home: const SizedBox.shrink(),
         routes: {
-          AppPrimaryDestination.home.routeName: (_) => navigationSurface(
-                AppPrimaryDestination.home,
-                'home route',
-              ),
-          AppPrimaryDestination.card.routeName: (_) => navigationSurface(
-                AppPrimaryDestination.card,
-                'accounts route',
-              ),
-          AppPrimaryDestination.history.routeName: (_) => navigationSurface(
-                AppPrimaryDestination.history,
-                'history route',
-              ),
-          AppPrimaryDestination.settings.routeName: (_) => navigationSurface(
-                AppPrimaryDestination.settings,
-                'settings route',
-              ),
+          AppPrimaryDestination.home.routeName: (_) =>
+              const _InternalNavigationHome(),
+          AppPrimaryDestination.card.routeName: (_) =>
+              routeSurface('accounts route'),
+          AppPrimaryDestination.history.routeName: (_) =>
+              routeSurface('history route'),
+          AppPrimaryDestination.settings.routeName: (_) =>
+              routeSurface('settings route'),
         },
       ),
     );
 
-    await tester.tapAt(closedButtonCenter(size));
-    await tester.pumpAndSettle();
-
-    await tester.tap(
-      find.byKey(const ValueKey('appPrimaryNavigationDestination-card')),
-    );
+    await tester.tap(find.byKey(const ValueKey('openAccountsFromContent')));
     await tester.pumpAndSettle();
 
     expect(find.text('accounts route'), findsOneWidget);
     expect(takeAllExceptions(tester), isEmpty);
   });
 
-  testWidgets('modal barrier fades out instead of disappearing on close', (
+  testWidgets('settings screen does not reintroduce the floating nav button', (
     tester,
   ) async {
-    const size = Size(430, 900);
-    await setViewport(tester, size);
-    await tester.pumpWidget(
-      localizedApp(
-        home: navigationSurface(AppPrimaryDestination.home, 'home'),
-      ),
-    );
-
-    Finder barrierBox() {
-      return find.byWidgetPredicate((widget) {
-        return widget is ColoredBox &&
-            widget.color == Colors.black.withValues(alpha: 0.16);
-      });
-    }
-
-    await tester.tapAt(closedButtonCenter(size));
-    await tester.pumpAndSettle();
-
-    expect(barrierBox(), findsOneWidget);
-
-    await tester.tapAt(const Offset(20, 20));
-    await tester.pump();
-
-    expect(
-      barrierBox(),
-      findsOneWidget,
-      reason: 'The modal barrier should remain mounted while opacity fades.',
-    );
-
-    await tester.pumpAndSettle();
-    expect(takeAllExceptions(tester), isEmpty);
-  });
-
-  testWidgets('settings screen renders the primary navigation when requested', (
-    tester,
-  ) async {
-    const size = Size(430, 900);
-    await setViewport(tester, size);
+    await setViewport(tester, const Size(430, 900));
     await tester.pumpWidget(
       const ProviderScope(
         child: _SettingsNavigationHarness(),
       ),
     );
-
-    await tester.tapAt(closedButtonCenter(size));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ajustes'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('appPrimaryNavigationSurface')),
+      findsNothing,
+    );
     expect(takeAllExceptions(tester), isEmpty);
   });
+}
+
+class _InternalNavigationHome extends StatelessWidget {
+  const _InternalNavigationHome();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: TextButton(
+          key: const ValueKey('openAccountsFromContent'),
+          onPressed: () => AppPrimaryNavigationBar.navigateTo(
+            context,
+            AppPrimaryDestination.card,
+          ),
+          child: const Text('Abrir contas'),
+        ),
+      ),
+    );
+  }
 }
 
 class _SettingsNavigationHarness extends StatelessWidget {
