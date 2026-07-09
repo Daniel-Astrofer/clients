@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -10,6 +12,10 @@ import '../../../../core/l10n/l10n_extension.dart';
 import '../datasources/auth_local_datasource.dart';
 
 class TokenInterceptor extends QueuedInterceptor {
+  static const int _sessionCredentialWarmupAttempts = 12;
+  static const Duration _sessionCredentialWarmupDelay =
+      Duration(milliseconds: 150);
+
   final AuthLocalDataSource localDataSource;
   final ApiClient apiClient;
 
@@ -49,6 +55,12 @@ class TokenInterceptor extends QueuedInterceptor {
     final requestPath = Uri.tryParse(path)?.path ?? path;
     return _matchesPathPrefix(requestPath, '/kfe/transactions') ||
         _matchesPathPrefix(requestPath, '/api/admin/kfe/transactions');
+  }
+
+  @visibleForTesting
+  static bool requiresSessionCredential(String path) {
+    final requestPath = Uri.tryParse(path)?.path ?? path;
+    return _matchesPathPrefix(requestPath, '/kfe');
   }
 
   @visibleForTesting
@@ -121,6 +133,26 @@ class TokenInterceptor extends QueuedInterceptor {
     return authorization != null;
   }
 
+  static bool _isUsableJwt(String? token) {
+    final value = token?.trim();
+    return value != null && value.isNotEmpty && value.contains('.');
+  }
+
+  Future<String?> _getTokenForRequest({required bool waitForCredential}) async {
+    final attempts = waitForCredential ? _sessionCredentialWarmupAttempts : 1;
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      final token = await localDataSource.getToken();
+      if (_isUsableJwt(token)) {
+        return token!.trim();
+      }
+      if (!waitForCredential || attempt == attempts - 1) {
+        break;
+      }
+      await Future<void>.delayed(_sessionCredentialWarmupDelay);
+    }
+    return null;
+  }
+
   @override
   Future<void> onRequest(
     RequestOptions options,
@@ -145,12 +177,22 @@ class TokenInterceptor extends QueuedInterceptor {
 
       // 1. Injetar Token se não for rota de Auth/Onboarding e se não estiver presente
       if (!isOnboardingOrAuth && options.headers['Authorization'] == null) {
-        final token = await localDataSource.getToken();
-        if (token != null && token.isNotEmpty) {
-          // Double check it looks like a JWT (contains periods) to avoid "compact JWT string" errors
-          if (token.contains('.')) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
+        final requiresCredential = requiresSessionCredential(path);
+        final token = await _getTokenForRequest(
+          waitForCredential: requiresCredential,
+        );
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        } else if (requiresCredential) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.cancel,
+              message:
+                  'Session credential is not ready for private KFE request.',
+            ),
+          );
+          return;
         }
       }
 
@@ -177,6 +219,17 @@ class TokenInterceptor extends QueuedInterceptor {
     } catch (_) {
       debugPrint(
           'TokenInterceptor: request credentials could not be prepared.');
+      if (requiresSessionCredential(options.path) &&
+          !_hasAuthorizationHeader(options)) {
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            message: 'Session credential is not ready for private KFE request.',
+          ),
+        );
+        return;
+      }
     }
 
     handler.next(options);

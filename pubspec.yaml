@@ -85,6 +85,8 @@ dev_dependencies:
 dependency_overrides:
   lucide_icons:
     path: third_party/lucide_icons
+  tor:
+    path: third_party/tor
 flutter:
   uses-material-design: true
   generate: true

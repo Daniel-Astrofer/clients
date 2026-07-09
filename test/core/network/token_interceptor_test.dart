@@ -65,6 +65,23 @@ void main() {
     });
   });
 
+  group('TokenInterceptor.requiresSessionCredential', () {
+    test('requires local session credentials for private KFE routes', () {
+      expect(
+        TokenInterceptor.requiresSessionCredential('/kfe/dashboard'),
+        isTrue,
+      );
+      expect(
+        TokenInterceptor.requiresSessionCredential('/kfe/payment-requests'),
+        isTrue,
+      );
+      expect(
+        TokenInterceptor.requiresSessionCredential('/api/economy/btc-price'),
+        isFalse,
+      );
+    });
+  });
+
   group('TokenInterceptor.shouldInvalidateSessionForError', () {
     test('keeps session for KFE transaction authorization failures', () {
       expect(

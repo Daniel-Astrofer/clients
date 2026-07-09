@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:tor/tor.dart';
 
 /// Manages the embedded Tor client lifecycle using the `tor` package
@@ -26,6 +27,10 @@ class TorService {
   static const int _externalSocksPort = int.fromEnvironment(
     'KERO_TOR_SOCKS_PORT',
     defaultValue: 0,
+  );
+  static const bool _purgeEmbeddedTorStateOnRestart = bool.fromEnvironment(
+    'KERO_TOR_PURGE_STATE_ON_RESTART',
+    defaultValue: false,
   );
 
   bool get isRunning => _isRunning;
@@ -139,13 +144,13 @@ class TorService {
     debugPrint('🧅 TorService: Tor (Arti) stopped.');
   }
 
-  Future<bool> _restartTorProxyForStaleDescriptor() async {
+  Future<bool> _restartTorProxyForOnionFailure() async {
     final inFlight = _restartFuture;
     if (inFlight != null) return inFlight;
 
     _restartFuture = () async {
       debugPrint(
-        '🧅 TorService: Restarting Tor proxy after stale onion descriptor.',
+        '🧅 TorService: Restarting Tor proxy after onion connection failure.',
       );
       try {
         if (_isRunning) {
@@ -157,6 +162,9 @@ class TorService {
 
       _isRunning = false;
       _startFuture = null;
+      if (_purgeEmbeddedTorStateOnRestart) {
+        await _purgeEmbeddedTorState();
+      }
       final restarted = await start();
       if (restarted) {
         debugPrint(
@@ -170,6 +178,22 @@ class TorService {
     });
 
     return _restartFuture!;
+  }
+
+  Future<void> _purgeEmbeddedTorState() async {
+    if (_usesExternalSocksProxy) return;
+
+    try {
+      final appSupportDir = await getApplicationSupportDirectory();
+      for (final name in const ['tor_state', 'tor_cache']) {
+        final dir = Directory('${appSupportDir.path}/$name');
+        if (!await dir.exists()) continue;
+        await dir.delete(recursive: true);
+        debugPrint('🧅 TorService: Deleted stale Arti $name directory.');
+      }
+    } catch (error) {
+      debugPrint('🧅 TorService: Failed to purge Arti state/cache: $error');
+    }
   }
 
   /// Polls the SOCKS port until a raw TCP connection succeeds.
@@ -328,7 +352,7 @@ class TorService {
   }) async {
     int relayAttempts = 0;
     const int maxRelayAttempts = 10;
-    bool restartedForStaleDescriptor = false;
+    bool restartedForOnionFailure = false;
     Socket? torSocket;
     StreamIterator<Uint8List>? torIter;
     final readBuffer = <int>[];
@@ -409,12 +433,16 @@ class TorService {
           ' onion $logPrefix: SOCKS5 Connect failure to $targetHost:$targetPort: $errorMsg on attempt $relayAttempts/$maxRelayAttempts',
         );
 
-        if (errorCode == 0xF2 && !restartedForStaleDescriptor) {
-          restartedForStaleDescriptor = true;
-          final restarted = await _restartTorProxyForStaleDescriptor();
+        if (_shouldRestartForOnionConnectError(
+              errorCode: errorCode,
+              targetHost: targetHost,
+            ) &&
+            !restartedForOnionFailure) {
+          restartedForOnionFailure = true;
+          final restarted = await _restartTorProxyForOnionFailure();
           if (!restarted) {
             throw const SocketException(
-              'Tor restart failed after stale onion descriptor',
+              'Tor restart failed after onion connect failure',
             );
           }
           relayAttempts = 0;
@@ -431,11 +459,15 @@ class TorService {
             'Tor SOCKS5 to $targetHost refused after $maxRelayAttempts attempts: $errorMsg',
           );
         }
-      } catch (_) {
+      } catch (e, stackTrace) {
+        debugPrint(
+          ' onion $logPrefix: SOCKS5 attempt $relayAttempts/$maxRelayAttempts exception: $e',
+        );
+        debugPrint(' onion $logPrefix: SOCKS5 stack: $stackTrace');
         if (relayAttempts >= maxRelayAttempts) rethrow;
       }
 
-      await Future.delayed(Duration(seconds: relayAttempts * 3));
+      await Future.delayed(_relayRetryDelay(relayAttempts));
     }
 
     throw const SocketException(
@@ -491,11 +523,32 @@ class TorService {
   }
 
   bool _isTerminalOnionDescriptorError(int code) =>
-      code == 0xF0 ||
-      code == 0xF1 ||
-      code == 0xF5 ||
-      code == 0xF6 ||
-      code == 0xF7;
+      code == 0xF1 || code == 0xF6 || code == 0xF7;
+
+  bool _shouldRestartForOnionConnectError({
+    required int errorCode,
+    required String targetHost,
+  }) {
+    if (_usesExternalSocksProxy ||
+        !targetHost.toLowerCase().endsWith('.onion')) {
+      return false;
+    }
+
+    // Arti can collapse onion-service descriptor/rendezvous failures into the
+    // generic SOCKS 0x01 code. Restart once so a stale client state does not
+    // trap the app in a request loop after the hidden service is already alive.
+    return errorCode == 0x01 ||
+        errorCode == 0xF0 ||
+        errorCode == 0xF2 ||
+        errorCode == 0xF3 ||
+        errorCode == 0xF4 ||
+        errorCode == 0xF5;
+  }
+
+  Duration _relayRetryDelay(int attempt) {
+    final seconds = attempt * 3;
+    return Duration(seconds: seconds > 15 ? 15 : seconds);
+  }
 }
 
 /// Provides access to the singleton TorService.

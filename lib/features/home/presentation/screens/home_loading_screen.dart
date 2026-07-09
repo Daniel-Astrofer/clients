@@ -14,6 +14,7 @@ import 'package:kerosene/features/financial_accounts/presentation/state/wallet_s
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     deferred as home;
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
+import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 
 class HomeLoadingScreen extends ConsumerStatefulWidget {
   const HomeLoadingScreen({super.key});
@@ -27,13 +28,17 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
   Timer? _timeoutTimer;
   Timer? _minDurationTimer;
   Timer? _walletRetryTimer;
+  Timer? _sessionReadyRetryTimer;
   bool _isNavigating = false;
   bool _minDurationPassed = false;
   bool _hasError = false;
   String _errorMessage = "";
   bool _walletSetupRedirectAttempted = false;
+  bool _initialLoadStarted = false;
   int _walletRetryAttempt = 0;
+  int _sessionReadyRetryAttempt = 0;
   static const int _maxWalletRetryAttempts = 3;
+  static const int _maxSessionReadyRetryAttempts = 20;
 
   @override
   void initState() {
@@ -52,8 +57,7 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     // Trigger wallet loading
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(walletProvider.notifier).refresh();
-      ref.invalidate(transactionHistoryProvider);
+      unawaited(_startInitialLoadWhenSessionReady());
     });
   }
 
@@ -62,7 +66,59 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
     _minDurationTimer?.cancel();
     _timeoutTimer?.cancel();
     _walletRetryTimer?.cancel();
+    _sessionReadyRetryTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _startInitialLoadWhenSessionReady() async {
+    if (_initialLoadStarted || !mounted) return;
+
+    final authState = ref.read(authControllerProvider);
+    final sessionScope = ref.read(sessionStorageScopeProvider);
+    if (authState is! AuthAuthenticated || sessionScope == null) {
+      _scheduleSessionReadyRetry();
+      return;
+    }
+
+    final token = await ref.read(authLocalDataSourceProvider).getToken();
+    if (!mounted || _initialLoadStarted) return;
+    if (!_isUsableJwt(token)) {
+      _scheduleSessionReadyRetry();
+      return;
+    }
+
+    _initialLoadStarted = true;
+    _sessionReadyRetryTimer?.cancel();
+    _sessionReadyRetryTimer = null;
+    ref.read(walletProvider.notifier).refresh();
+    ref.invalidate(transactionHistoryProvider);
+  }
+
+  bool _isUsableJwt(String? token) {
+    final value = token?.trim();
+    return value != null && value.isNotEmpty && value.contains('.');
+  }
+
+  void _scheduleSessionReadyRetry() {
+    if (!mounted ||
+        _initialLoadStarted ||
+        (_sessionReadyRetryTimer?.isActive ?? false)) {
+      return;
+    }
+
+    if (_sessionReadyRetryAttempt >= _maxSessionReadyRetryAttempts) {
+      unawaited(ref.read(authControllerProvider.notifier).retrySessionCheck());
+      return;
+    }
+
+    final delay = _sessionReadyRetryAttempt < 8
+        ? const Duration(milliseconds: 250)
+        : const Duration(milliseconds: 750);
+    _sessionReadyRetryAttempt += 1;
+    _sessionReadyRetryTimer = Timer(delay, () {
+      if (!mounted) return;
+      unawaited(_startInitialLoadWhenSessionReady());
+    });
   }
 
   void _scheduleWalletRetry() {
@@ -89,8 +145,12 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
         _hasError = false;
         _errorMessage = '';
       });
-      ref.read(walletProvider.notifier).refresh();
-      ref.invalidate(transactionHistoryProvider);
+      if (_initialLoadStarted) {
+        ref.read(walletProvider.notifier).refresh();
+        ref.invalidate(transactionHistoryProvider);
+      } else {
+        unawaited(_startInitialLoadWhenSessionReady());
+      }
     });
   }
 
@@ -177,6 +237,12 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
     final authState = ref.watch(authControllerProvider);
     final authenticatedUserId =
         authState is AuthAuthenticated ? authState.user.id : null;
+
+    ref.listen<AuthState>(authControllerProvider, (_, next) {
+      if (next is AuthAuthenticated) {
+        unawaited(_startInitialLoadWhenSessionReady());
+      }
+    });
 
     ref.listen<WalletState>(walletProvider, (_, next) {
       if (next is WalletError) {
