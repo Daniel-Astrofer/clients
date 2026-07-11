@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 
@@ -18,7 +19,14 @@ void main() {
         wallet: mockWallets.first,
         onChainWallet: true,
         amountBtc: 0.0042,
+        paymentRequestUri: 'kerosene://payment/pay/golden-request',
+        paymentRail: 'ONCHAIN',
         supportsNfc: () async => true,
+        startNfcWrite: ({
+          required String paymentRequestUri,
+          required VoidCallback onWritten,
+          required ValueChanged<String> onError,
+        }) async {},
       ),
     );
     await screenMatchesGolden(

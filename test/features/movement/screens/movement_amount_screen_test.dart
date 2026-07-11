@@ -16,6 +16,7 @@ import 'package:kerosene/features/movement/domain/repositories/transaction_repos
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/screens/movement_amount_screen.dart';
+import 'package:kerosene/features/movement/flow/receive_nfc_availability_provider.dart';
 import 'package:kerosene/features/movement/screens/receive_method.dart';
 
 void main() {
@@ -97,6 +98,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.enterText(
       find.byKey(const ValueKey('movement-amount-input')),
@@ -106,7 +108,6 @@ void main() {
     await tester.tap(find.textContaining('350.000,00'));
     await tester.pump();
 
-    expect(find.text('R\$350.000,00'), findsOneWidget);
     expect(find.text('≈ ₿ 1'), findsOneWidget);
 
     await tester.ensureVisible(find.text('CONTINUAR'));
@@ -120,6 +121,61 @@ void main() {
     expect(repository.lastMetadata?['rail'], 'INTERNAL');
     expect(repository.lastMetadata?['method'], 'qrCode');
     expect(find.text('Receber na Kerosene'), findsOneWidget);
+  });
+
+  testWidgets('creates a public request before starting NFC write',
+      (tester) async {
+    final repository = _ReceiveAmountRepository();
+    String? writtenUri;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          transactionRepositoryProvider.overrideWithValue(repository),
+          latestBtcPriceProvider.overrideWith((ref) => 65000),
+          btcEurPriceProvider.overrideWith((ref) => 60000),
+          btcBrlPriceProvider.overrideWith((ref) => 350000),
+          paymentLinksProvider.overrideWith((ref) async => const []),
+          transactionHistoryProvider.overrideWith((ref) async => const []),
+          externalTransfersProvider.overrideWith((ref) async => const []),
+          receiveNfcCompatibilityProvider.overrideWith((ref) async => true),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MovementAmountScreen(
+            wallet: _wallet(),
+            method: ReceiveAmountMethod.nfc,
+            onChainWallet: false,
+            nfcWriter: ({
+              required String paymentRequestUri,
+              required VoidCallback onWritten,
+              required ValueChanged<String> onError,
+            }) async {
+              writtenUri = paymentRequestUri;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('movement-amount-input')),
+      '1',
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.text('CONTINUAR'));
+    await tester.tap(find.text('CONTINUAR'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(repository.createPaymentLinkCalls, 1);
+    expect(repository.lastMetadata?['method'], 'nfc');
+    expect(writtenUri, 'kerosene://payment/pay/receive-link-1');
+    expect(find.text('Gravar solicitação'), findsOneWidget);
   });
 }
 

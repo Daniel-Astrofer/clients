@@ -12,25 +12,41 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
+import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/flow/receive_nfc_availability_provider.dart';
+import 'package:nfc_manager/nfc_manager.dart';
+import 'package:nfc_manager_ndef/nfc_manager_ndef.dart';
 
 enum ReceiveNfcStage { methodSelection, searching, found, success }
 
 enum ReceiveNfcMethod { direct, lightning, onchain, automatic }
 
+typedef NfcPaymentRequestWriter = Future<void> Function({
+  required String paymentRequestUri,
+  required VoidCallback onWritten,
+  required ValueChanged<String> onError,
+});
+
 class ReceiveNfcFlowScreen extends StatefulWidget {
   final Wallet wallet;
   final bool onChainWallet;
   final double amountBtc;
+  final String paymentRequestUri;
+  final String paymentRail;
   final Future<bool> Function()? supportsNfc;
+  final NfcPaymentRequestWriter? startNfcWrite;
 
   const ReceiveNfcFlowScreen({
     super.key,
     required this.wallet,
     required this.onChainWallet,
     required this.amountBtc,
+    this.paymentRequestUri = 'kerosene://payment/pay/preview-request',
+    this.paymentRail = 'ONCHAIN',
     this.supportsNfc,
+    this.startNfcWrite,
   });
 
   @override
@@ -50,10 +66,13 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   late final AnimationController _pulseController;
   final List<Timer> _timers = [];
 
-  ReceiveNfcStage _stage = ReceiveNfcStage.methodSelection;
+  ReceiveNfcStage _stage = ReceiveNfcStage.searching;
   ReceiveNfcMethod _detectedMethod = ReceiveNfcMethod.direct;
   DateTime _completedAt = DateTime.now();
   bool _checkingCompatibility = true;
+  bool _sessionActive = false;
+  bool _writeCompleted = false;
+  String _nfcStatus = 'Preparando a solicitação NFC';
 
   @override
   void initState() {
@@ -62,6 +81,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
       vsync: this,
       duration: KeroseneMotion.ceremonial,
     )..repeat();
+    _detectedMethod = _methodForRail(widget.paymentRail);
     unawaited(_ensureNfcCompatible());
   }
 
@@ -70,12 +90,15 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     for (final timer in _timers) {
       timer.cancel();
     }
+    if (_sessionActive) {
+      unawaited(NfcManager.instance.stopSession());
+    }
     _pulseController.dispose();
     super.dispose();
   }
 
   Future<void> _ensureNfcCompatible() async {
-    final compatible =
+    final compatible = widget.startNfcWrite != null ||
         await (widget.supportsNfc ?? keroseneDeviceSupportsNfc)();
     if (!mounted) return;
     if (!compatible) {
@@ -83,6 +106,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
       return;
     }
     setState(() => _checkingCompatibility = false);
+    unawaited(_startNfcWriteSession());
   }
 
   void _setStage(ReceiveNfcStage stage) {
@@ -94,18 +118,118 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
 
   void _selectMethod(ReceiveNfcMethod method) {
     HapticFeedback.selectionClick();
-    _clearTimers();
     _detectedMethod = _resolveDetectedMethod(method);
-    setState(() => _stage = ReceiveNfcStage.searching);
-    _timers
-      ..add(Timer(KeroseneMotion.nfcSceneIntro, () {
-        _setStage(ReceiveNfcStage.found);
-      }))
-      ..add(Timer(KeroseneMotion.nfcSceneReady, () {
-        _completedAt = DateTime.now();
-        HapticFeedback.mediumImpact();
-        _setStage(ReceiveNfcStage.success);
-      }));
+    unawaited(_startNfcWriteSession());
+  }
+
+  ReceiveNfcMethod _methodForRail(String rail) {
+    return switch (rail.trim().toUpperCase()) {
+      'LIGHTNING' => ReceiveNfcMethod.lightning,
+      'INTERNAL' => ReceiveNfcMethod.direct,
+      _ => ReceiveNfcMethod.onchain,
+    };
+  }
+
+  Future<void> _startNfcWriteSession() async {
+    if (_sessionActive || _writeCompleted) return;
+    _clearTimers();
+
+    final injectedWriter = widget.startNfcWrite;
+    if (injectedWriter != null) {
+      setState(() {
+        _stage = ReceiveNfcStage.searching;
+        _nfcStatus = 'Aproxime uma tag NFC gravável';
+        _sessionActive = true;
+      });
+      await injectedWriter(
+        paymentRequestUri: widget.paymentRequestUri,
+        onWritten: _completeNfcWrite,
+        onError: _failNfcWrite,
+      );
+      return;
+    }
+
+    final availability = await NfcManager.instance.checkAvailability();
+    if (!mounted) return;
+    if (availability != NfcAvailability.enabled) {
+      _failNfcWrite(
+        availability == NfcAvailability.disabled
+            ? 'Ative o NFC do dispositivo para gravar a solicitação.'
+            : 'Este dispositivo não oferece gravação NFC.',
+      );
+      return;
+    }
+
+    final message = NfcPaymentRequestCodec.encodeUri(
+      widget.paymentRequestUri,
+    );
+    setState(() {
+      _stage = ReceiveNfcStage.searching;
+      _nfcStatus = 'Aproxime uma tag NFC gravável';
+      _sessionActive = true;
+    });
+
+    try {
+      await NfcManager.instance.startSession(
+        pollingOptions: const {
+          NfcPollingOption.iso14443,
+          NfcPollingOption.iso15693,
+          NfcPollingOption.iso18092,
+        },
+        alertMessageIos: 'Aproxime uma tag NFC gravável.',
+        onDiscovered: (tag) async {
+          if (_writeCompleted) return;
+          try {
+            final ndef = Ndef.from(tag);
+            if (ndef == null) {
+              throw StateError('A tag não oferece suporte a NDEF.');
+            }
+            if (!ndef.isWritable) {
+              throw StateError('A tag NFC está protegida contra gravação.');
+            }
+            if (ndef.maxSize > 0 && message.byteLength > ndef.maxSize) {
+              throw StateError('A solicitação não cabe nesta tag NFC.');
+            }
+
+            await ndef.write(message: message);
+            _sessionActive = false;
+            await NfcManager.instance.stopSession(
+              alertMessageIos: 'Solicitação gravada.',
+            );
+            _completeNfcWrite();
+          } catch (error) {
+            _failNfcWrite(error.toString().replaceFirst('Bad state: ', ''));
+          }
+        },
+      );
+    } catch (error) {
+      _failNfcWrite('Não foi possível iniciar a sessão NFC: $error');
+    }
+  }
+
+  void _completeNfcWrite() {
+    if (_writeCompleted || !mounted) return;
+    _writeCompleted = true;
+    _sessionActive = false;
+    _completedAt = DateTime.now();
+    HapticFeedback.mediumImpact();
+    _setStage(ReceiveNfcStage.found);
+    _timers.add(Timer(KeroseneMotion.calm, () {
+      _setStage(ReceiveNfcStage.success);
+    }));
+  }
+
+  void _failNfcWrite(String message) {
+    if (_sessionActive) {
+      unawaited(NfcManager.instance.stopSession(errorMessageIos: message));
+    }
+    _sessionActive = false;
+    if (!mounted) return;
+    setState(() => _nfcStatus = message);
+    SnackbarHelper.showError(message);
+    _timers.add(Timer(KeroseneMotion.ceremonial, () {
+      if (mounted) Navigator.of(context).maybePop();
+    }));
   }
 
   ReceiveNfcMethod _resolveDetectedMethod(ReceiveNfcMethod method) {
@@ -135,12 +259,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   }
 
   String get _statusLabel {
-    return switch (_detectedMethod) {
-      ReceiveNfcMethod.direct => 'Confirmado na Kerosene',
-      ReceiveNfcMethod.lightning => 'Confirmado via Lightning',
-      ReceiveNfcMethod.onchain => 'Aguardando rede Bitcoin',
-      ReceiveNfcMethod.automatic => 'Confirmado na Kerosene',
-    };
+    return 'Aguardando pagamento';
   }
 
   String get _networkLabel {
@@ -153,25 +272,12 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   }
 
   String get _detectedTitle {
-    return switch (_detectedMethod) {
-      ReceiveNfcMethod.direct => 'Transação Direct detectada',
-      ReceiveNfcMethod.lightning => 'Transação Lightning detectada',
-      ReceiveNfcMethod.onchain => 'Transação On-chain detectada',
-      ReceiveNfcMethod.automatic => 'Transação Direct detectada',
-    };
+    return 'Solicitação NFC gravada';
   }
 
   String get _detectedDescription {
-    return switch (_detectedMethod) {
-      ReceiveNfcMethod.direct =>
-        'Transferência interna reconhecida. Aguardando autenticação do pagador.',
-      ReceiveNfcMethod.lightning =>
-        'Invoice Lightning reconhecida. Validando rota e liquidez.',
-      ReceiveNfcMethod.onchain =>
-        'Pedido on-chain reconhecido. Aguardando propagação da transação.',
-      ReceiveNfcMethod.automatic =>
-        'Método detectado automaticamente. Aguardando confirmação do pagador.',
-    };
+    return 'A tag contém o identificador público do pedido. O pagamento só '
+        'será confirmado depois que o pagador abrir e concluir a solicitação.';
   }
 
   @override
@@ -216,9 +322,6 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   }
 
   Widget _buildSearching(BuildContext context) {
-    const searchingTitle = 'Aproxime o dispositivo';
-    const searchingFooter =
-        'Aproxime o dispositivo do pagador ao sensor NFC do seu celular';
     return _buildHeaderLayout(
       context,
       center: Column(
@@ -227,7 +330,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
           _buildNfcOrb(size: 200),
           const SizedBox(height: 32),
           Text(
-            searchingTitle,
+            'Gravar solicitação',
             textAlign: TextAlign.center,
             style: AppTypography.newsreader(
               color: _text,
@@ -240,7 +343,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
         ],
       ),
       footer: Text(
-        searchingFooter,
+        _nfcStatus,
         textAlign: TextAlign.center,
         style: AppTypography.inter(
           color: _text.withValues(alpha: 0.9),
@@ -452,7 +555,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   }
 
   Widget _buildSuccess(BuildContext context) {
-    const successTitle = 'Transação reconhecida';
+    const successTitle = 'Pedido NFC preparado';
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       child: Column(

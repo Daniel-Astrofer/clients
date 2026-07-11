@@ -291,7 +291,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     final amountBtc =
         amountSats > 0 ? amountSats / 100000000.0 : (fallbackAmountBtc ?? 0);
     return PaymentLink.fromJson({
-      'id': payload['id'] ?? payload['transactionId'],
+      'id': payload['publicId'] ?? payload['id'] ?? payload['transactionId'],
       'amountBtc': amountBtc,
       'description': payload['memo']?.toString() ??
           fallbackDescription ??

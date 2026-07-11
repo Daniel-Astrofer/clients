@@ -5,49 +5,42 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/movement/screens/receive_nfc_flow_screen.dart';
 
 void main() {
-  testWidgets('starts NFC receive flow with method selection', (tester) async {
-    await _pumpScreen(tester);
+  testWidgets('only reports success after the NFC request is written',
+      (tester) async {
+    VoidCallback? writtenCallback;
+    await _pumpScreen(
+      tester,
+      writer: ({
+        required String paymentRequestUri,
+        required VoidCallback onWritten,
+        required ValueChanged<String> onError,
+      }) async {
+        expect(
+          paymentRequestUri,
+          'kerosene://payment/pay/public-request-id',
+        );
+        writtenCallback = onWritten;
+      },
+    );
 
-    expect(find.text('Selecionar método'), findsOneWidget);
-    expect(find.text('Direct'), findsWidgets);
-    expect(find.text('Lightning'), findsWidgets);
+    expect(find.text('Gravar solicitação'), findsOneWidget);
+    expect(find.text('Pedido NFC preparado'), findsNothing);
+
+    writtenCallback!();
+    await tester.pump();
+    expect(find.text('Solicitação NFC gravada'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1100));
+    expect(find.text('Pedido NFC preparado'), findsOneWidget);
+    expect(find.text('Aguardando pagamento'), findsWidgets);
     expect(find.text('On-chain'), findsWidgets);
-    expect(find.text('Detectar\nautomaticamente'), findsOneWidget);
-  });
-
-  testWidgets('shows detected Lightning transaction with fee details',
-      (tester) async {
-    await _pumpScreen(tester);
-
-    await tester.tap(find.text('Lightning').first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1700));
-
-    expect(find.text('Transação Lightning detectada'), findsOneWidget);
-
-    await tester.pump(const Duration(milliseconds: 2400));
-
-    expect(find.text('Transação reconhecida'), findsOneWidget);
-    expect(find.text('Lightning'), findsWidgets);
-    expect(find.text('Taxa Lightning'), findsOneWidget);
-  });
-
-  testWidgets('shows direct transaction details without network fee',
-      (tester) async {
-    await _pumpScreen(tester);
-
-    await tester.tap(find.text('Direct').first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 4200));
-
-    expect(find.text('Transação reconhecida'), findsOneWidget);
-    expect(find.text('Direct'), findsWidgets);
-    expect(find.text('Taxa Lightning'), findsNothing);
-    expect(find.text('Taxa de rede'), findsNothing);
   });
 }
 
-Future<void> _pumpScreen(WidgetTester tester) async {
+Future<void> _pumpScreen(
+  WidgetTester tester, {
+  required NfcPaymentRequestWriter writer,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -61,7 +54,10 @@ Future<void> _pumpScreen(WidgetTester tester) async {
         wallet: _wallet(),
         onChainWallet: false,
         amountBtc: 0.0042,
+        paymentRequestUri: 'kerosene://payment/pay/public-request-id',
+        paymentRail: 'ONCHAIN',
         supportsNfc: () async => true,
+        startNfcWrite: writer,
       ),
     ),
   );

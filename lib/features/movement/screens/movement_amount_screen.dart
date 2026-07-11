@@ -6,6 +6,7 @@ import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/movement/flow/movement_flow_coordinator.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
@@ -21,12 +22,14 @@ class MovementAmountScreen extends ConsumerStatefulWidget {
   final Wallet wallet;
   final ReceiveAmountMethod method;
   final bool onChainWallet;
+  final NfcPaymentRequestWriter? nfcWriter;
 
   const MovementAmountScreen({
     super.key,
     required this.wallet,
     required this.method,
     required this.onChainWallet,
+    this.nfcWriter,
   });
 
   @override
@@ -50,17 +53,6 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         Navigator.of(context).maybePop();
         return;
       }
-      if (!mounted) return;
-      Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (context) => ReceiveNfcFlowScreen(
-            wallet: widget.wallet,
-            onChainWallet: widget.onChainWallet,
-            amountBtc: amountBtc,
-          ),
-        ),
-      );
-      return;
     }
 
     setState(() => _isContinuing = true);
@@ -70,6 +62,28 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         expiresInMinutes: flowState.paymentLinkExpiresInMinutes,
       );
       if (!mounted) return;
+
+      if (widget.method == ReceiveAmountMethod.nfc) {
+        if (paymentLink == null || paymentLink.id.trim().isEmpty) {
+          throw const FormatException(
+            'A solicitação NFC não retornou um identificador público.',
+          );
+        }
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (context) => ReceiveNfcFlowScreen(
+              wallet: widget.wallet,
+              onChainWallet: widget.onChainWallet,
+              amountBtc: amountBtc,
+              paymentRequestUri:
+                  QrPaymentParser.encodePaymentLink(paymentLink.id),
+              paymentRail: paymentLink.paymentRail,
+              startNfcWrite: widget.nfcWriter,
+            ),
+          ),
+        );
+        return;
+      }
 
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
@@ -99,7 +113,8 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     required int expiresInMinutes,
   }) async {
     if (widget.method != ReceiveAmountMethod.paymentLink &&
-        widget.method != ReceiveAmountMethod.qrCode) {
+        widget.method != ReceiveAmountMethod.qrCode &&
+        widget.method != ReceiveAmountMethod.nfc) {
       return null;
     }
 

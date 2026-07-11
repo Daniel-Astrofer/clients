@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager_ndef/nfc_manager_ndef.dart';
@@ -31,28 +31,7 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
     final message = ndef.cachedMessage;
     if (message == null) return null;
 
-    for (final record in message.records) {
-      final payload = record.payload;
-      if (payload.isEmpty) continue;
-
-      final full = utf8.decode(payload, allowMalformed: true);
-      if (_looksLikePaymentRequest(full)) return full;
-
-      if (payload.length > 1) {
-        final withoutFirst = utf8.decode(
-          payload.sublist(1),
-          allowMalformed: true,
-        );
-        if (_looksLikePaymentRequest(withoutFirst)) return withoutFirst;
-      }
-    }
-    return null;
-  }
-
-  bool _looksLikePaymentRequest(String s) {
-    final t = s.trim();
-    return t.toLowerCase().startsWith('bitcoin:') ||
-        (t.startsWith('{') && t.contains('"address"'));
+    return NfcPaymentRequestCodec.decodeMessage(message);
   }
 
   void _startNfcSession() async {
@@ -85,15 +64,8 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
             final ndef = Ndef.from(tag)!;
             final message = await ndef.read();
             if (message != null) {
-              for (final record in message.records) {
-                final payload = record.payload;
-                if (payload.isEmpty) continue;
-                final full = utf8.decode(payload, allowMalformed: true);
-                if (_looksLikePaymentRequest(full)) {
-                  paymentRequestString = full;
-                  break;
-                }
-              }
+              paymentRequestString =
+                  NfcPaymentRequestCodec.decodeMessage(message);
             }
           } catch (_) {}
         }
