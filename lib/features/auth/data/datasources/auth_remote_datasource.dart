@@ -249,8 +249,8 @@ abstract class AuthRemoteDataSource {
 
   Future<AdminLoginResult> pollAdminLogin(String attemptId);
 
-  /// Verifica TOTP de login — retorna JWT
-  Future<String> verifyLoginTotp({
+  /// Verifica TOTP de login — retorna a sessão autenticada completa
+  Future<LoginResult> verifyLoginTotp({
     required String username,
     required String totpCode,
     required String preAuthToken,
@@ -607,7 +607,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   // ─── Login TOTP verify ──────────────────────────────────────────────────────
 
   @override
-  Future<String> verifyLoginTotp({
+  Future<LoginResult> verifyLoginTotp({
     required String username,
     required String totpCode,
     required String preAuthToken,
@@ -621,8 +621,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'preAuthToken': preAuthToken,
         },
       );
-      final result = LoginResult.fromResponseData(response.data);
-      return result.jwt;
+      return LoginResult.fromResponseData(response.data);
     } catch (e) {
       if (e is AppException) rethrow;
       throw ServerException(

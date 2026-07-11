@@ -165,16 +165,23 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      final jwt = await remoteDataSource.verifyLoginTotp(
+      final loginResult = await remoteDataSource.verifyLoginTotp(
         username: username,
         totpCode: totpCode,
         preAuthToken: token,
       );
+      final userId = loginResult.userId.trim();
+      final jwt = loginResult.jwt.trim();
+      if (loginResult.requiresTotp || userId.isEmpty || jwt.isEmpty) {
+        throw ServerException(
+          message: 'Não conseguimos concluir a autenticação agora.',
+        );
+      }
 
       await localDataSource.saveToken(jwt);
 
       final user = UserModel(
-        id: '0',
+        id: userId,
         username: username,
         createdAt: DateTime.now(),
       );
