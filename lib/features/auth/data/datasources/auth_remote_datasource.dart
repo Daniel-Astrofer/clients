@@ -934,7 +934,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> logout() async {
-    // Logout é realizado localmente limpando o token armazenado.
+    await apiClient.post(AppConfig.authLogout);
   }
 
   @override

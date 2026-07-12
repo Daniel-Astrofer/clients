@@ -82,6 +82,7 @@ class AppConfig {
   static const String authSignupVerify = '/auth/signup/totp/verify';
   static const String authLogin = '/auth/login';
   static const String authLoginVerify = '/auth/login/totp/verify';
+  static const String authLogout = '/auth/logout';
   static const String authPowChallenge = '/auth/pow/challenge';
   static const String authEmergencyRecoveryStart =
       '/auth/recovery/emergency/start';
