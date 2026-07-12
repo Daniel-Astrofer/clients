@@ -123,7 +123,7 @@ Future<dynamic> _confirmPaymentLink({
 }) async {
   final result = await ref.read(paymentLinkNotifierProvider.notifier).pay(
         linkId: linkId,
-        payerWalletName: wallet.name,
+        payerWalletId: wallet.id,
         totpCode: authResult.totpCode,
         confirmationPassphrase: authResult.confirmationPassphrase,
         passkeyAssertionJson: authResult.passkeyAssertionJson,

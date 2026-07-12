@@ -642,7 +642,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
 
   Future<TxStatus?> pay({
     required String linkId,
-    required String payerWalletName,
+    required String payerWalletId,
     String? totpCode,
     String? confirmationPassphrase,
     String? passkeyAssertionJson,
@@ -655,10 +655,11 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         : const Uuid().v4();
     try {
       final link = await _repository.getPaymentLink(linkId);
-      _ensurePaymentLinkIsNotSelfPay(link);
+      _ensurePaymentLinkPayable(link);
       final result = await _repository.withdraw(
-        fromWalletName: payerWalletName,
+        fromWalletName: payerWalletId,
         toAddress: _withdrawalDestination(link),
+        paymentRequest: _paymentRequestPublicId(link),
         amount: link.amountBtc,
         description: link.description.isNotEmpty
             ? link.description
@@ -681,7 +682,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         return _retryPaymentLinkWithPasskeyChallenge(
           initialChallenge: challenge,
           linkId: linkId,
-          payerWalletName: payerWalletName,
+          payerWalletId: payerWalletId,
           confirmationPassphrase: confirmationPassphrase,
           totpCode: totpCode,
           idempotencyKey: operationIdempotencyKey,
@@ -705,6 +706,27 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     }
   }
 
+  void _ensurePaymentLinkPayable(PaymentLink link) {
+    _ensurePaymentLinkIsNotSelfPay(link);
+    final status = link.status.trim().toUpperCase();
+    if (const {'PAID', 'COMPLETED', 'SETTLED'}.contains(status)) {
+      throw const ValidationException(
+        message: 'Payment link has already been paid.',
+        statusCode: 409,
+        errorCode: 'ERR_KFE_PAYMENT_LINK_ALREADY_PAID',
+      );
+    }
+    if (link.terminal ||
+        link.isExpired ||
+        const {'CANCELLED', 'CANCELED', 'HIDDEN', 'EXPIRED'}.contains(status)) {
+      throw const ValidationException(
+        message: 'Payment link is no longer open.',
+        statusCode: 409,
+        errorCode: 'ERR_KFE_PAYMENT_LINK_NOT_OPEN',
+      );
+    }
+  }
+
   String _withdrawalDestination(PaymentLink link) {
     if (link.paymentRail.trim().toUpperCase() != 'INTERNAL') {
       return link.depositAddress;
@@ -721,10 +743,26 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     return destinationHash;
   }
 
+  String? _paymentRequestPublicId(PaymentLink link) {
+    if (link.paymentRail.trim().toUpperCase() != 'INTERNAL') {
+      return null;
+    }
+
+    final publicId = link.id.trim();
+    if (publicId.isEmpty) {
+      throw const ValidationException(
+        message: 'Internal payment link reference is missing.',
+        statusCode: 422,
+        errorCode: 'ERR_KFE_PAYMENT_LINK_REFERENCE_MISSING',
+      );
+    }
+    return publicId;
+  }
+
   Future<TxStatus?> _retryPaymentLinkWithPasskeyChallenge({
     required String initialChallenge,
     required String linkId,
-    required String payerWalletName,
+    required String payerWalletId,
     String? confirmationPassphrase,
     String? totpCode,
     required String idempotencyKey,
@@ -733,12 +771,13 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     var challenge = initialChallenge;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final assertionJson = await _passkeyAssertionBuilder(challenge);
         final link = await _repository.getPaymentLink(linkId);
-        _ensurePaymentLinkIsNotSelfPay(link);
+        _ensurePaymentLinkPayable(link);
+        final assertionJson = await _passkeyAssertionBuilder(challenge);
         final result = await _repository.withdraw(
-          fromWalletName: payerWalletName,
+          fromWalletName: payerWalletId,
           toAddress: _withdrawalDestination(link),
+          paymentRequest: _paymentRequestPublicId(link),
           amount: link.amountBtc,
           description: link.description.isNotEmpty
               ? link.description

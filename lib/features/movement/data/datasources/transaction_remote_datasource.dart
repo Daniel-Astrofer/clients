@@ -1000,6 +1000,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         ? _requiredText(paymentRequest, 'paymentRequest')
         : _requiredText(toAddress, 'toAddress');
     final isInternal = !isLightning && _looksLikeUuid(destination);
+    final paymentRequestPublicId =
+        isInternal ? _optionalText(paymentRequest) : null;
     final rail = isLightning
         ? 'LIGHTNING'
         : isInternal
@@ -1017,6 +1019,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'direction': isInternal ? 'INTERNAL' : 'OUTBOUND',
       'sourceWalletId': normalizedWalletName,
       if (isInternal) 'destinationWalletId': destination,
+      if (paymentRequestPublicId != null)
+        'paymentRequestPublicId': paymentRequestPublicId,
       'amountSats': (amount * 100000000).round(),
       'networkFeeSats': (feeBtc * 100000000).round(),
       if (!isInternal) 'externalReference': destination,

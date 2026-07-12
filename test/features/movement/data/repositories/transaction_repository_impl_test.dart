@@ -199,6 +199,7 @@ void main() {
         idempotencyKey: 'idem-internal',
         fromWalletName: 'Minha Carteira',
         toAddress: '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8',
+        paymentRequest: ' public-internal-id ',
         amount: 0.0001,
         networkFeeBtc: 0.0005,
       );
@@ -209,6 +210,7 @@ void main() {
         'direction': 'INTERNAL',
         'sourceWalletId': 'Minha Carteira',
         'destinationWalletId': '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8',
+        'paymentRequestPublicId': 'public-internal-id',
         'amountSats': 10000,
         'networkFeeSats': 0,
         'memo': 'transferencia interna',
