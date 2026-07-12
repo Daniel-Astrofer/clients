@@ -593,7 +593,13 @@ final sendTransactionProvider =
 
 /// Notifier para Payment Links
 class PaymentLinkNotifier extends Notifier<AsyncActionState> {
+  final Future<String> Function(String) _passkeyAssertionBuilder;
   late TransactionRepository _repository;
+
+  PaymentLinkNotifier({
+    Future<String> Function(String)? passkeyAssertionBuilder,
+  }) : _passkeyAssertionBuilder =
+            passkeyAssertionBuilder ?? _buildPasskeyAssertionJson;
 
   @override
   AsyncActionState build() {
@@ -652,7 +658,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
       _ensurePaymentLinkIsNotSelfPay(link);
       final result = await _repository.withdraw(
         fromWalletName: payerWalletName,
-        toAddress: link.depositAddress,
+        toAddress: _withdrawalDestination(link),
         amount: link.amountBtc,
         description: link.description.isNotEmpty
             ? link.description
@@ -699,6 +705,22 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     }
   }
 
+  String _withdrawalDestination(PaymentLink link) {
+    if (link.paymentRail.trim().toUpperCase() != 'INTERNAL') {
+      return link.depositAddress;
+    }
+
+    final destinationHash = link.destinationHash?.trim();
+    if (destinationHash == null || destinationHash.isEmpty) {
+      throw const ValidationException(
+        message: 'Internal payment link destination is missing.',
+        statusCode: 422,
+        errorCode: 'ERR_KFE_PAYMENT_LINK_DESTINATION_MISSING',
+      );
+    }
+    return destinationHash;
+  }
+
   Future<TxStatus?> _retryPaymentLinkWithPasskeyChallenge({
     required String initialChallenge,
     required String linkId,
@@ -711,12 +733,12 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     var challenge = initialChallenge;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final assertionJson = await _buildPasskeyAssertionJson(challenge);
+        final assertionJson = await _passkeyAssertionBuilder(challenge);
         final link = await _repository.getPaymentLink(linkId);
         _ensurePaymentLinkIsNotSelfPay(link);
         final result = await _repository.withdraw(
           fromWalletName: payerWalletName,
-          toAddress: link.depositAddress,
+          toAddress: _withdrawalDestination(link),
           amount: link.amountBtc,
           description: link.description.isNotEmpty
               ? link.description
@@ -753,7 +775,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
 
 final paymentLinkNotifierProvider =
     NotifierProvider<PaymentLinkNotifier, AsyncActionState>(
-        PaymentLinkNotifier.new);
+        () => PaymentLinkNotifier());
 
 /// Notifier para Saques Externos
 class WithdrawNotifier extends Notifier<AsyncActionState> {

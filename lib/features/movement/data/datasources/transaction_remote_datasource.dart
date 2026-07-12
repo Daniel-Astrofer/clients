@@ -201,7 +201,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
 
   int _btcToSats(double value) => (value * 100000000).round();
 
-  bool _looksLikeUuid(String value) {
+  static bool _looksLikeUuid(String value) {
     return RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
     ).hasMatch(value.trim());
@@ -284,6 +284,13 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     Map<String, String>? metadata,
     String? referenceLabel,
   }) {
+    final paymentRail =
+        (payload['rail']?.toString() ?? metadata?['rail'] ?? 'ONCHAIN')
+            .trim()
+            .toUpperCase();
+    final publicId = payload['publicId']?.toString().trim() ?? '';
+    final walletId = payload['walletId']?.toString().trim() ?? '';
+    final isInternal = paymentRail == 'INTERNAL';
     final amountSats = (payload['amountSats'] as num?)?.toDouble() ??
         (payload['receiverAmountSats'] as num?)?.toDouble() ??
         (payload['grossAmountSats'] as num?)?.toDouble() ??
@@ -292,6 +299,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         amountSats > 0 ? amountSats / 100000000.0 : (fallbackAmountBtc ?? 0);
     return PaymentLink.fromJson({
       'id': payload['publicId'] ?? payload['id'] ?? payload['transactionId'],
+      'userId': payload['userId'],
       'amountBtc': amountBtc,
       'description': payload['memo']?.toString() ??
           fallbackDescription ??
@@ -304,6 +312,10 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'amountLocked': true,
       'referenceLabel': referenceLabel,
       'metadata': metadata ?? const <String, String>{},
+      if (isInternal && walletId.isNotEmpty) 'destinationHash': walletId,
+      if (isInternal && publicId.isNotEmpty)
+        'paymentUri': 'kerosene://payment/pay/${Uri.encodeComponent(publicId)}',
+      'locked': isInternal,
       'status': payload['status']?.toString() ?? 'PENDING',
       'txid': payload['blockchainTxid']?.toString(),
       'createdAt': payload['createdAt']?.toString(),
@@ -311,7 +323,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'completedAt': payload['updatedAt']?.toString(),
       'expiresAt': payload['expiresAt']?.toString() ??
           fallbackExpiresAt?.toIso8601String(),
-      'paymentRail': payload['rail']?.toString() ?? 'ONCHAIN',
+      'paymentRail': paymentRail,
       'settlementStatus': payload['settlementStatus']?.toString() ??
           payload['status']?.toString() ??
           'PENDING',
@@ -338,6 +350,21 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       message: 'walletName is required',
       statusCode: 400,
       errorCode: 'ERR_KFE_PAYMENT_LINK_WALLET_REQUIRED',
+    );
+  }
+
+  String _resolvePaymentLinkRail(Map<String, String>? metadata) {
+    final rail = metadata?['rail']?.trim().toUpperCase();
+    if (rail == null || rail.isEmpty) {
+      return 'ONCHAIN';
+    }
+    if (rail == 'INTERNAL' || rail == 'ONCHAIN') {
+      return rail;
+    }
+    throw const ValidationException(
+      message: 'Payment requests support INTERNAL and ONCHAIN rails only.',
+      statusCode: 400,
+      errorCode: 'ERR_KFE_PAYMENT_LINK_RAIL_UNSUPPORTED',
     );
   }
 
@@ -659,19 +686,20 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       final walletId = wallet['walletId']?.toString() ??
           wallet['id']?.toString() ??
           requestedWalletId;
+      final rail = _resolvePaymentLinkRail(metadata);
       final expiresAt = _resolveExpiry(expiresInMinutes);
       final response = await apiClient.post(
         AppConfig.kfePaymentRequests,
         data: {
           'walletId': walletId,
-          'rail': 'ONCHAIN',
+          'rail': rail,
           'amountSats': _btcToSats(amount),
           if (description != null && description.trim().isNotEmpty)
             'description': description.trim(),
           if (referenceLabel != null && referenceLabel.trim().isNotEmpty)
             'memo': referenceLabel.trim(),
           if (expiresAt != null) 'expiresAt': expiresAt.toIso8601String(),
-          'issueFreshAddress': true,
+          if (rail == 'ONCHAIN') 'issueFreshAddress': true,
         },
       );
 
@@ -920,22 +948,36 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'idempotencyKey',
     );
     final normalizedDescription = _optionalText(description);
-    final externalReference = isLightning
+    final destination = isLightning
         ? _requiredText(paymentRequest, 'paymentRequest')
         : _requiredText(toAddress, 'toAddress');
-    final feeBtc =
-        isLightning && networkFeeBtc <= 0 ? maxRoutingFeeBtc : networkFeeBtc;
+    final isInternal = !isLightning && _looksLikeUuid(destination);
+    final rail = isLightning
+        ? 'LIGHTNING'
+        : isInternal
+            ? 'INTERNAL'
+            : 'ONCHAIN';
+    final feeBtc = isInternal
+        ? 0.0
+        : isLightning && networkFeeBtc <= 0
+            ? maxRoutingFeeBtc
+            : networkFeeBtc;
 
     return {
       'idempotencyKey': normalizedIdempotencyKey,
-      'rail': isLightning ? 'LIGHTNING' : 'ONCHAIN',
-      'direction': 'OUTBOUND',
+      'rail': rail,
+      'direction': isInternal ? 'INTERNAL' : 'OUTBOUND',
       'sourceWalletId': normalizedWalletName,
+      if (isInternal) 'destinationWalletId': destination,
       'amountSats': (amount * 100000000).round(),
       'networkFeeSats': (feeBtc * 100000000).round(),
-      'externalReference': externalReference,
+      if (!isInternal) 'externalReference': destination,
       'memo': normalizedDescription ??
-          (isLightning ? 'Pagamento Lightning' : 'saque para carteira externa'),
+          (isLightning
+              ? 'Pagamento Lightning'
+              : isInternal
+                  ? 'transferencia interna'
+                  : 'saque para carteira externa'),
       if (totpCode != null && totpCode.trim().isNotEmpty)
         'totpCode': totpCode.trim(),
       if (passkeyAssertionJson != null &&

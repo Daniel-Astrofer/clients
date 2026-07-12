@@ -193,6 +193,51 @@ void main() {
       expect(payload['memo'], 'saque para carteira externa');
     });
 
+    test('builds an internal transfer for a destination wallet UUID', () {
+      final payload =
+          TransactionRemoteDataSourceImpl.buildWithdrawRequestPayload(
+        idempotencyKey: 'idem-internal',
+        fromWalletName: 'Minha Carteira',
+        toAddress: '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8',
+        amount: 0.0001,
+        networkFeeBtc: 0.0005,
+      );
+
+      expect(payload, {
+        'idempotencyKey': 'idem-internal',
+        'rail': 'INTERNAL',
+        'direction': 'INTERNAL',
+        'sourceWalletId': 'Minha Carteira',
+        'destinationWalletId': '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8',
+        'amountSats': 10000,
+        'networkFeeSats': 0,
+        'memo': 'transferencia interna',
+      });
+    });
+
+    test('preserves the Lightning outbound contract', () {
+      final payload =
+          TransactionRemoteDataSourceImpl.buildWithdrawRequestPayload(
+        idempotencyKey: 'idem-lightning',
+        fromWalletName: 'Minha Carteira',
+        paymentRequest: 'lnbcrt1paymentrequest',
+        amount: 0.0001,
+        isLightning: true,
+        maxRoutingFeeBtc: 0.000002,
+      );
+
+      expect(payload, {
+        'idempotencyKey': 'idem-lightning',
+        'rail': 'LIGHTNING',
+        'direction': 'OUTBOUND',
+        'sourceWalletId': 'Minha Carteira',
+        'amountSats': 10000,
+        'networkFeeSats': 200,
+        'externalReference': 'lnbcrt1paymentrequest',
+        'memo': 'Pagamento Lightning',
+      });
+    });
+
     test('requires idempotencyKey for external withdrawals', () {
       expect(
         () => TransactionRemoteDataSourceImpl.buildWithdrawRequestPayload(
