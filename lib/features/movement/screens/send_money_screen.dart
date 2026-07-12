@@ -439,11 +439,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
     double networkFeeBtc = 0;
     double? feeRateSatPerByte;
+    FeeEstimate? resolvedFee;
     bool isLoading = false;
     Object? error;
 
     feeEstimateAsync.when(
       data: (fee) {
+        resolvedFee = fee;
         networkFeeBtc = fee.estimatedStandardBtc;
         feeRateSatPerByte = fee.standardSatPerByte;
       },
@@ -462,6 +464,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
         feeRateSatPerByte: feeRateSatPerByte,
         isLoading: isLoading,
         error: error,
+      );
+    }
+
+    if (resolvedFee?.serverPriced == true) {
+      return _buildOnchainFeeQuote(
+        amountBtc: amountBtc,
+        fee: resolvedFee!,
       );
     }
 
@@ -501,6 +510,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
     try {
       final fee = await ref.read(feeEstimateProvider(amountBtc).future);
+      if (fee.serverPriced) {
+        return _buildOnchainFeeQuote(amountBtc: amountBtc, fee: fee);
+      }
       return _buildExternalFeeQuote(
         amountBtc: amountBtc,
         platformFeeRate: wallet.withdrawalFeeRate,
@@ -511,6 +523,26 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       SnackbarHelper.showError(networkFeeUnavailableMessage);
       return null;
     }
+  }
+
+  SendFeeQuote _buildOnchainFeeQuote({
+    required double amountBtc,
+    required FeeEstimate fee,
+  }) {
+    final platformFeeRate =
+        amountBtc > 0 ? fee.keroseneFeeBtc / amountBtc : 0.0;
+    return SendFeeQuote(
+      requestedAmountBtc: amountBtc,
+      receiverAmountBtc: fee.amountReceived,
+      platformFeeRate: platformFeeRate,
+      platformFeeBtc: fee.keroseneFeeBtc,
+      networkFeeBtc: fee.estimatedStandardBtc,
+      totalDebitedBtc: fee.totalToSend,
+      feeRateSatPerByte: fee.standardSatPerByte,
+      estimatedSettlementSeconds: fee.standardEstimatedSeconds,
+      feeSource: fee.feeSource,
+      quoteExpiresAt: fee.quoteExpiresAt,
+    );
   }
 
   SendFeeQuote _buildExternalFeeQuote({

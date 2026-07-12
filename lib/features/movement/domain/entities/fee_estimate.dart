@@ -10,6 +10,16 @@ class FeeEstimate extends Equatable {
   final double estimatedSlowBtc;
   final double amountReceived;
   final double totalToSend;
+  final double keroseneFeeBtc;
+  final double totalFeeBtc;
+  final int estimatedVbytes;
+  final int estimatedConfirmationBlocks;
+  final int? fastEstimatedSeconds;
+  final int? standardEstimatedSeconds;
+  final int? slowEstimatedSeconds;
+  final String? feeSource;
+  final DateTime? quoteExpiresAt;
+  final bool serverPriced;
 
   const FeeEstimate({
     required this.fastSatPerByte,
@@ -20,6 +30,16 @@ class FeeEstimate extends Equatable {
     required this.estimatedSlowBtc,
     required this.amountReceived,
     required this.totalToSend,
+    this.keroseneFeeBtc = 0,
+    this.totalFeeBtc = 0,
+    this.estimatedVbytes = 0,
+    this.estimatedConfirmationBlocks = 0,
+    this.fastEstimatedSeconds,
+    this.standardEstimatedSeconds,
+    this.slowEstimatedSeconds,
+    this.feeSource,
+    this.quoteExpiresAt,
+    this.serverPriced = false,
   });
 
   factory FeeEstimate.fromJson(Map<String, dynamic> json) {
@@ -33,6 +53,20 @@ class FeeEstimate extends Equatable {
       estimatedSlowBtc: (json['estimatedSlowBtc'] as num?)?.toDouble() ?? 0,
       amountReceived: (json['amountReceived'] as num?)?.toDouble() ?? 0,
       totalToSend: (json['totalToSend'] as num?)?.toDouble() ?? 0,
+      keroseneFeeBtc: (json['keroseneFeeBtc'] as num?)?.toDouble() ?? 0,
+      totalFeeBtc: (json['totalFeeBtc'] as num?)?.toDouble() ?? 0,
+      estimatedVbytes: (json['estimatedVbytes'] as num?)?.toInt() ?? 0,
+      estimatedConfirmationBlocks:
+          (json['estimatedConfirmationBlocks'] as num?)?.toInt() ?? 0,
+      fastEstimatedSeconds: (json['fastEstimatedSeconds'] as num?)?.toInt(),
+      standardEstimatedSeconds:
+          (json['standardEstimatedSeconds'] as num?)?.toInt(),
+      slowEstimatedSeconds: (json['slowEstimatedSeconds'] as num?)?.toInt(),
+      feeSource: json['feeSource']?.toString(),
+      quoteExpiresAt: DateTime.tryParse(
+        json['quoteExpiresAt']?.toString() ?? '',
+      ),
+      serverPriced: json['serverPriced'] == true,
     );
   }
 
@@ -46,5 +80,15 @@ class FeeEstimate extends Equatable {
         estimatedSlowBtc,
         amountReceived,
         totalToSend,
+        keroseneFeeBtc,
+        totalFeeBtc,
+        estimatedVbytes,
+        estimatedConfirmationBlocks,
+        fastEstimatedSeconds,
+        standardEstimatedSeconds,
+        slowEstimatedSeconds,
+        feeSource,
+        quoteExpiresAt,
+        serverPriced,
       ];
 }

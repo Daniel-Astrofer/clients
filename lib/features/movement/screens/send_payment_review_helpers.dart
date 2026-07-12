@@ -120,7 +120,10 @@ List<SendPaymentReviewRowData> _buildReviewRows({
   rows.addAll([
     SendPaymentReviewRowData(
       label: 'Tempo estimado',
-      value: estimatedSendTime(destination),
+      value: estimatedSendTime(
+        destination,
+        estimatedSeconds: feeQuote.estimatedSettlementSeconds,
+      ),
     ),
     SendPaymentReviewRowData(
       label: 'Valor de envio',

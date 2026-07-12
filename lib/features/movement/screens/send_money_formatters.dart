@@ -102,8 +102,19 @@ String formatFiatReference({
   return includeApproxPrefix ? '≈ $value' : value;
 }
 
-String estimatedSendTime(SendDestinationAnalysis destination) {
-  if (destination.isOnChain) return '~10 min';
+String estimatedSendTime(
+  SendDestinationAnalysis destination, {
+  int? estimatedSeconds,
+}) {
+  if (destination.isOnChain) {
+    if (estimatedSeconds == null || estimatedSeconds <= 0) return '~10 min';
+    final minutes = (estimatedSeconds / 60).ceil();
+    if (minutes < 60) return '~$minutes min';
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    if (remainingMinutes == 0) return '~$hours h';
+    return '~$hours h $remainingMinutes min';
+  }
   if (destination.isLightning) return 'Segundos';
   return 'Instantâneo';
 }

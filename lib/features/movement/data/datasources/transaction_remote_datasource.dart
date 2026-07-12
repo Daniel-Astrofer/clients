@@ -430,24 +430,72 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         },
       );
       final data = _parseJsonResponse(response.data);
-      final networkFeeBtc =
-          ((data['networkFeeSats'] as num?)?.toDouble() ?? 0) / 100000000.0;
-      final receiverAmountBtc =
-          ((data['receiverAmountSats'] as num?)?.toDouble() ??
-                  _btcToSats(amount).toDouble()) /
-              100000000.0;
-      final totalDebitBtc = ((data['totalDebitSats'] as num?)?.toDouble() ??
-              _btcToSats(amount).toDouble()) /
-          100000000.0;
+      final requiredFields = [
+        'receiverAmountSats',
+        'networkFeeSats',
+        'totalDebitSats',
+        'keroseneFeeSats',
+        'totalFeeSats',
+        'feeRateSatPerVbyte',
+        'estimatedVbytes',
+        'estimatedConfirmationBlocks',
+        'estimatedSettlementSeconds',
+      ];
+      if (requiredFields.any((field) => data[field] is! num)) {
+        throw const ServerException(
+          message: 'O servidor retornou uma cotação de taxa incompleta.',
+          errorCode: 'ERR_KFE_FEE_QUOTE_INVALID',
+        );
+      }
+
+      final networkFeeSats = (data['networkFeeSats'] as num).toInt();
+      final tiers = _parseJsonListResponse(data['feeTiers']);
+      Map<String, dynamic> tier(String priority) => tiers.firstWhere(
+            (item) => item['priority']?.toString().toUpperCase() == priority,
+            orElse: () => const {},
+          );
+      final fast = tier('FAST');
+      final standard = tier('STANDARD');
+      final slow = tier('SLOW');
+      int tierInt(
+        Map<String, dynamic> item,
+        String field,
+        int fallback,
+      ) =>
+          (item[field] as num?)?.toInt() ?? fallback;
+      final selectedRate = (data['feeRateSatPerVbyte'] as num).toInt();
+      final selectedEta = (data['estimatedSettlementSeconds'] as num).toInt();
       return FeeEstimate(
-        fastSatPerByte: 0,
-        standardSatPerByte: 0,
-        slowSatPerByte: 0,
-        estimatedFastBtc: networkFeeBtc,
-        estimatedStandardBtc: networkFeeBtc,
-        estimatedSlowBtc: networkFeeBtc,
-        amountReceived: receiverAmountBtc,
-        totalToSend: totalDebitBtc,
+        fastSatPerByte:
+            tierInt(fast, 'feeRateSatPerVbyte', selectedRate).toDouble(),
+        standardSatPerByte:
+            tierInt(standard, 'feeRateSatPerVbyte', selectedRate).toDouble(),
+        slowSatPerByte:
+            tierInt(slow, 'feeRateSatPerVbyte', selectedRate).toDouble(),
+        estimatedFastBtc:
+            tierInt(fast, 'networkFeeSats', networkFeeSats) / 100000000.0,
+        estimatedStandardBtc:
+            tierInt(standard, 'networkFeeSats', networkFeeSats) / 100000000.0,
+        estimatedSlowBtc:
+            tierInt(slow, 'networkFeeSats', networkFeeSats) / 100000000.0,
+        amountReceived:
+            (data['receiverAmountSats'] as num).toDouble() / 100000000.0,
+        totalToSend: (data['totalDebitSats'] as num).toDouble() / 100000000.0,
+        keroseneFeeBtc:
+            (data['keroseneFeeSats'] as num).toDouble() / 100000000.0,
+        totalFeeBtc: (data['totalFeeSats'] as num).toDouble() / 100000000.0,
+        estimatedVbytes: (data['estimatedVbytes'] as num).toInt(),
+        estimatedConfirmationBlocks:
+            (data['estimatedConfirmationBlocks'] as num).toInt(),
+        fastEstimatedSeconds: tierInt(fast, 'estimatedSeconds', selectedEta),
+        standardEstimatedSeconds:
+            tierInt(standard, 'estimatedSeconds', selectedEta),
+        slowEstimatedSeconds: tierInt(slow, 'estimatedSeconds', selectedEta),
+        feeSource: data['feeSource']?.toString(),
+        quoteExpiresAt: DateTime.tryParse(
+          data['quoteExpiresAt']?.toString() ?? '',
+        ),
+        serverPriced: true,
       );
     } catch (e) {
       if (e is DioException) {

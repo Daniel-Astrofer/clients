@@ -47,6 +47,9 @@ class SendFeeQuote {
   final double networkFeeBtc;
   final double totalDebitedBtc;
   final double? feeRateSatPerByte;
+  final int? estimatedSettlementSeconds;
+  final String? feeSource;
+  final DateTime? quoteExpiresAt;
   final bool isLoading;
   final Object? error;
 
@@ -58,6 +61,9 @@ class SendFeeQuote {
     required this.networkFeeBtc,
     required this.totalDebitedBtc,
     this.feeRateSatPerByte,
+    this.estimatedSettlementSeconds,
+    this.feeSource,
+    this.quoteExpiresAt,
     this.isLoading = false,
     this.error,
   });
