@@ -17,6 +17,91 @@ import '../../../../core/utils/device_helper.dart';
 import 'wallet_provider.dart';
 
 const double _balanceChangeEpsilon = 0.000000001;
+const financialRealtimeFallbackInterval = Duration(seconds: 30);
+
+typedef FinancialRefreshCancel = void Function();
+typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
+  Duration delay,
+  void Function() callback,
+);
+
+/// Schedules financial refreshes serially so a slow request cannot overlap the
+/// next polling cycle.
+class FinancialRealtimeRefreshLoop {
+  FinancialRealtimeRefreshLoop({
+    required Future<void> Function() refresh,
+    this.interval = financialRealtimeFallbackInterval,
+    FinancialRefreshScheduler scheduler = _scheduleFinancialRefresh,
+  })  : _refresh = refresh,
+        _scheduler = scheduler;
+
+  final Future<void> Function() _refresh;
+  final Duration interval;
+  final FinancialRefreshScheduler _scheduler;
+
+  FinancialRefreshCancel? _cancelScheduledRefresh;
+  bool _started = false;
+  bool _refreshInFlight = false;
+  bool _disposed = false;
+
+  void start() {
+    if (_started || _disposed) {
+      return;
+    }
+    _started = true;
+    _scheduleNext();
+  }
+
+  void _scheduleNext() {
+    if (_disposed) {
+      return;
+    }
+
+    _cancelScheduledRefresh = _scheduler(interval, () {
+      _cancelScheduledRefresh = null;
+      unawaited(_runRefresh());
+    });
+  }
+
+  Future<void> _runRefresh() async {
+    if (_disposed || _refreshInFlight) {
+      return;
+    }
+
+    _refreshInFlight = true;
+    try {
+      await _refresh();
+    } catch (_) {
+      debugPrint(
+        'BalanceWebSocket: periodic financial refresh failed; retrying later.',
+      );
+    } finally {
+      _refreshInFlight = false;
+      _scheduleNext();
+    }
+  }
+
+  void dispose() {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    _cancelScheduledRefresh?.call();
+    _cancelScheduledRefresh = null;
+  }
+}
+
+FinancialRefreshCancel _scheduleFinancialRefresh(
+  Duration delay,
+  void Function() callback,
+) {
+  final timer = Timer(delay, callback);
+  return timer.cancel;
+}
+
+final financialRefreshSchedulerProvider = Provider<FinancialRefreshScheduler>(
+  (ref) => _scheduleFinancialRefresh,
+);
 
 /// Provider do serviço WebSocket para atualizações de saldo em tempo real
 final balanceWebSocketServiceProvider =
@@ -50,6 +135,9 @@ final balanceWebSocketServiceProvider =
   }
 
   final deviceHash = await DeviceHelper.getDeviceHash();
+  if (!ref.mounted) {
+    return null;
+  }
 
   final service = BalanceWebSocketService(
     baseUrl: baseUrl,
@@ -140,15 +228,52 @@ final balanceWebSocketServiceProvider =
 
   // Conectar ao WebSocket
   await service.connect();
+  if (!ref.mounted) {
+    service.disconnect();
+    return null;
+  }
+
+  // Core can keep this socket connected while KFE events travel through a
+  // separate runtime. Polling remains active as a bounded consistency fallback.
+  final refreshLoop = FinancialRealtimeRefreshLoop(
+    refresh: () => _refreshFinancialState(ref, userId.toString()),
+    scheduler: ref.read(financialRefreshSchedulerProvider),
+  )..start();
 
   // Desconectar quando o provider for descartado
   ref.onDispose(() {
     debugPrint('BalanceWebSocket: disconnecting.');
+    refreshLoop.dispose();
     service.disconnect();
   });
 
   return service;
 });
+
+Future<void> _refreshFinancialState(Ref ref, String sessionUserId) async {
+  final authState = ref.read(authControllerProvider);
+  if (authState is! AuthAuthenticated ||
+      authState.user.id.toString() != sessionUserId) {
+    return;
+  }
+
+  final walletNotifier = ref.read(walletProvider.notifier);
+
+  // Invalidating the ledger repository also expires the session-scoped history
+  // providers that sit behind the public history facades.
+  ref.invalidate(ledgerRepositoryProvider);
+  ref.invalidate(transactionHistoryProvider);
+  ref.invalidate(pagedTransactionHistoryProvider);
+  ref.invalidate(depositsProvider);
+  ref.invalidate(depositBalanceProvider);
+  ref.invalidate(depositDetailProvider);
+  ref.invalidate(externalTransfersProvider);
+  ref.invalidate(externalTransferDetailProvider);
+  ref.invalidate(paymentLinksProvider);
+  ref.invalidate(txStatusProvider);
+
+  await walletNotifier.refresh();
+}
 
 String? _normalizeSessionToken(String? token) {
   if (token == null) {
