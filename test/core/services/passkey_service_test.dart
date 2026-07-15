@@ -50,8 +50,18 @@ class _FakePasskeyCryptographyService implements PasskeyCryptographyService {
   @override
   Future<int> nextSignatureCounter({String? subject}) async {
     lastSubject = subject;
-    counter++;
-    return counter;
+    return counter + 1;
+  }
+
+  @override
+  Future<void> commitSignatureCounter(int value, {String? subject}) async {
+    lastSubject = subject;
+    counter = value;
+  }
+
+  @override
+  Future<void> clearSubjectMaterial({String? subject}) async {
+    lastSubject = subject;
   }
 
   @override

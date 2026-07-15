@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
@@ -477,15 +478,9 @@ class _SovereigntyStatusScreenState
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
+          CupertinoActivityIndicator(
+            radius: 11,
+            color: Theme.of(context).colorScheme.onPrimary,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -857,15 +852,9 @@ class _SovereigntyStatusScreenState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 36,
-            height: 36,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
+          CupertinoActivityIndicator(
+            radius: 18,
+            color: Theme.of(context).colorScheme.onPrimary,
           ),
           const SizedBox(height: 20),
           Text(

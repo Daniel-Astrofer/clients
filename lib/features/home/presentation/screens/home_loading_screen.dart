@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/navigation/deferred_page.dart';
 
-import 'package:kerosene/core/presentation/widgets/kerosene_logo_loading_view.dart';
+import 'package:kerosene/core/presentation/widgets/tor_navigation_loading_screen.dart';
+import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
     deferred as bitcoin_accounts;
@@ -16,6 +16,10 @@ import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 
+/// Single post-PIN loading surface: Tor dots only.
+///
+/// Loads home data (wallets/history) and the deferred home library under the
+/// same dots screen, then jumps straight to [HomeScreen] with no extra spinner.
 class HomeLoadingScreen extends ConsumerStatefulWidget {
   const HomeLoadingScreen({super.key});
 
@@ -24,17 +28,14 @@ class HomeLoadingScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
-  double _uIsDelayed = 0.0;
   Timer? _timeoutTimer;
-  Timer? _minDurationTimer;
   Timer? _walletRetryTimer;
   Timer? _sessionReadyRetryTimer;
   bool _isNavigating = false;
-  bool _minDurationPassed = false;
   bool _hasError = false;
-  String _errorMessage = "";
   bool _walletSetupRedirectAttempted = false;
   bool _initialLoadStarted = false;
+  bool _homeLibraryReady = false;
   int _walletRetryAttempt = 0;
   int _sessionReadyRetryAttempt = 0;
   static const int _maxWalletRetryAttempts = 3;
@@ -43,19 +44,17 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
   @override
   void initState() {
     super.initState();
-    _minDurationTimer = Timer(KeroseneMotion.loadingMinimum, () {
-      if (mounted) setState(() => _minDurationPassed = true);
-    });
+
+    // Preload home UI while dots are up so navigation never shows DeferredPage.
+    unawaited(_preloadHomeLibrary());
 
     _timeoutTimer = Timer(KeroseneMotion.loadingTimeout, () {
-      if (mounted && !_hasError) {
-        setState(() {
-          _uIsDelayed = 1.0;
-        });
+      if (mounted && !_hasError && !_isNavigating) {
+        // Soft timeout: still try to enter home rather than stack more loaders.
+        unawaited(_navigateToHome(allowError: true));
       }
     });
 
-    // Trigger wallet loading
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_startInitialLoadWhenSessionReady());
     });
@@ -63,11 +62,22 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
   @override
   void dispose() {
-    _minDurationTimer?.cancel();
     _timeoutTimer?.cancel();
     _walletRetryTimer?.cancel();
     _sessionReadyRetryTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _preloadHomeLibrary() async {
+    try {
+      await home.loadLibrary();
+    } catch (_) {
+      // Navigation path will retry loadLibrary if needed.
+    }
+    if (mounted) {
+      setState(() => _homeLibraryReady = true);
+      _tryFinish();
+    }
   }
 
   Future<void> _startInitialLoadWhenSessionReady() async {
@@ -78,6 +88,12 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
     if (authState is! AuthAuthenticated || sessionScope == null) {
       _scheduleSessionReadyRetry();
       return;
+    }
+
+    // PIN may unlock before Tor finishes; hold wallet requests until relay is up.
+    if (!ref.read(torSettledProvider)) {
+      await ref.read(appColdStartProvider.notifier).waitUntilTorSettled();
+      if (!mounted || _initialLoadStarted) return;
     }
 
     final token = await ref.read(authLocalDataSourceProvider).getToken();
@@ -128,14 +144,14 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     if (_walletRetryAttempt >= _maxWalletRetryAttempts) {
       _walletRetryTimer?.cancel();
-      _navigateToHome(allowError: true);
+      unawaited(_navigateToHome(allowError: true));
       return;
     }
 
     final delay = switch (_walletRetryAttempt) {
-      0 => KeroseneMotion.loadingMinimum,
-      1 => KeroseneMotion.loadingRetryMedium,
-      _ => KeroseneMotion.loadingRetryLong,
+      0 => KeroseneMotion.short,
+      1 => KeroseneMotion.medium,
+      _ => KeroseneMotion.long,
     };
     _walletRetryAttempt += 1;
 
@@ -143,7 +159,6 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
       if (!mounted) return;
       setState(() {
         _hasError = false;
-        _errorMessage = '';
       });
       if (_initialLoadStarted) {
         ref.read(walletProvider.notifier).refresh();
@@ -154,30 +169,60 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
     });
   }
 
-  void _navigateToHome({bool allowError = false}) {
+  void _tryFinish() {
+    if (_isNavigating || !mounted) return;
+
+    final walletState = ref.read(walletProvider);
+    final authState = ref.read(authControllerProvider);
+    final authenticatedUserId =
+        authState is AuthAuthenticated ? authState.user.id : null;
+
+    if (walletState is WalletLoaded && !_hasError && _homeLibraryReady) {
+      if (walletState.wallets.isEmpty &&
+          !_hasSeenWalletSetupRedirect(authenticatedUserId)) {
+        unawaited(_navigateToWalletSetup(authenticatedUserId));
+      } else {
+        unawaited(_navigateToHome());
+      }
+      return;
+    }
+
+    if (walletState is WalletError &&
+        (!walletState.isRetryable ||
+            _walletRetryAttempt >= _maxWalletRetryAttempts) &&
+        _homeLibraryReady) {
+      unawaited(_navigateToHome(allowError: true));
+    }
+  }
+
+  Future<void> _navigateToHome({bool allowError = false}) async {
     if (_isNavigating || (_hasError && !allowError)) return;
     _isNavigating = true;
     _timeoutTimer?.cancel();
 
-    Future.delayed(KeroseneMotion.slow, () {
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                DeferredPage(
-              loadLibrary: home.loadLibrary,
-              builder: (_) => home.HomeScreen(),
-            ),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: KeroseneMotion.calm,
-          ),
-          (route) => false,
-        );
+    try {
+      if (!_homeLibraryReady) {
+        await home.loadLibrary();
+        _homeLibraryReady = true;
       }
-    });
+    } catch (_) {
+      // Fall through; HomeScreen may still fail to build — better than looping loaders.
+    }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            home.HomeScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        // Short fade only — no second loading surface after dots.
+        transitionDuration: KeroseneMotion.short,
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _navigateToWalletSetup(String? userId) async {
@@ -188,19 +233,22 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     _markWalletSetupRedirectSeen(userId);
 
-    await Future<void>.delayed(KeroseneMotion.slow);
+    if (!mounted) return;
+
+    try {
+      await bitcoin_accounts.loadLibrary();
+    } catch (_) {}
+
     if (!mounted) return;
 
     await Navigator.of(context).push<void>(
       PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) => DeferredPage(
-          loadLibrary: bitcoin_accounts.loadLibrary,
-          builder: (_) => bitcoin_accounts.BitcoinAccountsScreen(),
-        ),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            bitcoin_accounts.BitcoinAccountsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
-        transitionDuration: KeroseneMotion.long,
+        transitionDuration: KeroseneMotion.short,
       ),
     );
 
@@ -209,7 +257,7 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
     ref.invalidate(transactionHistoryProvider);
 
     _isNavigating = false;
-    _navigateToHome();
+    unawaited(_navigateToHome());
   }
 
   bool _hasSeenWalletSetupRedirect(String? userId) {
@@ -234,9 +282,6 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
   @override
   Widget build(BuildContext context) {
     final walletState = ref.watch(walletProvider);
-    final authState = ref.watch(authControllerProvider);
-    final authenticatedUserId =
-        authState is AuthAuthenticated ? authState.user.id : null;
 
     ref.listen<AuthState>(authControllerProvider, (_, next) {
       if (next is AuthAuthenticated) {
@@ -248,15 +293,14 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
       if (next is WalletError) {
         if (mounted) {
           setState(() {
-            _uIsDelayed = 1.0;
             _hasError = true;
-            _errorMessage = next.message;
           });
         }
         if (next.isRetryable) {
           _scheduleWalletRetry();
         } else {
           _walletRetryTimer?.cancel();
+          _tryFinish();
         }
         return;
       }
@@ -264,48 +308,22 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
       if (next is WalletLoaded) {
         _walletRetryTimer?.cancel();
         _walletRetryAttempt = 0;
-        if (mounted && (_hasError || _uIsDelayed > 0.0)) {
+        if (mounted && _hasError) {
           setState(() {
-            _uIsDelayed = 0.0;
             _hasError = false;
-            _errorMessage = '';
           });
         }
+        _tryFinish();
       }
     });
 
-    // Only move away if data is loaded AND minimum animation time completed
-    if (walletState is WalletLoaded &&
-        _uIsDelayed == 0.0 &&
-        _minDurationPassed &&
-        !_hasError) {
-      if (walletState.wallets.isEmpty &&
-          !_hasSeenWalletSetupRedirect(authenticatedUserId)) {
-        unawaited(_navigateToWalletSetup(authenticatedUserId));
-      } else {
-        _navigateToHome();
-      }
+    // Also evaluate when library becomes ready while wallets already loaded.
+    if (walletState is WalletLoaded || walletState is WalletError) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _tryFinish();
+      });
     }
 
-    if (walletState is WalletError &&
-        (!walletState.isRetryable ||
-            _walletRetryAttempt >= _maxWalletRetryAttempts) &&
-        _minDurationPassed) {
-      _navigateToHome(allowError: true);
-    }
-
-    return KeroseneLogoLoadingView(
-      status: _hasError
-          ? 'CONEXÃO INDISPONÍVEL'
-          : (_uIsDelayed > 0.5 ? 'CONEXÃO LENTA' : 'SINCRONIZANDO'),
-      detail: _hasError
-          ? 'Sessão preservada. Tentando reconectar...'
-          : (_uIsDelayed > 0.5
-              ? 'Tentando carregar seus dados...'
-              : 'Garantindo segurança total para seus ativos'),
-      isDelayed: _uIsDelayed > 0.5,
-      isError: _hasError,
-      errorMessage: _errorMessage,
-    );
+    return const TorNavigationLoadingScreen();
   }
 }

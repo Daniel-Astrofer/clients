@@ -52,6 +52,8 @@ abstract interface class PasskeyCryptographyService {
   });
   Future<String> signChallenge(String hexChallenge, {String? subject});
   Future<int> nextSignatureCounter({String? subject});
+  Future<void> commitSignatureCounter(int counter, {String? subject});
+  Future<void> clearSubjectMaterial({String? subject});
 }
 
 abstract interface class SovereignKeyStore {
@@ -64,7 +66,10 @@ abstract interface class SovereignKeyStore {
   Future<Uint8List?> readCredentialId({String? subject});
   Future<Uint8List?> readPrivateKeySeed({String? subject});
   Future<Uint8List?> readPublicKey({String? subject});
+  /// Peeks next counter without persisting (commit after successful server verify).
   Future<int> nextSignatureCounter({String? subject});
+  Future<void> commitSignatureCounter(int counter, {String? subject});
+  Future<void> clearSubjectMaterial({String? subject});
 }
 
 class SecureStorageSovereignKeyStore implements SovereignKeyStore {
@@ -82,7 +87,14 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
   IOSOptions _iosOptions() =>
       const IOSOptions(accessibility: KeychainAccessibility.first_unlock);
 
-  AndroidOptions _androidOptions() => const AndroidOptions();
+  /// Shared namespace with SecureStorageService / DeviceKeyService so keys
+  /// remain readable after the app is backgrounded or cold-started.
+  AndroidOptions _androidOptions() => const AndroidOptions(
+        storageNamespace: 'kerosene_secure_storage',
+      );
+
+  /// Pre-namespace defaults used by earlier builds.
+  AndroidOptions _legacyAndroidOptions() => const AndroidOptions();
 
   @override
   Future<void> saveKeyMaterial({
@@ -129,39 +141,55 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
 
   @override
   Future<Uint8List?> readCredentialId({String? subject}) async {
-    return _readBytesWithLegacyFallback(_credentialIdStorageKey, subject);
+    // Never fall back to unscoped keys for a different account subject.
+    if (subject == null || subject.trim().isEmpty) {
+      return _readBytes(_credentialIdStorageKey);
+    }
+    return _readBytes(_storageKey(_credentialIdStorageKey, subject));
   }
 
   @override
   Future<Uint8List?> readPrivateKeySeed({String? subject}) async {
-    return _readBytesWithLegacyFallback(_privateKeySeedStorageKey, subject);
+    if (subject == null || subject.trim().isEmpty) {
+      return _readBytes(_privateKeySeedStorageKey);
+    }
+    return _readBytes(_storageKey(_privateKeySeedStorageKey, subject));
   }
 
   @override
   Future<Uint8List?> readPublicKey({String? subject}) async {
-    return _readBytesWithLegacyFallback(_publicKeyStorageKey, subject);
+    if (subject == null || subject.trim().isEmpty) {
+      return _readBytes(_publicKeyStorageKey);
+    }
+    return _readBytes(_storageKey(_publicKeyStorageKey, subject));
   }
 
   @override
   Future<int> nextSignatureCounter({String? subject}) async {
     try {
       final key = _storageKey(_signatureCounterStorageKey, subject);
-      final currentRaw = await _secureStorage.read(
-        key: key,
-        iOptions: _iosOptions(),
-        aOptions: _androidOptions(),
-      );
+      final currentRaw = await _readStorageValue(key);
       final current = int.tryParse(currentRaw ?? '') ?? 0;
-      final next = current + 1;
+      return current + 1;
+    } catch (error) {
+      throw SovereignAuthException(
+        code: SovereignAuthErrorCodes.storageFailure,
+        message: 'Unable to read the device key counter.',
+        cause: error,
+      );
+    }
+  }
 
+  @override
+  Future<void> commitSignatureCounter(int counter, {String? subject}) async {
+    try {
+      final key = _storageKey(_signatureCounterStorageKey, subject);
       await _secureStorage.write(
         key: key,
-        value: next.toString(),
+        value: counter.toString(),
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
       );
-
-      return next;
     } catch (error) {
       throw SovereignAuthException(
         code: SovereignAuthErrorCodes.storageFailure,
@@ -171,24 +199,39 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
     }
   }
 
-  Future<Uint8List?> _readBytesWithLegacyFallback(
-    String baseKey,
-    String? subject,
-  ) async {
-    final scopedValue = await _readBytes(_storageKey(baseKey, subject));
-    if (scopedValue != null || subject == null || subject.trim().isEmpty) {
-      return scopedValue;
+  @override
+  Future<void> clearSubjectMaterial({String? subject}) async {
+    try {
+      for (final base in [
+        _privateKeySeedStorageKey,
+        _publicKeyStorageKey,
+        _credentialIdStorageKey,
+        _signatureCounterStorageKey,
+      ]) {
+        final key = _storageKey(base, subject);
+        await _secureStorage.delete(
+          key: key,
+          iOptions: _iosOptions(),
+          aOptions: _androidOptions(),
+        );
+        await _secureStorage.delete(
+          key: key,
+          iOptions: _iosOptions(),
+          aOptions: _legacyAndroidOptions(),
+        );
+      }
+    } catch (error) {
+      throw SovereignAuthException(
+        code: SovereignAuthErrorCodes.storageFailure,
+        message: 'Unable to clear device key material.',
+        cause: error,
+      );
     }
-    return _readBytes(baseKey);
   }
 
   Future<Uint8List?> _readBytes(String key) async {
     try {
-      final storedValue = await _secureStorage.read(
-        key: key,
-        iOptions: _iosOptions(),
-        aOptions: _androidOptions(),
-      );
+      final storedValue = await _readStorageValue(key);
       if (storedValue == null || storedValue.trim().isEmpty) {
         return null;
       }
@@ -200,12 +243,47 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
         cause: error,
       );
     } catch (error) {
+      if (error is SovereignAuthException) rethrow;
       throw SovereignAuthException(
         code: SovereignAuthErrorCodes.storageFailure,
         message: 'Unable to access the secure device key.',
         cause: error,
       );
     }
+  }
+
+  /// Prefer namespaced store; migrate legacy unscoped values once.
+  Future<String?> _readStorageValue(String key) async {
+    final current = await _secureStorage.read(
+      key: key,
+      iOptions: _iosOptions(),
+      aOptions: _androidOptions(),
+    );
+    if (current != null && current.trim().isNotEmpty) {
+      return current;
+    }
+
+    final legacy = await _secureStorage.read(
+      key: key,
+      iOptions: _iosOptions(),
+      aOptions: _legacyAndroidOptions(),
+    );
+    if (legacy == null || legacy.trim().isEmpty) {
+      return null;
+    }
+
+    await _secureStorage.write(
+      key: key,
+      value: legacy,
+      iOptions: _iosOptions(),
+      aOptions: _androidOptions(),
+    );
+    await _secureStorage.delete(
+      key: key,
+      iOptions: _iosOptions(),
+      aOptions: _legacyAndroidOptions(),
+    );
+    return legacy;
   }
 
   String _storageKey(String baseKey, String? subject) {
@@ -482,6 +560,16 @@ class SovereignAuthService implements PasskeyCryptographyService {
   @override
   Future<int> nextSignatureCounter({String? subject}) {
     return _keyStore.nextSignatureCounter(subject: subject);
+  }
+
+  @override
+  Future<void> commitSignatureCounter(int counter, {String? subject}) {
+    return _keyStore.commitSignatureCounter(counter, subject: subject);
+  }
+
+  @override
+  Future<void> clearSubjectMaterial({String? subject}) {
+    return _keyStore.clearSubjectMaterial(subject: subject);
   }
 
   static Uint8List generateCredentialId() {

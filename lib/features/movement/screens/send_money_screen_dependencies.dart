@@ -11,7 +11,6 @@ export 'package:kerosene/core/utils/bitcoin_network.dart';
 export 'package:kerosene/core/utils/money_display.dart';
 export 'package:kerosene/core/utils/snackbar_helper.dart';
 export 'package:kerosene/core/utils/error_translator.dart';
-export 'package:kerosene/core/services/audio_service.dart';
 export 'package:kerosene/core/services/notification_service.dart';
 export 'package:kerosene/features/home/presentation/screens/qr_scanner_screen.dart';
 export 'package:kerosene/core/l10n/l10n_extension.dart';

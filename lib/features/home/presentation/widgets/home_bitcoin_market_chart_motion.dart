@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import '../screens/home_screen.dart';
@@ -12,6 +14,7 @@ double homeBitcoinChartHeight(BuildContext context) {
 class HomeBitcoinChartStateTransition extends StatelessWidget {
   final Widget child;
   const HomeBitcoinChartStateTransition({super.key, required this.child});
+
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
@@ -33,27 +36,142 @@ class HomeBitcoinChartStateTransition extends StatelessWidget {
   }
 }
 
-class HomeBitcoinChartReveal extends StatelessWidget {
-  final Widget child;
-  const HomeBitcoinChartReveal({super.key, required this.child});
+/// Draws the chart path from left→right (draw-on) when [seriesKey] changes.
+class HomeBitcoinChartDrawOn extends StatefulWidget {
+  final Object seriesKey;
+  final Widget Function(BuildContext context, double progress) builder;
+
+  const HomeBitcoinChartDrawOn({
+    super.key,
+    required this.seriesKey,
+    required this.builder,
+  });
+
+  @override
+  State<HomeBitcoinChartDrawOn> createState() => _HomeBitcoinChartDrawOnState();
+}
+
+class _HomeBitcoinChartDrawOnState extends State<HomeBitcoinChartDrawOn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: KeroseneMotion.long,
+    )..forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeBitcoinChartDrawOn oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.seriesKey != widget.seriesKey) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (KeroseneMotion.reduceMotion(context)) return child;
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(child.key),
-      tween: Tween(begin: 0, end: 1),
-      duration: KeroseneMotion.long,
-      curve: KeroseneMotion.entrance,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, homeSize(8) * (1 - value)),
-            child: child,
-          ),
-        );
+    if (KeroseneMotion.reduceMotion(context)) {
+      return widget.builder(context, 1);
+    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = Curves.easeOutCubic.transform(_controller.value);
+        return widget.builder(context, t);
       },
-      child: child,
+    );
+  }
+}
+
+/// Smoothly animates displayed price when the value jumps.
+class HomeBitcoinAnimatedPrice extends StatelessWidget {
+  final double price;
+  final String Function(double value) formatter;
+  final TextStyle style;
+
+  const HomeBitcoinAnimatedPrice({
+    super.key,
+    required this.price,
+    required this.formatter,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (KeroseneMotion.reduceMotion(context)) {
+      return Text(formatter(price), maxLines: 1, style: style);
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: price, end: price),
+      duration: KeroseneMotion.medium,
+      curve: KeroseneMotion.standard,
+      builder: (context, value, _) {
+        return Text(formatter(value), maxLines: 1, style: style);
+      },
+    );
+  }
+}
+
+/// Tween that actually animates between previous and next price.
+class HomeBitcoinPriceTicker extends StatefulWidget {
+  final double price;
+  final String Function(double value) formatter;
+  final TextStyle style;
+
+  const HomeBitcoinPriceTicker({
+    super.key,
+    required this.price,
+    required this.formatter,
+    required this.style,
+  });
+
+  @override
+  State<HomeBitcoinPriceTicker> createState() => _HomeBitcoinPriceTickerState();
+}
+
+class _HomeBitcoinPriceTickerState extends State<HomeBitcoinPriceTicker> {
+  late double _from;
+  late double _to;
+
+  @override
+  void initState() {
+    super.initState();
+    _from = widget.price;
+    _to = widget.price;
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeBitcoinPriceTicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((oldWidget.price - widget.price).abs() > 0.0001) {
+      _from = oldWidget.price;
+      _to = widget.price;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (KeroseneMotion.reduceMotion(context) || (_to - _from).abs() < 0.0001) {
+      return Text(widget.formatter(widget.price), maxLines: 1, style: widget.style);
+    }
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(_to),
+      tween: Tween(begin: _from, end: _to),
+      duration: KeroseneMotion.medium,
+      curve: KeroseneMotion.standard,
+      builder: (context, value, _) {
+        return Text(widget.formatter(value), maxLines: 1, style: widget.style);
+      },
     );
   }
 }
@@ -61,13 +179,17 @@ class HomeBitcoinChartReveal extends StatelessWidget {
 class HomeBitcoinChartAmbientPulse extends StatefulWidget {
   final Widget child;
   const HomeBitcoinChartAmbientPulse({super.key, required this.child});
+
   @override
-  State<HomeBitcoinChartAmbientPulse> createState() => _HomeBitcoinChartAmbientPulseState();
+  State<HomeBitcoinChartAmbientPulse> createState() =>
+      _HomeBitcoinChartAmbientPulseState();
 }
 
-class _HomeBitcoinChartAmbientPulseState extends State<HomeBitcoinChartAmbientPulse>
+class _HomeBitcoinChartAmbientPulseState
+    extends State<HomeBitcoinChartAmbientPulse>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+
   @override
   void initState() {
     super.initState();
@@ -76,11 +198,13 @@ class _HomeBitcoinChartAmbientPulseState extends State<HomeBitcoinChartAmbientPu
       duration: KeroseneMotion.loop,
     )..repeat(reverse: true);
   }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     if (KeroseneMotion.reduceMotion(context)) return widget.child;
@@ -92,5 +216,96 @@ class _HomeBitcoinChartAmbientPulseState extends State<HomeBitcoinChartAmbientPu
         return Opacity(opacity: opacity, child: child);
       },
     );
+  }
+}
+
+/// Live pulse on the last point of the chart.
+class HomeBitcoinLiveDot extends StatefulWidget {
+  final Offset offset;
+  final Color color;
+
+  const HomeBitcoinLiveDot({
+    super.key,
+    required this.offset,
+    required this.color,
+  });
+
+  @override
+  State<HomeBitcoinLiveDot> createState() => _HomeBitcoinLiveDotState();
+}
+
+class _HomeBitcoinLiveDotState extends State<HomeBitcoinLiveDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (KeroseneMotion.reduceMotion(context)) {
+      return CustomPaint(
+        painter: _LiveDotPainter(
+          offset: widget.offset,
+          color: widget.color,
+          t: 1,
+        ),
+      );
+    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return CustomPaint(
+          painter: _LiveDotPainter(
+            offset: widget.offset,
+            color: widget.color,
+            t: _controller.value,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LiveDotPainter extends CustomPainter {
+  final Offset offset;
+  final Color color;
+  final double t;
+
+  _LiveDotPainter({
+    required this.offset,
+    required this.color,
+    required this.t,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wave = math.sin(t * math.pi * 2);
+    final radius = 3.2 + wave.abs() * 1.4;
+    canvas.drawCircle(
+      offset,
+      radius + 4,
+      Paint()..color = color.withValues(alpha: 0.18 + wave.abs() * 0.12),
+    );
+    canvas.drawCircle(offset, radius, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LiveDotPainter oldDelegate) {
+    return oldDelegate.t != t ||
+        oldDelegate.offset != offset ||
+        oldDelegate.color != color;
   }
 }

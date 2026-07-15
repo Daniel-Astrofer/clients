@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -8,16 +9,27 @@ import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/icons.dart';
 
+/// Professional amount-entry surface (send / receive).
+///
+/// Natural left-to-right decimal entry via embedded keypad (no system keyboard),
+/// currency chip, conversion line, optional balance/fee/warning, and CTA.
 class TransactionValueEntrySurface extends StatelessWidget {
   final VoidCallback onBack;
+  final String? title;
+  final String? subtitle;
   final String amountInput;
   final String unitLabel;
   final Currency currency;
   final String fiatReference;
   final Widget? configuration;
   final bool showKeypad;
-  final ValueChanged<String>? onAmountChanged;
-  final VoidCallback? onFiatReferenceTap;
+  final ValueChanged<String>? onKeyTap;
+  final VoidCallback? onCurrencyTap;
+  final String? availableLabel;
+  final String? feeLabel;
+  final String? warningLabel;
+  final List<({String label, String key})> quickActions;
+  final ValueChanged<String>? onQuickAction;
   final String ctaLabel;
   final bool ctaEnabled;
   final bool isBusy;
@@ -26,14 +38,21 @@ class TransactionValueEntrySurface extends StatelessWidget {
   const TransactionValueEntrySurface({
     super.key,
     required this.onBack,
+    this.title,
+    this.subtitle,
     this.amountInput = '0',
     this.unitLabel = '₿',
     this.currency = Currency.btc,
     required this.fiatReference,
     this.configuration,
     this.showKeypad = true,
-    this.onAmountChanged,
-    this.onFiatReferenceTap,
+    this.onKeyTap,
+    this.onCurrencyTap,
+    this.availableLabel,
+    this.feeLabel,
+    this.warningLabel,
+    this.quickActions = const [],
+    this.onQuickAction,
     required this.ctaLabel,
     required this.ctaEnabled,
     required this.isBusy,
@@ -42,63 +61,87 @@ class TransactionValueEntrySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasWarning = warningLabel != null && warningLabel!.trim().isNotEmpty;
+
     return ColoredBox(
-      color: _AmountEntryColors.background,
+      color: _C.bg,
       child: SafeArea(
         child: Column(
           children: [
-            _AmountEntryHeader(onBack: onBack),
+            _Header(
+              onBack: onBack,
+              title: title,
+              subtitle: subtitle,
+            ),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  final compact = constraints.maxHeight < 640;
                   return SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.xl2,
+                      compact ? 8 : 16,
+                      AppSpacing.xl2,
+                      12,
+                    ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
+                        minHeight: constraints.maxHeight - 24,
+                        maxWidth: 448,
                       ),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.xl2,
-                            AppSpacing.none,
-                            AppSpacing.xl2,
-                            AppSpacing.xl2,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _CurrencyChip(
+                            label: unitLabel,
+                            currency: currency,
+                            onTap: showKeypad ? onCurrencyTap : null,
                           ),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 448),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _AmountEntryDisplay(
-                                  amountInput: amountInput,
-                                  unitLabel: unitLabel,
-                                  currency: currency,
-                                  fiatReference: fiatReference,
-                                  editable: showKeypad,
-                                  onAmountChanged: onAmountChanged,
-                                  onFiatReferenceTap: onFiatReferenceTap,
-                                  onSubmitted: () {
-                                    if (ctaEnabled && !isBusy) {
-                                      onCta();
-                                    }
-                                  },
-                                ),
-                                if (configuration != null) configuration!,
-                              ],
+                          SizedBox(height: compact ? 18 : 28),
+                          _AmountHero(
+                            amountInput: amountInput,
+                            currency: currency,
+                            hasWarning: hasWarning,
+                            showCursor: showKeypad,
+                          ),
+                          const SizedBox(height: 10),
+                          _ConversionLine(
+                            text: fiatReference,
+                            onTap: showKeypad ? onCurrencyTap : null,
+                          ),
+                          if (availableLabel != null ||
+                              feeLabel != null ||
+                              hasWarning) ...[
+                            const SizedBox(height: 22),
+                            _ContextPanel(
+                              availableLabel: availableLabel,
+                              feeLabel: feeLabel,
+                              warningLabel: warningLabel,
                             ),
-                          ),
-                        ),
+                          ],
+                          if (configuration != null) ...[
+                            const SizedBox(height: 20),
+                            configuration!,
+                          ],
+                          if (quickActions.isNotEmpty && showKeypad) ...[
+                            const SizedBox(height: 18),
+                            _QuickActions(
+                              actions: quickActions,
+                              onTap: onQuickAction,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   );
                 },
               ),
             ),
-            _AmountEntryBottom(
-              ctaLabel: ctaLabel,
-              ctaEnabled: ctaEnabled,
+            if (showKeypad && onKeyTap != null) _Keypad(onKeyTap: onKeyTap!),
+            _CtaBar(
+              label: ctaLabel,
+              enabled: ctaEnabled,
               isBusy: isBusy,
               onCta: onCta,
             ),
@@ -109,425 +152,790 @@ class TransactionValueEntrySurface extends StatelessWidget {
   }
 }
 
-class _AmountEntryHeader extends StatelessWidget {
-  final VoidCallback onBack;
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
 
-  const _AmountEntryHeader({required this.onBack});
+class _Header extends StatelessWidget {
+  final VoidCallback onBack;
+  final String? title;
+  final String? subtitle;
+
+  const _Header({
+    required this.onBack,
+    this.title,
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final hasTitle = title != null && title!.trim().isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl2,
-        AppSpacing.xl2,
-        AppSpacing.xl2,
-        AppSpacing.none,
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
       child: Row(
         children: [
-          SizedBox.square(
-            dimension: 48,
-            child: IconButton(
-              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              onPressed: onBack,
-              icon: const Icon(KeroseneIcons.back, size: 24),
-              style: IconButton.styleFrom(
-                foregroundColor: _AmountEntryColors.text,
-                minimumSize: const Size.square(48),
-                tapTargetSize: MaterialTapTargetSize.padded,
-              ),
+          IconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: onBack,
+            icon: const Icon(KeroseneIcons.back, size: 22),
+            style: IconButton.styleFrom(
+              foregroundColor: _C.text,
+              minimumSize: const Size.square(48),
             ),
           ),
-          const Spacer(),
-          const SizedBox(width: 48),
+          Expanded(
+            child: hasTitle
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.inter(
+                          color: _C.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      if (subtitle != null && subtitle!.trim().isNotEmpty)
+                        Text(
+                          subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.inter(
+                            color: _C.muted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
   }
 }
 
-class _AmountEntryDisplay extends StatefulWidget {
-  final String amountInput;
-  final String unitLabel;
-  final Currency currency;
-  final String fiatReference;
-  final bool editable;
-  final ValueChanged<String>? onAmountChanged;
-  final VoidCallback? onFiatReferenceTap;
-  final VoidCallback? onSubmitted;
+// ---------------------------------------------------------------------------
+// Currency chip
+// ---------------------------------------------------------------------------
 
-  const _AmountEntryDisplay({
-    required this.amountInput,
-    required this.unitLabel,
+class _CurrencyChip extends StatelessWidget {
+  final String label;
+  final Currency currency;
+  final VoidCallback? onTap;
+
+  const _CurrencyChip({
+    required this.label,
     required this.currency,
-    required this.fiatReference,
-    required this.editable,
-    required this.onAmountChanged,
-    required this.onFiatReferenceTap,
-    required this.onSubmitted,
+    this.onTap,
   });
 
   @override
-  State<_AmountEntryDisplay> createState() => _AmountEntryDisplayState();
+  Widget build(BuildContext context) {
+    final name = switch (currency) {
+      Currency.btc => 'Bitcoin',
+      Currency.usd => 'US Dollar',
+      Currency.eur => 'Euro',
+      Currency.brl => 'Real',
+    };
+
+    // Flat text control — no gray pill background.
+    return InkWell(
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onTap!();
+            },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppTypography.inter(
+                color: _C.text,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              name,
+              style: AppTypography.inter(
+                color: _C.muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(
+                KeroseneIcons.chevronDown,
+                size: 16,
+                color: _C.muted,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _AmountEntryDisplayState extends State<_AmountEntryDisplay> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+// ---------------------------------------------------------------------------
+// Amount hero
+// ---------------------------------------------------------------------------
+
+class _AmountHero extends StatefulWidget {
+  final String amountInput;
+  final Currency currency;
+  final bool hasWarning;
+  final bool showCursor;
+
+  const _AmountHero({
+    required this.amountInput,
+    required this.currency,
+    required this.hasWarning,
+    required this.showCursor,
+  });
+
+  @override
+  State<_AmountHero> createState() => _AmountHeroState();
+}
+
+class _AmountHeroState extends State<_AmountHero>
+    with TickerProviderStateMixin {
+  static const _pulseScale = 0.985;
+  static const _digitIn = Duration(milliseconds: 160);
+  static const _settle = Duration(milliseconds: 220);
+  static const _shakeMs = Duration(milliseconds: 280);
+
+  late final AnimationController _cursor;
+  late final AnimationController _pulse;
+  late final AnimationController _shake;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+  late final Animation<double> _shakeX;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: _digitsFromRawInput(widget.amountInput, widget.currency),
+    _cursor = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
     );
-    _focusNode = FocusNode();
-    _focusNode.addListener(_handleFocusChange);
+    _pulse = AnimationController(vsync: this, duration: _digitIn);
+    _shake = AnimationController(vsync: this, duration: _shakeMs);
+
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: _pulseScale)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: _pulseScale, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 60,
+      ),
+    ]).animate(_pulse);
+
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.72)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.72, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 65,
+      ),
+    ]).animate(_pulse);
+
+    // Micro horizontal shake: 0 → 2 → -2 → 1 → 0 (logical px).
+    _shakeX = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: 2.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 2.0, end: -2.0), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: -2.0, end: 1.0), weight: 25),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 25),
+    ]).animate(CurvedAnimation(parent: _shake, curve: Curves.easeOutCubic));
+
+    if (widget.showCursor) {
+      _cursor.repeat(reverse: true);
+    }
   }
 
   @override
-  void didUpdateWidget(covariant _AmountEntryDisplay oldWidget) {
+  void didUpdateWidget(covariant _AmountHero oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.currency != widget.currency ||
-        oldWidget.amountInput != widget.amountInput) {
-      final synced = _digitsFromRawInput(widget.amountInput, widget.currency);
-      if (_controller.text == synced) {
-        return;
-      }
-      _controller.text = synced;
-      _controller.selection = TextSelection.collapsed(
-        offset: _controller.text.length,
-      );
+    if (widget.showCursor && !_cursor.isAnimating) {
+      _cursor.repeat(reverse: true);
+    } else if (!widget.showCursor && _cursor.isAnimating) {
+      _cursor.stop();
+      _cursor.value = 0;
     }
+
+    final amountChanged = oldWidget.amountInput != widget.amountInput;
+    final currencyChanged = oldWidget.currency != widget.currency;
+    if (amountChanged || currencyChanged) {
+      final lengthDelta =
+          (widget.amountInput.length - oldWidget.amountInput.length).abs();
+      final settle = currencyChanged || lengthDelta > 2;
+      _playPulse(settle: settle);
+    }
+
+    if (!oldWidget.hasWarning && widget.hasWarning) {
+      _playShake();
+    }
+  }
+
+  void _playPulse({required bool settle}) {
+    if (!mounted) return;
+    if (_reduceMotion(context)) return;
+    _pulse.duration = settle ? _settle : _digitIn;
+    _pulse.forward(from: 0);
+  }
+
+  void _playShake() {
+    if (!mounted) return;
+    if (_reduceMotion(context)) return;
+    _shake.forward(from: 0);
+  }
+
+  bool _reduceMotion(BuildContext context) {
+    return KeroseneMotion.reduceMotion(context);
   }
 
   @override
   void dispose() {
-    _focusNode.removeListener(_handleFocusChange);
-    _focusNode.dispose();
-    _controller.dispose();
+    _cursor.dispose();
+    _pulse.dispose();
+    _shake.dispose();
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    if (!_focusNode.hasFocus) {
-      final synced = _digitsFromRawInput(widget.amountInput, widget.currency);
-      if (_controller.text != synced) {
-        _controller.text = synced;
-      }
-    }
-  }
-
-  void _handleChanged(String value) {
-    final digits = _normalizeDigitBuffer(value);
-    if (digits != _controller.text) {
-      _controller.value = TextEditingValue(
-        text: digits,
-        selection: TextSelection.collapsed(offset: digits.length),
-      );
-    }
-    widget.onAmountChanged?.call(
-      _rawInputFromDigits(digits, widget.currency),
+  TextStyle _amountStyle(Color color) {
+    return AppTypography.inter(
+      color: color,
+      fontSize: 56,
+      fontWeight: FontWeight.w600,
+      height: 1.05,
+      letterSpacing: -1.2,
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
 
-  String _normalizeDigitBuffer(String value) {
-    final digits = StringBuffer();
-    final maxDigits = widget.currency == Currency.btc ? 16 : 14;
-
-    for (var index = 0; index < value.length; index++) {
-      final character = value[index];
-      final codeUnit = character.codeUnitAt(0);
-      if (codeUnit >= 48 && codeUnit <= 57) {
-        digits.write(character);
-      }
-    }
-
-    final withoutLeadingZeros = digits.toString().replaceFirst(
-          RegExp(r'^0+'),
-          '',
-        );
-    if (withoutLeadingZeros.length <= maxDigits) {
-      return withoutLeadingZeros;
-    }
-    return withoutLeadingZeros.substring(
-      withoutLeadingZeros.length - maxDigits,
-    );
-  }
-
-  String _rawInputFromDigits(String digits, Currency currency) {
-    final decimals = MoneyDisplay.decimalsFor(currency);
-    final sanitized = _normalizeDigitBuffer(digits);
-    final padded = sanitized.padLeft(decimals + 1, '0');
-    final integerEnd = padded.length - decimals;
-    final integerPart = padded.substring(0, integerEnd);
-    final decimalPart = padded.substring(integerEnd);
-    final normalizedInteger =
-        int.tryParse(integerPart)?.toString() ?? integerPart;
-
-    if (decimals == 0) {
-      return normalizedInteger;
-    }
-    return '$normalizedInteger.$decimalPart';
-  }
-
-  String _digitsFromRawInput(String rawInput, Currency currency) {
-    final decimals = MoneyDisplay.decimalsFor(currency);
-    final normalized = rawInput.replaceAll(',', '.').trim();
-    final parts = normalized.split('.');
-    final integerDigits = _digitsOnly(parts.isEmpty ? '0' : parts.first);
-    final decimalDigits = parts.length > 1 ? _digitsOnly(parts[1]) : '';
-    final fixedDecimal = decimalDigits.padRight(decimals, '0').substring(
-          0,
-          decimals,
-        );
-    final combined = '$integerDigits$fixedDecimal'.replaceFirst(
-      RegExp(r'^0+'),
-      '',
-    );
-    return combined;
-  }
-
-  String _digitsOnly(String value) {
-    final digits = StringBuffer();
-    for (var index = 0; index < value.length; index++) {
-      final character = value[index];
-      final codeUnit = character.codeUnitAt(0);
-      if (codeUnit >= 48 && codeUnit <= 57) {
-        digits.write(character);
-      }
-    }
-    return digits.toString();
-  }
-
-  String _displayAmountLabel() {
-    final amount = MoneyDisplay.parseEditableInput(widget.amountInput);
-    return MoneyDisplay.formatCompact(
-      amount: amount,
-      currency: widget.currency,
-      withSymbol: false,
-      maxDecimalPlaces: MoneyDisplay.decimalsFor(widget.currency),
+  /// Prefix + last grapheme so only the trailing digit pops in (PR2).
+  ({String prefix, String tail}) _splitDisplay(String display) {
+    if (display.isEmpty) return (prefix: '', tail: '');
+    final chars = display.characters;
+    if (chars.length <= 1) return (prefix: '', tail: display);
+    return (
+      prefix: chars.skipLast(1).toString(),
+      tail: chars.last,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final amountLabel = _displayAmountLabel();
-    final amountKey = '${widget.unitLabel}$amountLabel';
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final display = MoneyDisplay.formatEditableInput(
+      rawValue: widget.amountInput,
+      currency: widget.currency,
+      withSymbol: false,
+    );
+    final color = widget.hasWarning ? _C.warning : _C.text;
+    final reduce = _reduceMotion(context);
+    final style = _amountStyle(color);
+    final parts = _splitDisplay(display);
+    final digitDuration =
+        KeroseneMotion.duration(context, const Duration(milliseconds: 150));
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.none,
-        AppSpacing.none,
-        AppSpacing.none,
-        AppSpacing.xl2,
-      ),
-      child: Column(
+    Widget amountRow;
+    if (reduce) {
+      amountRow = Text(display, style: style);
+    } else {
+      amountRow = Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            width: double.infinity,
-            height: 86,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(
-                  opacity: 0,
-                  child: TextField(
-                    key: const ValueKey('movement-amount-input'),
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    readOnly: !widget.editable,
-                    canRequestFocus: widget.editable,
-                    enableInteractiveSelection: false,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: _handleChanged,
-                    onSubmitted: (_) => widget.onSubmitted?.call(),
-                    maxLines: 1,
-                    showCursor: false,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      isCollapsed: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-                IgnorePointer(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                    ),
-                    child: AnimatedSwitcher(
-                      duration: disableAnimations
-                          ? Duration.zero
-                          : KeroseneMotion.duration(
-                              context,
-                              KeroseneMotion.fast,
-                            ),
-                      switchInCurve: KeroseneMotion.standard,
-                      switchOutCurve: KeroseneMotion.exit,
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: ScaleTransition(
-                            scale: Tween<double>(begin: 0.985, end: 1).animate(
-                              CurvedAnimation(
-                                parent: animation,
-                                curve: KeroseneMotion.standard,
-                              ),
-                            ),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: FittedBox(
-                        key: ValueKey(amountKey),
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.center,
-                        child: _AmountEntryReadout(
-                          unitLabel: widget.unitLabel,
-                          amountLabel: amountLabel,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          if (parts.prefix.isNotEmpty)
+            Text(
+              parts.prefix,
+              style: style,
+            ),
+          AnimatedSwitcher(
+            duration: digitDuration,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            layoutBuilder: (current, previous) {
+              return Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  ...previous,
+                  if (current != null) current,
+                ],
+              );
+            },
+            transitionBuilder: (child, animation) {
+              final fade = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              );
+              final slide = Tween<Offset>(
+                begin: const Offset(0, 0.12),
+                end: Offset.zero,
+              ).animate(fade);
+              return FadeTransition(
+                opacity: fade,
+                child: SlideTransition(position: slide, child: child),
+              );
+            },
+            child: Text(
+              parts.tail,
+              key: ValueKey<String>(
+                '${widget.currency.name}-${parts.prefix}-${parts.tail}',
+              ),
+              style: style,
             ),
           ),
+        ],
+      );
+    }
+
+    Widget content = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          amountRow,
+          if (widget.showCursor) ...[
+            const SizedBox(width: 2),
+            FadeTransition(
+              opacity: _cursor,
+              child: Container(
+                width: 2.5,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (reduce) {
+      return Semantics(
+        liveRegion: true,
+        label: display,
+        child: content,
+      );
+    }
+
+    return Semantics(
+      liveRegion: true,
+      label: display,
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_pulse, _shake]),
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(_shakeX.value, 0),
+              child: Transform.scale(
+                scale: _scale.value,
+                child: Opacity(
+                  opacity: _opacity.value.clamp(0.0, 1.0),
+                  child: child,
+                ),
+              ),
+            );
+          },
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConversionLine extends StatefulWidget {
+  final String text;
+  final VoidCallback? onTap;
+
+  const _ConversionLine({required this.text, this.onTap});
+
+  @override
+  State<_ConversionLine> createState() => _ConversionLineState();
+}
+
+class _ConversionLineState extends State<_ConversionLine>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _swapSpin;
+
+  @override
+  void initState() {
+    super.initState();
+    _swapSpin = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+  }
+
+  @override
+  void dispose() {
+    _swapSpin.dispose();
+    super.dispose();
+  }
+
+  void _onTap() {
+    if (widget.onTap == null) return;
+    HapticFeedback.selectionClick();
+    if (!KeroseneMotion.reduceMotion(context)) {
+      _swapSpin.forward(from: 0);
+    }
+    widget.onTap!();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = KeroseneMotion.reduceMotion(context);
+    final duration = KeroseneMotion.duration(
+      context,
+      const Duration(milliseconds: 220),
+    );
+
+    final label = Text(
+      widget.text,
+      key: ValueKey<String>(widget.text),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: AppTypography.inter(
+        color: _C.muted,
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+        height: 1.25,
+      ),
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap == null ? null : _onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: reduce
+                ? label
+                : AnimatedSwitcher(
+                    duration: duration,
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: label,
+                  ),
+          ),
+          if (widget.onTap != null) ...[
+            const SizedBox(width: 6),
+            RotationTransition(
+              turns: Tween<double>(begin: 0, end: 0.5).animate(
+                CurvedAnimation(
+                  parent: _swapSpin,
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
+              child: Icon(
+                KeroseneIcons.swap,
+                size: 14,
+                color: _C.muted.withValues(alpha: 0.85),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Context panel (balance / fee / warning)
+// ---------------------------------------------------------------------------
+
+class _ContextPanel extends StatelessWidget {
+  final String? availableLabel;
+  final String? feeLabel;
+  final String? warningLabel;
+
+  const _ContextPanel({
+    this.availableLabel,
+    this.feeLabel,
+    this.warningLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // No gray panel — flat, centered meta lines under the amount.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (availableLabel != null)
+          _ContextLine(label: 'Disponível', value: availableLabel!),
+        if (availableLabel != null && feeLabel != null)
           const SizedBox(height: 8),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onFiatReferenceTap,
-            child: AnimatedSwitcher(
-              duration: KeroseneMotion.duration(context, KeroseneMotion.fast),
-              child: Text(
-                widget.fiatReference,
-                key: ValueKey(widget.fiatReference),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.inter(
-                  color: widget.onFiatReferenceTap == null
-                      ? _AmountEntryColors.muted
-                      : _AmountEntryColors.text,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w300,
-                  height: 1.2,
-                  letterSpacing: 0,
+        if (feeLabel != null)
+          _ContextLine(label: 'Taxa de rede', value: feeLabel!),
+        if (warningLabel != null && warningLabel!.trim().isNotEmpty) ...[
+          if (availableLabel != null || feeLabel != null)
+            const SizedBox(height: 10),
+          Text(
+            warningLabel!,
+            textAlign: TextAlign.center,
+            style: AppTypography.inter(
+              color: _C.warning,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ContextLine extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ContextLine({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label  ',
+            style: AppTypography.inter(
+              color: _C.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: AppTypography.inter(
+              color: _C.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+class _QuickActions extends StatelessWidget {
+  final List<({String label, String key})> actions;
+  final ValueChanged<String>? onTap;
+
+  const _QuickActions({required this.actions, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        for (final action in actions)
+          Material(
+            color: _C.chip,
+            borderRadius: BorderRadius.circular(999),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: onTap == null
+                  ? null
+                  : () {
+                      HapticFeedback.selectionClick();
+                      onTap!(action.key);
+                    },
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Text(
+                  action.label,
+                  style: AppTypography.inter(
+                    color: _C.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }
 
-class _AmountEntryReadout extends StatelessWidget {
-  final String unitLabel;
-  final String amountLabel;
+// ---------------------------------------------------------------------------
+// Keypad
+// ---------------------------------------------------------------------------
 
-  const _AmountEntryReadout({
-    required this.unitLabel,
-    required this.amountLabel,
-  });
+class _Keypad extends StatelessWidget {
+  final ValueChanged<String> onKeyTap;
+
+  const _Keypad({required this.onKeyTap});
+
+  static const _rows = [
+    ['1', '2', '3'],
+    ['4', '5', '6'],
+    ['7', '8', '9'],
+    ['.', '0', '←'],
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final parts = _AmountEntryParts.from(amountLabel);
-    final baseStyle = AppTypography.inter(
-      color: _AmountEntryColors.text,
-      fontSize: 72,
-      fontWeight: FontWeight.w600,
-      height: 1,
-      letterSpacing: 0,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-    final unitStyle = baseStyle.copyWith(
-      color: _AmountEntryColors.text.withValues(alpha: 0.72),
-      fontSize: 38,
-      fontWeight: FontWeight.w600,
-    );
-    final fractionStyle = baseStyle.copyWith(
-      color: _AmountEntryColors.muted.withValues(alpha: 0.72),
-      fontSize: 44,
-      fontWeight: FontWeight.w500,
-    );
-
-    return Text.rich(
-      TextSpan(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          TextSpan(text: unitLabel, style: unitStyle),
-          const TextSpan(text: ' '),
-          TextSpan(text: parts.integer, style: baseStyle),
-          if (parts.fraction.isNotEmpty) ...[
-            TextSpan(text: parts.separator, style: fractionStyle),
-            TextSpan(text: parts.fraction, style: fractionStyle),
+          for (final row in _rows) ...[
+            Row(
+              children: [
+                for (final key in row)
+                  Expanded(
+                    child: _Key(
+                      label: key,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onKeyTap(key);
+                      },
+                    ),
+                  ),
+              ],
+            ),
           ],
         ],
       ),
-      key: const ValueKey('movement-amount-display'),
-      maxLines: 1,
-      softWrap: false,
-      textAlign: TextAlign.center,
     );
   }
 }
 
-class _AmountEntryParts {
-  final String integer;
-  final String separator;
-  final String fraction;
+class _Key extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
 
-  const _AmountEntryParts({
-    required this.integer,
-    required this.separator,
-    required this.fraction,
-  });
+  const _Key({required this.label, required this.onTap});
 
-  factory _AmountEntryParts.from(String value) {
-    final dot = value.lastIndexOf('.');
-    final comma = value.lastIndexOf(',');
-    final separatorIndex = dot > comma ? dot : comma;
-    if (separatorIndex < 0) {
-      return _AmountEntryParts(
-        integer: value.isEmpty ? '0' : value,
-        separator: '',
-        fraction: '',
-      );
-    }
+  @override
+  State<_Key> createState() => _KeyState();
+}
 
-    final rawFraction = value.substring(separatorIndex + 1);
-    final trimmedFraction = rawFraction.replaceFirst(RegExp(r'0+$'), '');
-    return _AmountEntryParts(
-      integer: value.substring(0, separatorIndex).isEmpty
-          ? '0'
-          : value.substring(0, separatorIndex),
-      separator: trimmedFraction.isEmpty ? '' : value[separatorIndex],
-      fraction: trimmedFraction,
+class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
+  static const _pressScale = 0.96;
+  late final AnimationController _press;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _press = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 90),
+      reverseDuration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(begin: 1.0, end: _pressScale).animate(
+      CurvedAnimation(parent: _press, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _press.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    // Fire value change immediately; press animation runs in parallel.
+    widget.onTap();
+    if (!mounted || KeroseneMotion.reduceMotion(context)) return;
+    _press.forward(from: 0).then((_) {
+      if (mounted) _press.reverse();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isBackspace = widget.label == '←';
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _handleTap,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.white.withValues(alpha: 0.08),
+          highlightColor: Colors.white.withValues(alpha: 0.04),
+          child: ScaleTransition(
+            scale: _scale,
+            child: SizedBox(
+              height: 56,
+              child: Center(
+                child: isBackspace
+                    ? const Icon(
+                        KeroseneIcons.backspace,
+                        color: _C.text,
+                        size: 22,
+                      )
+                    : Text(
+                        widget.label,
+                        style: AppTypography.inter(
+                          color: _C.text,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w400,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _AmountEntryBottom extends StatelessWidget {
-  final String ctaLabel;
-  final bool ctaEnabled;
+// ---------------------------------------------------------------------------
+// CTA
+// ---------------------------------------------------------------------------
+
+class _CtaBar extends StatelessWidget {
+  final String label;
+  final bool enabled;
   final bool isBusy;
   final VoidCallback onCta;
 
-  const _AmountEntryBottom({
-    required this.ctaLabel,
-    required this.ctaEnabled,
+  const _CtaBar({
+    required this.label,
+    required this.enabled,
     required this.isBusy,
     required this.onCta,
   });
@@ -535,96 +943,53 @@ class _AmountEntryBottom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl2,
-              AppSpacing.sm,
-              AppSpacing.xl2,
-              AppSpacing.none,
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: FilledButton(
+          onPressed: enabled && !isBusy ? onCta : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: _C.text,
+            foregroundColor: _C.bg,
+            disabledBackgroundColor: _C.chip,
+            disabledForegroundColor: _C.muted,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: _AmountEntryButton(
-                label: ctaLabel,
-                enabled: ctaEnabled,
-                isBusy: isBusy,
-                onPressed: onCta,
-              ),
+            textStyle: AppTypography.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AmountEntryButton extends StatelessWidget {
-  final String label;
-  final bool enabled;
-  final bool isBusy;
-  final VoidCallback onPressed;
-
-  const _AmountEntryButton({
-    required this.label,
-    required this.enabled,
-    required this.isBusy,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: FilledButton(
-        onPressed: enabled && !isBusy ? onPressed : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: _AmountEntryColors.text,
-          foregroundColor: _AmountEntryColors.background,
-          disabledBackgroundColor: _AmountEntryColors.button,
-          disabledForegroundColor: _AmountEntryColors.muted,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: AppTypography.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 2.4,
-          ),
-        ),
-        child: AnimatedSwitcher(
-          duration: KeroseneMotion.duration(context, KeroseneMotion.fast),
-          child: isBusy
-              ? const SizedBox(
-                  key: ValueKey('busy'),
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: _AmountEntryColors.muted,
+          child: AnimatedSwitcher(
+            duration: KeroseneMotion.fast,
+            child: isBusy
+                ? const CupertinoActivityIndicator(
+                    key: ValueKey('busy'),
+                    radius: 10,
+                    color: _C.muted,
+                  )
+                : Text(
+                    label,
+                    key: ValueKey(label),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                )
-              : Text(
-                  label.toUpperCase(),
-                  key: ValueKey(label),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _AmountEntryColors {
-  const _AmountEntryColors._();
+class _C {
+  const _C._();
 
-  static const background = AppColors.hexFF000000;
+  static const bg = AppColors.hexFF000000;
   static const text = AppColors.hexFFFFFFFF;
-  static const muted = AppColors.hexFFA0A09B;
-  static const button = AppColors.hexFF333333;
+  static const muted = Color(0xFF8E8E93);
+  static const chip = Color(0xFF1C1C1E);
+  static const warning = Color(0xFFFFB020);
 }

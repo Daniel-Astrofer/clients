@@ -6,6 +6,7 @@ import 'package:kerosene/core/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/providers/currency_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
+import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/api_display_text.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
@@ -165,24 +166,91 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                 createdAt: createdAt,
               ),
               const SizedBox(height: 20),
+              _ReceiptSection(
+                children: [
+                  if (createdAt != null)
+                    _ReceiptRow(
+                      label: dateTitle,
+                      value: DateFormat('dd/MM/yyyy • HH:mm').format(createdAt),
+                    ),
+                  if (transaction != null) ...[
+                    _ReceiptRow(
+                      label: _financialCopy(context, pt: 'Valor base', en: 'Base amount', es: 'Monto base'),
+                      value: MoneyDisplay.formatAmountFromBtc(
+                        btcAmount: transaction!.amountBTC,
+                        currency: Currency.btc,
+                        btcUsd: btcUsd,
+                        btcEur: btcEur,
+                        btcBrl: btcBrl,
+                        signed: false,
+                      ),
+                      isTechnical: true,
+                    ),
+                    _ReceiptRow(
+                      label: _financialCopy(context, pt: 'Taxa de rede', en: 'Network fee', es: 'Tarifa de red'),
+                      value: transaction!.isInternal || transaction!.feeSatoshis == 0 
+                        ? _financialCopy(context, pt: 'Isenta', en: 'Free', es: 'Gratis')
+                        : MoneyDisplay.formatAmountFromBtc(
+                            btcAmount: transaction!.feeBTC,
+                            currency: Currency.btc,
+                            btcUsd: btcUsd,
+                            btcEur: btcEur,
+                            btcBrl: btcBrl,
+                            signed: false,
+                          ),
+                      isTechnical: transaction!.feeSatoshis > 0,
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider(color: monoBorderStrongColor, height: 1),
+                    ),
+                    _ReceiptRow(
+                      label: _financialCopy(context, pt: 'Valor total', en: 'Total amount', es: 'Monto total'),
+                      value: MoneyDisplay.formatAmountFromBtc(
+                        btcAmount: (transaction!.amountSatoshis + transaction!.feeSatoshis) / 100000000.0,
+                        currency: Currency.btc,
+                        btcUsd: btcUsd,
+                        btcEur: btcEur,
+                        btcBrl: btcBrl,
+                        signed: false,
+                      ),
+                      isTechnical: true,
+                      isHighlight: true,
+                    ),
+                  ],
+                ],
+              ),
+              if (transaction != null && !transaction!.isInternal) ...[
+                const SizedBox(height: 12),
+                _ReceiptSection(
+                  children: [
+                    _ReceiptRow(
+                      label: _financialCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
+                      value: transaction!.isLightning ? 'Lightning Network' : 'Bitcoin On-chain',
+                    ),
+                    if (!transaction!.isLightning)
+                      _ReceiptRow(
+                        label: _financialCopy(context, pt: 'Confirmações', en: 'Confirmations', es: 'Confirmaciones'),
+                        value: transaction!.confirmations >= 6 
+                          ? '6+ (Seguro)'
+                          : '${transaction!.confirmations}/6',
+                        isHighlight: transaction!.confirmations >= 6,
+                      ),
+                    if (transaction!.blockHeight != null && transaction!.blockHeight! > 0)
+                      _ReceiptRow(
+                        label: _financialCopy(context, pt: 'Bloco', en: 'Block', es: 'Bloque'),
+                        value: '#${transaction!.blockHeight}',
+                        isTechnical: true,
+                      ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
               if (_primaryAddress != null)
                 _CopyablePanel(
                   title: _primaryAddressLabel,
                   value: _primaryAddress!,
                 ),
-              if (createdAt != null) ...[
-                const SizedBox(height: 12),
-                _DetailPanel(
-                  title: dateTitle,
-                  child: Text(
-                    DateFormat('dd/MM/yyyy • HH:mm').format(createdAt),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: monoTextColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ],
               if (hasAdvancedDetails) ...[
                 const SizedBox(height: 12),
                 _DisclosurePanel(
@@ -407,6 +475,8 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
         return 'Esta movimentação ainda está em andamento. O status muda automaticamente assim que houver atualização.';
       case TransactionStatus.confirmed:
         return 'Movimentação concluída com sucesso e pronta para conferência.';
+      case TransactionStatus.cancelled:
+        return 'Esta movimentação foi cancelada ou expirou e não alterou o saldo.';
       case TransactionStatus.failed:
         return 'Não foi possível concluir esta movimentação. Revise os detalhes antes de tentar novamente.';
     }
@@ -681,6 +751,86 @@ class _DisclosurePanel extends StatelessWidget {
           ),
           children: children,
         ),
+      ),
+    );
+  }
+}
+
+class _ReceiptSection extends StatelessWidget {
+  final List<Widget> children;
+
+  const _ReceiptSection({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: monochromePanelDecoration(
+        color: monoSurfaceAltColor,
+        borderColor: monoBorderStrongColor,
+        showShadow: false,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _ReceiptRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isTechnical;
+  final bool isHighlight;
+
+  const _ReceiptRow({
+    required this.label,
+    required this.value,
+    this.isTechnical = false,
+    this.isHighlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: monoMutedTextColor,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: LayoutBuilder(builder: (context, constraints) {
+              return Text(
+                '.' * (constraints.maxWidth / 3).floor(),
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: TextStyle(
+                  color: monoBorderStrongColor.withValues(alpha: 0.3),
+                  letterSpacing: 2,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontFamily: isTechnical ? AppTypography.monoFontFamily : AppTypography.fontFamily,
+                  color: isHighlight ? monoTextColor : monoMutedTextColor,
+                  fontWeight: isHighlight ? FontWeight.w800 : (isTechnical ? FontWeight.w600 : FontWeight.w700),
+                ),
+          ),
+        ],
       ),
     );
   }

@@ -1,12 +1,15 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
+import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 
 class ServerAvailabilityGate extends ConsumerStatefulWidget {
   final Widget child;
@@ -26,6 +29,23 @@ class _ServerAvailabilityGateState
   Widget build(BuildContext context) {
     final isOnline = ref.watch(networkStatusProvider);
     final authState = ref.watch(authControllerProvider);
+    final torSettled = ref.watch(torSettledProvider);
+    final pinUnlocked = ref.watch(appEntryPinUnlockedProvider);
+
+    // During cold session bootstrap the shell shows the K logo. Do not replace
+    // it with "server unavailable" for transient offline/Tor-up probes.
+    if (authState is AuthInitial || authState is AuthLoading) {
+      _showingUnavailableScreen = false;
+      return widget.child;
+    }
+
+    // Authenticated + PIN gate / Tor still warming: the PIN flow owns the UX
+    // (dots while held PIN waits for Tor). Never cover it with offline dialog.
+    if (authState is AuthAuthenticated && (!torSettled || !pinUnlocked)) {
+      _showingUnavailableScreen = false;
+      return widget.child;
+    }
+
     final isUnavailable = !isOnline || authState is AuthServerUnavailable;
     final isRetryingUnavailable =
         _showingUnavailableScreen && authState is AuthLoading;
@@ -122,13 +142,9 @@ class ServerUnavailableScreen extends ConsumerWidget {
                       ),
                       onPressed: isLoading ? null : () => _retry(context, ref),
                       child: isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.hexFF000000,
-                              ),
+                          ? const CupertinoActivityIndicator(
+                              radius: 9,
+                              color: AppColors.hexFF000000,
                             )
                           : Text(context.tr.tryAgain),
                     ),

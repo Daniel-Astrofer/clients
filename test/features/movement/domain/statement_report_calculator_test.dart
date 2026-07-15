@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/domain/entities/statement_report.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
@@ -32,6 +33,7 @@ void main() {
     expect(report.incomingSats, 100000);
     expect(report.outgoingSats, 0);
     expect(report.feeSats, 0);
+    expect(report.netSats, 100000);
     expect(_bucketValue(report, 'jun.', 'wallet-global'), 100000);
   });
 
@@ -56,7 +58,35 @@ void main() {
     expect(report.incomingSats, 0);
     expect(report.outgoingSats, 50000);
     expect(report.feeSats, 1000);
+    expect(report.netSats, -51000);
     expect(_bucketValue(report, 'jun.', 'wallet-global'), 51000);
+  });
+
+  test('separates network fee and service fee and exposes net', () {
+    final report = StatementReportCalculator.calculate(
+      wallets: [_wallet(id: 'wallet-global', name: 'Carteira Global')],
+      transactions: [
+        _transaction(
+          id: 'send-1',
+          walletId: 'wallet-global',
+          sourceWalletId: 'wallet-global',
+          amountSatoshis: 20000,
+          feeSatoshis: 300,
+          serviceFeeSatoshis: 150,
+          type: TransactionType.send,
+          timestamp: DateTime(2026, 6, 12),
+        ),
+      ],
+      period: StatementReportPeriod.monthly,
+      now: now,
+    );
+
+    expect(report.outgoingSats, 20000);
+    expect(report.feeSats, 300);
+    expect(report.serviceFeeSats, 150);
+    expect(report.totalFeesSats, 450);
+    expect(report.netSats, -20450);
+    expect(_bucketValue(report, 'jun.', 'wallet-global'), 20450);
   });
 
   test('keeps internal transfer out of global external totals', () {
@@ -136,6 +166,28 @@ void main() {
     expect(report.isPartial, isTrue);
   });
 
+  test('marks report partial when oldest loaded tx is after period start', () {
+    final report = StatementReportCalculator.calculate(
+      wallets: [_wallet(id: 'wallet-global', name: 'Carteira Global')],
+      transactions: [
+        _transaction(
+          id: 'recent-only',
+          walletId: 'wallet-global',
+          destinationWalletId: 'wallet-global',
+          amountSatoshis: 5000,
+          type: TransactionType.deposit,
+          timestamp: DateTime(2026, 6, 20),
+        ),
+      ],
+      period: StatementReportPeriod.monthly,
+      now: now,
+    );
+
+    // Monthly window starts months earlier than the single loaded tx.
+    expect(report.isPartial, isTrue);
+    expect(report.periodStart.isBefore(DateTime(2026, 6, 20)), isTrue);
+  });
+
   test('keeps distribution ordered by real balance without inflating zeroes',
       () {
     final report = StatementReportCalculator.calculate(
@@ -198,6 +250,115 @@ void main() {
     expect(report.includedTransactionCount, 1);
     expect(report.ignoredFailedTransactionCount, 1);
     expect(report.ignoredOutOfPeriodTransactionCount, 1);
+    expect(report.unclassifiedTransactionCount, 0);
+  });
+
+  test('prefers BitcoinAccount labels and match keys over legacy wallets', () {
+    final report = StatementReportCalculator.calculate(
+      accounts: [
+        const BitcoinAccount(
+          id: 'acct-cold',
+          type: 'WATCH_ONLY_COLD_WALLET',
+          custody: 'WATCH_ONLY',
+          status: 'ACTIVE',
+          label: 'Cofre frio',
+          riskTier: 'GOLD',
+          coldWalletId: 'cold-1',
+          observedBalanceSats: 250000,
+        ),
+        const BitcoinAccount(
+          id: 'acct-global',
+          type: 'INTERNAL_CARD',
+          custody: 'KEROSENE_CUSTODIAL',
+          status: 'ACTIVE',
+          label: 'Carteira Global',
+          riskTier: 'BRONZE',
+          balanceAvailableSats: 100000,
+        ),
+      ],
+      wallets: [
+        _wallet(id: 'legacy-ignored', name: 'Legacy', balance: 9),
+      ],
+      transactions: [
+        _transaction(
+          id: 'to-cold',
+          walletId: 'acct-cold',
+          destinationWalletId: 'acct-cold',
+          amountSatoshis: 8000,
+          type: TransactionType.deposit,
+          timestamp: DateTime(2026, 6, 8),
+        ),
+        _transaction(
+          id: 'from-global',
+          walletId: 'acct-global',
+          sourceWalletId: 'acct-global',
+          amountSatoshis: 3000,
+          feeSatoshis: 50,
+          type: TransactionType.send,
+          timestamp: DateTime(2026, 6, 9),
+        ),
+      ],
+      period: StatementReportPeriod.monthly,
+      now: now,
+    );
+
+    expect(report.walletCount, 2);
+    expect(report.dominantWalletName, 'Cofre frio');
+    expect(report.incomingSats, 8000);
+    expect(report.outgoingSats, 3000);
+    expect(report.feeSats, 50);
+    expect(
+      report.distribution.map((segment) => segment.label).toList(),
+      ['Cofre frio', 'Carteira Global'],
+    );
+    expect(_bucketValue(report, 'jun.', 'acct-cold'), 8000);
+    expect(_bucketValue(report, 'jun.', 'acct-global'), 3050);
+  });
+
+  test('counts unmatched in-period txs as unclassified but still in KPIs', () {
+    final report = StatementReportCalculator.calculate(
+      wallets: [_wallet(id: 'wallet-a', name: 'Carteira A')],
+      transactions: [
+        _transaction(
+          id: 'orphan-credit',
+          walletId: 'unknown-wallet',
+          destinationWalletId: 'unknown-wallet',
+          amountSatoshis: 7000,
+          type: TransactionType.deposit,
+          timestamp: DateTime(2026, 6, 15),
+        ),
+      ],
+      period: StatementReportPeriod.monthly,
+      now: now,
+    );
+
+    expect(report.incomingSats, 7000);
+    expect(report.unclassifiedTransactionCount, 1);
+    expect(report.includedTransactionCount, 1);
+    expect(_bucketValue(report, 'jun.', 'wallet-a'), 0);
+  });
+
+  test('ignores placeholder addresses when matching wallets', () {
+    final report = StatementReportCalculator.calculate(
+      wallets: [
+        _wallet(id: 'wallet-a', name: 'Carteira A', address: 'bc1qreal'),
+      ],
+      transactions: [
+        _transaction(
+          id: 'placeholder-only',
+          fromAddress: 'Minha carteira',
+          toAddress: 'Rede Bitcoin',
+          amountSatoshis: 4000,
+          type: TransactionType.send,
+          timestamp: DateTime(2026, 6, 16),
+        ),
+      ],
+      period: StatementReportPeriod.monthly,
+      now: now,
+    );
+
+    expect(report.unclassifiedTransactionCount, 1);
+    expect(_bucketValue(report, 'jun.', 'wallet-a'), 0);
   });
 }
 
@@ -234,6 +395,7 @@ Transaction _transaction({
   String? destinationWalletId,
   required int amountSatoshis,
   int feeSatoshis = 0,
+  int serviceFeeSatoshis = 0,
   TransactionStatus status = TransactionStatus.confirmed,
   required TransactionType type,
   required DateTime timestamp,
@@ -248,6 +410,7 @@ Transaction _transaction({
     destinationWalletId: destinationWalletId,
     amountSatoshis: amountSatoshis,
     feeSatoshis: feeSatoshis,
+    serviceFeeSatoshis: serviceFeeSatoshis,
     status: status,
     type: type,
     confirmations: status == TransactionStatus.confirmed ? 6 : 0,

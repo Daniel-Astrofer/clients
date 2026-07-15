@@ -183,18 +183,14 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                       return Stack(
                         alignment: Alignment.center,
                         children: [
-                          if (selected)
+                          if (selected && showProgress)
                             SizedBox.square(
                               dimension: iconOuterSize,
                               child: CircularProgressIndicator(
-                                value: showProgress
-                                    ? _holdController.value.clamp(0.0, 1.0)
-                                    : 0,
-                                strokeWidth: 2.4,
-                                strokeCap: StrokeCap.round,
-                                color: foreground,
-                                backgroundColor:
-                                    foreground.withValues(alpha: 0.13),
+                                value: _holdController.value,
+                                strokeWidth: 3.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(foreground),
+                                backgroundColor: foreground.withValues(alpha: 0.12),
                               ),
                             ),
                           child!,

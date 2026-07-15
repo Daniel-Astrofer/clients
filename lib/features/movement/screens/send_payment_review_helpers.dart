@@ -8,10 +8,15 @@ import 'package:kerosene/features/movement/screens/send_money_screen_review.dart
 String sendReviewNote(
   SendDestinationAnalysis destination, {
   required bool isPaymentLink,
+  bool coldSource = false,
 }) {
   if (isPaymentLink) return 'Pagamento por link interno';
   if (destination.isLightning) return 'Pagamento Lightning';
-  if (destination.isOnChain) return 'Envio on-chain';
+  if (destination.isOnChain) {
+    return coldSource
+        ? 'Você assina no aparelho · Kerosene só observa a blockchain'
+        : 'Envio on-chain';
+  }
   return 'Transferência interna Kerosene';
 }
 
@@ -29,6 +34,8 @@ Future<dynamic> openSendPaymentReview({
   required bool isPaymentLink,
   required Future<dynamic> Function(BuildContext confirmationContext) onConfirm,
 }) {
+  final coldSource =
+      wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable;
   final btcAmountLabel = formatBtcValue(requestedAmount);
   final fiatAmountLabel = formatFiatReference(
     btcAmount: requestedAmount,
@@ -49,6 +56,7 @@ Future<dynamic> openSendPaymentReview({
     recipientLabel: recipientLabel,
     networkLabel: networkLabel,
     fiatAmountLabel: fiatAmountLabel,
+    coldSource: coldSource,
   );
 
   return Navigator.of(context).push<dynamic>(
@@ -86,6 +94,7 @@ List<SendPaymentReviewRowData> _buildReviewRows({
   required String recipientLabel,
   required String networkLabel,
   required String fiatAmountLabel,
+  bool coldSource = false,
 }) {
   final rows = <SendPaymentReviewRowData>[
     SendPaymentReviewRowData(
@@ -100,6 +109,11 @@ List<SendPaymentReviewRowData> _buildReviewRows({
     ),
     SendPaymentReviewRowData(label: 'Rede', value: networkLabel),
     SendPaymentReviewRowData(label: 'Carteira', value: wallet.name),
+    if (coldSource)
+      const SendPaymentReviewRowData(
+        label: 'Assinatura',
+        value: 'No aparelho · seed local',
+      ),
     SendPaymentReviewRowData(
       label: 'Taxa de rede',
       value: _networkFeeLabel(destination, feeQuote),
@@ -271,7 +285,22 @@ String _networkFeeLabel(
   SendFeeQuote feeQuote,
 ) {
   if (!destination.isExternal) return 'Grátis';
-  return '${formatBtcValue(feeQuote.networkFeeBtc)} BTC';
+  if (feeQuote.networkFeeCertainty == NetworkFeeCertainty.unknownUntilPay) {
+    return 'Estimada no pagamento';
+  }
+  if (feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading) {
+    return 'Calculando…';
+  }
+  final fee = '${formatBtcValue(feeQuote.networkFeeBtc)} BTC';
+  if (feeQuote.feeTier != NetworkFeeTier.standard && destination.isOnChain) {
+    final tier = switch (feeQuote.feeTier) {
+      NetworkFeeTier.fast => 'Rápido',
+      NetworkFeeTier.slow => 'Econômico',
+      NetworkFeeTier.standard => 'Normal',
+    };
+    return '$fee · $tier';
+  }
+  return fee;
 }
 
 String _displayFiatLabel(String value) {

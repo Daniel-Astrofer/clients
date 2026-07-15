@@ -1,5 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'dart:ui';
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 
@@ -122,10 +123,15 @@ class HomeLoadingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Rare path (wallet still loading on home). Keep dots centered — not a
+    // short strip near the top of the scroll view.
     if (MediaQuery.sizeOf(context).width >= 0) {
+      final height = MediaQuery.sizeOf(context).height;
       return SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.58,
-        child: const Center(child: TorLoadingDots()),
+        height: height * 0.72,
+        child: const Center(
+          child: TorLoadingDots(travel: 5),
+        ),
       );
     }
 
@@ -161,57 +167,36 @@ class HomeLoadingContent extends StatelessWidget {
           ],
         ),
         SizedBox(height: homeSize(18)),
-        HomeGlassPanel(
-          borderRadius: BorderRadius.circular(homeSize(18)),
-          padding: EdgeInsets.all(homeSize(20)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HomeSkeletonBox(
-                width: homeSize(132),
-                height: homeSize(14),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-              SizedBox(height: homeSize(18)),
-              HomeSkeletonBox(
-                width: homeSize(160),
-                height: homeSize(16),
-                borderRadius: BorderRadius.circular(homeSize(6)),
-              ),
-              SizedBox(height: homeSize(8)),
-              HomeSkeletonBox(
-                width: homeSize(220),
-                height: homeSize(12),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-              SizedBox(height: homeSize(22)),
-              HomeSkeletonBox(
-                width: homeSize(238),
-                height: homeSize(44),
-                borderRadius: BorderRadius.circular(homeSize(10)),
-              ),
-              SizedBox(height: homeSize(10)),
-              HomeSkeletonBox(
-                width: homeSize(118),
-                height: homeSize(14),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-              SizedBox(height: homeSize(8)),
-              HomeSkeletonBox(
-                width: homeSize(92),
-                height: homeSize(13),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-              SizedBox(height: homeSize(24)),
-              HomeSkeletonBox(
-                width: homeSize(104),
-                height: homeSize(34),
-                borderRadius: BorderRadius.circular(homeSize(8)),
-              ),
-            ],
-          ),
+        // Balance hero skeleton — no glass card; matches floating OLED layout.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            HomeSkeletonBox(
+              width: homeSize(100),
+              height: homeSize(12),
+              borderRadius: BorderRadius.circular(homeSize(5)),
+            ),
+            SizedBox(height: homeSize(22)),
+            HomeSkeletonBox(
+              width: homeSize(220),
+              height: homeSize(48),
+              borderRadius: BorderRadius.circular(homeSize(10)),
+            ),
+            SizedBox(height: homeSize(12)),
+            HomeSkeletonBox(
+              width: homeSize(140),
+              height: homeSize(14),
+              borderRadius: BorderRadius.circular(homeSize(5)),
+            ),
+            SizedBox(height: homeSize(10)),
+            HomeSkeletonBox(
+              width: homeSize(118),
+              height: homeSize(14),
+              borderRadius: BorderRadius.circular(homeSize(5)),
+            ),
+          ],
         ),
-        SizedBox(height: homeSize(16)),
+        SizedBox(height: homeSize(20)),
         Row(
           children: [
             Expanded(
@@ -229,8 +214,6 @@ class HomeLoadingContent extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: homeSize(14)),
-        const HomePaginationDots(count: 3, activeIndex: 0),
         SizedBox(height: homeSize(24)),
         HomeGlassPanel(
           borderRadius: BorderRadius.circular(homeSize(16)),
@@ -508,39 +491,52 @@ class HomeBalanceActionButton extends StatelessWidget {
 
     return BouncingButtonWrapper(
       onTap: onTap,
-      child: Container(
-        constraints: BoxConstraints(minHeight: homeSize(48)),
-        padding: EdgeInsets.symmetric(horizontal: homeSize(14)),
-        decoration: BoxDecoration(
-          color: primary ? Colors.white : homeCardColor,
-          borderRadius: BorderRadius.circular(homeSize(12)),
-          border: Border.all(
-            color: primary ? Colors.white : homePanelBorderColor,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: homeSize(18),
-              color: primary ? Colors.black : Colors.white,
-            ),
-            SizedBox(width: homeSize(8)),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: primary ? Colors.black : Colors.white,
-                  fontSize: homeFontSize(14),
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 0,
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(homeSize(16)),
+        child: BackdropFilter(
+          filter: primary 
+              ? ImageFilter.blur(sigmaX: 0, sigmaY: 0)
+              : ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+          child: Container(
+            constraints: BoxConstraints(minHeight: homeSize(52)),
+            padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
+            decoration: BoxDecoration(
+              color: primary 
+                  ? Colors.white 
+                  : Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(homeSize(16)),
+              border: Border.all(
+                color: primary 
+                    ? Colors.transparent 
+                    : Colors.white.withValues(alpha: 0.08),
+                width: 0.5,
               ),
             ),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: homeSize(20),
+                  color: primary ? Colors.black : Colors.white,
+                ),
+                SizedBox(width: homeSize(8)),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: primary ? Colors.black : Colors.white,
+                      fontSize: homeFontSize(15),
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

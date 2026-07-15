@@ -119,8 +119,13 @@ void onStart(ServiceInstance service) async {
   }
 
   if (_usesOnionBackend()) {
+    // Tor SOCKS is owned by the main isolate. For onion deployments the app
+    // must remain process-alive (backgrounded but not force-stopped) so the
+    // main BalanceWebSocketProvider keeps receiving events and writing the
+    // secure 24h+ local transaction ledger.
     debugPrint(
-      'BackgroundService: Tor-backed websocket disabled in background isolate.',
+      'BackgroundService: Tor-backed websocket disabled in background isolate; '
+      'main isolate owns Tor + local history cache.',
     );
     service.stopSelf();
     return;

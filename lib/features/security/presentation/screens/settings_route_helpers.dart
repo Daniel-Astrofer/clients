@@ -8,29 +8,44 @@ void pushSettingsDeferred(
   WidgetBuilder builder,
 ) {
   Navigator.of(context).push(
-    PageRouteBuilder<void>(
-      transitionDuration: KeroseneMotion.medium,
-      reverseTransitionDuration: KeroseneMotion.short,
+    _settingsRoute(
       pageBuilder: (_, __, ___) => DeferredPage(
         loadLibrary: loadLibrary,
         builder: builder,
       ),
-      transitionsBuilder: (_, animation, __, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: KeroseneMotion.emphasized,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.04, 0.02),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
-        );
-      },
     ),
+  );
+}
+
+/// Push a fully built settings feature screen (no deferred library load).
+void pushSettingsPage(BuildContext context, Widget page) {
+  Navigator.of(context).push(
+    _settingsRoute(pageBuilder: (_, __, ___) => page),
+  );
+}
+
+PageRouteBuilder<void> _settingsRoute({
+  required RoutePageBuilder pageBuilder,
+}) {
+  return PageRouteBuilder<void>(
+    transitionDuration: KeroseneMotion.medium,
+    reverseTransitionDuration: KeroseneMotion.short,
+    pageBuilder: pageBuilder,
+    transitionsBuilder: (_, animation, __, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: KeroseneMotion.emphasized,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.04, 0.02),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
   );
 }

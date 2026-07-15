@@ -4,7 +4,9 @@ import 'package:dio/dio.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/bitcoin_network.dart';
 import '../../../../core/utils/device_helper.dart';
+import '../../../../core/utils/qr_payment_parser.dart';
 import '../../domain/entities/external_transfer.dart';
 import '../../domain/entities/fee_estimate.dart';
 import '../../domain/entities/tx_status.dart';
@@ -291,12 +293,39 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     final publicId = payload['publicId']?.toString().trim() ?? '';
     final walletId = payload['walletId']?.toString().trim() ?? '';
     final isInternal = paymentRail == 'INTERNAL';
+    final rawAddress = (payload['address']?.toString() ??
+            payload['externalReference']?.toString() ??
+            '')
+        .trim();
+    // INTERNAL requests use kerosene:wallet:<uuid>; never treat that as deposit
+    // address for BIP-21 / external wallets.
+    final isChainAddress = rawAddress.isNotEmpty &&
+        !rawAddress.toLowerCase().startsWith('kerosene:') &&
+        looksLikeBitcoinAddress(rawAddress);
+    final depositAddress = isChainAddress
+        ? rawAddress
+        : (isInternal ? '' : rawAddress);
     final amountSats = (payload['amountSats'] as num?)?.toDouble() ??
         (payload['receiverAmountSats'] as num?)?.toDouble() ??
         (payload['grossAmountSats'] as num?)?.toDouble() ??
         0;
     final amountBtc =
         amountSats > 0 ? amountSats / 100000000.0 : (fallbackAmountBtc ?? 0);
+    final String? paymentUri;
+    if (isChainAddress) {
+      paymentUri = QrPaymentParser.encode(
+        address: depositAddress,
+        amountBtc: amountBtc > 0 ? amountBtc : null,
+        label: referenceLabel,
+        message: payload['description']?.toString() ??
+            payload['memo']?.toString() ??
+            fallbackDescription,
+      );
+    } else if (isInternal && publicId.isNotEmpty) {
+      paymentUri = 'kerosene://payment/pay/${Uri.encodeComponent(publicId)}';
+    } else {
+      paymentUri = null;
+    }
     return PaymentLink.fromJson({
       'id': payload['publicId'] ?? payload['id'] ?? payload['transactionId'],
       'userId': payload['userId'],
@@ -304,17 +333,14 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'description': payload['memo']?.toString() ??
           fallbackDescription ??
           'Recebimento via QR',
-      'depositAddress': payload['address']?.toString() ??
-          payload['externalReference']?.toString() ??
-          '',
+      'depositAddress': depositAddress,
       'visibility': 'PRIVATE',
       'confirmationMode': 'USER_ACTION_REQUIRED',
       'amountLocked': true,
       'referenceLabel': referenceLabel,
       'metadata': metadata ?? const <String, String>{},
       if (isInternal && walletId.isNotEmpty) 'destinationHash': walletId,
-      if (isInternal && publicId.isNotEmpty)
-        'paymentUri': 'kerosene://payment/pay/${Uri.encodeComponent(publicId)}',
+      if (paymentUri != null) 'paymentUri': paymentUri,
       'locked': isInternal,
       'status': payload['status']?.toString() ?? 'PENDING',
       'txid': payload['blockchainTxid']?.toString(),
@@ -620,14 +646,21 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       final response = await apiClient.get(AppConfig.kfeOnrampUrls);
       final data = response.data;
 
+      // Empty map is valid for beta: no third-party links configured.
+      if (data == null) {
+        return const <String, String>{};
+      }
+
       if (data is Map<String, dynamic>) {
-        return data.map((key, value) => MapEntry(key, value?.toString() ?? ''));
+        return data.map(
+          (key, value) => MapEntry(key, value?.toString().trim() ?? ''),
+        )..removeWhere((_, value) => value.isEmpty);
       }
 
       if (data is Map) {
-        return Map<String, dynamic>.from(
-          data,
-        ).map((key, value) => MapEntry(key, value?.toString() ?? ''));
+        return Map<String, dynamic>.from(data).map(
+          (key, value) => MapEntry(key, value?.toString().trim() ?? ''),
+        )..removeWhere((_, value) => value.isEmpty);
       }
 
       throw const ServerException(

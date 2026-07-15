@@ -1,7 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/motion/app_motion.dart';
+
+/// Shared [GlobalKey] so PIN → home bootstrap reuses the same dots [State]
+/// (animation keeps running across the handoff without a second static loader).
+class TorLoadingDotsKeys {
+  TorLoadingDotsKeys._();
+
+  static final GlobalKey primary = GlobalKey(debugLabel: 'torPrimaryDots');
+}
 
 class TorLoadingDots extends StatefulWidget {
   final double dotSize;
@@ -30,7 +37,7 @@ class _TorLoadingDotsState extends State<TorLoadingDots>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: KeroseneMotion.calm,
+      duration: const Duration(milliseconds: 900),
     )..repeat();
   }
 
@@ -41,15 +48,35 @@ class _TorLoadingDotsState extends State<TorLoadingDots>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Resume if a parent rebuild paused the ticker (common after route swaps).
+    final tickerEnabled = TickerMode.valuesOf(context).enabled;
+    final media = MediaQuery.maybeOf(context);
+    final disableAnimations = media?.disableAnimations == true;
+    if (!_controller.isAnimating && tickerEnabled && !disableAnimations) {
+      _controller.repeat();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final color = widget.color ?? Theme.of(context).colorScheme.onSurface;
     final width = widget.dotSize * 3 + widget.spacing * 2;
+    final travel = widget.travel;
 
-    if (KeroseneMotion.reduceMotion(context)) {
+    // Only hard-disable when the platform asks to disable animations entirely.
+    // accessibleNavigation alone must not freeze the primary bootstrap loader.
+    final media = MediaQuery.maybeOf(context);
+    final disableAnimations = media?.disableAnimations == true;
+
+    if (disableAnimations) {
       return SizedBox(
         width: width,
+        height: widget.dotSize + (travel > 0 ? travel : widget.dotSize * 0.35),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
             3,
             (index) => _Dot(
@@ -62,24 +89,37 @@ class _TorLoadingDotsState extends State<TorLoadingDots>
       );
     }
 
+    // Fixed box: layout never shifts. Vertical travel is optional; scale/alpha
+    // always pulse so travel:0 still looks alive.
+    final boxHeight = widget.dotSize +
+        (travel > 0 ? travel : widget.dotSize * 0.4);
     return SizedBox(
       width: width,
-      height: widget.dotSize + widget.travel,
+      height: boxHeight,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
           return Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(3, (index) {
               final phase = (_controller.value + index * 0.18) % 1;
-              final offset = math.sin(phase * math.pi * 2) * widget.travel / 2;
+              final wave = math.sin(phase * math.pi * 2);
+              final offsetY = travel <= 0 ? 0.0 : wave * (travel / 2);
+              // Stronger alpha so the pulse is obvious on dark backgrounds.
+              final alpha = 0.28 + 0.72 * ((wave + 1) / 2);
+              // Scale pulse even when travel is 0 (static position, living dots).
+              final scale = 0.72 + 0.28 * ((wave + 1) / 2);
               return Transform.translate(
-                offset: Offset(0, offset),
-                child: _Dot(
-                  size: widget.dotSize,
-                  color: color.withValues(alpha: 0.42 + 0.46 * phase),
-                  left: index == 0 ? 0 : widget.spacing,
+                offset: Offset(0, offsetY),
+                child: Transform.scale(
+                  scale: scale,
+                  child: _Dot(
+                    size: widget.dotSize,
+                    color: color.withValues(alpha: alpha.clamp(0.22, 1.0)),
+                    left: index == 0 ? 0 : widget.spacing,
+                  ),
                 ),
               );
             }),

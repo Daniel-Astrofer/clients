@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
-import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
@@ -209,10 +208,8 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
     final nfcCompatibility = ref.watch(receiveNfcCompatibilityProvider);
     final canShowNfc = nfcCompatibility.asData?.value ?? true;
 
-    if (widget.initialWallet == null &&
-        (walletState is WalletInitial || walletState is WalletLoading)) {
-      return const Center(child: TorLoadingDots());
-    }
+    final isWalletLoading = widget.initialWallet == null &&
+        (walletState is WalletInitial || walletState is WalletLoading);
 
     return Scaffold(
       backgroundColor: _receiveBackground,
@@ -231,6 +228,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
                     child: _buildMethodSelection(
                       selectedWallet,
                       canShowNfc: canShowNfc,
+                      isLoading: isWalletLoading,
                     ),
                   ),
                 ),
@@ -245,6 +243,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
   Widget _buildMethodSelection(
     Wallet? wallet, {
     required bool canShowNfc,
+    bool isLoading = false,
   }) {
     final kind = wallet == null
         ? MovementReceiveWalletKind.internal
@@ -305,6 +304,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
                   context,
                   actions[index],
                   showDivider: index < actions.length - 1,
+                  isLoading: isLoading,
                 ),
             ],
           ),
@@ -317,47 +317,53 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
     BuildContext context,
     MovementReceiveAction action, {
     required bool showDivider,
+    bool isLoading = false,
   }) {
     return switch (action.kind) {
       MovementReceiveActionKind.gateway => _ReceiveActionTile(
           icon: KeroseneIcons.creditCard,
           title: context.tr.receiveMethodGatewayTitle,
           subtitle: context.tr.receiveMethodGatewaySubtitle,
-          onTap: _openGatewayProviders,
+          onTap: isLoading ? () {} : _openGatewayProviders,
           showDivider: showDivider,
           verticalPadding: 24,
+          isLoading: isLoading,
         ),
       MovementReceiveActionKind.p2p => _ReceiveActionTile(
           icon: KeroseneIcons.internalTransfer,
           title: 'P2P',
           subtitle: 'Receber por transferencia de usuario interno',
-          onTap: () => _openReceive(ReceiveAmountMethod.p2p),
+          onTap: isLoading ? () {} : () => _openReceive(ReceiveAmountMethod.p2p),
           showDivider: showDivider,
           verticalPadding: 24,
+          isLoading: isLoading,
         ),
       MovementReceiveActionKind.qrCode => _ReceiveActionTile(
           icon: KeroseneIcons.qr,
           title: context.tr.receiveMethodQrTitle,
           subtitle: context.tr.receiveMethodQrSubtitle,
-          onTap: () => _openReceive(ReceiveAmountMethod.qrCode),
+          onTap: isLoading ? () {} : () => _openReceive(ReceiveAmountMethod.qrCode),
           showDivider: showDivider,
           verticalPadding: 24,
+          isLoading: isLoading,
         ),
       MovementReceiveActionKind.paymentLink => _ReceiveActionTile(
           icon: KeroseneIcons.onchain,
           title: context.tr.receiveMethodPaymentLinkTitle,
           subtitle: context.tr.receiveMethodPaymentLinkSubtitle,
-          onTap: () => _openReceive(ReceiveAmountMethod.paymentLink),
+          onTap: isLoading ? () {} : () => _openReceive(ReceiveAmountMethod.paymentLink),
           showDivider: showDivider,
           verticalPadding: 24,
+          isLoading: isLoading,
         ),
       MovementReceiveActionKind.nfc => _ReceiveActionTile(
           icon: KeroseneIcons.nfc,
           title: context.tr.receiveMethodNfcTitle,
           subtitle: context.tr.receiveMethodNfcSubtitle,
-          onTap: () => _openReceive(ReceiveAmountMethod.nfc),
+          onTap: isLoading ? () {} : () => _openReceive(ReceiveAmountMethod.nfc),
           showDivider: showDivider,
           verticalPadding: 24,
+          isLoading: isLoading,
         ),
     };
   }
@@ -465,6 +471,7 @@ class _ReceiveActionTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool showDivider;
   final double verticalPadding;
+  final bool isLoading;
 
   const _ReceiveActionTile({
     required this.icon,
@@ -473,6 +480,7 @@ class _ReceiveActionTile extends StatelessWidget {
     required this.onTap,
     this.showDivider = true,
     this.verticalPadding = 20,
+    this.isLoading = false,
   });
 
   @override
@@ -496,16 +504,34 @@ class _ReceiveActionTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _receiveSurfaceHigh,
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (isLoading)
+                      const SizedBox(
+                        width: 54,
+                        height: 54,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _receiveTextColor,
+                        ),
+                      ),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _receiveSurfaceHigh,
+                      ),
+                      child: Icon(icon, color: _receiveTextColor, size: 22),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: _receiveTextColor, size: 22),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,10 +693,6 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
     final urlsAsync = ref.watch(_receiveGatewayProviderUrlsProvider);
     final providers = _providerSections(context);
 
-    if (urlsAsync.isLoading && !urlsAsync.hasValue) {
-      return const Center(child: TorLoadingDots());
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -707,24 +729,55 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
                           letterSpacing: 0,
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      Text(
+                        // Beta disclaimer: Kerosene never processes fiat.
+                        // Links open third-party providers outside the app.
+                        'Third-party links only. Kerosene does not process fiat '
+                        'or custody onramp funds. Testnet beta — use with care.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _receiveMutedTextColor,
+                              fontSize: 13,
+                              height: 1.35,
+                            ),
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: urlsAsync.when(
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => _GatewayProviderList(
+                    loading: () => _GatewayProviderList(
                       sections: providers,
                       urls: const {},
-                      onSelect: (provider) =>
+                      onSelect: (_) {},
+                      isLoading: true,
+                    ),
+                    error: (_, __) => _GatewayEmptyState(
+                      message:
+                          'Could not load buy options. Try again later, or receive on-chain / Lightning instead.',
+                      providers: providers,
+                      onSelectUnavailable: (provider) =>
                           _showProviderUnavailable(context, provider),
                     ),
-                    data: (urls) => _GatewayProviderList(
-                      sections: providers,
-                      urls: urls,
-                      onSelect: (provider) =>
-                          _selectProvider(context, provider, urls),
-                    ),
+                    data: (urls) {
+                      final hasAny = urls.values.any((v) => v.trim().isNotEmpty);
+                      if (!hasAny) {
+                        return _GatewayEmptyState(
+                          message:
+                              'No buy providers are configured for this environment. '
+                              'Receive BTC on-chain or via payment request instead.',
+                          providers: providers,
+                          onSelectUnavailable: (provider) =>
+                              _showProviderUnavailable(context, provider),
+                        );
+                      }
+                      return _GatewayProviderList(
+                        sections: providers,
+                        urls: urls,
+                        onSelect: (provider) =>
+                            _selectProvider(context, provider, urls),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -771,15 +824,63 @@ final _receiveGatewayProviderUrlsProvider =
   );
 });
 
+class _GatewayEmptyState extends StatelessWidget {
+  final String message;
+  final List<_GatewayProviderSection> providers;
+  final ValueChanged<_GatewayProvider> onSelectUnavailable;
+
+  const _GatewayEmptyState({
+    required this.message,
+    required this.providers,
+    required this.onSelectUnavailable,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.hexFF121212,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.hexFF2A2A2A),
+            ),
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: _receiveMutedTextColor,
+                    height: 1.4,
+                  ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: _GatewayProviderList(
+            sections: providers,
+            urls: const {},
+            onSelect: onSelectUnavailable,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _GatewayProviderList extends StatelessWidget {
   final List<_GatewayProviderSection> sections;
   final Map<String, String> urls;
   final ValueChanged<_GatewayProvider> onSelect;
+  final bool isLoading;
 
   const _GatewayProviderList({
     required this.sections,
     required this.urls,
     required this.onSelect,
+    this.isLoading = false,
   });
 
   @override
@@ -809,8 +910,9 @@ class _GatewayProviderList extends StatelessWidget {
               if (index > 0) const SizedBox(height: 24),
               _GatewayProviderTile(
                 provider: section.providers[index],
-                available: section.providers[index].resolveUrl(urls) != null,
-                onTap: () => onSelect(section.providers[index]),
+                available: isLoading ? true : section.providers[index].resolveUrl(urls) != null,
+                onTap: isLoading ? () {} : () => onSelect(section.providers[index]),
+                isLoading: isLoading,
               ),
             ],
           ],
@@ -824,11 +926,13 @@ class _GatewayProviderTile extends StatelessWidget {
   final _GatewayProvider provider;
   final bool available;
   final VoidCallback onTap;
+  final bool isLoading;
 
   const _GatewayProviderTile({
     required this.provider,
     required this.available,
     required this.onTap,
+    this.isLoading = false,
   });
 
   @override
@@ -839,20 +943,38 @@ class _GatewayProviderTile extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.hexFF1E1E1E,
-              ),
-              child: Icon(
-                provider.icon,
-                color: _receiveMutedTextColor,
-                size: 20,
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (isLoading)
+                    const SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _receiveTextColor,
+                      ),
+                    ),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.hexFF1E1E1E,
+                    ),
+                    child: Icon(
+                      provider.icon,
+                      color: _receiveMutedTextColor,
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

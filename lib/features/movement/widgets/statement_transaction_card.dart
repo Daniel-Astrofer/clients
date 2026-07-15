@@ -12,24 +12,37 @@ import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
+import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
+import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
+import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 import 'package:kerosene/core/theme/app_typography.dart';
 
 enum StatementTransactionCardMode { stacked, separated }
 
-class StatementTransactionScrollStack extends StatefulWidget {
+/// Vertical list of statement cards. Expansion only grows downward so cards
+/// below are pushed away; multiple cards may stay expanded at once.
+class StatementTransactionScrollStack extends StatelessWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
+  final double itemGap;
+
+  /// Kept for call-site compatibility; layout no longer uses fixed extents.
   final double itemExtent;
   final double expandedItemExtent;
-  final double itemGap;
   final double stackGap;
   final double topAnchorOffset;
   final double collapseStartFraction;
   final int? expandedIndex;
+  final Set<int>? expandedIndices;
 
   const StatementTransactionScrollStack({
     super.key,
@@ -42,164 +55,23 @@ class StatementTransactionScrollStack extends StatefulWidget {
     this.topAnchorOffset = 10,
     this.collapseStartFraction = 0.75,
     this.expandedIndex,
+    this.expandedIndices,
   });
 
   @override
-  State<StatementTransactionScrollStack> createState() =>
-      _StatementTransactionScrollStackState();
-}
-
-class _StatementTransactionScrollStackState
-    extends State<StatementTransactionScrollStack> {
-  ScrollPosition? _position;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _bindScrollPosition();
-  }
-
-  @override
-  void dispose() {
-    _position?.removeListener(_handleScroll);
-    super.dispose();
-  }
-
-  void _bindScrollPosition() {
-    final nextPosition = Scrollable.maybeOf(context)?.position;
-    if (identical(_position, nextPosition)) return;
-    _position?.removeListener(_handleScroll);
-    _position = nextPosition;
-    _position?.addListener(_handleScroll);
-  }
-
-  void _handleScroll() {
-    if (mounted) setState(() {});
-  }
-
-  @override
   Widget build(BuildContext context) {
-    _bindScrollPosition();
+    if (itemCount <= 0) return const SizedBox.shrink();
 
-    if (widget.itemCount <= 0) return const SizedBox.shrink();
-
-    final expandedIndex = _validExpandedIndex();
-    final expandedExtra = expandedIndex == null
-        ? 0.0
-        : math.max(0.0, widget.expandedItemExtent - widget.itemExtent);
-    final step = widget.itemExtent + widget.itemGap;
-    final totalHeight = widget.itemExtent +
-        math.max(0, widget.itemCount - 1) * step +
-        expandedExtra;
-    final listTop = _globalTopOfList();
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final safeTop = MediaQuery.viewPaddingOf(context).top;
-    final collapseStartTop = screenHeight * widget.collapseStartFraction;
-    final collapseEndTop = safeTop + widget.topAnchorOffset;
-    final paintOrder = _paintOrder(expandedIndex);
-
-    return AnimatedSize(
-      duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
-      curve: KeroseneMotion.standard,
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        height: totalHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            for (final index in paintOrder)
-              _positionedItem(
-                context,
-                index: index,
-                naturalTop: _naturalTop(
-                  index,
-                  step: step,
-                  expandedIndex: expandedIndex,
-                  expandedExtra: expandedExtra,
-                ),
-                expandedIndex: expandedIndex,
-                expandedExtra: expandedExtra,
-                listTop: listTop,
-                collapseStartTop: collapseStartTop,
-                collapseEndTop: collapseEndTop,
-              ),
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < itemCount; index++) ...[
+          if (index > 0) SizedBox(height: itemGap),
+          itemBuilder(context, index),
+        ],
+      ],
     );
-  }
-
-  int? _validExpandedIndex() {
-    final index = widget.expandedIndex;
-    if (index == null || index < 0 || index >= widget.itemCount) return null;
-    return index;
-  }
-
-  List<int> _paintOrder(int? expandedIndex) {
-    final order = List<int>.generate(widget.itemCount, (index) => index);
-    if (expandedIndex == null) return order;
-    order
-      ..remove(expandedIndex)
-      ..add(expandedIndex);
-    return order;
-  }
-
-  Widget _positionedItem(
-    BuildContext context, {
-    required int index,
-    required double naturalTop,
-    required int? expandedIndex,
-    required double expandedExtra,
-    required double listTop,
-    required double collapseStartTop,
-    required double collapseEndTop,
-  }) {
-    final collapseRange = math.max(1.0, collapseStartTop - collapseEndTop);
-    final collapseProgress =
-        ((collapseStartTop - listTop) / collapseRange).clamp(0.0, 1.0);
-    final stackedTop = _stackedTop(
-      index,
-      expandedIndex: expandedIndex,
-      expandedExtra: expandedExtra,
-    );
-    final top = naturalTop + (stackedTop - naturalTop) * collapseProgress;
-    return AnimatedPositioned(
-      duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
-      curve: KeroseneMotion.entrance,
-      left: 0,
-      right: 0,
-      top: top,
-      child: widget.itemBuilder(context, index),
-    );
-  }
-
-  double _naturalTop(
-    int index, {
-    required double step,
-    required int? expandedIndex,
-    required double expandedExtra,
-  }) {
-    final baseTop = index * step;
-    if (expandedIndex == null || index <= expandedIndex) return baseTop;
-    return baseTop + expandedExtra;
-  }
-
-  double _stackedTop(
-    int index, {
-    required int? expandedIndex,
-    required double expandedExtra,
-  }) {
-    final baseTop = index * widget.stackGap;
-    if (expandedIndex == null || index <= expandedIndex) return baseTop;
-    return baseTop + expandedExtra;
-  }
-
-  double _globalTopOfList() {
-    final renderObject = context.findRenderObject();
-    if (renderObject is! RenderBox || !renderObject.hasSize) {
-      return double.infinity;
-    }
-    return renderObject.localToGlobal(Offset.zero).dy;
   }
 }
 
@@ -224,7 +96,7 @@ class StatementTransactionCard extends ConsumerWidget {
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final style = _StatementCardStyle.fromTransaction(transaction);
+    final colors = TransactionCardColors.resolve(transaction);
     final amountLabel = _amountLabel(
       transaction: transaction,
       currency: selectedCurrency,
@@ -232,11 +104,17 @@ class StatementTransactionCard extends ConsumerWidget {
       btcEur: btcEur,
       btcBrl: btcBrl,
     );
-    final title = _title(context, transaction, visual);
-    final counterparty = _counterparty(context, transaction);
+    final wallets = _walletsFromRef(ref);
+    final accounts = _accountsFromRef(ref);
+    final title = resolveTransactionActionTitle(context, transaction);
+    final counterparty = _counterparty(
+      context,
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+    );
     final date = transaction.timestamp.toLocal();
-    final timestampLabel =
-        '${_dateFormat.format(date)}\n${_timeFormat.format(date)}';
+    final timestampLabel = _timeFormat.format(date);
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
     final cardPadding = compact ? 16.0 : 20.0;
     final iconSize = compact ? 42.0 : 48.0;
@@ -244,8 +122,6 @@ class StatementTransactionCard extends ConsumerWidget {
     final counterpartyFontSize = compact ? 12.0 : 13.0;
     final amountFontSize = compact ? 24.0 : 30.0;
     final headerAmountGap = compact ? 12.0 : 22.0;
-    final amountStatusGap = compact ? 10.0 : 16.0;
-    final pillScale = compact ? 0.92 : 1.0;
 
     if (mode == StatementTransactionCardMode.separated) {
       return _BankStatementTransactionRow(
@@ -259,16 +135,14 @@ class StatementTransactionCard extends ConsumerWidget {
           btcBrl: btcBrl,
           signed: true,
         ),
-        feeAmount: transaction.hasNetworkFee && transaction.feeSatoshis > 0
-            ? MoneyDisplay.format(
-                amount: transaction.feeBTC,
-                currency: Currency.btc,
-              )
-            : null,
         expanded: expanded,
         onTap: onTap,
+        wallets: wallets,
+        accounts: accounts,
       );
     }
+
+    final motion = KeroseneMotion.duration(context, KeroseneMotion.medium);
 
     return Material(
       color: Colors.transparent,
@@ -276,13 +150,13 @@ class StatementTransactionCard extends ConsumerWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(28),
         child: AnimatedContainer(
-          duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
+          duration: motion,
           curve: KeroseneMotion.standard,
           padding: EdgeInsets.all(cardPadding),
           decoration: BoxDecoration(
-            color: style.background,
+            color: colors.background,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: style.border),
+            border: Border.all(color: colors.border),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.55),
@@ -291,128 +165,107 @@ class StatementTransactionCard extends ConsumerWidget {
               ),
             ],
           ),
+          // Grow only downward: top content stays put, details open below.
+          // Animações mais internas cuidarão da expansão
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: iconSize,
-                    height: iconSize,
-                    decoration: const BoxDecoration(
-                      color: Colors.black,
-                      shape: BoxShape.circle,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _AnimatedRingIconWrapper(
+                      transaction: transaction,
+                      visual: visual,
+                      colors: colors,
+                      iconSize: iconSize,
+                      expanded: expanded,
                     ),
-                    child: Icon(
-                      _iconFor(transaction, visual),
-                      color: Colors.white,
-                      size: 23,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: colors.title,
+                              fontFamily: AppTypography.bodyFontFamily,
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            counterparty,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: colors.subtitle,
+                              fontFamily: AppTypography.bodyFontFamily,
+                              fontSize: counterpartyFontSize,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          title,
+                          amountLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontFamily: AppTypography.bodyFontFamily,
-                            fontSize: titleFontSize,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
+                          style: AppTypography.financial(
+                            color: colors.title, // Ou TransactionPalette.inkPrimary se preferir
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.xs),
+                        const SizedBox(height: 4),
                         Text(
-                          counterparty,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          timestampLabel,
+                          textAlign: TextAlign.right,
                           style: TextStyle(
-                            color: style.secondaryText,
+                            color: colors.meta,
                             fontFamily: AppTypography.bodyFontFamily,
-                            fontSize: counterpartyFontSize,
-                            fontWeight: FontWeight.w400,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             letterSpacing: 0,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    timestampLabel,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: style.timeText,
-                      fontFamily: AppTypography.bodyFontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      height: 1.18,
-                      letterSpacing: 0,
+                  ],
+                ),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 300),
+                  firstCurve: Curves.easeOutCubic,
+                  secondCurve: Curves.easeOutCubic,
+                  sizeCurve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  crossFadeState: expanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: const SizedBox(width: double.infinity, height: 0),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.only(top: 22),
+                    child: _TransactionDetailsTable(
+                      transaction: transaction,
+                      colors: colors,
+                      wallets: wallets,
+                      accounts: accounts,
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: headerAmountGap),
-              Text(
-                amountLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontFamily: AppTypography.bodyFontFamily,
-                  fontSize: amountFontSize,
-                  fontWeight: FontWeight.w700,
-                  height: 1.05,
-                  letterSpacing: 0,
                 ),
-              ),
-              SizedBox(height: amountStatusGap),
-              Transform.scale(
-                scale: pillScale,
-                alignment: Alignment.centerLeft,
-                child: _StatusPill(status: transaction.status),
-              ),
-              AnimatedSize(
-                duration: KeroseneMotion.duration(
-                  context,
-                  KeroseneMotion.medium,
-                ),
-                curve: KeroseneMotion.standard,
-                alignment: Alignment.topCenter,
-                child: expanded
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 22),
-                        child: _TransactionDetailsTable(
-                          transaction: transaction,
-                          style: style,
-                          btcAmount: MoneyDisplay.formatAmountFromBtc(
-                            btcAmount: transaction.signedAmountBTC,
-                            currency: Currency.btc,
-                            btcUsd: btcUsd,
-                            btcEur: btcEur,
-                            btcBrl: btcBrl,
-                            signed: true,
-                          ),
-                          feeAmount: transaction.hasNetworkFee &&
-                                  transaction.feeSatoshis > 0
-                              ? MoneyDisplay.format(
-                                  amount: transaction.feeBTC,
-                                  currency: Currency.btc,
-                                )
-                              : null,
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
+              ],
+            ),
         ),
       ),
     );
@@ -445,42 +298,36 @@ class StatementTransactionCard extends ConsumerWidget {
     );
   }
 
-  static bool _isDebit(Transaction transaction) {
-    return transaction.isDebit;
-  }
-
-  static String _title(
+  static String _counterparty(
     BuildContext context,
-    Transaction tx,
-    TransactionVisualSpec visual,
-  ) {
-    if (tx.isInternal) return 'Transação Interna';
-    if (tx.isLightning) return 'Lightning';
-    if (visual.family == TransactionVisualFamily.onChain ||
-        visual.family == TransactionVisualFamily.deposit ||
-        visual.family == TransactionVisualFamily.withdrawal) {
-      return 'Onchain';
-    }
-    return visual.localizedLabel(context);
-  }
-
-  static String _counterparty(BuildContext context, Transaction tx) {
-    final sent = _isDebit(tx);
+    Transaction tx, {
+    List<Wallet> wallets = const [],
+    List<BitcoinAccount> accounts = const [],
+  }) {
+    final sent = tx.isDebit;
     final label = sent ? 'Para' : 'De';
-    final value = resolvePrimaryTransactionAddress(tx).trim();
-    final fallback = tx.description?.trim() ?? '';
-    final display = value.isNotEmpty
-        ? _shorten(value, head: tx.isInternal ? 18 : 16, tail: 6)
-        : fallback.isNotEmpty
-            ? _shorten(fallback, head: 18, tail: 6)
-            : 'Carteira Kerosene';
-    return '$label: $display';
+    final value = sent
+        ? resolveTransactionToParty(
+            tx,
+            wallets: wallets,
+            accounts: accounts,
+            compactHash: true,
+          )
+        : resolveTransactionFromParty(
+            tx,
+            wallets: wallets,
+            accounts: accounts,
+          );
+    return '$label: $value';
   }
 
   static IconData _iconFor(Transaction tx, TransactionVisualSpec visual) {
     if (tx.isInternal) return KeroseneIcons.group;
     if (tx.isLightning) return KeroseneIcons.lightning;
-    if (tx.status == TransactionStatus.failed) return KeroseneIcons.warning;
+    if (tx.status == TransactionStatus.failed ||
+        tx.status == TransactionStatus.cancelled) {
+      return KeroseneIcons.warning;
+    }
     return KeroseneIcons.archive;
   }
 
@@ -491,17 +338,15 @@ class StatementTransactionCard extends ConsumerWidget {
   }
 }
 
-String _bankTitle(Transaction tx) {
-  if (tx.isInternal) return 'Transferência interna';
-  if (tx.isLightning) return 'Pagamento Lightning';
-  if (tx.type == TransactionType.deposit ||
-      tx.type == TransactionType.receive) {
-    return 'Recebido';
-  }
-  if (tx.type == TransactionType.withdrawal) return 'Saque on-chain';
-  if (tx.type == TransactionType.send) return 'Enviado';
-  if (tx.type == TransactionType.fee) return 'Taxa de rede';
-  return 'Transação';
+List<Wallet> _walletsFromRef(WidgetRef ref) {
+  final state = ref.watch(walletProvider);
+  if (state is WalletLoaded) return state.wallets;
+  return const [];
+}
+
+List<BitcoinAccount> _accountsFromRef(WidgetRef ref) {
+  return ref.watch(bitcoinAccountsProvider).asData?.value ??
+      const <BitcoinAccount>[];
 }
 
 String _bankRailLabel(Transaction tx) {
@@ -517,6 +362,7 @@ String _bankStatusLabel(Transaction tx) {
     TransactionStatus.confirmed => 'Confirmado',
     TransactionStatus.confirming => '${tx.confirmations} confirmações',
     TransactionStatus.pending => 'Pendente',
+    TransactionStatus.cancelled => 'Cancelada',
     TransactionStatus.failed => 'Falhou',
   };
 }
@@ -528,19 +374,25 @@ String _bankSubtitle(Transaction tx) {
   return '$hour:$minute · ${_bankRailLabel(tx)} · ${_bankStatusLabel(tx)}';
 }
 
-String _bankCounterparty(Transaction tx) {
-  final displayName =
-      tx.isDebit ? tx.receiverDisplayName : tx.senderDisplayName;
-  final address = resolvePrimaryTransactionAddress(tx);
-  final fallback = tx.description?.trim() ?? '';
-  final value = [
-    displayName,
-    address,
-    fallback,
-    'Carteira Kerosene',
-  ].firstWhere((value) => (value ?? '').trim().isNotEmpty)!;
+String _bankCounterparty(
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
   final label = tx.isDebit ? 'Para' : 'De';
-  return '$label ${StatementTransactionCard._shorten(value, head: 18, tail: 8)}';
+  final value = tx.isDebit
+      ? resolveTransactionToParty(
+          tx,
+          wallets: wallets,
+          accounts: accounts,
+          compactHash: true,
+        )
+      : resolveTransactionFromParty(
+          tx,
+          wallets: wallets,
+          accounts: accounts,
+        );
+  return '$label $value';
 }
 
 String _darkDetailValue(String value) {
@@ -553,27 +405,36 @@ class _BankStatementTransactionRow extends StatelessWidget {
   final Transaction transaction;
   final String amountLabel;
   final String btcAmount;
-  final String? feeAmount;
   final bool expanded;
   final VoidCallback? onTap;
+  final List<Wallet> wallets;
+  final List<BitcoinAccount> accounts;
 
   const _BankStatementTransactionRow({
     required this.transaction,
     required this.amountLabel,
     required this.btcAmount,
-    required this.feeAmount,
     required this.expanded,
     required this.onTap,
+    this.wallets = const [],
+    this.accounts = const [],
   });
 
   @override
   Widget build(BuildContext context) {
-    final title = _bankTitle(transaction);
-    final counterparty = _bankCounterparty(transaction);
+    final title = resolveTransactionActionTitle(context, transaction);
+    final counterparty = _bankCounterparty(
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+    );
     final subtitle = _bankSubtitle(transaction);
-    final amountColor = transaction.status == TransactionStatus.failed
-        ? AppColors.hexFFF4C7C7
-        : Colors.white;
+    final tone = TransactionPalette.toneFor(transaction);
+    final amountColor =
+        tone == TransactionStatusTone.failed ||
+                tone == TransactionStatusTone.cancelled
+            ? TransactionPalette.statusStrong(tone)
+            : TransactionPalette.inkOnDark;
 
     return Material(
       color: Colors.transparent,
@@ -608,7 +469,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white,
+                            color: TransactionPalette.inkOnDark,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0,
@@ -621,7 +482,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.hexFFB8BCC2,
+                            color: TransactionPalette.inkTertiary,
                             letterSpacing: 0,
                             height: 1.22,
                           ),
@@ -632,7 +493,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.caption.copyWith(
-                            color: AppColors.hexFF8A8A8E,
+                            color: TransactionPalette.inkSecondary,
                             letterSpacing: 0,
                             height: 1.2,
                           ),
@@ -661,7 +522,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerRight,
-                          child: _DarkStatusPill(status: transaction.status),
+                          child: _DarkStatusPill(transaction: transaction),
                         ),
                       ],
                     ),
@@ -680,8 +541,8 @@ class _BankStatementTransactionRow extends StatelessWidget {
                         padding: const EdgeInsets.only(top: AppSpacing.base),
                         child: _BankTransactionDetailsTable(
                           transaction: transaction,
-                          btcAmount: btcAmount,
-                          feeAmount: feeAmount,
+                          wallets: wallets,
+                          accounts: accounts,
                         ),
                       )
                     : const SizedBox.shrink(),
@@ -701,31 +562,36 @@ class _BankDirectionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _icon();
-    final color = transaction.status == TransactionStatus.failed
-        ? AppColors.hexFFF4C7C7
-        : transaction.isLightning
-            ? AppColors.hexFFD9B66A
-            : transaction.isInternal
-                ? AppColors.hexFFB8BCC2
-                : transaction.isCredit
-                    ? AppColors.hexFFA8C7B1
-                    : AppColors.hexFFD4D4D8;
+    final tone = TransactionPalette.toneFor(transaction);
+    final color = switch (tone) {
+      TransactionStatusTone.failed ||
+      TransactionStatusTone.cancelled =>
+        TransactionPalette.statusStrong(tone),
+      TransactionStatusTone.confirming ||
+      TransactionStatusTone.pending =>
+        TransactionPalette.statusStrong(tone),
+      TransactionStatusTone.confirmed => transaction.isCredit
+          ? TransactionPalette.amountCredit
+          : transaction.isDebit
+              ? TransactionPalette.amountDebit
+              : TransactionPalette.inkTertiary,
+    };
 
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.hexFF111111,
+        color: TransactionPalette.iconWell,
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.hexFF2A2A2A),
       ),
-      child: Icon(icon, color: color, size: 18),
+      child: Icon(_icon(), color: color, size: 18),
     );
   }
 
   IconData _icon() {
-    if (transaction.status == TransactionStatus.failed) {
+    if (transaction.status == TransactionStatus.failed ||
+        transaction.isCancelled) {
       return KeroseneIcons.warning;
     }
     if (transaction.isLightning) {
@@ -739,29 +605,20 @@ class _BankDirectionIcon extends StatelessWidget {
 }
 
 class _DarkStatusPill extends StatelessWidget {
-  final TransactionStatus status;
+  final Transaction transaction;
 
-  const _DarkStatusPill({required this.status});
+  const _DarkStatusPill({required this.transaction});
 
   @override
   Widget build(BuildContext context) {
-    final colors = switch (status) {
-      TransactionStatus.confirmed => (
-          fg: AppColors.hexFFA8C7B1,
-          label: 'Confirmado',
-        ),
-      TransactionStatus.confirming => (
-          fg: AppColors.hexFFD9B66A,
-          label: 'Confirmando',
-        ),
-      TransactionStatus.pending => (
-          fg: AppColors.hexFFD9B66A,
-          label: 'Pendente',
-        ),
-      TransactionStatus.failed => (
-          fg: AppColors.hexFFF4C7C7,
-          label: 'Falhou',
-        ),
+    final tone = TransactionPalette.toneFor(transaction);
+    final fg = TransactionPalette.statusStrong(tone);
+    final label = switch (tone) {
+      TransactionStatusTone.confirmed => 'Confirmado',
+      TransactionStatusTone.confirming => 'Confirmando',
+      TransactionStatusTone.pending => 'Pendente',
+      TransactionStatusTone.cancelled => 'Cancelada',
+      TransactionStatusTone.failed => 'Falhou',
     };
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -770,15 +627,15 @@ class _DarkStatusPill extends StatelessWidget {
           width: 5,
           height: 5,
           decoration: BoxDecoration(
-            color: colors.fg,
+            color: fg,
             shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 6),
         Text(
-          colors.label,
+          label,
           style: AppTypography.caption.copyWith(
-            color: colors.fg,
+            color: fg,
             fontWeight: FontWeight.w600,
             letterSpacing: 0,
             height: 1,
@@ -791,72 +648,23 @@ class _DarkStatusPill extends StatelessWidget {
 
 class _BankTransactionDetailsTable extends StatelessWidget {
   final Transaction transaction;
-  final String btcAmount;
-  final String? feeAmount;
+  final List<Wallet> wallets;
+  final List<BitcoinAccount> accounts;
 
   const _BankTransactionDetailsTable({
     required this.transaction,
-    required this.btcAmount,
-    required this.feeAmount,
+    this.wallets = const [],
+    this.accounts = const [],
   });
 
   @override
   Widget build(BuildContext context) {
-    final reference = _firstNonEmpty([
-      transaction.blockchainTxid,
-      transaction.paymentHash,
-      transaction.invoiceId,
-      transaction.externalReference,
-    ]);
-    final rows = [
-      _TransactionDetailRow(
-        key: 'amount',
-        label: context.tr.amount,
-        displayValue: btcAmount,
-      ),
-      if (feeAmount != null)
-        _TransactionDetailRow(
-          key: 'network-fee',
-          label: context.tr.networkFee,
-          displayValue: feeAmount!,
-        ),
-      _TransactionDetailRow(
-        key: 'from',
-        label: _titleCase(context.tr.homeCounterpartyFrom),
-        displayValue: _darkDetailValue(resolveTransactionSender(transaction)),
-        copyValue: _copyValue(transaction.fromAddress),
-      ),
-      _TransactionDetailRow(
-        key: 'to',
-        label: _titleCase(context.tr.homeCounterpartyTo),
-        displayValue:
-            _darkDetailValue(resolveTransactionRecipient(transaction)),
-        copyValue: _copyValue(transaction.toAddress),
-      ),
-      _TransactionDetailRow(
-        key: 'id',
-        label: _localizedCopy(
-          context,
-          pt: 'ID interno',
-          en: 'Internal ID',
-          es: 'ID interno',
-        ),
-        displayValue: StatementTransactionCard._shorten(transaction.id),
-        copyValue: _copyValue(transaction.id),
-      ),
-      if (reference != null && reference != transaction.id)
-        _TransactionDetailRow(
-          key: 'reference',
-          label: _localizedCopy(
-            context,
-            pt: 'Hash ou referência',
-            en: 'Hash or reference',
-            es: 'Hash o referencia',
-          ),
-          displayValue: StatementTransactionCard._shorten(reference),
-          copyValue: reference,
-        ),
-    ];
+    final rows = _compactDetailRows(
+      context,
+      transaction,
+      wallets,
+      accounts: accounts,
+    );
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -877,6 +685,8 @@ class _BankTransactionDetailsTable extends StatelessWidget {
                 child: _BankTransactionDetailsRow(row: rows[index]),
               ),
             ],
+            const SizedBox(height: 16),
+            _SeeDetailsLink(transaction: transaction),
           ],
         ),
       ),
@@ -891,13 +701,15 @@ class _BankTransactionDetailsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Solid black data on expanded rows (light paper cards / bank expanded).
+    const ink = Colors.black;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           row.label,
           style: AppTypography.caption.copyWith(
-            color: AppColors.hexFF8A8A8E,
+            color: ink,
             fontWeight: FontWeight.w600,
             letterSpacing: 0,
           ),
@@ -914,10 +726,11 @@ class _BankTransactionDetailsRow extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.hexFFE4E4E7,
+              color: ink,
               fontFamily: row.displayValue.length > 20
                   ? AppTypography.financialFontFamily
                   : AppTypography.bodyFontFamily,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0,
             ),
           ),
@@ -949,7 +762,7 @@ class _DarkTransactionDetailCopyButton extends StatelessWidget {
         icon: const Icon(
           KeroseneIcons.copy,
           size: 15,
-          color: AppColors.hexFFB8BCC2,
+          color: Colors.black,
         ),
       ),
     );
@@ -987,81 +800,135 @@ class _DarkTransactionDetailCopyButton extends StatelessWidget {
   }
 }
 
+List<_TransactionDetailRow> _compactDetailRows(
+  BuildContext context,
+  Transaction transaction,
+  List<Wallet> wallets, {
+  List<BitcoinAccount> accounts = const [],
+}) {
+  final from = resolveTransactionFromParty(
+    transaction,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  final to = resolveTransactionToParty(
+    transaction,
+    wallets: wallets,
+    accounts: accounts,
+    compactHash: true,
+  );
+  final network = resolveTransactionNetworkLabel(transaction);
+  final networkFeeLabel = transaction.hasNetworkFee || transaction.feeSatoshis > 0
+      ? formatSatsAsBtc(transaction.feeSatoshis)
+      : '—';
+  final serviceFeeLabel = transaction.hasServiceFee
+      ? formatSatsAsBtc(transaction.serviceFeeSatoshis)
+      : '—';
+
+  return [
+    _TransactionDetailRow(
+      key: 'from',
+      label: _localizedCopy(context, pt: 'De', en: 'From', es: 'De'),
+      displayValue: from,
+    ),
+    _TransactionDetailRow(
+      key: 'to',
+      label: _localizedCopy(context, pt: 'Para', en: 'To', es: 'Para'),
+      displayValue: to,
+      copyValue: looksLikeOnchainAddress(to) ? to : null,
+    ),
+    _TransactionDetailRow(
+      key: 'network-fee',
+      label: _localizedCopy(
+        context,
+        pt: 'Taxa de transação',
+        en: 'Network fee',
+        es: 'Tarifa de red',
+      ),
+      displayValue: networkFeeLabel,
+    ),
+    _TransactionDetailRow(
+      key: 'service-fee',
+      label: _localizedCopy(
+        context,
+        pt: 'Taxa de serviço',
+        en: 'Service fee',
+        es: 'Tarifa de servicio',
+      ),
+      displayValue: serviceFeeLabel,
+    ),
+    _TransactionDetailRow(
+      key: 'network',
+      label: _localizedCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
+      displayValue: network,
+    ),
+  ];
+}
+
+class _SeeDetailsLink extends StatelessWidget {
+  final Transaction transaction;
+
+  const _SeeDetailsLink({required this.transaction});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _localizedCopy(
+      context,
+      pt: 'ver detalhes',
+      en: 'see details',
+      es: 'ver detalles',
+    );
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          TransactionDetailScreen.open(context, transaction);
+        },
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTypography.bodySmall.copyWith(
+            color: Colors.black,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.black.withValues(alpha: 0.55),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TransactionDetailsTable extends StatelessWidget {
   final Transaction transaction;
-  final _StatementCardStyle style;
-  final String btcAmount;
-  final String? feeAmount;
+  final TransactionCardColors colors;
+  final List<Wallet> wallets;
+  final List<BitcoinAccount> accounts;
 
   const _TransactionDetailsTable({
     required this.transaction,
-    required this.style,
-    required this.btcAmount,
-    this.feeAmount,
+    required this.colors,
+    this.wallets = const [],
+    this.accounts = const [],
   });
 
   @override
   Widget build(BuildContext context) {
-    final reference = _firstNonEmpty([
-      transaction.blockchainTxid,
-      transaction.paymentHash,
-      transaction.invoiceId,
-      transaction.externalReference,
-    ]);
-    final senderValue = resolveTransactionSender(transaction);
-    final recipientValue = resolveTransactionRecipient(transaction);
-    final rows = [
-      _TransactionDetailRow(
-        key: 'from',
-        label: _titleCase(context.tr.homeCounterpartyFrom),
-        displayValue: _detailValue(context, senderValue),
-        copyValue: _copyValue(transaction.fromAddress),
-      ),
-      _TransactionDetailRow(
-        key: 'to',
-        label: _titleCase(context.tr.homeCounterpartyTo),
-        displayValue: _detailValue(context, recipientValue),
-        copyValue: _copyValue(transaction.toAddress),
-      ),
-      _TransactionDetailRow(
-        key: 'amount',
-        label: context.tr.amount,
-        displayValue: btcAmount,
-      ),
-      if (feeAmount != null)
-        _TransactionDetailRow(
-          key: 'network-fee',
-          label: context.tr.networkFee,
-          displayValue: feeAmount!,
-        ),
-      _TransactionDetailRow(
-        key: 'id',
-        label: _localizedCopy(
-          context,
-          pt: 'ID da transação',
-          en: 'Transaction ID',
-          es: 'ID de transacción',
-        ),
-        displayValue: StatementTransactionCard._shorten(transaction.id),
-        copyValue: _copyValue(transaction.id),
-      ),
-      if (reference != null && reference != transaction.id)
-        _TransactionDetailRow(
-          key: 'reference',
-          label: _localizedCopy(
-            context,
-            pt: 'Referência',
-            en: 'Reference',
-            es: 'Referencia',
-          ),
-          displayValue: StatementTransactionCard._shorten(reference),
-          copyValue: reference,
-        ),
-    ];
+    final rows = _compactDetailRows(
+      context,
+      transaction,
+      wallets,
+      accounts: accounts,
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: style.divider)),
+        border: Border(top: BorderSide(color: colors.divider)),
       ),
       child: Padding(
         padding: const EdgeInsets.only(top: 14),
@@ -1071,57 +938,47 @@ class _TransactionDetailsTable extends StatelessWidget {
               if (index > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
-                  child: Divider(height: 1, color: style.divider),
+                  child: Divider(height: 1, color: colors.divider),
                 ),
               Padding(
                 padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
-                child: _TransactionDetailsRow(row: rows[index], style: style),
+                child: _TransactionDetailsRow(row: rows[index], colors: colors),
               ),
             ],
+            const SizedBox(height: 16),
+            _SeeDetailsLink(transaction: transaction),
           ],
         ),
       ),
     );
   }
-
-  String _detailValue(BuildContext context, String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return _localizedCopy(
-        context,
-        pt: '—',
-        en: '—',
-        es: '—',
-      );
-    }
-    return StatementTransactionCard._shorten(trimmed, head: 18, tail: 8);
-  }
 }
 
 class _TransactionDetailsRow extends StatelessWidget {
   final _TransactionDetailRow row;
-  final _StatementCardStyle style;
+  final TransactionCardColors colors;
 
-  const _TransactionDetailsRow({required this.row, required this.style});
+  const _TransactionDetailsRow({required this.row, required this.colors});
 
   @override
   Widget build(BuildContext context) {
+    const ink = Colors.black;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           row.label,
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: ink,
             fontFamily: AppTypography.bodyFontFamily,
             fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             letterSpacing: 0,
           ),
         ),
         if (row.copyValue != null) ...[
           const SizedBox(width: 6),
-          _TransactionDetailCopyButton(row: row, style: style),
+          _TransactionDetailCopyButton(row: row, colors: colors),
         ],
         const SizedBox(width: 14),
         Expanded(
@@ -1131,12 +988,12 @@ class _TransactionDetailsRow extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.black,
+              color: ink,
               fontFamily: row.displayValue.length > 20
                   ? AppTypography.financialFontFamily
                   : AppTypography.bodyFontFamily,
               fontSize: row.displayValue.length > 20 ? 12 : 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0,
             ),
           ),
@@ -1148,9 +1005,9 @@ class _TransactionDetailsRow extends StatelessWidget {
 
 class _TransactionDetailCopyButton extends StatelessWidget {
   final _TransactionDetailRow row;
-  final _StatementCardStyle style;
+  final TransactionCardColors colors;
 
-  const _TransactionDetailCopyButton({required this.row, required this.style});
+  const _TransactionDetailCopyButton({required this.row, required this.colors});
 
   @override
   Widget build(BuildContext context) {
@@ -1166,7 +1023,7 @@ class _TransactionDetailCopyButton extends StatelessWidget {
           minimumSize: const Size.square(24),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        icon: Icon(KeroseneIcons.copy, size: 15, color: Colors.black),
+        icon: const Icon(KeroseneIcons.copy, size: 15, color: Colors.black),
       ),
     );
   }
@@ -1249,59 +1106,451 @@ String _localizedCopy(
   };
 }
 
-class _StatusPill extends StatelessWidget {
-  final TransactionStatus status;
+/// Compact confirmation rings at the bottom-right of a statement card.
+///
+/// Visual language:
+/// - **Confirmed** — calm light green, static
+/// - **Pending** (waiting, 0 confs) — orange, static
+/// - **Confirming** (network progress) — orange with a soft pulse + sweep
+/// - **Cancelled / failed** — red, static
+///
+/// Tap expands a short confirmation count label from the circle.
+class _ConfirmationRingsIndicator extends StatefulWidget {
+  final Transaction transaction;
 
-  const _StatusPill({required this.status});
+  const _ConfirmationRingsIndicator({required this.transaction});
+
+  @override
+  State<_ConfirmationRingsIndicator> createState() =>
+      _ConfirmationRingsIndicatorState();
+}
+
+enum _ConfirmationRingPhase {
+  confirmed,
+  confirming,
+  pending,
+  cancelled,
+  failed,
+}
+
+class _ConfirmationRingsIndicatorState
+    extends State<_ConfirmationRingsIndicator>
+    with SingleTickerProviderStateMixin {
+  static const int _ringCount = 3;
+  static const int _targetConfirmations = 6;
+  static const double _circleSize = 19;
+
+  late final AnimationController _confirmingController;
+  bool _labelOpen = false;
+
+  Transaction get _tx => widget.transaction;
+
+  TransactionStatusTone get _tone => TransactionPalette.toneFor(_tx);
+
+  _ConfirmationRingPhase get _phase {
+    return switch (_tone) {
+      TransactionStatusTone.cancelled => _ConfirmationRingPhase.cancelled,
+      TransactionStatusTone.failed => _ConfirmationRingPhase.failed,
+      TransactionStatusTone.confirmed => _ConfirmationRingPhase.confirmed,
+      TransactionStatusTone.confirming => _ConfirmationRingPhase.confirming,
+      TransactionStatusTone.pending => _ConfirmationRingPhase.pending,
+    };
+  }
+
+  bool get _shouldAnimate => _phase == _ConfirmationRingPhase.confirming;
+
+  int get _filledRings {
+    switch (_phase) {
+      case _ConfirmationRingPhase.confirmed:
+        return _ringCount;
+      case _ConfirmationRingPhase.cancelled:
+      case _ConfirmationRingPhase.failed:
+      case _ConfirmationRingPhase.pending:
+        return 0;
+      case _ConfirmationRingPhase.confirming:
+        final conf = _tx.confirmations.clamp(0, _targetConfirmations);
+        if (conf <= 0) return 0;
+        return ((conf / _targetConfirmations) * _ringCount)
+            .ceil()
+            .clamp(1, _ringCount);
+    }
+  }
+
+  int get _displayCurrent {
+    if (_phase == _ConfirmationRingPhase.confirmed) {
+      return _targetConfirmations;
+    }
+    return _tx.confirmations.clamp(0, _targetConfirmations);
+  }
+
+  Color get _activeColor => TransactionPalette.statusStrong(_tone);
+
+  Color get _centerColor => TransactionPalette.statusSoft(_tone);
+
+  Color get _inactiveColor => TransactionPalette.statusTrack;
+
+  String get _labelText {
+    return switch (_phase) {
+      _ConfirmationRingPhase.cancelled => 'Cancelada',
+      _ConfirmationRingPhase.failed => 'Falhou',
+      _ConfirmationRingPhase.confirmed =>
+        '$_targetConfirmations de $_targetConfirmations confirmações',
+      _ConfirmationRingPhase.pending => 'Aguardando confirmações',
+      _ConfirmationRingPhase.confirming =>
+        '$_displayCurrent de $_targetConfirmations confirmações',
+    };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _confirmingController = AnimationController(
+      vsync: this,
+      duration: KeroseneMotion.loop,
+    );
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConfirmationRingsIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.transaction.status != widget.transaction.status ||
+        oldWidget.transaction.confirmations !=
+            widget.transaction.confirmations ||
+        oldWidget.transaction.id != widget.transaction.id) {
+      _syncAnimation();
+    }
+  }
+
+  @override
+  void dispose() {
+    _confirmingController.dispose();
+    super.dispose();
+  }
+
+  void _syncAnimation() {
+    if (_shouldAnimate) {
+      if (!_confirmingController.isAnimating) {
+        _confirmingController.repeat(reverse: true);
+      }
+    } else {
+      _confirmingController
+        ..stop()
+        ..value = 0;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colors = switch (status) {
-      TransactionStatus.confirmed => (
-          bg: AppColors.hexFFDCFCE7,
-          fg: AppColors.hexFF166534,
-          icon: KeroseneIcons.success,
-          label: 'Concluída',
-        ),
-      TransactionStatus.confirming => (
-          bg: AppColors.hexFFFFEDD5,
-          fg: AppColors.hexFF9A3412,
-          icon: KeroseneIcons.pending,
-          label: 'Confirmando',
-        ),
-      TransactionStatus.pending => (
-          bg: AppColors.hexFFFFEDD5,
-          fg: AppColors.hexFF9A3412,
-          icon: KeroseneIcons.pending,
-          label: 'Pendente',
-        ),
-      TransactionStatus.failed => (
-          bg: AppColors.hexFFFEE2E2,
-          fg: AppColors.hexFF991B1B,
-          icon: KeroseneIcons.warning,
-          label: 'Falhou',
-        ),
-    };
+    final motion = KeroseneMotion.duration(context, KeroseneMotion.short);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius: BorderRadius.circular(999),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        // Absorb the tap so the parent card does not expand/collapse.
+        HapticFeedback.selectionClick();
+        setState(() => _labelOpen = !_labelOpen);
+      },
+      child: AnimatedSize(
+        duration: motion,
+        curve: Curves.easeInOutCubic,
+        alignment: Alignment.centerRight,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_labelOpen) ...[
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 148),
+                child: Text(
+                  _labelText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: _activeColor,
+                    fontFamily: AppTypography.bodyFontFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            SizedBox(
+              width: _circleSize,
+              height: _circleSize,
+              child: AnimatedBuilder(
+                animation: _confirmingController,
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _ConfirmationRingsPainter(
+                      filledRings: _filledRings,
+                      ringCount: _ringCount,
+                      activeColor: _activeColor,
+                      inactiveColor: _inactiveColor,
+                      centerColor: _centerColor,
+                      animating: _shouldAnimate,
+                      // 0→1→0 when reverse; used for pulse + soft sweep.
+                      animationValue: _confirmingController.value,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    );
+  }
+}
+
+class _ConfirmationRingsPainter extends CustomPainter {
+  final int filledRings;
+  final int ringCount;
+  final Color activeColor;
+  final Color inactiveColor;
+  final Color centerColor;
+  final bool animating;
+  final double animationValue;
+
+  const _ConfirmationRingsPainter({
+    required this.filledRings,
+    required this.ringCount,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.centerColor,
+    this.animating = false,
+    this.animationValue = 0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final origin = Offset(size.width / 2, size.height / 2);
+    final outerRadius = math.min(size.width, size.height) / 2;
+    // Thin rings so the filled center can grow until it nearly meets them.
+    final strokeWidth = outerRadius * 0.13;
+    final ringRadius = outerRadius - strokeWidth / 2 - 0.4;
+    final ringInnerEdge = ringRadius - strokeWidth / 2;
+    // ~1.2 logical px air gap between disk and arcs.
+    final baseCenterRadius =
+        math.max(outerRadius * 0.52, ringInnerEdge - 1.2);
+    // Subtle breathing only while confirming (product: “network is working”).
+    final pulse = animating ? 1.0 + (0.06 * animationValue) : 1.0;
+    final centerRadius = baseCenterRadius * pulse;
+    final gapRadians = 0.32;
+    final sweep = (2 * math.pi / ringCount) - gapRadians;
+    final startOffset = -math.pi / 2 + gapRadians / 2;
+
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    for (var i = 0; i < ringCount; i++) {
+      final filled = i < filledRings;
+      ringPaint.color = filled ? activeColor : inactiveColor;
+      if (animating && filled) {
+        // Filled arcs gently brighten with the pulse.
+        ringPaint.color = Color.lerp(
+              activeColor,
+              activeColor.withValues(alpha: 0.72),
+              animationValue,
+            ) ??
+            activeColor;
+      }
+      canvas.drawArc(
+        Rect.fromCircle(center: origin, radius: ringRadius),
+        startOffset + i * (2 * math.pi / ringCount),
+        sweep,
+        false,
+        ringPaint,
+      );
+    }
+
+    // Soft orange “next ring” highlight while confirming — draws attention to
+    // the segment still waiting, without spinning like a generic spinner.
+    if (animating && filledRings < ringCount) {
+      final nextIndex = filledRings;
+      final segmentStart =
+          startOffset + nextIndex * (2 * math.pi / ringCount);
+      final highlightSweep = sweep * (0.28 + 0.52 * animationValue);
+      final highlightPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth * 1.15
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true
+        ..color = activeColor.withValues(alpha: 0.35 + 0.45 * animationValue);
+      canvas.drawArc(
+        Rect.fromCircle(center: origin, radius: ringRadius),
+        segmentStart,
+        highlightSweep,
+        false,
+        highlightPaint,
+      );
+    }
+
+    // Soft outer glow while confirming — reads as “live” without dominating the card.
+    if (animating) {
+      canvas.drawCircle(
+        origin,
+        centerRadius * 1.18,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = centerColor.withValues(alpha: 0.18 + 0.14 * animationValue)
+          ..isAntiAlias = true
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.2),
+      );
+    }
+
+    canvas.drawCircle(
+      origin,
+      centerRadius,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = centerColor
+        ..isAntiAlias = true,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConfirmationRingsPainter oldDelegate) {
+    return oldDelegate.filledRings != filledRings ||
+        oldDelegate.ringCount != ringCount ||
+        oldDelegate.activeColor != activeColor ||
+        oldDelegate.inactiveColor != inactiveColor ||
+        oldDelegate.centerColor != centerColor ||
+        oldDelegate.animating != animating ||
+        oldDelegate.animationValue != animationValue;
+  }
+}
+
+class _AnimatedRingIconWrapper extends StatefulWidget {
+  final Transaction transaction;
+  final TransactionVisualSpec visual;
+  final TransactionCardColors colors;
+  final double iconSize;
+  final bool expanded;
+
+  const _AnimatedRingIconWrapper({
+    required this.transaction,
+    required this.visual,
+    required this.colors,
+    required this.iconSize,
+    required this.expanded,
+  });
+
+  @override
+  State<_AnimatedRingIconWrapper> createState() => _AnimatedRingIconWrapperState();
+}
+
+class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: KeroseneMotion.loop,
+    );
+    _syncPulse();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedRingIconWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.transaction.confirmations !=
+            widget.transaction.confirmations ||
+        oldWidget.transaction.status != widget.transaction.status) {
+      _syncPulse();
+    }
+  }
+
+  void _syncPulse() {
+    final conf = widget.transaction.confirmations.clamp(0, 6);
+    final needsPulse = conf < 6 &&
+        (widget.transaction.status == TransactionStatus.confirming ||
+            widget.transaction.status == TransactionStatus.pending);
+    if (needsPulse) {
+      if (!_pulseController.isAnimating) {
+        // Color pulse only — ring geometry stays fixed (no rotation).
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      _pulseController
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tx = widget.transaction;
+    final int conf = tx.confirmations.clamp(0, 6);
+    final bool isConfirmed = conf >= 6;
+
+    return SizedBox(
+      width: widget.iconSize,
+      height: widget.iconSize,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Icon(colors.icon, size: 13, color: colors.fg),
-          const SizedBox(width: 5),
-          Text(
-            colors.label,
-            style: TextStyle(
-              color: colors.fg,
-              fontFamily: AppTypography.bodyFontFamily,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, _) {
+              // Ring stays fixed; only unconfirmed segments pulse in color.
+              return CustomPaint(
+                size: Size(widget.iconSize, widget.iconSize),
+                painter: _RingConfirmationPainter(
+                  confirmations: conf,
+                  activeColor: const Color(0xFF34C759),
+                  inactiveColor: widget.colors.iconWellBorder,
+                  pulseValue: _pulseController.value,
+                  isPulsing: !isConfirmed,
+                ),
+              );
+            },
+          ),
+          Container(
+            width: widget.iconSize * 0.78,
+            height: widget.iconSize * 0.78,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.colors.iconWell,
+            ),
+            alignment: Alignment.center,
+            child: AnimatedCrossFade(
+              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+              crossFadeState: widget.expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: Icon(
+                StatementTransactionCard._iconFor(
+                  widget.transaction,
+                  widget.visual,
+                ),
+                color: widget.colors.icon,
+                size: widget.iconSize * 0.45,
+              ),
+              secondChild: Text(
+                '$conf/6',
+                style: TextStyle(
+                  color: widget.colors.icon,
+                  fontFamily: AppTypography.bodyFontFamily,
+                  fontWeight: FontWeight.w600,
+                  fontSize: widget.iconSize * 0.28,
+                  letterSpacing: 0,
+                ),
+              ),
             ),
           ),
         ],
@@ -1310,46 +1559,69 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _StatementCardStyle {
-  final Color background;
-  final Color border;
-  final Color secondaryText;
-  final Color timeText;
-  final Color divider;
+class _RingConfirmationPainter extends CustomPainter {
+  final int confirmations;
+  final Color activeColor;
+  final Color inactiveColor;
+  final double pulseValue;
+  final bool isPulsing;
 
-  const _StatementCardStyle({
-    required this.background,
-    required this.border,
-    required this.secondaryText,
-    required this.timeText,
-    required this.divider,
+  _RingConfirmationPainter({
+    required this.confirmations,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.pulseValue,
+    required this.isPulsing,
   });
 
-  factory _StatementCardStyle.fromTransaction(Transaction tx) {
-    if (tx.isLightning) {
-      return const _StatementCardStyle(
-        background: AppColors.hexFFFCE353,
-        border: AppColors.hexFFE7CA32,
-        secondaryText: AppColors.hexB3000000,
-        timeText: AppColors.hex80000000,
-        divider: AppColors.hex22000000,
+  @override
+  void paint(Canvas canvas, Size size) {
+    final origin = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) / 2) - 1.5;
+    final strokeWidth = 2.5;
+
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    const ringCount = 6;
+    const gapRadians = 0.20;
+    final sweep = (2 * math.pi / ringCount) - gapRadians;
+    final startOffset = -math.pi / 2 + gapRadians / 2;
+
+    for (var i = 0; i < ringCount; i++) {
+      final isFilled = i < confirmations;
+      // Fixed geometry: filled = confirmed color; current pending = color load pulse.
+      if (isFilled) {
+        ringPaint.color = activeColor;
+      } else if (isPulsing && i == confirmations) {
+        ringPaint.color = Color.lerp(
+              inactiveColor,
+              activeColor.withValues(alpha: 0.75),
+              pulseValue,
+            ) ??
+            activeColor.withValues(alpha: 0.5);
+      } else {
+        ringPaint.color = inactiveColor;
+      }
+
+      canvas.drawArc(
+        Rect.fromCircle(center: origin, radius: radius),
+        startOffset + i * (2 * math.pi / ringCount),
+        sweep,
+        false,
+        ringPaint,
       );
     }
-    if (!tx.isInternal) {
-      return const _StatementCardStyle(
-        background: AppColors.hexFFFBBD75,
-        border: AppColors.hexFFECA75D,
-        secondaryText: AppColors.hexB3000000,
-        timeText: AppColors.hex80000000,
-        divider: AppColors.hex22000000,
-      );
-    }
-    return const _StatementCardStyle(
-      background: Colors.white,
-      border: AppColors.hexFFE8E8EA,
-      secondaryText: AppColors.hexFF6B7280,
-      timeText: AppColors.hexFF9CA3AF,
-      divider: AppColors.hexFFE5E7EB,
-    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingConfirmationPainter oldDelegate) {
+    return confirmations != oldDelegate.confirmations ||
+           pulseValue != oldDelegate.pulseValue;
   }
 }
+
+

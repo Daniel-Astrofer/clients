@@ -32,6 +32,7 @@ ALLOWED_EXACT = {
     Path('lib/dev_menu.dart'),
     Path('lib/storybook/stories/wallet_flow_stories.dart'),
     Path('lib/core/widgets/animated_number_display.dart'),
+    Path('lib/features/financial_accounts/presentation/widgets/revolut_account_card.dart'),
 }
 
 DIRECT_MATERIAL_ICON = re.compile(r'(?<!Kerosene)Icons\.')

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/providers/transaction_provider.dart';
+import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 class NotificationNavigation {
@@ -15,12 +19,33 @@ class NotificationNavigation {
     SessionNotificationItem notification,
     NavigatorState navigator,
   ) async {
+    final context = navigator.context;
+
+    // Transaction notifications → exclusive detail screen (not legacy dialog).
+    if (_isTransaction(notification)) {
+      final tx = await _resolveTransactionFromNotification(context, notification);
+      if (!navigator.mounted) return;
+      if (tx != null) {
+        await TransactionDetailScreen.open(navigator.context, tx);
+        return;
+      }
+      // Fallback: open statement if we only have a deeplink.
+      final route = notification.deeplink?.trim();
+      if (route != null && route.isNotEmpty) {
+        try {
+          await navigator.pushNamed(route);
+        } catch (error) {
+          debugPrint('Could not open notification deeplink "$route": $error');
+        }
+      }
+      return;
+    }
+
     final route = notification.deeplink?.trim();
     if (route == null || route.isEmpty) {
       return;
     }
 
-    final context = navigator.context;
     if (_shouldShowProfessionalDialog(notification)) {
       final shouldOpenRoute = await showDialog<bool>(
             context: context,
@@ -44,11 +69,133 @@ class NotificationNavigation {
     }
   }
 
+  static Future<Transaction?> _resolveTransactionFromNotification(
+    BuildContext context,
+    SessionNotificationItem notification,
+  ) async {
+    final entityId = notification.entityId?.trim() ?? '';
+    final metaId = _firstMetadataValue(notification, const [
+          'transactionId',
+          'txId',
+          'txid',
+          'blockchainTxid',
+          'paymentHash',
+        ]) ??
+        '';
+
+    try {
+      final container = ProviderScope.containerOf(context, listen: false);
+      final history = await container.read(transactionHistoryProvider.future);
+      final keys = <String>{
+        if (entityId.isNotEmpty) entityId,
+        if (metaId.isNotEmpty) metaId,
+      };
+      for (final key in keys) {
+        for (final tx in history) {
+          if (tx.id == key ||
+              (tx.blockchainTxid ?? '') == key ||
+              (tx.paymentHash ?? '') == key ||
+              (tx.externalTransferId ?? '') == key ||
+              (tx.invoiceId ?? '') == key) {
+            return tx;
+          }
+        }
+      }
+    } catch (error) {
+      debugPrint('Could not resolve notification transaction: $error');
+    }
+
+    // Synthesize a minimal transaction from notification metadata so the
+    // exclusive detail screen still opens with available data.
+    return _transactionFromNotificationMetadata(notification);
+  }
+
+  static Transaction? _transactionFromNotificationMetadata(
+    SessionNotificationItem notification,
+  ) {
+    final amountRaw = _firstMetadataValue(notification, const [
+      'amountBtc',
+      'amount',
+      'btcAmount',
+    ]);
+    final amountBtc = double.tryParse(
+          (amountRaw ?? '').replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-]'), ''),
+        ) ??
+        0;
+    final isReceive = notification.kind ==
+            SessionNotificationItem.kindTransferReceived ||
+        notification.kind == SessionNotificationItem.kindDepositDetected ||
+        notification.kind == SessionNotificationItem.kindDepositConfirmed ||
+        notification.kind == SessionNotificationItem.kindPaymentRequestPaid;
+
+    final walletName = _firstMetadataValue(notification, const [
+      'walletName',
+      'wallet_name',
+      'wallet',
+      'accountName',
+    ]);
+    final from = _firstMetadataValue(notification, const [
+          'sender',
+          'from',
+          'payerName',
+        ]) ??
+        (isReceive ? 'Rede Bitcoin' : (walletName ?? ''));
+    final to = _firstMetadataValue(notification, const [
+          'receiver',
+          'to',
+          'payeeName',
+        ]) ??
+        (isReceive ? (walletName ?? '') : '');
+    final txid = _firstMetadataValue(notification, const [
+      'blockchainTxid',
+      'txid',
+      'txId',
+      'transactionId',
+    ]);
+    final id = (notification.entityId?.trim().isNotEmpty == true)
+        ? notification.entityId!.trim()
+        : (txid ?? notification.id);
+
+    final amountSats = (amountBtc.abs() * 100000000).round();
+    final isLightning = notification.kind ==
+            SessionNotificationItem.kindPaymentRequestPaid ||
+        (notification.body.toLowerCase().contains('lightning'));
+
+    return Transaction(
+      id: id,
+      fromAddress: from,
+      toAddress: to,
+      walletId: walletName,
+      amountSatoshis: amountSats,
+      feeSatoshis: 0,
+      status: notification.kind == SessionNotificationItem.kindDepositDetected
+          ? TransactionStatus.confirming
+          : TransactionStatus.confirmed,
+      type: isReceive
+          ? (notification.kind.contains('deposit')
+              ? TransactionType.deposit
+              : TransactionType.receive)
+          : TransactionType.send,
+      confirmations:
+          notification.kind == SessionNotificationItem.kindDepositConfirmed
+              ? 6
+              : 0,
+      timestamp: notification.timestamp,
+      blockchainTxid: txid,
+      description: notification.body,
+      isInternal: notification.kind ==
+              SessionNotificationItem.kindTransferReceived ||
+          notification.kind == SessionNotificationItem.kindTransferSent,
+      isLightning: isLightning,
+      hasNetworkFee: false,
+    );
+  }
+
   static bool _shouldShowProfessionalDialog(
     SessionNotificationItem notification,
   ) {
-    return _isTransaction(notification) ||
-        _isLoginOrSecurity(notification) ||
+    // Transaction kinds use TransactionDetailScreen — not the legacy dialog.
+    return _isLoginOrSecurity(notification) ||
         _isPaymentLink(notification) ||
         _isRealBitcoinMarketAlert(notification) ||
         _isColdWalletNotification(notification);
@@ -61,6 +208,7 @@ class NotificationNavigation {
       SessionNotificationItem.kindDepositDetected,
       SessionNotificationItem.kindDepositConfirmed,
       SessionNotificationItem.kindPaymentSent,
+      SessionNotificationItem.kindPaymentRequestPaid,
     }.contains(notification.kind);
   }
 

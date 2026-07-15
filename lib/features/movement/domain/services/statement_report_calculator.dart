@@ -1,19 +1,23 @@
 import 'dart:math' as math;
 
 import 'package:intl/intl.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/domain/entities/statement_report.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 class StatementReportCalculator {
   static const int _satsPerBtc = 100000000;
+
+  /// Soft signal that remote history is capped (page size).
   static const int partialHistoryThreshold = 50;
 
   const StatementReportCalculator._();
 
   static StatementReport calculate({
     required List<Transaction> transactions,
-    required List<Wallet> wallets,
+    List<Wallet> wallets = const [],
+    List<BitcoinAccount> accounts = const [],
     required StatementReportPeriod period,
     DateTime? now,
     String locale = 'pt',
@@ -21,10 +25,12 @@ class StatementReportCalculator {
   }) {
     final effectiveNow = now ?? DateTime.now();
     final walletInsights = _walletInsights(
-      wallets,
+      wallets: wallets,
+      accounts: accounts,
       emptyWalletName: emptyWalletName,
     );
     final ranges = _bucketRanges(
+      accounts: accounts,
       wallets: wallets,
       period: period,
       now: effectiveNow,
@@ -32,11 +38,17 @@ class StatementReportCalculator {
     );
     final reportStart = ranges.first.start;
     final reportEnd = ranges.last.end;
-    final countAllTransactionsAsSingleWallet =
-        walletInsights.length == 1 && walletInsights.first.matchKeys.isEmpty;
+
+    // Only collapse everything into one wallet when we truly have a single
+    // known account/wallet with no identity keys (edge empty case).
+    final countAllTransactionsAsSingleWallet = walletInsights.length == 1 &&
+        walletInsights.first.matchKeys.isEmpty &&
+        walletInsights.first.id == 'empty';
 
     final usableTransactions = transactions
-        .where((tx) => tx.status != TransactionStatus.failed)
+        .where((tx) =>
+            tx.status != TransactionStatus.failed &&
+            tx.status != TransactionStatus.cancelled)
         .toList(growable: false);
 
     final buckets = ranges.map((range) {
@@ -63,10 +75,12 @@ class StatementReportCalculator {
     var incoming = 0;
     var outgoing = 0;
     var fees = 0;
+    var serviceFees = 0;
     var internalTransfers = 0;
     var includedTransactions = 0;
     var ignoredFailedTransactions = 0;
     var ignoredOutOfPeriodTransactions = 0;
+    var unclassifiedTransactions = 0;
 
     for (final tx in transactions) {
       final local = tx.timestamp.toLocal();
@@ -74,7 +88,8 @@ class StatementReportCalculator {
         ignoredOutOfPeriodTransactions += 1;
         continue;
       }
-      if (tx.status == TransactionStatus.failed) {
+      if (tx.status == TransactionStatus.failed ||
+          tx.status == TransactionStatus.cancelled) {
         ignoredFailedTransactions += 1;
         continue;
       }
@@ -84,17 +99,26 @@ class StatementReportCalculator {
         walletInsights,
         fallbackToWallet: countAllTransactionsAsSingleWallet,
       );
-      if (!classification.belongsToKnownWallet) {
-        continue;
-      }
+
+      // Global KPIs count every usable in-period movement (honest totals).
       includedTransactions += 1;
+      if (!classification.belongsToKnownWallet &&
+          !countAllTransactionsAsSingleWallet) {
+        unclassifiedTransactions += 1;
+      }
 
       final amount = tx.amountSatoshis.abs();
       final fee = tx.feeSatoshis.abs();
-      if (classification.isInternalBetweenKnownWallets) {
-        internalTransfers += amount;
-        fees += fee;
-        continue;
+      final serviceFee = tx.serviceFeeSatoshis.abs();
+
+      if (classification.isInternalBetweenKnownWallets ||
+          (tx.isInternal && classification.belongsToKnownWallet)) {
+        if (classification.isInternalBetweenKnownWallets) {
+          internalTransfers += amount;
+          fees += fee;
+          serviceFees += serviceFee;
+          continue;
+        }
       }
 
       if (tx.isCredit || classification.destinationMatchesKnownWallet) {
@@ -105,6 +129,17 @@ class StatementReportCalculator {
       if (tx.isDebit || classification.sourceMatchesKnownWallet) {
         outgoing += amount;
         fees += fee;
+        serviceFees += serviceFee;
+        continue;
+      }
+
+      // Unmatched but still in-period: attribute by direction flags.
+      if (tx.isCredit) {
+        incoming += amount;
+      } else if (tx.isDebit) {
+        outgoing += amount;
+        fees += fee;
+        serviceFees += serviceFee;
       }
     }
 
@@ -120,15 +155,29 @@ class StatementReportCalculator {
     });
     final distribution = [
       for (final wallet in walletInsights)
-        StatementDistributionSegment(
-          walletId: wallet.id,
-          label: wallet.name,
-          sats: wallet.balanceSats,
-          visualSats: totalBalance > 0 ? math.max(0, wallet.balanceSats) : 0,
-          percent:
-              totalBalance <= 0 ? 0 : wallet.balanceSats / totalBalance * 100,
-        ),
+        if (wallet.id != 'empty' || wallet.balanceSats > 0)
+          StatementDistributionSegment(
+            walletId: wallet.id,
+            label: wallet.name,
+            sats: wallet.balanceSats,
+            visualSats: totalBalance > 0 ? math.max(0, wallet.balanceSats) : 0,
+            percent:
+                totalBalance <= 0 ? 0 : wallet.balanceSats / totalBalance * 100,
+          ),
     ];
+    // Keep empty distribution honest.
+    final safeDistribution = distribution.isEmpty
+        ? [
+            StatementDistributionSegment(
+              walletId: dominant.id,
+              label: dominant.name,
+              sats: 0,
+              visualSats: 0,
+              percent: 0,
+            ),
+          ]
+        : distribution;
+
     final rawAxisMax = buckets.fold<int>(
       0,
       (maxValue, bucket) => math.max(
@@ -140,38 +189,82 @@ class StatementReportCalculator {
       ),
     );
 
+    final isPartial = _isPartialHistory(
+      transactions: transactions,
+      reportStart: reportStart,
+    );
+
+    final net = incoming - outgoing - fees - serviceFees;
+
     return StatementReport(
       wallets: walletInsights,
       buckets: buckets,
-      distribution: distribution,
+      distribution: safeDistribution,
       incomingSats: incoming,
       outgoingSats: outgoing,
       feeSats: fees,
+      serviceFeeSats: serviceFees,
       internalTransferSats: internalTransfers,
+      netSats: net,
       axisMaxSats: _niceAxisMax(rawAxisMax),
       totalBalanceSats: totalBalance,
       dominantWalletName: dominant.name,
-      isPartial: transactions.length >= partialHistoryThreshold,
-      walletCount: _sourceWalletCount(wallets),
+      isPartial: isPartial,
+      walletCount: walletInsights.where((w) => w.id != 'empty').length,
       loadedTransactionCount: transactions.length,
       includedTransactionCount: includedTransactions,
       ignoredFailedTransactionCount: ignoredFailedTransactions,
       ignoredOutOfPeriodTransactionCount: ignoredOutOfPeriodTransactions,
+      unclassifiedTransactionCount: unclassifiedTransactions,
+      periodStart: reportStart,
+      periodEnd: reportEnd,
     );
   }
 
-  static int _sourceWalletCount(List<Wallet> wallets) {
-    final activeWallets = wallets.where((wallet) => wallet.isActive).length;
-    return activeWallets > 0 ? activeWallets : wallets.length;
+  static bool _isPartialHistory({
+    required List<Transaction> transactions,
+    required DateTime reportStart,
+  }) {
+    if (transactions.length >= partialHistoryThreshold) return true;
+    if (transactions.isEmpty) return false;
+    DateTime? oldest;
+    for (final tx in transactions) {
+      final t = tx.timestamp.toLocal();
+      if (oldest == null || t.isBefore(oldest)) oldest = t;
+    }
+    // If the oldest loaded tx is still after the report window start, we likely
+    // do not have full history for the selected period.
+    return oldest != null && oldest.isAfter(reportStart);
   }
 
-  static List<StatementWalletInsight> _walletInsights(
-    List<Wallet> source, {
+  static List<StatementWalletInsight> _walletInsights({
+    required List<Wallet> wallets,
+    required List<BitcoinAccount> accounts,
     required String emptyWalletName,
   }) {
-    final wallets = source.where((wallet) => wallet.isActive).toList();
+    final activeAccounts =
+        accounts.where((account) => account.isActive).toList(growable: false);
+
+    if (activeAccounts.isNotEmpty) {
+      final insights = [
+        for (final account in activeAccounts)
+          StatementWalletInsight(
+            id: account.id,
+            name: _accountDisplayName(account),
+            matchKeys: _accountMatchKeys(account),
+            balanceSats: math.max(0, account.totalSats),
+          ),
+      ]..sort((a, b) {
+          final balance = b.balanceSats.compareTo(a.balanceSats);
+          if (balance != 0) return balance;
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+      return insights;
+    }
+
+    final source = wallets.where((wallet) => wallet.isActive).toList();
     final displayWallets =
-        wallets.isNotEmpty ? wallets : List<Wallet>.from(source);
+        source.isNotEmpty ? source : List<Wallet>.from(wallets);
     displayWallets.sort((a, b) {
       final balance = b.balance.compareTo(a.balance);
       if (balance != 0) return balance;
@@ -193,11 +286,32 @@ class StatementReportCalculator {
       for (final wallet in displayWallets)
         StatementWalletInsight(
           id: wallet.id,
-          name: wallet.name,
+          name: wallet.name.trim().isEmpty ? emptyWalletName : wallet.name,
           matchKeys: _walletMatchKeys(wallet),
           balanceSats: _btcToSats(wallet.balance),
         ),
     ];
+  }
+
+  static String _accountDisplayName(BitcoinAccount account) {
+    final label = account.label.trim();
+    if (label.isNotEmpty) return label;
+    return account.custodyDisplayLabel;
+  }
+
+  static Set<String> _accountMatchKeys(BitcoinAccount account) {
+    return {
+      account.id,
+      account.label,
+      account.coldWalletId ?? '',
+      account.custody,
+      account.type,
+      if (account.isInternal) 'carteira global',
+      if (account.isInternal) 'conta assegurada',
+    }
+        .map((value) => value.trim().toLowerCase())
+        .where((value) => value.isNotEmpty)
+        .toSet();
   }
 
   static Set<String> _walletMatchKeys(Wallet wallet) {
@@ -214,24 +328,32 @@ class StatementReportCalculator {
   }
 
   static List<({DateTime start, DateTime end, String label})> _bucketRanges({
+    required List<BitcoinAccount> accounts,
     required List<Wallet> wallets,
     required StatementReportPeriod period,
     required DateTime now,
     required String locale,
   }) {
     final localNow = now.toLocal();
-    final createdAt = wallets.isEmpty
-        ? DateTime(localNow.year, localNow.month)
-        : wallets
-            .map((wallet) => wallet.createdAt.toLocal())
-            .reduce((a, b) => a.isBefore(b) ? a : b);
+    DateTime? earliest;
+    for (final wallet in wallets) {
+      final created = wallet.createdAt.toLocal();
+      if (earliest == null || created.isBefore(earliest)) earliest = created;
+    }
+    // Accounts have no createdAt; fall back to year start if needed.
+    final createdAt = earliest ?? DateTime(localNow.year, localNow.month);
 
     switch (period) {
       case StatementReportPeriod.weekly:
         final currentWeek = _weekStart(localNow);
         final firstWeek = _weekStart(createdAt);
         final ytdWeek = _weekStart(DateTime(localNow.year));
-        final start = firstWeek.isAfter(ytdWeek) ? firstWeek : ytdWeek;
+        // Cap at 12 weeks for readability.
+        final capWeek = currentWeek.subtract(const Duration(days: 7 * 11));
+        final start = _maxDate(
+          firstWeek.isAfter(ytdWeek) ? firstWeek : ytdWeek,
+          capWeek,
+        );
         final ranges = <({DateTime start, DateTime end, String label})>[];
         for (var week = start;
             !week.isAfter(currentWeek);
@@ -315,15 +437,16 @@ class StatementReportCalculator {
     required bool fallbackToWallet,
   }) {
     final amount = tx.amountSatoshis.abs();
-    final debitAmount = amount + tx.feeSatoshis.abs();
+    final debitAmount = amount + tx.feeSatoshis.abs() + tx.serviceFeeSatoshis.abs();
     final walletMatches = _matchesWallet(wallet, [tx.walletId]);
     final sourceMatches = _matchesWallet(wallet, [
       tx.sourceWalletId,
-      tx.fromAddress,
+      // Avoid matching generic placeholders as wallet identity.
+      if (!_isPlaceholder(tx.fromAddress)) tx.fromAddress,
     ]);
     final destinationMatches = _matchesWallet(wallet, [
       tx.destinationWalletId,
-      tx.toAddress,
+      if (!_isPlaceholder(tx.toAddress)) tx.toAddress,
     ]);
     final matched = walletMatches || sourceMatches || destinationMatches;
 
@@ -340,6 +463,18 @@ class StatementReportCalculator {
       return -debitAmount;
     }
     return 0;
+  }
+
+  static bool _isPlaceholder(String? value) {
+    final lower = (value ?? '').trim().toLowerCase();
+    if (lower.isEmpty) return true;
+    return lower == 'minha carteira' ||
+        lower == 'my wallet' ||
+        lower == 'rede bitcoin' ||
+        lower == 'bitcoin network' ||
+        lower == 'carteira kerosene' ||
+        lower == 'destino' ||
+        lower == 'origem';
   }
 
   static _TransactionClassification _classifyTransaction(
@@ -362,9 +497,15 @@ class StatementReportCalculator {
     for (final wallet in wallets) {
       walletMatches = walletMatches || _matchesWallet(wallet, [tx.walletId]);
       sourceMatches = sourceMatches ||
-          _matchesWallet(wallet, [tx.sourceWalletId, tx.fromAddress]);
+          _matchesWallet(wallet, [
+            tx.sourceWalletId,
+            if (!_isPlaceholder(tx.fromAddress)) tx.fromAddress,
+          ]);
       destinationMatches = destinationMatches ||
-          _matchesWallet(wallet, [tx.destinationWalletId, tx.toAddress]);
+          _matchesWallet(wallet, [
+            tx.destinationWalletId,
+            if (!_isPlaceholder(tx.toAddress)) tx.toAddress,
+          ]);
     }
     return _TransactionClassification(
       belongsToKnownWallet:

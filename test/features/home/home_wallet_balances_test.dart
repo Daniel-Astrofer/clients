@@ -5,39 +5,40 @@ import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/core/theme/app_theme.dart';
-import 'package:kerosene/features/auth/controller/auth_controller.dart';
-import 'package:kerosene/features/auth/domain/entities/user.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
+import 'package:kerosene/features/home/presentation/screens/home_screen_balance.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
-import 'package:kerosene/features/movement/providers/transaction_provider.dart';
-import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
-import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('home carousel starts with total balance then wallet card',
+  testWidgets('home tabs start on total balance then switch without carousel',
       (tester) async {
-    await _pumpHome(tester, wallets: [_wallet(name: 'Carteira Global')]);
+    await _pumpBalance(tester, wallets: [_wallet(name: 'Carteira Global')]);
 
     expect(find.text('SALDO TOTAL'), findsOneWidget);
-    expect(find.text('Carteira Global'), findsNothing);
-    expect(find.byKey(const ValueKey('home-balance-carousel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-tabs')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-hero')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-carousel')), findsNothing);
+    expect(find.text('Conta'), findsOneWidget);
 
-    await tester.drag(find.byKey(const ValueKey('home-balance-carousel')),
-        const Offset(-500, 0));
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('Conta'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
+    expect(find.text('SALDO INTERNO'), findsOneWidget);
     expect(find.text('Carteira Global'), findsOneWidget);
-    expect(find.text('CARTEIRA GLOBAL'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('home carousel lists backend wallets with balances and custody',
-      (tester) async {
-    await _pumpHome(
+  testWidgets('home tabs list platform and cofre environments', (tester) async {
+    await _pumpBalance(
       tester,
       wallets: [
         _wallet(name: 'Carteira Global', balance: 0.1),
@@ -51,49 +52,51 @@ void main() {
     );
 
     expect(find.text('SALDO TOTAL'), findsOneWidget);
-    expect(find.text('Carteira Global'), findsNothing);
-    expect(find.text('Cold vault'), findsNothing);
-    expect(find.byKey(const ValueKey('home-balance-carousel')), findsOneWidget);
+    expect(find.text('Conta'), findsOneWidget);
+    expect(find.text('Cofre'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-carousel')), findsNothing);
 
-    await tester.drag(find.byKey(const ValueKey('home-balance-carousel')),
-        const Offset(-500, 0));
-    await tester.pumpAndSettle();
-
+    await tester.tap(find.text('Conta'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('SALDO INTERNO'), findsOneWidget);
     expect(find.text('Carteira Global'), findsOneWidget);
-    expect(find.text('CARTEIRA GLOBAL'), findsOneWidget);
 
-    await tester.drag(find.byKey(const ValueKey('home-balance-carousel')),
-        const Offset(-500, 0));
-    await tester.pumpAndSettle();
-
+    await tester.tap(find.text('Cofre'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('SALDO DO COFRE'), findsOneWidget);
     expect(find.text('Cold vault'), findsOneWidget);
-    expect(find.text('COLD WALLET'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 }
 
-Future<void> _pumpHome(
+Future<void> _pumpBalance(
   WidgetTester tester, {
   required List<Wallet> wallets,
 }) async {
   SharedPreferences.setMockInitialValues(const {});
   final sharedPreferences = await SharedPreferences.getInstance();
+  final walletState = WalletLoaded(
+    wallets: wallets,
+    selectedWallet: wallets.firstOrNull,
+    btcToUsdRate: 65000,
+  );
 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-        authControllerProvider.overrideWith(() => _AuthTestController()),
-        walletProvider.overrideWith(() => _WalletTestNotifier(wallets)),
         sessionNotificationFeedProvider.overrideWith(
           () => _EmptyNotificationFeedNotifier(),
         ),
-        transactionHistoryProvider.overrideWith((ref) async => const []),
-        depositsProvider.overrideWith((ref) async => const []),
-        depositBalanceProvider.overrideWith((ref) async => 0),
         latestBtcPriceProvider.overrideWith((ref) => 65000),
         btcEurPriceProvider.overrideWith((ref) => 60000),
         btcBrlPriceProvider.overrideWith((ref) => 350000),
         btcDailyChangePercentProvider.overrideWith((ref) => 0),
+        homeRouteActiveProvider.overrideWith((ref) => false),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -101,13 +104,34 @@ Future<void> _pumpHome(
         locale: const Locale('pt'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const HomeScreen(),
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: HomeBalanceSection(
+                userName: 'Satoshi',
+                walletState: walletState,
+                activeWallet: wallets.firstOrNull,
+                onReceive: () {},
+                onSend: () {},
+                onViewStatement: () {},
+                onOpenWallets: () {},
+              ),
+            ),
+          ),
+        ),
       ),
     ),
   );
 
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump(const Duration(milliseconds: 50));
 }
 
 Wallet _wallet({
@@ -127,41 +151,6 @@ Wallet _wallet({
     createdAt: DateTime(2026, 6, 1),
     updatedAt: DateTime(2026, 6, 1),
   );
-}
-
-class _AuthTestController extends AuthController {
-  @override
-  AuthState build() => AuthAuthenticated(
-        User(
-          id: 'user-1',
-          username: 'Satoshi Nakamoto',
-          createdAt: DateTime(2026, 1, 1),
-        ),
-      );
-}
-
-class _WalletTestNotifier extends WalletNotifier {
-  final List<Wallet> wallets;
-
-  _WalletTestNotifier(this.wallets);
-
-  @override
-  WalletState build() {
-    return WalletLoaded(
-      wallets: wallets,
-      selectedWallet: wallets.firstOrNull,
-      btcToUsdRate: 65000,
-    );
-  }
-
-  @override
-  Future<void> refresh() async {
-    state = WalletLoaded(
-      wallets: wallets,
-      selectedWallet: wallets.firstOrNull,
-      btcToUsdRate: 65000,
-    );
-  }
 }
 
 class _EmptyNotificationFeedNotifier extends SessionNotificationFeedNotifier {

@@ -145,6 +145,94 @@ class SendMoneyCopy {
         _ => 'Envio on-chain',
       };
 
+  static String offlineBanner(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'No connection — reconnect to send.',
+        'es' => 'Sin conexión — reconéctate para enviar.',
+        _ => 'Sem conexão — reconecte para enviar.',
+      };
+
+  static String offlineBlocked(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'You are offline. Check your connection and try again.',
+        'es' => 'Estás sin conexión. Revisa la red e inténtalo de nuevo.',
+        _ => 'Você está offline. Verifique a conexão e tente de novo.',
+      };
+
+  static String coldSeedMissing(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'No backup on this device. Restore the cold wallet BIP39 seed to sign.',
+        'es' =>
+          'Sin copia en este dispositivo. Restaura la seed BIP39 de la cold para firmar.',
+        _ =>
+          'Sem backup neste aparelho. Restaure a seed BIP39 da carteira fria para assinar.',
+      };
+
+  static String coldOnlyOnchain(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'Cold wallets only send on-chain. Use a Bitcoin address (tb1…/bc1…).',
+        'es' =>
+          'La cold solo envía on-chain. Usa una dirección Bitcoin (tb1…/bc1…).',
+        _ =>
+          'Carteira fria envia só on-chain. Use um endereço Bitcoin (tb1…/bc1…).',
+      };
+
+  static String coldNoLightning(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Cold wallets cannot send Lightning. Use an on-chain address.',
+        'es' =>
+          'La cold no envía Lightning. Usa una dirección on-chain.',
+        _ => 'Carteira fria não envia Lightning. Use um endereço on-chain.',
+      };
+
+  static String sendSuccessTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Send submitted',
+        'es' => 'Envío enviado',
+        _ => 'Envio enviado',
+      };
+
+  static String sendSuccessBody(
+    BuildContext context, {
+    required String amountLabel,
+    required String destinationLabel,
+  }) =>
+      switch (_language(context)) {
+        'en' => 'Sent $amountLabel to $destinationLabel.',
+        'es' => 'Enviaste $amountLabel a $destinationLabel.',
+        _ => 'Enviado $amountLabel para $destinationLabel.',
+      };
+
+  static String progressResolving(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Checking how the recipient can receive…',
+        'es' => 'Comprobando cómo puede recibir el destinatario…',
+        _ => 'Verificando como o destinatário pode receber…',
+      };
+
+  static String progressAuthorizing(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Authorizing…',
+        'es' => 'Autorizando…',
+        _ => 'Autorizando…',
+      };
+
+  static String progressSigningDevice(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Signing on this device…',
+        'es' => 'Firmando en este dispositivo…',
+        _ => 'Assinando no aparelho…',
+      };
+
+  static String progressSending(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Sending…',
+        'es' => 'Enviando…',
+        _ => 'Enviando…',
+      };
+
   static String _language(BuildContext context) =>
       Localizations.localeOf(context).languageCode;
 }

@@ -1,5 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -684,13 +685,9 @@ class ReceiveLoadingOverlay extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    color: _receiveText,
-                    strokeWidth: 2,
-                  ),
+                CupertinoActivityIndicator(
+                  color: _receiveText,
+                  radius: 11,
                 ),
                 const SizedBox(height: 14),
                 Text(

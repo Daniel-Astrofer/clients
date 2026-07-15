@@ -3,8 +3,12 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:kerosene/app/network/api_client_provider.dart';
+import 'package:kerosene/core/config/app_config.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:kerosene/core/errors/failures.dart';
+import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/core/services/passkey_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
     show authControllerProvider, sessionStorageScopeProvider;
@@ -204,19 +208,33 @@ final transactionHistoryProvider = FutureProvider<List<Transaction>>((
 });
 
 final _scopedTransactionHistoryProvider =
-    FutureProvider.family<List<Transaction>, String>((ref, _) async {
+    FutureProvider.family<List<Transaction>, String>((ref, sessionScope) async {
   final ledgerRepo = ref.watch(ledgerRepositoryProvider);
+  final localStore = ref.watch(localTransactionHistoryStoreProvider);
+  final localCached = await localStore.load(sessionScope);
+
   final result = await ledgerRepo.getHistory(page: 0, size: 50);
   final externalTransfers = await _loadExternalTransfersSafely(ref);
   final paymentLinks = await _loadPaymentLinksSafely(ref);
 
   return result.fold(
-    (failure) => throw Exception(failure.message),
-    (transactions) {
-      return _mergeExternalHistory(
+    (failure) async {
+      // Backend 24h window may be offline/unreachable — serve secure local ledger.
+      if (localCached.isNotEmpty) {
+        return localCached;
+      }
+      throw Exception(failure.message);
+    },
+    (transactions) async {
+      final online = _mergeExternalHistory(
         kfeTransactions: transactions,
         externalTransfers: externalTransfers,
         paymentLinks: paymentLinks,
+      );
+      // Persist merge so history survives after the server prunes 24h statements.
+      return localStore.mergeAndPersist(
+        sessionScope: sessionScope,
+        incoming: online,
       );
     },
   );
@@ -548,7 +566,10 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
     var challenge = initialChallenge;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final assertionJson = await _buildPasskeyAssertionJson(challenge);
+        final assertion = await buildTransactionalPasskeyAssertion(
+          ref: ref,
+          challenge: challenge,
+        );
         final result = await _repository.sendTransaction(
           toAddress: toAddress,
           amount: amount,
@@ -556,13 +577,14 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
           fromWalletId: fromWalletId,
           fromAddress: fromAddress,
           context: context,
-          passkeyAssertionJson: assertionJson,
+          passkeyAssertionJson: assertion.json,
           confirmationPassphrase: confirmationPassphrase,
           totpCode: totpCode,
           idempotencyKey: idempotencyKey,
           requestTimestamp: requestTimestamp,
           appPin: appPin,
         );
+        await assertion.commitIfNeeded();
 
         ref.invalidate(transactionHistoryProvider);
         ref.invalidate(depositsProvider);
@@ -593,13 +615,12 @@ final sendTransactionProvider =
 
 /// Notifier para Payment Links
 class PaymentLinkNotifier extends Notifier<AsyncActionState> {
-  final Future<String> Function(String) _passkeyAssertionBuilder;
+  final Future<String> Function(String)? _passkeyAssertionBuilder;
   late TransactionRepository _repository;
 
   PaymentLinkNotifier({
     Future<String> Function(String)? passkeyAssertionBuilder,
-  }) : _passkeyAssertionBuilder =
-            passkeyAssertionBuilder ?? _buildPasskeyAssertionJson;
+  }) : _passkeyAssertionBuilder = passkeyAssertionBuilder;
 
   @override
   AsyncActionState build() {
@@ -773,7 +794,17 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
       try {
         final link = await _repository.getPaymentLink(linkId);
         _ensurePaymentLinkPayable(link);
-        final assertionJson = await _passkeyAssertionBuilder(challenge);
+        final TransactionalPasskeyAssertion assertion;
+        if (_passkeyAssertionBuilder != null) {
+          assertion = TransactionalPasskeyAssertion(
+            json: await _passkeyAssertionBuilder!(challenge),
+          );
+        } else {
+          assertion = await buildTransactionalPasskeyAssertion(
+            ref: ref,
+            challenge: challenge,
+          );
+        }
         final result = await _repository.withdraw(
           fromWalletName: payerWalletId,
           toAddress: _withdrawalDestination(link),
@@ -783,11 +814,12 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
               ? link.description
               : 'Pagamento de link',
           confirmationPassphrase: confirmationPassphrase,
-          passkeyAssertionJson: assertionJson,
+          passkeyAssertionJson: assertion.json,
           totpCode: totpCode,
           idempotencyKey: idempotencyKey,
           appPin: appPin,
         );
+        await assertion.commitIfNeeded();
 
         ref.invalidate(transactionHistoryProvider);
         ref.invalidate(depositsProvider);
@@ -914,7 +946,10 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     var challenge = initialChallenge;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final assertionJson = await _buildPasskeyAssertionJson(challenge);
+        final assertion = await buildTransactionalPasskeyAssertion(
+          ref: ref,
+          challenge: challenge,
+        );
         final result = await _repository.withdraw(
           fromWalletName: fromWalletName,
           toAddress: toAddress,
@@ -926,10 +961,11 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
           maxRoutingFeeBtc: maxRoutingFeeBtc,
           description: description,
           confirmationPassphrase: confirmationPassphrase,
-          passkeyAssertionJson: assertionJson,
+          passkeyAssertionJson: assertion.json,
           idempotencyKey: idempotencyKey,
           appPin: appPin,
         );
+        await assertion.commitIfNeeded();
 
         ref.invalidate(transactionHistoryProvider);
         ref.invalidate(depositsProvider);
@@ -1016,12 +1052,20 @@ void _appendPasskeyChallengeCandidates(List<String> candidates, Object? value) {
   }
 
   if (value is Map) {
-    for (final key in const ['challenge', 'message', 'error', 'guidance']) {
+    for (final key in const [
+      'challenge',
+      'message',
+      'error',
+      'guidance',
+      'errorCode',
+      'code',
+    ]) {
       final candidate = value[key]?.toString().trim();
       if (candidate != null && candidate.isNotEmpty) {
         candidates.add(candidate);
       }
     }
+    // ApiResponse envelope often nests PasskeyActionRequiredDTO under data.
     _appendPasskeyChallengeCandidates(candidates, value['data']);
     return;
   }
@@ -1039,10 +1083,131 @@ void _appendPasskeyChallengeCandidates(List<String> candidates, Object? value) {
   }
 }
 
-Future<String> _buildPasskeyAssertionJson(String challenge) async {
+/// Result of a local transactional signature.
+///
+/// [commitIfNeeded] must run only after the server accepts the assertion so the
+/// local WebAuthn-style counter stays aligned with `passkey_credentials`.
+class TransactionalPasskeyAssertion {
+  final String json;
+  final Future<void> Function()? commitOnSuccess;
+
+  const TransactionalPasskeyAssertion({
+    required this.json,
+    this.commitOnSuccess,
+  });
+
+  Future<void> commitIfNeeded() async {
+    final commit = commitOnSuccess;
+    if (commit != null) {
+      await commit();
+    }
+  }
+}
+
+/// Signs a KFE transactional challenge with the **authenticated** user's keys.
+///
+/// Historical bugs fixed here:
+/// 1. Used username `'transaction'` so local material was never found.
+/// 2. Device-key path reused the **passkey** challenge hex as `challengeId`
+///    instead of fetching `/auth/device-key/challenge` (Redis `device_key_challenge`).
+/// 3. Sovereign passkey counter was never committed after a successful tx, so the
+///    next attempt replayed the same counter and the server answered AUTH_016 /
+///    "passkey not linked" guidance.
+///
+/// Prefers device-key (mobile beta) when enrolled; otherwise sovereign passkey.
+Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
+  required Ref ref,
+  required String challenge,
+}) async {
+  final authState = ref.read(authControllerProvider);
+  if (authState is! AuthAuthenticated) {
+    throw const ServerException(
+      message: 'Sessão inválida para assinar a transação.',
+      errorCode: 'ERR_AUTH_SESSION_REQUIRED',
+    );
+  }
+
+  final username = authState.user.username.trim();
+  if (username.isEmpty) {
+    throw const ServerException(
+      message: 'Usuário inválido para assinar a transação.',
+      errorCode: 'ERR_AUTH_USERNAME_REQUIRED',
+    );
+  }
+
+  final deviceKey = DeviceKeyService.instance;
+  if (await deviceKey.hasRegisteredDeviceKey(username)) {
+    // Device-key AUTH must use a server-issued device_key_challenge UUID, not
+    // the passkey transactional challenge embedded in the 428 body.
+    final deviceChallenge =
+        await _fetchDeviceKeyAuthChallenge(ref: ref, username: username);
+    final assertion = await deviceKey.authenticate(
+      challenge: deviceChallenge,
+      username: username,
+    );
+    return TransactionalPasskeyAssertion(
+      json: jsonEncode({
+        'type': 'DEVICE_KEY',
+        ...assertion,
+      }),
+    );
+  }
+
   final credential = await PasskeyService.instance.authenticate(
     challengeHex: challenge,
-    username: 'transaction',
+    username: username,
   );
-  return jsonEncode(credential);
+  return TransactionalPasskeyAssertion(
+    json: jsonEncode(PasskeyService.toWirePayload(credential)),
+    commitOnSuccess: () =>
+        PasskeyService.instance.commitAuthenticationCounter(credential),
+  );
+}
+
+Future<DeviceKeyChallenge> _fetchDeviceKeyAuthChallenge({
+  required Ref ref,
+  required String username,
+}) async {
+  try {
+    final response = await ref.read(apiClientProvider).get(
+          AppConfig.authDeviceKeyChallenge,
+          queryParameters: {'username': username},
+        );
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final challenge = DeviceKeyChallenge.fromJson(data);
+      if (challenge.challengeId.isEmpty || challenge.challenge.isEmpty) {
+        throw const ServerException(
+          message: 'Challenge da device key incompleto.',
+          errorCode: 'ERR_AUTH_DEVICE_KEY_INVALID_CHALLENGE',
+        );
+      }
+      return challenge;
+    }
+    if (data is Map) {
+      final challenge = DeviceKeyChallenge.fromJson(
+        Map<String, dynamic>.from(data),
+      );
+      if (challenge.challengeId.isEmpty || challenge.challenge.isEmpty) {
+        throw const ServerException(
+          message: 'Challenge da device key incompleto.',
+          errorCode: 'ERR_AUTH_DEVICE_KEY_INVALID_CHALLENGE',
+        );
+      }
+      return challenge;
+    }
+    throw const ServerException(
+      message: 'Não foi possível obter o challenge da device key.',
+      errorCode: 'ERR_AUTH_DEVICE_KEY_INVALID_CHALLENGE',
+    );
+  } on AppException {
+    rethrow;
+  } catch (error) {
+    throw ServerException(
+      message:
+          'Não foi possível obter o challenge da device key para assinar a transação.',
+      errorCode: 'ERR_AUTH_DEVICE_KEY_CHALLENGE_FETCH',
+      data: {'cause': error.toString()},
+    );
+  }
 }

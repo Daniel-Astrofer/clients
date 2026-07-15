@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:bip39/bip39.dart' as bip39;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
@@ -18,7 +19,7 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
 import 'package:kerosene/core/presentation/widgets/bitcoin_address_blocks.dart';
-import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/core/presentation/widgets/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
@@ -34,6 +35,8 @@ import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'bitcoin_accounts_empty_layout.dart';
 import 'bitcoin_accounts_header.dart';
 import 'bitcoin_accounts_presentation_support.dart';
+import 'bitcoin_screens/wallet_setup_hub_screen.dart';
+import 'package:kerosene/features/movement/screens/send_money_screen.dart';
 
 import 'bitcoin_screens/cold_wallet_creation_screen.dart';
 import 'bitcoin_screens/internal_account_creation_screen.dart';
@@ -42,6 +45,7 @@ import 'bitcoin_widgets/bottom_sheets.dart';
 import 'bitcoin_accounts_details.dart';
 import 'bitcoin_accounts_internal_sections.dart';
 import 'bitcoin_accounts_advanced_sections.dart';
+import 'widgets/revolut_account_card.dart';
 
 class BitcoinAccountsScreen extends ConsumerStatefulWidget {
   const BitcoinAccountsScreen({super.key});
@@ -66,7 +70,7 @@ class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen> {
         authState is AuthAuthenticated ? authState.user.name.trim() : '';
 
     return accounts.when(
-      loading: () => const Center(child: TorLoadingDots()),
+      loading: () => const TorNavigationLoadingScreen(),
       error: (_, __) => Scaffold(
         backgroundColor: AppColors.hexFF000000,
         body: Stack(
@@ -184,7 +188,7 @@ class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen> {
   Future<void> openColdWalletFlow() async {
     final changed = await Navigator.of(context).push<bool>(
       keroseneHorizontalRoute<bool>(
-        builder: (_) => const ColdWalletCreationScreen(),
+        builder: (_) => const WalletSetupHubScreen(),
       ),
     );
     await reloadAccountsAfterChildFlow(force: changed == true);
@@ -265,7 +269,7 @@ class AccountsContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FocusedAccountPager(
+        RevolutAccountCardPager(
           accounts: accounts,
           userDisplayName: userDisplayName,
           selectedIndex: selectedIndex,
@@ -931,11 +935,7 @@ class WalletLockSwitchRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           if (busy)
-            const SizedBox(
-              width: 26,
-              height: 26,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+            const CupertinoActivityIndicator(radius: 13)
           else
             Switch.adaptive(
               value: locked,
@@ -1229,6 +1229,43 @@ class ColdWalletBackendOptions extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                // Unified send wizard (PR6) — same flow as home send.
+                final walletId = coldWalletId.isNotEmpty
+                    ? coldWalletId
+                    : account.id.trim();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SendMoneyScreen(walletId: walletId),
+                  ),
+                );
+              },
+              icon: const Icon(KeroseneIcons.send, size: 18),
+              label: Text(
+                context.tr.bitcoinAdvancedNewPsbtAction,
+                style: AppTypography.inter(
+                  color: KeroseneBrandTokens.background,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: KeroseneBrandTokens.textPrimary,
+                foregroundColor: KeroseneBrandTokens.background,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ),
         AccountExpansionItem(
           title: 'UTXOS MONITORADOS',
           expanded: expandedKey == 'utxos',

@@ -64,7 +64,15 @@ class DeviceKeyService {
   IOSOptions _iosOptions() =>
       const IOSOptions(accessibility: KeychainAccessibility.first_unlock);
 
-  AndroidOptions _androidOptions() => const AndroidOptions();
+  /// Keep the same Android namespace as [SecureStorageService] so material
+  /// survives process death / app backgrounding on OEM builds that isolate
+  /// default EncryptedSharedPreferences scopes inconsistently.
+  AndroidOptions _androidOptions() => const AndroidOptions(
+        storageNamespace: 'kerosene_secure_storage',
+      );
+
+  /// Pre-namespace defaults used by earlier builds.
+  AndroidOptions _legacyAndroidOptions() => const AndroidOptions();
 
   Future<Map<String, dynamic>> register({
     required DeviceKeyChallenge challenge,
@@ -275,10 +283,8 @@ class DeviceKeyService {
     required String username,
     required String credentialId,
   }) async {
-    final value = await _secureStorage.read(
-      key: _storageKey(_privateSeedKey, username, credentialId),
-      iOptions: _iosOptions(),
-      aOptions: _androidOptions(),
+    final value = await _readStorageValue(
+      _storageKey(_privateSeedKey, username, credentialId),
     );
     if (value == null || value.trim().isEmpty) {
       return null;
@@ -287,11 +293,7 @@ class DeviceKeyService {
   }
 
   Future<String?> _readActiveCredentialId(String username) {
-    return _secureStorage.read(
-      key: _activeCredentialStorageKey(username),
-      iOptions: _iosOptions(),
-      aOptions: _androidOptions(),
-    );
+    return _readStorageValue(_activeCredentialStorageKey(username));
   }
 
   Future<int> _nextCounter({
@@ -299,11 +301,7 @@ class DeviceKeyService {
     required String credentialId,
   }) async {
     final key = _storageKey(_counterKey, username, credentialId);
-    final currentRaw = await _secureStorage.read(
-      key: key,
-      iOptions: _iosOptions(),
-      aOptions: _androidOptions(),
-    );
+    final currentRaw = await _readStorageValue(key);
     final next = (int.tryParse(currentRaw ?? '') ?? 0) + 1;
     await _secureStorage.write(
       key: key,
@@ -312,6 +310,40 @@ class DeviceKeyService {
       aOptions: _androidOptions(),
     );
     return next;
+  }
+
+  /// Reads from the namespaced store first, then migrates legacy values.
+  Future<String?> _readStorageValue(String key) async {
+    final current = await _secureStorage.read(
+      key: key,
+      iOptions: _iosOptions(),
+      aOptions: _androidOptions(),
+    );
+    if (current != null && current.trim().isNotEmpty) {
+      return current;
+    }
+
+    final legacy = await _secureStorage.read(
+      key: key,
+      iOptions: _iosOptions(),
+      aOptions: _legacyAndroidOptions(),
+    );
+    if (legacy == null || legacy.trim().isEmpty) {
+      return null;
+    }
+
+    await _secureStorage.write(
+      key: key,
+      value: legacy,
+      iOptions: _iosOptions(),
+      aOptions: _androidOptions(),
+    );
+    await _secureStorage.delete(
+      key: key,
+      iOptions: _iosOptions(),
+      aOptions: _legacyAndroidOptions(),
+    );
+    return legacy;
   }
 
   void _validateChallenge(DeviceKeyChallenge challenge) {

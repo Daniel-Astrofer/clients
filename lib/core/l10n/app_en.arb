@@ -1366,6 +1366,27 @@
   "errPasskeyWrongDevice": "This passkey cannot be used for this login. Sign in with passphrase and authenticator code, then link a new passkey on this device.",
   "errPasskeyRejected": "This passkey was rejected for the operation. If the problem persists, link another compatible passkey.",
   "errPasskeyLinkGuidance": "Sign in with passphrase and authenticator code, then link a passkey compatible with this device.",
+  "errAuthDeviceAlreadyBound": "This device is already linked to another account. Confirm to remove the previous passkey.",
+  "authDeviceUnlinkTitle": "Switch account on this device?",
+  "authDeviceUnlinkBody": "This device is linked to account {previousUsername}.\n\n{guidance}",
+  "@authDeviceUnlinkBody": {
+    "placeholders": {
+      "previousUsername": { "type": "String" },
+      "guidance": { "type": "String" }
+    }
+  },
+  "authDeviceUnlinkDefaultGuidance": "If you continue, the previous account's passkey will be removed from this device and that account will only be accessible with a password.",
+  "authDeviceUnlinkConfirmSignup": "Continue and create new account",
+  "authDeviceUnlinkConfirmLink": "Continue and link",
+  "authDeviceUnlinkCancel": "Cancel",
+  "authDeviceUnlinkCancelledTitle": "Device already linked",
+  "authDeviceUnlinkCancelledMessage": "Signup cancelled. This device remains linked to {previousUsername}.",
+  "@authDeviceUnlinkCancelledMessage": {
+    "placeholders": {
+      "previousUsername": { "type": "String" }
+    }
+  },
+
   "errReceiverNotReady": "This user is not ready to receive funds yet.",
   "errOnchainReceiverMethodNotFound": "This user does not have an on-chain wallet registered to receive.",
   "errOnchainInvalidAddress": "The Bitcoin address is not valid for this network.",
@@ -2405,6 +2426,7 @@
   "financialStatementFilterOutgoing": "Sent",
   "financialStatementFilterPending": "Pending",
   "financialStatementFilterFailed": "Failed",
+  "financialStatementFilterCancelled": "Cancelled",
   "financialStatementNoResultsTitle": "No matching transactions",
   "financialStatementNoResultsMessage": "Try another search or reset the filters.",
   "financialStatementClearFilters": "Clear filters",

@@ -90,7 +90,8 @@ class TorService {
 
     _isRunning = Tor.instance.started;
     if (_isRunning) {
-      await _waitForProxyToBoot(_socksPort, timeoutSeconds: 10);
+      // Short window: SOCKS usually answers within a few hundred ms after port is valid.
+      await _waitForProxyToBoot(_socksPort, timeoutSeconds: 8);
       debugPrint(
         '🧅 TorService: Tor (Arti) running on SOCKS5 port $_socksPort',
       );
@@ -104,7 +105,7 @@ class TorService {
   static bool _isValidPort(int port) => port > 0 && port <= 65535;
 
   Future<int> _waitForValidTorPackagePort({
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 20),
   }) async {
     final stopwatch = Stopwatch()..start();
     var lastPort = Tor.instance.port;
@@ -113,7 +114,8 @@ class TorService {
       lastPort = Tor.instance.port;
       if (_isValidPort(lastPort)) return lastPort;
 
-      await Future.delayed(const Duration(milliseconds: 250));
+      // 50ms poll — Arti often publishes the port quickly after start().
+      await Future.delayed(const Duration(milliseconds: 50));
     }
 
     return lastPort;
@@ -209,20 +211,23 @@ class TorService {
         final socket = await Socket.connect(
           _socksHost,
           port,
-          timeout: const Duration(milliseconds: 1000),
+          timeout: const Duration(milliseconds: 250),
         );
         socket.destroy();
         debugPrint(
-          '🧅 TorService: Proxy is ALIVE at $port after $attempts attempts.',
+          '🧅 TorService: Proxy is ALIVE at $port after $attempts attempts '
+          '(${stopwatch.elapsedMilliseconds}ms).',
         );
         return;
       } catch (_) {
-        if (attempts % 5 == 0) {
+        if (attempts % 10 == 0) {
           debugPrint(
             '🧅 TorService: Still waiting for port $port... (${stopwatch.elapsed.inSeconds}s)',
           );
         }
-        await Future.delayed(const Duration(milliseconds: 1000));
+        // Tight poll — full 1s sleep was the dominant delay when the proxy
+        // was already up but we missed the first connect window.
+        await Future.delayed(const Duration(milliseconds: 80));
       }
     }
     throw SocketException(
@@ -253,7 +258,14 @@ class TorService {
 
   /// Starts a local TCP server that blindly relays bytes through the Tor SOCKS5 proxy.
   /// This is used to tunnel protocols like WebSockets that don't natively support SOCKS5.
-  Future<int> startRelay(String targetHost, int targetPort) async {
+  ///
+  /// [warmUpCircuit] opens a full onion circuit before binding. That is expensive
+  /// (often many seconds) — cold start uses `false` and warms in the background.
+  Future<int> startRelay(
+    String targetHost,
+    int targetPort, {
+    bool warmUpCircuit = false,
+  }) async {
     if (!_isRunning || !_isValidPort(_socksPort)) {
       throw SocketException(
         'Cannot start relay: Tor is not running with a valid SOCKS5 port. current=$_socksPort',
@@ -263,6 +275,9 @@ class TorService {
     final resolvedTargetPort = _normalizeTargetPort(targetPort);
     final key = '$targetHost:$resolvedTargetPort';
     if (_relayPorts.containsKey(key)) {
+      if (warmUpCircuit) {
+        unawaited(warmOnionCircuit(targetHost, resolvedTargetPort));
+      }
       return _relayPorts[key]!;
     }
     final inFlight = _relayStartFutures[key];
@@ -270,8 +285,12 @@ class TorService {
       return inFlight;
     }
 
-    final startFuture =
-        _startRelayInternal(key, targetHost, resolvedTargetPort);
+    final startFuture = _startRelayInternal(
+      key,
+      targetHost,
+      resolvedTargetPort,
+      warmUpCircuit: warmUpCircuit,
+    );
     _relayStartFutures[key] = startFuture;
     try {
       return await startFuture;
@@ -280,17 +299,41 @@ class TorService {
     }
   }
 
+  /// Opens and closes one onion tunnel to prime Arti circuits (non-blocking UX).
+  Future<void> warmOnionCircuit(String targetHost, int targetPort) async {
+    if (!_isRunning || !_isValidPort(_socksPort)) return;
+    final resolved = _normalizeTargetPort(targetPort);
+    try {
+      final tunnel = await _openSocksTunnel(
+        targetHost: targetHost,
+        targetPort: resolved,
+        logPrefix: 'TorService [Circuit warm]',
+      );
+      tunnel.close();
+      debugPrint(
+        '🧅 TorService: Onion circuit warm complete for $targetHost:$resolved',
+      );
+    } catch (e) {
+      debugPrint('🧅 TorService: Circuit warm skipped/failed: $e');
+    }
+  }
+
   Future<int> _startRelayInternal(
     String key,
     String targetHost,
-    int targetPort,
-  ) async {
-    final preflightTunnel = await _openSocksTunnel(
-      targetHost: targetHost,
-      targetPort: targetPort,
-      logPrefix: 'TorService [Relay preflight]',
-    );
-    preflightTunnel.close();
+    int targetPort, {
+    bool warmUpCircuit = false,
+  }) async {
+    // Cold start must not block the UI on a full onion preflight (often 10–20s).
+    // Circuits are opened on the first client connection (or via [warmOnionCircuit]).
+    if (warmUpCircuit) {
+      final preflightTunnel = await _openSocksTunnel(
+        targetHost: targetHost,
+        targetPort: targetPort,
+        logPrefix: 'TorService [Relay preflight]',
+      );
+      preflightTunnel.close();
+    }
 
     final relayServer = await ServerSocket.bind('127.0.0.1', 0);
     final relayPort = relayServer.port;

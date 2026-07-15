@@ -135,6 +135,15 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
 
     if (next is AuthError) {
       _totpTransitionTimer?.cancel();
+      final isDeviceBound = next.errorCode == 'AUTH_024' ||
+          next.errorCode == 'ERR_AUTH_DEVICE_ALREADY_BOUND' ||
+          (next.data is Map &&
+              (next.data as Map)['action']?.toString() ==
+                  'CONFIRM_UNLINK_DEVICE');
+      if (isDeviceBound && _step == 5 && _sessionId.isNotEmpty) {
+        unawaited(_promptDeviceUnlinkAndRetry(next));
+        return;
+      }
       final wasTotpOrPasskeyStep = _step == 4 || _step == 5;
       if (_step == 3 || wasTotpOrPasskeyStep) {
         _sessionId = '';
@@ -149,6 +158,68 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
         target: _SignupErrorTarget.general,
       );
     }
+  }
+
+  Future<void> _promptDeviceUnlinkAndRetry(AuthError error) async {
+    if (!mounted) return;
+    final l10n = context.tr;
+    final data = error.data is Map
+        ? Map<String, dynamic>.from(error.data as Map)
+        : const <String, dynamic>{};
+    final previous = (data['previousUsernameMasked'] ??
+            data['previous_username_masked'] ??
+            '***')
+        .toString();
+    final guidanceRaw = data['guidance']?.toString().trim();
+    final guidance = (guidanceRaw == null || guidanceRaw.isEmpty)
+        ? l10n.authDeviceUnlinkDefaultGuidance
+        : guidanceRaw;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _signupPanel,
+          title: Text(
+            l10n.authDeviceUnlinkTitle,
+            style: const TextStyle(color: _signupText),
+          ),
+          content: Text(
+            l10n.authDeviceUnlinkBody(previous, guidance),
+            style: const TextStyle(color: _signupMuted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.authDeviceUnlinkCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                l10n.authDeviceUnlinkConfirmSignup,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+    if (confirmed == true) {
+      ref.read(authControllerProvider.notifier).registerPasskeyOnboarding(
+            _sessionId,
+            confirmUnlinkDevice: true,
+          );
+      return;
+    }
+
+    _showInlineFeedback(
+      title: l10n.authDeviceUnlinkCancelledTitle,
+      message: l10n.authDeviceUnlinkCancelledMessage(previous),
+      target: _SignupErrorTarget.general,
+    );
   }
 
   void _startAppAfterSuccess() {

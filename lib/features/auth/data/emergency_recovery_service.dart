@@ -83,6 +83,14 @@ class RemoteEmergencyRecoveryService implements EmergencyRecoveryService {
         'clientDataJSON': credential['clientDataJSON'],
         'credentialId': credential['credentialId'],
         'userHandle': credential['userHandle'],
+        'deviceInstallId': credential['deviceInstallId'],
+        'brand': credential['brand'],
+        'model': credential['model'],
+        'serialNumber': credential['serialNumber'],
+        'platform': credential['platform'],
+        'browser': credential['browser'],
+        // Recovery already proved ownership via backup codes + TOTP.
+        'confirmUnlinkDevice': true,
       },
     );
     return EmergencyRecoveryFinishResult.fromJson(

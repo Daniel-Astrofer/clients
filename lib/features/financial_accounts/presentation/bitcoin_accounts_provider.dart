@@ -66,7 +66,7 @@ class BitcoinAccountsNotifier extends AsyncNotifier<List<BitcoinAccount>> {
     }
   }
 
-  Future<void> importColdWallet({
+  Future<BitcoinAccount> importColdWallet({
     required String label,
     required String xpub,
     required String fingerprint,
@@ -86,6 +86,7 @@ class BitcoinAccountsNotifier extends AsyncNotifier<List<BitcoinAccount>> {
       await _refreshAfterMutation(
         fallbackAccounts: _mergeAccount(previousAccounts, imported),
       );
+      return imported;
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       Error.throwWithStackTrace(error, stackTrace);

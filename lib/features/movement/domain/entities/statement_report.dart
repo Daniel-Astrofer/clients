@@ -5,7 +5,9 @@ class StatementReport {
   final int incomingSats;
   final int outgoingSats;
   final int feeSats;
+  final int serviceFeeSats;
   final int internalTransferSats;
+  final int netSats;
   final int axisMaxSats;
   final int totalBalanceSats;
   final String dominantWalletName;
@@ -15,6 +17,9 @@ class StatementReport {
   final int includedTransactionCount;
   final int ignoredFailedTransactionCount;
   final int ignoredOutOfPeriodTransactionCount;
+  final int unclassifiedTransactionCount;
+  final DateTime periodStart;
+  final DateTime periodEnd;
 
   const StatementReport({
     required this.wallets,
@@ -23,7 +28,9 @@ class StatementReport {
     required this.incomingSats,
     required this.outgoingSats,
     required this.feeSats,
+    required this.serviceFeeSats,
     required this.internalTransferSats,
+    required this.netSats,
     required this.axisMaxSats,
     required this.totalBalanceSats,
     required this.dominantWalletName,
@@ -33,7 +40,12 @@ class StatementReport {
     required this.includedTransactionCount,
     required this.ignoredFailedTransactionCount,
     required this.ignoredOutOfPeriodTransactionCount,
+    required this.unclassifiedTransactionCount,
+    required this.periodStart,
+    required this.periodEnd,
   });
+
+  int get totalFeesSats => feeSats + serviceFeeSats;
 }
 
 enum StatementReportPeriod { monthly, weekly, annual }

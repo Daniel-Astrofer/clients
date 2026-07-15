@@ -128,8 +128,9 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       amountLocked: true,
       referenceLabel: widget.wallet.name,
       metadata: {
+        'walletId': widget.wallet.id,
         'walletName': widget.wallet.name,
-        'rail': widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL',
+        'rail': _paymentRequestRail(),
         'method': widget.method.name,
         'source': 'receive_flow',
       },
@@ -137,6 +138,18 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     ref.invalidate(paymentLinksProvider);
     ref.invalidate(transactionHistoryProvider);
     return paymentLink;
+  }
+
+  String _paymentRequestRail() {
+    switch (widget.method) {
+      case ReceiveAmountMethod.p2p:
+        return 'INTERNAL';
+      case ReceiveAmountMethod.nfc:
+        return widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL';
+      case ReceiveAmountMethod.qrCode:
+      case ReceiveAmountMethod.paymentLink:
+        return 'ONCHAIN';
+    }
   }
 
   @override
@@ -180,25 +193,51 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
             maxDecimalPlaces: 8,
           )}';
 
+    final title = switch (widget.method) {
+      ReceiveAmountMethod.qrCode => 'Receber via QR',
+      ReceiveAmountMethod.paymentLink => 'Link de pagamento',
+      ReceiveAmountMethod.nfc => 'Receber via NFC',
+      ReceiveAmountMethod.p2p => 'Receber P2P',
+    };
+
     return Scaffold(
+      backgroundColor: Colors.black,
       body: TransactionValueEntrySurface(
         onBack: () => Navigator.of(context).maybePop(),
+        title: title,
+        subtitle: widget.wallet.name,
         amountInput: flowState.amountInput,
         unitLabel: MoneyDisplay.tickerSymbolFor(_selectedCurrency),
         currency: _selectedCurrency,
         fiatReference: secondaryLabel,
         configuration: _configuration(flowState),
-        onAmountChanged:
-            ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput,
+        showKeypad: true,
+        onKeyTap: _onKey,
+        onCurrencyTap: _toggleAmountCurrency,
+        availableLabel: MoneyDisplay.formatCompact(
+          amount: widget.wallet.balance,
+          currency: Currency.btc,
+          maxDecimalPlaces: 8,
+        ),
         ctaLabel: widget.method == ReceiveAmountMethod.paymentLink
-            ? context.tr.receiveGenAction.toUpperCase()
+            ? context.tr.receiveGenAction
             : context.tr.continueButton,
         ctaEnabled: amountBtc > 0 && !_isContinuing,
         isBusy: _isContinuing,
         onCta: _continue,
-        onFiatReferenceTap: _toggleAmountCurrency,
       ),
     );
+  }
+
+  void _onKey(String key) {
+    final current = ref.read(movementFlowCoordinatorProvider).amountInput;
+    final next = MoneyDisplay.applyKeypadInput(
+      currentValue: current,
+      key: key,
+      currency: _selectedCurrency,
+      maxLength: _selectedCurrency == Currency.btc ? 16 : 14,
+    );
+    ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput(next);
   }
 
   double _currentAmountBtc(MovementFlowState flowState) {
@@ -252,12 +291,20 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
           );
 
     setState(() => _selectedCurrency = nextCurrency);
-    ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput(
-          MoneyDisplay.rawInputFromAmount(
-            amount: nextAmount,
-            currency: nextCurrency,
-          ),
-        );
+    // Natural display string — avoid zero-padded cent buffers.
+    final raw = nextAmount <= 0
+        ? '0'
+        : nextCurrency == Currency.btc
+            ? _trimTrailingZeros(nextAmount.toStringAsFixed(8))
+            : _trimTrailingZeros(nextAmount.toStringAsFixed(2));
+    ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput(raw);
+  }
+
+  String _trimTrailingZeros(String value) {
+    if (!value.contains('.')) return value;
+    return value
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
 
   Widget? _configuration(MovementFlowState flowState) {
@@ -271,38 +318,25 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       (minutes: 1440, label: context.tr.receive24Hours),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(3, 0, 3, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.tr.receiveScreenConfigureLinkTitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            context.tr.receiveExpirationLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  height: 1.3,
-                ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final option in options)
-                _expirationButton(flowState, option),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.tr.receiveExpirationLabel,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.72),
+                height: 1.3,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final option in options) _expirationButton(flowState, option),
+          ],
+        ),
+      ],
     );
   }
 
@@ -320,9 +354,10 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         backgroundColor:
             selected ? Colors.white : Colors.white.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.22)),
+          borderRadius: BorderRadius.circular(999),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       ),
       child: Text(option.label),
     );

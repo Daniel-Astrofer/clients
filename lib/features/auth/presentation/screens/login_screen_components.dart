@@ -1,5 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
@@ -416,13 +417,9 @@ class LoginPrimaryButton extends StatelessWidget {
             textStyle: LoginTypography.button(colors, color: foreground),
           ),
           child: isLoading
-              ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: foreground,
-                  ),
+              ? CupertinoActivityIndicator(
+                  radius: 9,
+                  color: foreground,
                 )
               : Text(
                   text,

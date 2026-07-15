@@ -19,12 +19,15 @@ class BitcoinMarketChartPoint {
   int get timeMillis => time.millisecondsSinceEpoch;
 }
 
+/// Preset windows + optional custom "last N days".
 enum BitcoinMarketChartRange {
   oneDay('1D', '15m', 96),
+  threeDays('3D', '1h', 72),
   oneWeek('1W', '1h', 168),
   oneMonth('1M', '4h', 180),
+  ninetyDays('90D', '6h', 180),
   oneYear('1Y', '1d', 366),
-  all('ALL', '1M', 1000);
+  all('ALL', '1w', 520);
 
   const BitcoinMarketChartRange(this.label, this.binanceInterval, this.limit);
 
@@ -32,31 +35,50 @@ enum BitcoinMarketChartRange {
   final String binanceInterval;
   final int limit;
 
+  /// Degraded limits for slow Tor / flaky networks.
+  int get degradedLimit => math.max(24, (limit * 0.45).round());
+
   DateTime? startDate(DateTime now) {
     switch (this) {
       case BitcoinMarketChartRange.oneDay:
         return now.subtract(const Duration(days: 1));
+      case BitcoinMarketChartRange.threeDays:
+        return now.subtract(const Duration(days: 3));
       case BitcoinMarketChartRange.oneWeek:
         return now.subtract(const Duration(days: 7));
       case BitcoinMarketChartRange.oneMonth:
         return now.subtract(const Duration(days: 31));
+      case BitcoinMarketChartRange.ninetyDays:
+        return now.subtract(const Duration(days: 90));
       case BitcoinMarketChartRange.oneYear:
         return now.subtract(const Duration(days: 366));
       case BitcoinMarketChartRange.all:
         return null;
     }
   }
+
+  bool get supportsLiveStream =>
+      this == BitcoinMarketChartRange.oneDay ||
+      this == BitcoinMarketChartRange.threeDays ||
+      this == BitcoinMarketChartRange.oneWeek;
 }
 
 class BitcoinMarketChartRequest {
   final String symbol;
   final Currency quoteCurrency;
   final BitcoinMarketChartRange range;
+  /// When set, overrides [range.startDate] (custom last-N or calendar window).
+  final DateTime? customStart;
+  final DateTime? customEnd;
+  final bool degraded;
 
   const BitcoinMarketChartRequest({
     required this.symbol,
     required this.quoteCurrency,
     required this.range,
+    this.customStart,
+    this.customEnd,
+    this.degraded = false,
   });
 
   static const fallback = BitcoinMarketChartRequest(
@@ -65,16 +87,42 @@ class BitcoinMarketChartRequest {
     range: BitcoinMarketChartRange.oneDay,
   );
 
-  String get streamName => '${symbol.toLowerCase()}@kline_${range.binanceInterval}';
+  String get streamName =>
+      '${symbol.toLowerCase()}@kline_${range.binanceInterval}';
   String get tickerStreamName => '${symbol.toLowerCase()}@ticker';
   String get combinedStreamNames => '$streamName/$tickerStreamName';
   String get pairLabel => 'BTC/${quoteCurrency.code}';
+
+  int get effectiveLimit => degraded ? range.degradedLimit : range.limit;
+
+  String get rangeLabel {
+    if (customStart != null && customEnd != null) {
+      final days = customEnd!.difference(customStart!).inDays;
+      if (days > 0) return '${days}D';
+    }
+    return range.label;
+  }
 
   BitcoinMarketChartRequest fallbackForSameRange() {
     return BitcoinMarketChartRequest(
       symbol: 'BTCUSDT',
       quoteCurrency: Currency.usd,
       range: range,
+      customStart: customStart,
+      customEnd: customEnd,
+      degraded: degraded,
+    );
+  }
+
+  BitcoinMarketChartRequest asDegraded() {
+    if (degraded) return this;
+    return BitcoinMarketChartRequest(
+      symbol: symbol,
+      quoteCurrency: quoteCurrency,
+      range: range,
+      customStart: customStart,
+      customEnd: customEnd,
+      degraded: true,
     );
   }
 
@@ -83,11 +131,21 @@ class BitcoinMarketChartRequest {
     return other is BitcoinMarketChartRequest &&
         other.symbol == symbol &&
         other.quoteCurrency == quoteCurrency &&
-        other.range == range;
+        other.range == range &&
+        other.customStart == customStart &&
+        other.customEnd == customEnd &&
+        other.degraded == degraded;
   }
 
   @override
-  int get hashCode => Object.hash(symbol, quoteCurrency, range);
+  int get hashCode => Object.hash(
+        symbol,
+        quoteCurrency,
+        range,
+        customStart,
+        customEnd,
+        degraded,
+      );
 }
 
 class BitcoinMarketChartSnapshot {
@@ -107,12 +165,19 @@ class BitcoinMarketChartSnapshot {
   double get lastPrice => points.isEmpty ? 0 : points.last.price;
   double get highPrice => points.fold<double>(
         0,
-        (previous, point) => previous == 0 ? point.price : math.max(previous, point.price),
+        (previous, point) =>
+            previous == 0 ? point.price : math.max(previous, point.price),
       );
   double get lowPrice => points.fold<double>(
         0,
-        (previous, point) => previous == 0 ? point.price : math.min(previous, point.price),
+        (previous, point) =>
+            previous == 0 ? point.price : math.min(previous, point.price),
       );
+
+  bool get isPositivePeriod {
+    if (points.length < 2) return true;
+    return lastPrice >= firstPrice;
+  }
 
   double? get changePercent {
     if (points.length < 2 || firstPrice <= 0) {
@@ -133,6 +198,7 @@ class BitcoinMarketChartService {
     'wss://data-stream.binance.vision/stream',
   );
   static const Duration _httpTimeout = Duration(seconds: 8);
+  static const Duration _httpTimeoutDegraded = Duration(seconds: 5);
   static const int _maxReconnectAttempts = 6;
 
   final http.Client _httpClient;
@@ -151,6 +217,7 @@ class BitcoinMarketChartService {
   int _reconnectAttempts = 0;
 
   Stream<BitcoinMarketChartSnapshot> get snapshots async* {
+    // Intentionally do NOT re-emit stale snapshot on new subscribe after clear.
     final snapshot = _latestSnapshot;
     if (snapshot != null) {
       yield snapshot;
@@ -158,13 +225,16 @@ class BitcoinMarketChartService {
     yield* _snapshotController.stream;
   }
 
-  Future<void> setRequest(BitcoinMarketChartRequest request) async {
+  Future<void> setRequest(
+    BitcoinMarketChartRequest request, {
+    bool forceRefresh = false,
+  }) async {
     if (_isDisposed) {
       return;
     }
 
     final latest = _latestSnapshot;
-    if (_activeRequest == request && latest != null) {
+    if (!forceRefresh && _activeRequest == request && latest != null) {
       _safeAdd(latest);
       return;
     }
@@ -172,8 +242,16 @@ class BitcoinMarketChartService {
     final generation = ++_generation;
     _activeRequest = request;
     _reconnectAttempts = 0;
+    // Keep previous snapshot visible until the new range loads (no mock loading flash).
+    // Only clear series on hard error after load fails.
     await _closeChannel();
     await _loadAndConnect(request, generation, allowFallback: true);
+  }
+
+  Future<void> refresh() async {
+    final request = _activeRequest;
+    if (request == null || _isDisposed) return;
+    await setRequest(request, forceRefresh: true);
   }
 
   Future<void> _loadAndConnect(
@@ -189,11 +267,21 @@ class BitcoinMarketChartService {
 
       _points = List.unmodifiable(points);
       _emitSnapshot(request, isLive: false);
-      _connectKlineStream(request, generation);
+      if (request.range.supportsLiveStream) {
+        _connectKlineStream(request, generation);
+      }
     } catch (error) {
       appLog(
         'BitcoinMarketChart: history load failed for ${request.symbol}: $error',
       );
+
+      // One automatic degrade retry (fewer points, shorter timeout).
+      if (!request.degraded && allowFallback) {
+        final degraded = request.asDegraded();
+        _activeRequest = degraded;
+        await _loadAndConnect(degraded, generation, allowFallback: true);
+        return;
+      }
 
       if (allowFallback && request.symbol != 'BTCUSDT') {
         final fallback = request.fallbackForSameRange();
@@ -202,6 +290,9 @@ class BitcoinMarketChartService {
         return;
       }
 
+      // No stale yield — surface error to UI.
+      _latestSnapshot = null;
+      _points = const [];
       if (!_snapshotController.isClosed && !_isDisposed) {
         _snapshotController.addError(error);
       }
@@ -212,18 +303,24 @@ class BitcoinMarketChartService {
     BitcoinMarketChartRequest request,
   ) async {
     final now = DateTime.now();
-    final start = request.range.startDate(now);
+    final start = request.customStart ?? request.range.startDate(now);
+    final end = request.customEnd;
     final query = <String, String>{
       'symbol': request.symbol,
       'interval': request.range.binanceInterval,
-      'limit': '${request.range.limit}',
+      'limit': '${request.effectiveLimit}',
     };
     if (start != null) {
       query['startTime'] = '${start.millisecondsSinceEpoch}';
     }
+    if (end != null) {
+      query['endTime'] = '${end.millisecondsSinceEpoch}';
+    }
 
     final uri = _binanceRestBaseUri.replace(queryParameters: query);
-    final response = await _httpClient.get(uri).timeout(_httpTimeout);
+    final timeout =
+        request.degraded ? _httpTimeoutDegraded : _httpTimeout;
+    final response = await _httpClient.get(uri).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('HTTP ${response.statusCode} from Binance klines.');
     }
@@ -249,8 +346,8 @@ class BitcoinMarketChartService {
       }
     }
 
-    if (unique.length > request.range.limit) {
-      return unique.sublist(unique.length - request.range.limit);
+    if (unique.length > request.effectiveLimit) {
+      return unique.sublist(unique.length - request.effectiveLimit);
     }
     if (unique.isEmpty) {
       throw StateError('Binance returned no kline points.');
@@ -392,15 +489,16 @@ class BitcoinMarketChartService {
       } else if (point.timeMillis > last.timeMillis) {
         next.add(point);
       } else {
-        final index = next.indexWhere((item) => item.timeMillis == point.timeMillis);
+        final index =
+            next.indexWhere((item) => item.timeMillis == point.timeMillis);
         if (index >= 0) {
           next[index] = point;
         }
       }
     }
 
-    if (next.length > request.range.limit) {
-      next.removeRange(0, next.length - request.range.limit);
+    if (next.length > request.effectiveLimit) {
+      next.removeRange(0, next.length - request.effectiveLimit);
     }
 
     _points = List.unmodifiable(next);
@@ -458,7 +556,10 @@ class BitcoinMarketChartService {
     });
   }
 
-  void _emitSnapshot(BitcoinMarketChartRequest request, {required bool isLive}) {
+  void _emitSnapshot(
+    BitcoinMarketChartRequest request, {
+    required bool isLive,
+  }) {
     if (_isDisposed || _points.isEmpty) {
       return;
     }
@@ -533,6 +634,8 @@ class BitcoinMarketChartService {
   Future<void> dispose() async {
     _isDisposed = true;
     ++_generation;
+    _latestSnapshot = null;
+    _points = const [];
     await _closeChannel();
     await _snapshotController.close();
     _httpClient.close();

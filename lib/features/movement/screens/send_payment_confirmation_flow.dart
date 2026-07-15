@@ -5,16 +5,22 @@ import 'package:uuid/uuid.dart';
 
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
-import 'package:kerosene/core/services/audio_service.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/features/security/presentation/widgets/transaction_auth_gate.dart';
+import 'package:bitcoin_base/bitcoin_base.dart';
+import 'package:kerosene/core/utils/bitcoin_network.dart';
+import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_spend_coordinator.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
+import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 
+/// @Deprecated Prefer NetworkFeeCertainty.unknownUntilPay — kept for older call sites.
 const defaultLightningRoutingFeeBtc = 0.000001;
 
 Future<dynamic> confirmSendPayment({
@@ -40,13 +46,42 @@ Future<dynamic> confirmSendPayment({
   required bool Function() isMounted,
 }) async {
   final l10n = context.tr;
+
+  // Fail-closed network check for on-chain destinations.
+  if (destination.isOnChain) {
+    final networkError = networkMismatchMessage(toAddress);
+    if (networkError != null) {
+      SnackbarHelper.showError(networkError);
+      return null;
+    }
+    final ok = await confirmFirstTimeOnchainAddress(
+      context: confirmationContext,
+      address: toAddress,
+    );
+    if (!ok || !isMounted() || !confirmationContext.mounted) {
+      return null;
+    }
+  }
+
+  // Quote must still be fresh at confirm time for external on-chain.
+  if (destination.isOnChain && feeQuote.isQuoteExpired) {
+    SnackbarHelper.showError(SendMoneyCopy.networkFeeUnavailable(context));
+    return null;
+  }
+
   final profile = await resolveSecurityProfile(wallet);
   if (!isMounted() || !confirmationContext.mounted) return null;
 
+  final isColdSource =
+      wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable;
   final authResult = await TransactionAuthGate.show(
     confirmationContext,
     profile: profile,
-    allowDeviceAuthUnavailable: true,
+    // Cold PSBT create requires TOTP on the KFE API.
+    forceTotp: isColdSource,
+    // Device biometrics may fail open only when policy does not need factors;
+    // server factors (TOTP/passkey/passphrase) are never skipped by the gate.
+    allowDeviceAuthUnavailable: false,
   );
 
   if (!authResult.isAuthenticated ||
@@ -57,6 +92,12 @@ Future<dynamic> confirmSendPayment({
   }
 
   if (pendingPaymentLinkId != null) {
+    if (wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable) {
+      SnackbarHelper.showError(
+        'Carteira fria não paga link Kerosene. Use um endereço on-chain.',
+      );
+      return null;
+    }
     return _confirmPaymentLink(
       confirmationContext: confirmationContext,
       ref: ref,
@@ -67,6 +108,23 @@ Future<dynamic> confirmSendPayment({
       linkId: pendingPaymentLinkId,
       authResult: authResult,
       showSentTransactionNotification: showSentTransactionNotification,
+      isMounted: isMounted,
+    );
+  }
+
+  // Cold / watch-only: local seed signs PSBT; same review + auth gate as above.
+  if (wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable) {
+    return _confirmColdSend(
+      confirmationContext: confirmationContext,
+      ref: ref,
+      wallet: wallet,
+      destination: destination,
+      amount: amount,
+      feeQuote: feeQuote,
+      toAddress: toAddress,
+      authResult: authResult,
+      showSentTransactionNotification: showSentTransactionNotification,
+      resolveRecentDestinationLabel: resolveRecentDestinationLabel,
       isMounted: isMounted,
     );
   }
@@ -137,13 +195,11 @@ Future<dynamic> _confirmPaymentLink({
       amount: amount,
       toAddress: toAddress,
     );
-    AudioService.instance.playTransaction();
     HapticFeedback.vibrate();
     ref.read(paymentLinkNotifierProvider.notifier).reset();
     return result;
   }
 
-  AudioService.instance.playError();
   HapticFeedback.heavyImpact();
   final error = ref.read(paymentLinkNotifierProvider).error;
   if (error != null) {
@@ -154,6 +210,111 @@ Future<dynamic> _confirmPaymentLink({
   }
   ref.read(paymentLinkNotifierProvider.notifier).reset();
   return null;
+}
+
+Future<dynamic> _confirmColdSend({
+  required BuildContext confirmationContext,
+  required WidgetRef ref,
+  required Wallet wallet,
+  required SendDestinationAnalysis destination,
+  required double amount,
+  required SendFeeQuote feeQuote,
+  required String toAddress,
+  required TransactionAuthResult authResult,
+  required Future<void> Function({
+    required Wallet wallet,
+    required SendDestinationAnalysis destination,
+    required double amount,
+    required String toAddress,
+  }) showSentTransactionNotification,
+  required String? Function(String toAddress) resolveRecentDestinationLabel,
+  required bool Function() isMounted,
+}) async {
+  if (!destination.isOnChain) {
+    SnackbarHelper.showError(
+      'Carteira fria envia apenas on-chain. Informe um endereço Bitcoin.',
+    );
+    return null;
+  }
+
+  final totp = authResult.totpCode?.trim() ?? '';
+  if (totp.length < 6) {
+    SnackbarHelper.showError(
+      'É necessário o código do autenticador para autorizar o envio da cold.',
+    );
+    return null;
+  }
+
+  final amountSats = (amount * 100000000).round();
+  if (amountSats < 546) {
+    SnackbarHelper.showError('Valor mínimo on-chain é 546 sats.');
+    return null;
+  }
+
+  final feeRate = feeQuote.feeRateSatPerByte;
+  final feeRateInt =
+      feeRate != null && feeRate > 0 ? feeRate.round() : null;
+
+  final networkKind = inferBitcoinNetworkFromAddress(toAddress);
+  final signingNetwork = switch (networkKind) {
+    BitcoinNetworkKind.mainnet => BitcoinNetwork.mainnet,
+    BitcoinNetworkKind.regtest => BitcoinNetwork.testnet,
+    _ => BitcoinNetwork.testnet,
+  };
+
+  try {
+    final coordinator = ColdWalletSpendCoordinator(
+      accountsService: ref.read(bitcoinAccountsServiceProvider),
+    );
+    final result = await coordinator.spend(
+      coldWalletId: wallet.id.trim(),
+      destinationAddress: toAddress,
+      amountSats: amountSats,
+      totpCode: totp,
+      feeRateSatsPerVbyte: feeRateInt,
+      network: signingNetwork,
+      broadcast: true,
+    );
+
+    await ref
+        .read(recentTransactionDestinationsProvider.notifier)
+        .saveDestination(
+          address: toAddress,
+          kind: RecentTransactionDestinationKind.onChain,
+          label: resolveRecentDestinationLabel(toAddress),
+        );
+    await showSentTransactionNotification(
+      wallet: wallet,
+      destination: destination,
+      amount: amount,
+      toAddress: toAddress,
+    );
+    HapticFeedback.vibrate();
+
+    final txid = result.txid?.trim() ?? '';
+    final networkFeeSats = (feeQuote.networkFeeBtc * 100000000).round();
+    return TxStatus(
+      txid: txid.isNotEmpty ? txid : (result.workflow.id),
+      status: txid.isNotEmpty ? 'broadcasted' : result.workflow.status,
+      feeSatoshis: networkFeeSats,
+      amountReceived: amount,
+      networkFeeBtc: feeQuote.networkFeeBtc,
+      platformFeeBtc: 0,
+      totalDebitedBtc: feeQuote.totalDebitedBtc > 0
+          ? feeQuote.totalDebitedBtc
+          : amount + feeQuote.networkFeeBtc,
+      sender: wallet.address,
+      receiver: toAddress,
+      message: 'Assinado no aparelho',
+    );
+  } catch (error) {
+    HapticFeedback.heavyImpact();
+    if (!isMounted() || !confirmationContext.mounted) return null;
+    SnackbarHelper.showError(
+      ErrorTranslator.translate(confirmationContext.l10n, error.toString()),
+    );
+    return null;
+  }
 }
 
 Future<dynamic> _confirmExternalSend({
@@ -208,13 +369,11 @@ Future<dynamic> _confirmExternalSend({
       amount: amount,
       toAddress: toAddress,
     );
-    AudioService.instance.playTransaction();
     HapticFeedback.vibrate();
     ref.read(withdrawProvider.notifier).reset();
     return result;
   }
 
-  AudioService.instance.playError();
   HapticFeedback.heavyImpact();
   final error = ref.read(withdrawProvider).error;
   if (error != null) {
@@ -277,13 +436,11 @@ Future<dynamic> _confirmInternalSend({
       amount: amount,
       toAddress: toAddress,
     );
-    AudioService.instance.playTransaction();
     HapticFeedback.vibrate();
     ref.read(sendTransactionProvider.notifier).reset();
     return result;
   }
 
-  AudioService.instance.playError();
   HapticFeedback.heavyImpact();
   final error = ref.read(sendTransactionProvider).error;
   if (error != null) {

@@ -55,12 +55,21 @@ class BitcoinAccount {
     return 'Carteira global';
   }
 
-  int get totalSats =>
-      balanceAvailableSats +
-      balancePendingSats +
-      balanceLockedSats +
-      balanceAutoHoldSats +
-      observedBalanceSats;
+  /// Spendable / primary total for UI.
+  /// Cold: only chain-observed. Custodial/internal: ledger buckets only
+  /// (chain observed is a separate reconciliation field — never summed).
+  int get totalSats {
+    if (isWatchOnly) {
+      return observedBalanceSats;
+    }
+    return balanceAvailableSats +
+        balancePendingSats +
+        balanceLockedSats +
+        balanceAutoHoldSats;
+  }
+
+  /// Blockchain-observed sats for cold/custodial on-chain reconciliation.
+  int get chainObservedSats => observedBalanceSats;
 
   factory BitcoinAccount.fromJson(Map<String, dynamic> json) {
     return BitcoinAccount(

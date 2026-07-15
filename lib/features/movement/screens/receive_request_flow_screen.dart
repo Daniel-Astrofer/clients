@@ -11,6 +11,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
@@ -305,7 +306,7 @@ class _ReceiveRequestFlowScreenState
       if (previousStatus != latestStatus || previousTxid != latestTxid) {
         ref.invalidate(paymentLinksProvider);
         ref.invalidate(transactionHistoryProvider);
-        if (widget.onChainWallet) {
+        if (_isOnChainReceive) {
           ref.invalidate(externalTransfersProvider);
         }
       }
@@ -320,9 +321,12 @@ class _ReceiveRequestFlowScreenState
   }
 
   void _applyPaymentLinkStage(PaymentLink link) {
+    final onChain = widget.onChainWallet ||
+        link.paymentRail.trim().toUpperCase() == 'ONCHAIN' ||
+        looksLikeBitcoinAddress(link.depositAddress.trim());
     final complete = link.isCompleted ||
-        (!widget.onChainWallet && link.isPaid) ||
-        (widget.onChainWallet &&
+        (!onChain && link.isPaid) ||
+        (onChain &&
             link.isPaid &&
             link.confirmations >= _requiredConfirmations);
     if (complete) {
@@ -340,60 +344,116 @@ class _ReceiveRequestFlowScreenState
     _stage = ReceiveRequestStage.qr;
   }
 
+  /// True when this receive surface should behave as on-chain (BIP-21 / confs).
+  ///
+  /// Uses the payment-request rail and the concrete deposit address, not only
+  /// the wallet classification flag — INTERNAL ledger wallets can still issue
+  /// testnet/mainnet deposit addresses.
+  bool get _isOnChainReceive {
+    if (widget.onChainWallet) return true;
+    final rail = (_link?.paymentRail ?? '').trim().toUpperCase();
+    if (rail == 'ONCHAIN') return true;
+    final address = _addressValue;
+    return address.isNotEmpty && looksLikeBitcoinAddress(address);
+  }
+
   String? _paymentUriFor(PaymentLink? link) {
     if (link == null) return null;
+    final address = link.depositAddress.trim();
+    final hasChainAddress =
+        address.isNotEmpty && looksLikeBitcoinAddress(address);
+
+    // Prefer BIP-21 whenever we have a real chain address (testnet tb1 / mainnet).
+    if (hasChainAddress) {
+      return QrPaymentParser.encode(
+        address: address,
+        amountBtc: link.amountBtc > 0 ? link.amountBtc : widget.amountBtc,
+        label: widget.wallet.name,
+        message: link.description,
+      );
+    }
+
     final explicitUri = link.paymentUri?.trim();
-    if (explicitUri != null && explicitUri.isNotEmpty) {
+    if (explicitUri != null &&
+        explicitUri.isNotEmpty &&
+        !explicitUri.toLowerCase().startsWith('bitcoin:')) {
+      // kerosene://… internal payment URI
       return explicitUri;
     }
-    if (link.isInternalPaymentRequest || !widget.onChainWallet) {
+    if (link.isInternalPaymentRequest || !_isOnChainReceive) {
       return QrPaymentParser.encodePaymentLink(link.id);
     }
-    final address = link.depositAddress.trim();
-    if (address.isEmpty) return null;
-    return QrPaymentParser.encode(
-      address: address,
-      amountBtc: link.amountBtc > 0 ? link.amountBtc : widget.amountBtc,
-      label: widget.wallet.name,
-      message: link.description,
-    );
+    return null;
   }
 
   String get _addressValue {
     final current = _address?.trim() ?? '';
-    if (current.isNotEmpty) return current;
+    if (current.isNotEmpty &&
+        !current.toLowerCase().startsWith('kerosene:') &&
+        (looksLikeBitcoinAddress(current) || current.startsWith('bitcoin:'))) {
+      if (current.toLowerCase().startsWith('bitcoin:')) {
+        final parsed = QrPaymentParser.decode(current);
+        final parsedAddress = parsed?.address.trim() ?? '';
+        if (parsedAddress.isNotEmpty) return parsedAddress;
+      }
+      return current;
+    }
     final linkAddress = _link?.depositAddress.trim() ?? '';
+    if (linkAddress.isNotEmpty &&
+        !linkAddress.toLowerCase().startsWith('kerosene:') &&
+        looksLikeBitcoinAddress(linkAddress)) {
+      return linkAddress;
+    }
+    final walletAddress = widget.wallet.address.trim();
+    if (walletAddress.isNotEmpty && looksLikeBitcoinAddress(walletAddress)) {
+      return walletAddress;
+    }
+    // Fall back to any non-empty display value last (internal refs, etc.).
+    if (current.isNotEmpty) return current;
     if (linkAddress.isNotEmpty) return linkAddress;
-    return widget.wallet.address.trim();
+    return walletAddress;
   }
 
   String get _paymentValue {
     final current = _paymentUri?.trim() ?? '';
     if (current.isNotEmpty) return current;
-    if (widget.onChainWallet) {
+    final address = _addressValue;
+    if (address.isNotEmpty && looksLikeBitcoinAddress(address)) {
       return QrPaymentParser.encode(
-        address: _addressValue,
+        address: address,
         amountBtc: widget.amountBtc,
         label: widget.wallet.name,
         message: 'Recebimento Kerosene',
       );
     }
+    if (_isOnChainReceive) {
+      return QrPaymentParser.encode(
+        address: address,
+        amountBtc: widget.amountBtc,
+        label: widget.wallet.name,
+        message: 'Recebimento Kerosene',
+      );
+    }
+    final linkId = _link?.id.trim() ?? '';
+    if (linkId.isNotEmpty) {
+      return QrPaymentParser.encodePaymentLink(linkId);
+    }
     return QrPaymentParser.encodeKerosene(
-      address: _addressValue,
+      address: address,
       amountBtc: widget.amountBtc,
       label: widget.wallet.name,
     );
   }
 
   int get _requiredConfirmations {
-    if (!widget.onChainWallet) return widget.requiredConfirmations ?? 1;
+    if (!_isOnChainReceive) return widget.requiredConfirmations ?? 1;
     return widget.requiredConfirmations ??
         _allocation?.requiredConfirmations ??
         3;
   }
 
   int get _currentConfirmations {
-    if (!widget.onChainWallet) {
+    if (!_isOnChainReceive) {
       if (_stage == ReceiveRequestStage.identified) {
         return _requiredConfirmations;
       }
@@ -407,17 +467,27 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _networkLabel {
-    if (!widget.onChainWallet) return 'Kerosene';
-    final network = (_allocation?.network ?? '').trim().toLowerCase();
-    return switch (network) {
-      'testnet' => 'Bitcoin Testnet',
-      'regtest' => 'Bitcoin Regtest',
-      _ => 'Bitcoin (BTC)',
+    if (!_isOnChainReceive) return 'Kerosene';
+    final fromAddress = bitcoinNetworkDisplayName(
+      inferBitcoinNetworkFromAddress(_addressValue),
+    );
+    return switch (fromAddress) {
+      'Testnet' => 'Bitcoin Testnet',
+      'Regtest' => 'Bitcoin Regtest',
+      'Mainnet' => 'Bitcoin (BTC)',
+      _ => () {
+          final network = (_allocation?.network ?? '').trim().toLowerCase();
+          return switch (network) {
+            'testnet' || 'testnet4' || 'testnet3' => 'Bitcoin Testnet',
+            'regtest' => 'Bitcoin Regtest',
+            _ => 'Bitcoin (BTC)',
+          };
+        }(),
     };
   }
 
   String get _statusLabel {
-    if (widget.onChainWallet) return 'Confirmado na rede';
+    if (_isOnChainReceive) return 'Confirmado na rede';
     return 'Confirmado na Kerosene';
   }
 
@@ -431,9 +501,19 @@ class _ReceiveRequestFlowScreenState
     return '$amount BTC';
   }
 
+  String get _requestedAmountLabel {
+    final amount = MoneyDisplay.format(
+      amount: widget.amountBtc,
+      currency: Currency.btc,
+      withSymbol: false,
+      decimalPlaces: 6,
+    );
+    return '$amount BTC';
+  }
+
   String get _monitorStatusLabel {
     if (_stage == ReceiveRequestStage.identified) {
-      return widget.onChainWallet ? 'Confirmado' : 'Recebido';
+      return _isOnChainReceive ? 'Confirmado' : 'Recebido';
     }
     if (_stage == ReceiveRequestStage.confirmations) {
       if (_link?.isValidatingSettlement == true) {
@@ -507,7 +587,7 @@ class _ReceiveRequestFlowScreenState
 
   Widget _buildQrScreen(BuildContext context) {
     final receiveTitle =
-        widget.onChainWallet ? 'Receber Bitcoin' : 'Receber na Kerosene';
+        _isOnChainReceive ? 'Receber Bitcoin' : 'Receber na Kerosene';
     return Column(
       children: [
         ReceiveContextHeader(
@@ -537,7 +617,7 @@ class _ReceiveRequestFlowScreenState
                 const SizedBox(height: 20),
                 _buildQrAmount(),
                 const SizedBox(height: 16),
-                _buildPlainReceiveMeta(),
+                _buildReceiveDetails(context),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 16),
                   InlineNotice(message: _errorMessage!),
@@ -572,19 +652,86 @@ class _ReceiveRequestFlowScreenState
     );
   }
 
-  Widget _buildPlainReceiveMeta() {
-    return Column(
-      children: [
-        _ReceivePlainLine(label: 'Endereço', value: _addressValue),
-        const SizedBox(height: 10),
-        _ReceivePlainLine(label: 'Status', value: _monitorStatusLabel),
-      ],
+  Widget _buildReceiveDetails(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.hexFF0A0A0A,
+        border: Border.all(color: AppColors.hexFF222222),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          DetailRow(label: 'Carteira', value: widget.wallet.name),
+          const ReceiveDivider(),
+          DetailRow(label: 'Rede', value: _networkLabel),
+          const ReceiveDivider(),
+          DetailRow(label: 'Solicitado', value: _requestedAmountLabel),
+          const ReceiveDivider(),
+          _buildAddressPill(),
+        ],
+      ),
     );
+  }
+
+  Widget _buildAddressPill() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Text(
+            'Endereço',
+            style: AppTypography.inter(
+              color: _receiveMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: GestureDetector(
+              key: const ValueKey('receive-address-pill-copy'),
+              behavior: HitTestBehavior.opaque,
+              onTap: _copyRawAddress,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Flexible(
+                    child: Text(
+                      shortenReceiveAddress(_addressValue, head: 10, tail: 6),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: AppTypography.ibmPlexMono(
+                        color: _receiveText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(KeroseneIcons.copy, size: 15, color: _receiveMuted),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyRawAddress() async {
+    await Clipboard.setData(ClipboardData(text: _addressValue));
+    await HapticFeedback.selectionClick();
+    SnackbarHelper.showSuccess('Endereço copiado');
   }
 
   Widget _buildConfirmationsScreen(BuildContext context) {
     final receiveTitle =
-        widget.onChainWallet ? 'Receber Bitcoin' : 'Receber na Kerosene';
+        _isOnChainReceive ? 'Receber Bitcoin' : 'Receber na Kerosene';
     return Column(
       children: [
         ReceiveContextHeader(
@@ -614,7 +761,15 @@ class _ReceiveRequestFlowScreenState
                 const SizedBox(height: 16),
                 _buildQrAmount(),
                 const SizedBox(height: 16),
-                _buildPlainReceiveMeta(),
+                _buildReceiveDetails(context),
+                const SizedBox(height: 16),
+                ReceiveNetworkStatusRow(
+                  onChainWallet: _isOnChainReceive,
+                  identified: _stage == ReceiveRequestStage.identified,
+                  currentConfirmations:
+                      _currentConfirmations.clamp(0, _requiredConfirmations).toInt(),
+                  requiredConfirmations: _requiredConfirmations,
+                ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
@@ -766,60 +921,6 @@ class _ReceiveRequestFlowScreenState
         height: 1.12,
         letterSpacing: 0,
         fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-  }
-}
-
-class _ReceivePlainLine extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ReceivePlainLine({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final displayValue = label == 'Endereço'
-        ? shortenReceiveAddress(value, head: 18, tail: 8)
-        : value;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: label == 'Endereço'
-          ? () => Clipboard.setData(ClipboardData(text: value))
-          : null,
-      child: Column(
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: AppTypography.inter(
-              color: _receiveMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            displayValue,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: (label == 'Endereço'
-                    ? AppTypography.ibmPlexMono()
-                    : AppTypography.inter())
-                .copyWith(
-              color: _receiveText,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              height: 1.25,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
       ),
     );
   }

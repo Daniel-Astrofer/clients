@@ -20,7 +20,7 @@ import '../features/auth/presentation/screens/emergency_recovery_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/screens/signup/signup_flow_screen.dart';
 import '../features/home/presentation/screens/home_loading_screen.dart';
-import '../features/home/presentation/screens/startup_connection_loading_screen.dart';
+import '../features/home/presentation/screens/onboarding_steps_screen.dart';
 import '../features/auth/presentation/screens/server_unavailable_screen.dart';
 import '../features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
     deferred as bitcoin_accounts;
@@ -40,9 +40,11 @@ import '../features/movement/screens/send_money_screen.dart'
     deferred as send_money;
 import '../features/financial_accounts/presentation/widgets/wallet_flow_selector.dart';
 import '../core/providers/tor_providers.dart';
+import '../core/providers/app_cold_start_provider.dart';
 import '../core/services/tor_network_bootstrap.dart';
 import '../core/services/tor_service.dart';
 import '../core/performance/kerosene_performance_boundary.dart';
+import '../core/presentation/widgets/kerosene_logo_loading_view.dart';
 import '../core/utils/qr_payment_parser.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';
@@ -105,6 +107,69 @@ Future<void> _bootstrapPeripheralServices() async {
 
 Widget buildApp() => const MyApp();
 
+/// First shell: brand K beat, then auth shell.
+///
+/// Returning users: K → PIN (stable pad; Tor may still boot) → dots → Home.
+/// Tor readiness is gated inside PIN verify + HomeLoadingScreen requests.
+///
+/// Important: only one [AppEntryPinGate] on the home path. Route wrappers use
+/// [appEntryPinUnlockedProvider] and must not remount a second gate that
+/// re-asks for PIN after unlock.
+class _MobileAppRoot extends ConsumerWidget {
+  const _MobileAppRoot();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final coldStart = ref.watch(appColdStartProvider);
+
+    // Session probe may fail while Tor is still binding — retry once Tor is up.
+    ref.listen<AppColdStartState>(appColdStartProvider, (previous, next) {
+      if (!next.torSettled || previous?.torSettled == true) return;
+      final auth = ref.read(authControllerProvider);
+      if (auth is AuthServerUnavailable) {
+        unawaited(ref.read(authControllerProvider.notifier).retrySessionCheck());
+      }
+    });
+
+    // 1) Kerosene K — hold until brand beat finishes (and while auth is probing).
+    if (!coldStart.canShowAppShell) {
+      return const KeroseneLogoLoadingView(
+        status: 'INICIANDO',
+        detail: 'Preparando conexão segura',
+      );
+    }
+
+    final authState = ref.watch(authControllerProvider);
+
+    // Stay on K until session restore finishes — never flash PIN then Welcome.
+    if (authState is AuthInitial || authState is AuthLoading) {
+      return const KeroseneLogoLoadingView(
+        status: 'INICIANDO',
+        detail: 'Preparando conexão segura',
+      );
+    }
+
+    if (authState is AuthAuthenticated) {
+      // Single PIN gate for cold start. Unlocked → HomeLoadingScreen → Home.
+      return const AppEntryPinGate(
+        child: HomeLoadingScreen(),
+      );
+    }
+
+    if (authState is AuthServerUnavailable) {
+      if (!coldStart.torSettled) {
+        return const KeroseneLogoLoadingView(
+          status: 'INICIANDO',
+          detail: 'Preparando conexão segura',
+        );
+      }
+      return const ServerUnavailableScreen();
+    }
+
+    return const WelcomeScreen();
+  }
+}
+
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
@@ -151,25 +216,7 @@ class MyApp extends ConsumerWidget {
         current = GlobalNotificationHost(child: current);
         return _AppRealtimeBootstrap(child: current);
       },
-      home: Consumer(
-        builder: (context, ref, child) {
-          final authState = ref.watch(authControllerProvider);
-          if (authState is AuthInitial || authState is AuthLoading) {
-            return const StartupConnectionLoadingScreen();
-          }
-          if (authState is AuthAuthenticated) {
-            return const AppEntryPinGate(
-              child: StartupConnectionLoadingScreen(
-                childAfterWarmup: HomeLoadingScreen(),
-              ),
-            );
-          }
-          if (authState is AuthServerUnavailable) {
-            return const ServerUnavailableScreen();
-          }
-          return const WelcomeScreen();
-        },
-      ),
+      home: const _MobileAppRoot(),
       routes: {
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
@@ -183,9 +230,7 @@ class MyApp extends ConsumerWidget {
               ),
             ),
         '/home_loading': (context) => const _PrivateMobileRoute(
-              child: StartupConnectionLoadingScreen(
-                childAfterWarmup: HomeLoadingScreen(),
-              ),
+              child: HomeLoadingScreen(),
             ),
         '/settings': (context) => _PrivateMobileRoute(
               child: DeferredPage(
@@ -198,6 +243,14 @@ class MyApp extends ConsumerWidget {
                 loadLibrary: settings.loadLibrary,
                 builder: (_) => settings.SettingsScreen(
                   openNotificationsPane: true,
+                ),
+              ),
+            ),
+        '/settings/security': (context) => _PrivateMobileRoute(
+              child: DeferredPage(
+                loadLibrary: settings.loadLibrary,
+                builder: (_) => settings.SettingsScreen(
+                  openSecurityPane: true,
                 ),
               ),
             ),
@@ -218,6 +271,9 @@ class MyApp extends ConsumerWidget {
                 loadLibrary: deposits.loadLibrary,
                 builder: (_) => deposits.MovementHubScreen(),
               ),
+            ),
+        '/onboarding/steps': (context) => const _PrivateMobileRoute(
+              child: OnboardingStepsScreen(),
             ),
         '/send-money': (context) => _PrivateMobileRoute(
               child: _WalletFlowMobileRoute(
@@ -301,6 +357,12 @@ class _PrivateMobileRoute extends ConsumerWidget {
       return const Scaffold(backgroundColor: Colors.black);
     }
     if (authState is AuthAuthenticated) {
+      // If the user already unlocked during cold start, do not mount a second
+      // PIN gate (that looked like "PIN twice"). Only gate when still locked.
+      final unlocked = ref.watch(appEntryPinUnlockedProvider);
+      if (unlocked) {
+        return child;
+      }
       return AppEntryPinGate(child: child);
     }
     if (authState is AuthServerUnavailable) {
@@ -318,12 +380,10 @@ class _AppRealtimeBootstrap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
-    final appPinStatus = ref.watch(appPinStatusProvider);
+    // Use synchronous gate status — never wait on Tor/network for realtime boot.
+    final gateStatus = ref.watch(appPinGateStatusProvider);
     final appUnlocked = ref.watch(appEntryPinUnlockedProvider);
-    final appPinSatisfied = appPinStatus.maybeWhen(
-      data: (status) => !status.requiresGate || appUnlocked,
-      orElse: () => false,
-    );
+    final appPinSatisfied = !gateStatus.requiresGate || appUnlocked;
     if (authState is AuthAuthenticated && appPinSatisfied) {
       ref.watch(balanceWebSocketServiceProvider);
       // Trigger market-price alert notifications (BTC up/down X%).

@@ -15,11 +15,13 @@ import 'settings_wallets_pane.dart';
 class SettingsScreen extends ConsumerStatefulWidget {
   final bool showPrimaryNavigation;
   final bool openNotificationsPane;
+  final bool openSecurityPane;
 
   const SettingsScreen({
     super.key,
     this.showPrimaryNavigation = false,
     this.openNotificationsPane = false,
+    this.openSecurityPane = false,
   });
 
   @override
@@ -32,6 +34,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (widget.openNotificationsPane) {
       return _SettingsPaneDetailScreen(
         pane: SettingsPane.notifications,
+        showPrimaryNavigation: widget.showPrimaryNavigation,
+      );
+    }
+    if (widget.openSecurityPane) {
+      return _SettingsPaneDetailScreen(
+        pane: SettingsPane.security,
         showPrimaryNavigation: widget.showPrimaryNavigation,
       );
     }

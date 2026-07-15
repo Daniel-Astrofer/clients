@@ -121,8 +121,17 @@ class QrPaymentParser {
     }
 
     if (uri.scheme.toLowerCase() == 'kerosene') {
+      // kerosene://pay/<id>
       if (uri.host.toLowerCase() == 'pay' && uri.pathSegments.isNotEmpty) {
         final id = uri.pathSegments.first.trim();
+        return id.isEmpty ? null : id;
+      }
+
+      // kerosene://payment/pay/<id> (canonical encodePaymentLink form)
+      if (uri.host.toLowerCase() == 'payment' &&
+          uri.pathSegments.length >= 2 &&
+          uri.pathSegments.first.toLowerCase() == 'pay') {
+        final id = uri.pathSegments[1].trim();
         return id.isEmpty ? null : id;
       }
 
@@ -136,11 +145,22 @@ class QrPaymentParser {
 
     if ((uri.scheme == 'http' || uri.scheme == 'https') &&
         uri.pathSegments.isNotEmpty) {
+      // https://host/pay/<id> or http://*.onion/pay/<id>
       final payIndex = uri.pathSegments.indexWhere(
         (segment) => segment.toLowerCase() == 'pay',
       );
       if (payIndex >= 0 && payIndex + 1 < uri.pathSegments.length) {
         final id = uri.pathSegments[payIndex + 1].trim();
+        return id.isEmpty ? null : id;
+      }
+
+      // Public KFE lookup path used by some QR/share surfaces:
+      // /api/public/kfe/payment-requests/<publicId>
+      final requestIndex = uri.pathSegments.indexWhere(
+        (segment) => segment.toLowerCase() == 'payment-requests',
+      );
+      if (requestIndex >= 0 && requestIndex + 1 < uri.pathSegments.length) {
+        final id = uri.pathSegments[requestIndex + 1].trim();
         return id.isEmpty ? null : id;
       }
     }

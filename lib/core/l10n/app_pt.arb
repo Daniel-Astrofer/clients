@@ -1253,6 +1253,27 @@
   "errPasskeyWrongDevice": "Esta passkey não serve para este login. Entre com senha e código do autenticador, depois vincule uma nova passkey neste aparelho.",
   "errPasskeyRejected": "A passkey foi rejeitada nesta operação. Se o problema persistir, vincule outra passkey compatível.",
   "errPasskeyLinkGuidance": "Entre com senha e código do autenticador, depois vincule uma passkey compatível com este aparelho.",
+  "errAuthDeviceAlreadyBound": "Este aparelho já está vinculado a outra conta. Confirme para desvincular a passkey anterior.",
+  "authDeviceUnlinkTitle": "Trocar conta neste aparelho?",
+  "authDeviceUnlinkBody": "Este dispositivo está vinculado à conta {previousUsername}.\n\n{guidance}",
+  "@authDeviceUnlinkBody": {
+    "placeholders": {
+      "previousUsername": { "type": "String" },
+      "guidance": { "type": "String" }
+    }
+  },
+  "authDeviceUnlinkDefaultGuidance": "Ao continuar, a passkey da conta anterior será removida deste aparelho e ela só poderá ser acessada com senha.",
+  "authDeviceUnlinkConfirmSignup": "Continuar e criar nova conta",
+  "authDeviceUnlinkConfirmLink": "Continuar e vincular",
+  "authDeviceUnlinkCancel": "Cancelar",
+  "authDeviceUnlinkCancelledTitle": "Dispositivo já vinculado",
+  "authDeviceUnlinkCancelledMessage": "Cadastro cancelado. Este aparelho permanece vinculado a {previousUsername}.",
+  "@authDeviceUnlinkCancelledMessage": {
+    "placeholders": {
+      "previousUsername": { "type": "String" }
+    }
+  },
+
   "errReceiverNotReady": "Este usuário ainda não está pronto para receber fundos.",
   "errOnchainReceiverMethodNotFound": "Este usuário não possui carteira on-chain cadastrada para receber.",
   "errOnchainInvalidAddress": "O endereço Bitcoin informado não é válido para esta rede.",
@@ -2292,6 +2313,7 @@
   "financialStatementFilterOutgoing": "Enviadas",
   "financialStatementFilterPending": "Pendentes",
   "financialStatementFilterFailed": "Falhas",
+  "financialStatementFilterCancelled": "Canceladas",
   "financialStatementNoResultsTitle": "Nenhuma transação encontrada",
   "financialStatementNoResultsMessage": "Tente outra busca ou limpe os filtros.",
   "financialStatementClearFilters": "Limpar filtros",

@@ -635,11 +635,12 @@ class _FakeBitcoinAccountsService implements BitcoinAccountsService {
 
   @override
   Future<PsbtWorkflowView> createColdWalletPsbt({
+    required int amountSats,
     required String coldWalletId,
     required String destinationAddress,
-    required int amountSats,
     int? feeRate,
-    List<String> selectedUtxoIds = const [],
+    List<String>? selectedUtxoIds,
+    String? totpCode,
   }) async {
     return PsbtWorkflowView(
       id: 'created-psbt',

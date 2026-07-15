@@ -11,6 +11,8 @@ class DeviceHelper {
   static final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
   static const String _deviceHashKey = 'device_hash_key'; // Hardcoded key
   static const String _deviceInstallIdKey = 'device_install_id';
+  /// Last account username successfully bound to this install (local only).
+  static const String _deviceBoundUsernameKey = 'device_bound_username';
 
   static Future<DeviceMetadata> getDeviceMetadata() async {
     final installId = await _getDeviceInstallId();
@@ -141,6 +143,31 @@ class DeviceHelper {
   static Future<void> clearDeviceHash() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_deviceHashKey);
+  }
+
+  /// Username of the account currently bound to this install (local cache).
+  static Future<String?> getDeviceBoundUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_deviceBoundUsernameKey)?.trim().toLowerCase();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  static Future<void> setDeviceBoundUsername(String username) async {
+    final normalized = username.trim().toLowerCase();
+    final prefs = await SharedPreferences.getInstance();
+    if (normalized.isEmpty) {
+      await prefs.remove(_deviceBoundUsernameKey);
+      return;
+    }
+    await prefs.setString(_deviceBoundUsernameKey, normalized);
+  }
+
+  static Future<void> clearDeviceBoundUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_deviceBoundUsernameKey);
   }
 
   static Future<String> _getDeviceInstallId() async {

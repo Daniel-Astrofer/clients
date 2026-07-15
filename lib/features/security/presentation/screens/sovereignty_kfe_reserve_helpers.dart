@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -23,15 +24,9 @@ Widget buildKfeReserveLoadingCard({required BuildContext context}) {
     ),
     child: Row(
       children: [
-        SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Theme.of(context).colorScheme.onPrimary,
-            ),
-          ),
+        CupertinoActivityIndicator(
+          radius: 11,
+          color: Theme.of(context).colorScheme.onPrimary,
         ),
         const SizedBox(width: 14),
         Expanded(

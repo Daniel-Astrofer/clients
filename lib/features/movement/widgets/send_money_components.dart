@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -174,18 +175,14 @@ class InternalPrimaryButton extends StatelessWidget {
                 letterSpacing: 1.8,
               ),
         ),
-        child: isLoading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
+          child: isLoading
+              ? CupertinoActivityIndicator(
+                  radius: 9,
                   color: foregroundColor,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(label.toUpperCase()),
                   if (icon != null) ...[

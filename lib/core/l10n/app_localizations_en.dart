@@ -3411,6 +3411,39 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sign in with passphrase and authenticator code, then link a passkey compatible with this device.';
 
   @override
+  String get errAuthDeviceAlreadyBound =>
+      'This device is already linked to another account. Confirm to remove the previous passkey.';
+
+  @override
+  String get authDeviceUnlinkTitle => 'Switch account on this device?';
+
+  @override
+  String authDeviceUnlinkBody(String previousUsername, String guidance) {
+    return 'This device is linked to account $previousUsername.\n\n$guidance';
+  }
+
+  @override
+  String get authDeviceUnlinkDefaultGuidance =>
+      'If you continue, the previous account\'s passkey will be removed from this device and that account will only be accessible with a password.';
+
+  @override
+  String get authDeviceUnlinkConfirmSignup => 'Continue and create new account';
+
+  @override
+  String get authDeviceUnlinkConfirmLink => 'Continue and link';
+
+  @override
+  String get authDeviceUnlinkCancel => 'Cancel';
+
+  @override
+  String get authDeviceUnlinkCancelledTitle => 'Device already linked';
+
+  @override
+  String authDeviceUnlinkCancelledMessage(String previousUsername) {
+    return 'Signup cancelled. This device remains linked to $previousUsername.';
+  }
+
+  @override
   String get errReceiverNotReady =>
       'This user is not ready to receive funds yet.';
 
@@ -6066,6 +6099,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get financialStatementFilterFailed => 'Failed';
+
+  @override
+  String get financialStatementFilterCancelled => 'Cancelled';
 
   @override
   String get financialStatementNoResultsTitle => 'No matching transactions';

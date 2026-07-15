@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
@@ -59,6 +61,9 @@ int _resolveTargetPort(Uri uri) {
 Future<bool> bootstrapTorNetwork({
   required TorService torService,
   required TorApiUrlUpdater updateApiUrl,
+  /// When true (e.g. PIN held while Tor boots), do not short-circuit on the
+  /// recent-failure cooldown — keep trying so the deferred PIN verify can send.
+  bool ignoreFailureCooldown = false,
 }) async {
   final inFlight = _bootstrapFuture;
   if (inFlight != null) {
@@ -70,7 +75,7 @@ Future<bool> bootstrapTorNetwork({
   }
 
   final lastFailureAt = _lastBootstrapFailureAt;
-  if (lastFailureAt != null) {
+  if (!ignoreFailureCooldown && lastFailureAt != null) {
     final elapsed = DateTime.now().difference(lastFailureAt);
     if (elapsed < _bootstrapFailureCooldown) {
       AppConfig.isTorEnabled = false;
@@ -127,8 +132,14 @@ Future<bool> _bootstrapTorNetworkInternal({
       return false;
     }
 
-    final relayPort =
-        await torService.startRelay(target.targetHost, target.targetPort);
+    // Bind local relay without blocking on a full onion preflight circuit.
+    // That preflight alone often dominated cold-start (10–20s). Warm circuits
+    // in the background so the first real API call is still fast.
+    final relayPort = await torService.startRelay(
+      target.targetHost,
+      target.targetPort,
+      warmUpCircuit: false,
+    );
     final newApiUrl = 'http://127.0.0.1:$relayPort';
 
     AppConfig.activeNodeUrl = target.apiUrl;
@@ -136,7 +147,12 @@ Future<bool> _bootstrapTorNetworkInternal({
     AppConfig.isTorEnabled = true;
     updateApiUrl(newApiUrl);
 
-    debugPrint('✅ Tor Network Ready.');
+    // Prime onion path while the user is on PIN / welcome (does not block UI).
+    unawaited(
+      torService.warmOnionCircuit(target.targetHost, target.targetPort),
+    );
+
+    debugPrint('✅ Tor Network Ready (relay bound; circuit warm in background).');
     debugPrint(
       '🌐 Unified Tor Relay Active: ${AppConfig.apiUrl} -> ${target.apiUrl}',
     );

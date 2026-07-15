@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/services/passkey_service.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
@@ -142,18 +143,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _isSubmittingCredentials = true);
     try {
-      final loginResult = await ref.read(authRemoteDataSourceProvider).login(
+      // Persist JWT via repository when password-only login succeeds.
+      final result = await ref.read(authRepositoryProvider).login(
             username: username,
             passphrase: _passwordController.text,
           );
+
       if (!mounted) {
         return;
       }
 
-      _openDeviceKeyVerification(
-        username,
-        fallbackPassphrase: _passwordController.text,
-        fallbackPreAuthToken: loginResult.requiresTotp ? loginResult.jwt : null,
+      await result.fold(
+        (failure) async {
+          _showInlineError(
+            title: context.tr.authFlowInterruptedTitle,
+            message: ErrorTranslator.translate(
+              context.tr,
+              failure.message,
+            ),
+            target: _LoginErrorTarget.password,
+          );
+        },
+        (loginResult) async {
+          if (loginResult.requiresTotp) {
+            _openInlineTotpChallenge(
+              AuthRequiresLoginTotp(
+                username: username,
+                passphrase: _passwordController.text,
+                preAuthToken: loginResult.jwt,
+              ),
+            );
+            return;
+          }
+          await _continueAfterPrimaryAuth(username);
+        },
       );
     } catch (error) {
       if (!mounted) {
@@ -169,6 +192,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isSubmittingCredentials = false);
       }
     }
+  }
+
+  /// After password (+ optional TOTP) issued a session:
+  /// - if this install still has a local passkey for the user → biometric step-up
+  /// - otherwise complete login with password only (unlinked / password-only accounts)
+  Future<void> _continueAfterPrimaryAuth(String username) async {
+    final hasLocalPasskey = await PasskeyService.instance.hasRegisteredPasskey(
+      username: username,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    if (hasLocalPasskey) {
+      _openDeviceKeyVerification(
+        username,
+        fallbackPassphrase: _passwordController.text,
+      );
+      return;
+    }
+
+    await ref
+        .read(authControllerProvider.notifier)
+        .establishSessionAfterPasswordLogin();
   }
 
   void _openDeviceKeyVerification(
@@ -231,15 +278,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _isSubmittingCredentials = true);
     try {
-      await ref.read(authRemoteDataSourceProvider).verifyLoginTotp(
+      final result = await ref.read(authRepositoryProvider).verifyLoginTotp(
             username: username,
+            passphrase: password,
             totpCode: code,
             preAuthToken: preAuthToken,
           );
       if (!mounted) {
         return;
       }
-      _openDeviceKeyVerification(username);
+
+      await result.fold(
+        (failure) async {
+          _showInlineError(
+            title: context.tr.authFlowInterruptedTitle,
+            message: ErrorTranslator.translate(context.tr, failure.message),
+            target: _LoginErrorTarget.totp,
+          );
+        },
+        (_) async {
+          // Clear pending TOTP UI state before optional passkey step-up.
+          setState(() {
+            _pendingTotpUsername = null;
+            _pendingTotpPassword = null;
+            _pendingTotpPreAuthToken = null;
+          });
+          await _continueAfterPrimaryAuth(username);
+        },
+      );
     } catch (error) {
       if (!mounted) {
         return;

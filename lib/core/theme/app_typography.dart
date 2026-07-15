@@ -16,11 +16,11 @@ import 'app_colors.dart';
 class AppTypography {
   AppTypography._();
 
-  static const String fontFamily = 'Inter';
+  static const String fontFamily = 'Plus Jakarta Sans';
   static const String bodyFontFamily = fontFamily;
   static const String displayFontFamily = 'Newsreader';
   static const String titleFontFamily = displayFontFamily;
-  static const String monoFontFamily = 'IBMPlexMono';
+  static const String monoFontFamily = 'JetBrains Mono';
   static const String numericFontFamily = fontFamily;
   static const String financialFontFamily = monoFontFamily;
 
@@ -30,7 +30,7 @@ class AppTypography {
   static const String sansHebrewFontFamily = financialFontFamily;
 
   static TextTheme interTextTheme(TextTheme textTheme) {
-    return GoogleFonts.interTextTheme(textTheme);
+    return GoogleFonts.plusJakartaSansTextTheme(textTheme);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -360,7 +360,7 @@ class AppTypography {
     TextDecorationStyle? decorationStyle,
     double? decorationThickness,
   }) {
-    return GoogleFonts.inter(
+    return GoogleFonts.plusJakartaSans(
       textStyle: textStyle,
       color: color,
       backgroundColor: backgroundColor,
@@ -448,7 +448,7 @@ class AppTypography {
     TextDecorationStyle? decorationStyle,
     double? decorationThickness,
   }) {
-    return GoogleFonts.ibmPlexMono(
+    return GoogleFonts.jetBrainsMono(
       textStyle: textStyle,
       color: color,
       backgroundColor: backgroundColor,

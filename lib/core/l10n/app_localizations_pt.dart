@@ -3433,6 +3433,39 @@ class AppLocalizationsPt extends AppLocalizations {
       'Entre com senha e código do autenticador, depois vincule uma passkey compatível com este aparelho.';
 
   @override
+  String get errAuthDeviceAlreadyBound =>
+      'Este aparelho já está vinculado a outra conta. Confirme para desvincular a passkey anterior.';
+
+  @override
+  String get authDeviceUnlinkTitle => 'Trocar conta neste aparelho?';
+
+  @override
+  String authDeviceUnlinkBody(String previousUsername, String guidance) {
+    return 'Este dispositivo está vinculado à conta $previousUsername.\n\n$guidance';
+  }
+
+  @override
+  String get authDeviceUnlinkDefaultGuidance =>
+      'Ao continuar, a passkey da conta anterior será removida deste aparelho e ela só poderá ser acessada com senha.';
+
+  @override
+  String get authDeviceUnlinkConfirmSignup => 'Continuar e criar nova conta';
+
+  @override
+  String get authDeviceUnlinkConfirmLink => 'Continuar e vincular';
+
+  @override
+  String get authDeviceUnlinkCancel => 'Cancelar';
+
+  @override
+  String get authDeviceUnlinkCancelledTitle => 'Dispositivo já vinculado';
+
+  @override
+  String authDeviceUnlinkCancelledMessage(String previousUsername) {
+    return 'Cadastro cancelado. Este aparelho permanece vinculado a $previousUsername.';
+  }
+
+  @override
   String get errReceiverNotReady =>
       'Este usuário ainda não está pronto para receber fundos.';
 
@@ -6111,6 +6144,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get financialStatementFilterFailed => 'Falhas';
+
+  @override
+  String get financialStatementFilterCancelled => 'Canceladas';
 
   @override
   String get financialStatementNoResultsTitle => 'Nenhuma transação encontrada';

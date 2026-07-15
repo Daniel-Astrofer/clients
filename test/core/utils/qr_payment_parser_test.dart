@@ -13,6 +13,41 @@ void main() {
       expect(data.paymentLinkId, 'link-123');
     });
 
+    test('decodes canonical kerosene://payment/pay/<publicId> form', () {
+      const publicId = 'euk1dbtccw7fo31lpzciveyf';
+      final encoded = QrPaymentParser.encodePaymentLink(publicId);
+      expect(encoded, 'kerosene://payment/pay/$publicId');
+
+      final data = QrPaymentParser.decode(encoded);
+      expect(data, isNotNull);
+      expect(data!.isPaymentLink, isTrue);
+      expect(data.paymentLinkId, publicId);
+      expect(QrPaymentParser.extractPaymentLinkId(encoded), publicId);
+    });
+
+    test('decodes public KFE payment-request API path as payment link', () {
+      final data = QrPaymentParser.decode(
+        'http://u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion'
+        '/api/public/kfe/payment-requests/jpqf3ax5ujnprjpfjajgjwbr',
+      );
+
+      expect(data, isNotNull);
+      expect(data!.isPaymentLink, isTrue);
+      expect(data.paymentLinkId, 'jpqf3ax5ujnprjpfjajgjwbr');
+    });
+
+    test('decodes testnet4 bech32 address and bitcoin URI', () {
+      const address = 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x';
+      final plain = QrPaymentParser.decode(address);
+      expect(plain, isNotNull);
+      expect(plain!.address, address);
+
+      final uri = QrPaymentParser.decode('bitcoin:$address?amount=0.00025');
+      expect(uri, isNotNull);
+      expect(uri!.address, address);
+      expect(uri.amountBtc, 0.00025);
+    });
+
     test('decodes bitcoin uri with amount and label', () {
       final data = QrPaymentParser.decode(
         'bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh?amount=0.05&label=Reserva',

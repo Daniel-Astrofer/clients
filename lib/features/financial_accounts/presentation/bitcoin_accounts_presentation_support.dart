@@ -59,8 +59,17 @@ String bitcoinAccountTypeLabel(BuildContext context, BitcoinAccount account) {
 }
 
 int bitcoinAccountVisibleBalance(BitcoinAccount account) {
+  // Cold: chain only. Custodial/internal: ledger spendable (available+pending+locked).
   if (account.isWatchOnly) return account.observedBalanceSats;
   return account.totalSats;
+}
+
+/// Optional secondary line for custodial on-chain (ledger vs chain).
+String? bitcoinAccountChainObservedLabel(BitcoinAccount account) {
+  if (!account.isCustodialOnchain) return null;
+  final chain = account.observedBalanceSats;
+  if (chain <= 0) return null;
+  return 'On-chain: $chain sats';
 }
 
 ReceivingRequestView? firstBitcoinReceiveRequest(
@@ -122,6 +131,8 @@ String bitcoinAccountTransactionStatusLabel(
     TransactionStatus.pending => context.tr.bitcoinReceiveStatusWaiting,
     TransactionStatus.confirming => context.tr.bitcoinReceiveStatusConfirming,
     TransactionStatus.confirmed => context.tr.bitcoinReceiveStatusPaid,
+    TransactionStatus.cancelled =>
+      context.tr.financialStatementFilterCancelled,
     TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
   };
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -6,6 +7,7 @@ import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/movement/domain/payment_intent.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
@@ -21,6 +23,12 @@ class SendDestinationStep extends StatelessWidget {
   final VoidCallback onContinue;
   final ValueChanged<RecentTransactionDestination> onRecentDestinationSelected;
 
+  /// Live capabilities resolve (username / internal).
+  final ResolvedPaymentIntent? resolvedIntent;
+  final bool isLiveResolving;
+  final String? liveResolveError;
+  final ValueChanged<PaymentRail>? onRailSelected;
+
   const SendDestinationStep({
     super.key,
     required this.receiverController,
@@ -31,6 +39,10 @@ class SendDestinationStep extends StatelessWidget {
     required this.onScan,
     required this.onContinue,
     required this.onRecentDestinationSelected,
+    this.resolvedIntent,
+    this.isLiveResolving = false,
+    this.liveResolveError,
+    this.onRailSelected,
   });
 
   static const internalBlack = KeroseneBrandTokens.background;
@@ -43,7 +55,13 @@ class SendDestinationStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final destination = receiverController.text.trim();
     final isValidDestination = analysis.isValid;
-    final hasContacts = recentDestinations.isNotEmpty;
+    final filteredContacts = _filterRecentDestinations(
+      recentDestinations,
+      destination,
+    );
+    final hasContacts = filteredContacts.isNotEmpty;
+    final showEmptyContacts =
+        recentDestinations.isEmpty && destination.length < 3;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,9 +71,9 @@ class SendDestinationStep extends StatelessWidget {
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
               24,
-              hasContacts ? 24 : 30,
+              hasContacts || showEmptyContacts ? 24 : 30,
               24,
-              hasContacts ? 28 : 48,
+              hasContacts || showEmptyContacts ? 28 : 48,
             ),
             child: Center(
               child: ConstrainedBox(
@@ -63,13 +81,15 @@ class SendDestinationStep extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _DestinationHeader(hasContacts: hasContacts),
-                    SizedBox(height: hasContacts ? 32 : 26),
+                    _DestinationHeader(
+                      hasContacts: hasContacts || showEmptyContacts,
+                    ),
+                    SizedBox(height: hasContacts || showEmptyContacts ? 32 : 26),
                     _DestinationInputSection(
                       controller: receiverController,
                       analysis: analysis,
                       isLoading: isLoading,
-                      largeLabel: !hasContacts,
+                      largeLabel: !hasContacts && !showEmptyContacts,
                       onChanged: onDestinationChanged,
                       onScan: onScan,
                     ),
@@ -77,22 +97,38 @@ class SendDestinationStep extends StatelessWidget {
                       const SizedBox(height: 12),
                       _DestinationFeedback(
                         analysis: analysis,
-                        message: _destinationHelperText(analysis),
+                        message: _resolveHelperText(
+                          context,
+                          analysis: analysis,
+                          resolved: resolvedIntent,
+                          liveError: liveResolveError,
+                          liveResolving: isLiveResolving,
+                        ),
                       ),
                     ],
-                    if (recentDestinations.isNotEmpty) ...[
+                    if (resolvedIntent != null &&
+                        resolvedIntent!.alternatives.length > 1 &&
+                        onRailSelected != null) ...[
+                      const SizedBox(height: 16),
+                      _RailPicker(
+                        options: resolvedIntent!.alternatives,
+                        selected: resolvedIntent!.selectedRail,
+                        onSelected: onRailSelected!,
+                      ),
+                    ],
+                    if (hasContacts) ...[
                       const SizedBox(height: 40),
                       _FrequentContactsSection(
                         destinations:
-                            recentDestinations.take(3).toList(growable: false),
+                            filteredContacts.take(3).toList(growable: false),
                         onSelected: onRecentDestinationSelected,
                       ),
                       const SizedBox(height: 36),
                       _AllContactsSection(
-                        destinations: recentDestinations,
+                        destinations: filteredContacts,
                         onSelected: onRecentDestinationSelected,
                       ),
-                    ] else ...[
+                    ] else if (showEmptyContacts) ...[
                       const SizedBox(height: 42),
                       const _EmptyContactsState(),
                     ],
@@ -103,7 +139,7 @@ class SendDestinationStep extends StatelessWidget {
           ),
         ),
         _DestinationBottomAction(
-          hasContacts: hasContacts,
+          hasContacts: hasContacts || showEmptyContacts,
           enabled: isValidDestination,
           isLoading: isLoading,
           onTap: onContinue,
@@ -112,12 +148,56 @@ class SendDestinationStep extends StatelessWidget {
     );
   }
 
+  /// Local prefix search (≥3 chars) over recent destinations (username/label/address).
+  static List<RecentTransactionDestination> _filterRecentDestinations(
+    List<RecentTransactionDestination> all,
+    String query,
+  ) {
+    final q = query.trim().toLowerCase();
+    if (q.length < 3) return all;
+    final needle = q.startsWith('@') ? q.substring(1) : q;
+    return all.where((dest) {
+      final label = (dest.label ?? '').toLowerCase();
+      final address = dest.address.toLowerCase();
+      final labelBare =
+          label.startsWith('@') ? label.substring(1) : label;
+      final addressBare =
+          address.startsWith('@') ? address.substring(1) : address;
+      return labelBare.contains(needle) ||
+          addressBare.contains(needle) ||
+          label.contains(q) ||
+          address.contains(q);
+    }).toList(growable: false);
+  }
+
+  String _resolveHelperText(
+    BuildContext context, {
+    required SendDestinationAnalysis analysis,
+    required ResolvedPaymentIntent? resolved,
+    required String? liveError,
+    required bool liveResolving,
+  }) {
+    if (liveError != null && liveError.trim().isNotEmpty) {
+      return liveError.trim();
+    }
+    if (liveResolving) {
+      return SendMoneyCopy.progressResolving(context);
+    }
+    if (resolved != null && resolved.explainWhy.trim().isNotEmpty) {
+      if (resolved.blockers.isNotEmpty) {
+        return resolved.blockers.first.message;
+      }
+      return resolved.explainWhy;
+    }
+    return _destinationHelperText(analysis);
+  }
+
   String _destinationHelperText(SendDestinationAnalysis analysis) {
     if (analysis.isEmpty) {
       return 'Informe o destino para continuar.';
     }
     if (analysis.isInvalid) {
-      return 'Corrija o destino: use usuário Kerosene, endereço Bitcoin, invoice Lightning, link, QR ou NFC.';
+      return 'Corrija o destino: usuário Kerosene, endereço Bitcoin, invoice Lightning, link — ou use o botão para QR / NFC / colar.';
     }
     if (analysis.isPaymentLink) {
       return 'Link de pagamento Kerosene detectado.';
@@ -134,6 +214,126 @@ class SendDestinationStep extends StatelessWidget {
       return 'Pagamento Lightning detectado.';
     }
     return '';
+  }
+}
+
+class _RailPicker extends StatelessWidget {
+  final List<RailOption> options;
+  final PaymentRail selected;
+  final ValueChanged<PaymentRail> onSelected;
+
+  const _RailPicker({
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          switch (Localizations.localeOf(context).languageCode) {
+            'en' => 'How to send',
+            'es' => 'Cómo enviar',
+            _ => 'Como enviar',
+          },
+          style: AppTypography.inter(
+            color: SendDestinationStep.internalMutedText,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final option in options)
+              _RailChip(
+                option: option,
+                selected: option.rail == selected,
+                onTap: () => onSelected(option.rail),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _RailChip extends StatelessWidget {
+  final RailOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RailChip({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected
+        ? SendDestinationStep.internalText
+        : SendDestinationStep.internalSurfaceHigh;
+    final fg = selected
+        ? KeroseneBrandTokens.background
+        : SendDestinationStep.internalText;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    option.title,
+                    style: AppTypography.inter(
+                      color: fg,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (option.recommended) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: selected
+                          ? KeroseneBrandTokens.background.withValues(alpha: 0.85)
+                          : KeroseneBrandTokens.info,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                option.subtitle,
+                style: AppTypography.inter(
+                  color: selected
+                      ? KeroseneBrandTokens.background.withValues(alpha: 0.72)
+                      : SendDestinationStep.internalMutedText,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -230,11 +430,7 @@ class _DestinationBottomAction extends StatelessWidget {
               ),
             ),
             child: isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const CupertinoActivityIndicator(radius: 9)
                 : Text(context.tr.continueButton),
           ),
         ),
@@ -453,14 +649,10 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
             AnimatedSwitcher(
               duration: KeroseneMotion.duration(context, KeroseneMotion.short),
               child: widget.isLoading
-                  ? SizedBox(
+                  ? CupertinoActivityIndicator(
                       key: const ValueKey('destination-loading'),
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: activeElementColor,
-                      ),
+                      radius: 9,
+                      color: activeElementColor,
                     )
                   : const SizedBox(
                       key: ValueKey('destination-loading-empty'),
@@ -468,15 +660,27 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
                       height: 18,
                     ),
             ),
-            IconButton(
-              onPressed: widget.onScan,
-              tooltip: context.tr.scanQR,
-              icon: const Icon(KeroseneIcons.scanner, size: 24),
-              color: activeElementColor,
-              padding: EdgeInsets.zero,
-              style: IconButton.styleFrom(
-                minimumSize: const Size.square(48),
-                tapTargetSize: MaterialTapTargetSize.padded,
+            Semantics(
+              button: true,
+              label: switch (Localizations.localeOf(context).languageCode) {
+                'en' => 'Add destination with QR, NFC or paste',
+                'es' => 'Agregar destino con QR, NFC o pegar',
+                _ => 'Adicionar destino com QR, NFC ou colar',
+              },
+              child: IconButton(
+                onPressed: widget.onScan,
+                tooltip: switch (Localizations.localeOf(context).languageCode) {
+                  'en' => 'QR, NFC or paste',
+                  'es' => 'QR, NFC o pegar',
+                  _ => 'QR, NFC ou colar',
+                },
+                icon: const Icon(KeroseneIcons.scanner, size: 24),
+                color: activeElementColor,
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  minimumSize: const Size.square(48),
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                ),
               ),
             ),
           ],

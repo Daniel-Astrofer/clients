@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -146,14 +147,9 @@ class _WalletLoadingState extends State<_WalletLoading> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 46,
-                  height: 46,
-                  child: CircularProgressIndicator(
-                    color: SendWalletSelectionStep.internalText,
-                    strokeWidth: 2.2,
-                    backgroundColor: SendWalletSelectionStep.internalBorder,
-                  ),
+                CupertinoActivityIndicator(
+                  color: SendWalletSelectionStep.internalText,
+                  radius: 23,
                 ),
                 const SizedBox(height: 20),
                 Text(

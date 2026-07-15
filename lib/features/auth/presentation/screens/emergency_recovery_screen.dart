@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -888,11 +889,7 @@ class _RecoveryActionButton extends StatelessWidget {
       child: FilledButton.icon(
         onPressed: onPressed,
         icon: loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+            ? const CupertinoActivityIndicator(radius: 9)
             : Icon(icon ?? KeroseneIcons.next, size: 18),
         label: Text(label),
       ),

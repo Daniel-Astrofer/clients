@@ -71,7 +71,8 @@ class ExternalTransfer extends Equatable {
       'CONFIRMED' ||
       'PAID' =>
         TransactionStatus.confirmed,
-      'CANCELLED' || 'EXPIRED' || 'FAILED' => TransactionStatus.failed,
+      'CANCELLED' || 'EXPIRED' => TransactionStatus.cancelled,
+      'FAILED' => TransactionStatus.failed,
       _ => confirmations > 0
           ? TransactionStatus.confirming
           : TransactionStatus.pending,

@@ -28,6 +28,7 @@ ALLOWED_HARD_FILES = {
     Path('lib/design_system/icons/kerosene_icons.dart'),
     Path('lib/design_system/animation/kerosene_lottie.dart'),
     Path('lib/design_system/animation/kerosene_rive.dart'),
+    Path('lib/features/financial_accounts/presentation/widgets/revolut_account_card.dart'),
 }
 
 TEXT_ALLOWED_FILES = {

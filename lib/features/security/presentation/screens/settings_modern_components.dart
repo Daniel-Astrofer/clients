@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
@@ -662,11 +663,7 @@ class SettingsLoadingPanel extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
-          const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          const CupertinoActivityIndicator(radius: 9),
           const SizedBox(width: AppSpacing.md),
           Text(
             label,

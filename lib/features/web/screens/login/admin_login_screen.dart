@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -616,13 +617,9 @@ class _ApprovalPendingBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AdminColors.warning,
-            ),
+          const CupertinoActivityIndicator(
+            radius: 8,
+            color: AdminColors.warning,
           ),
           const SizedBox(width: AdminTheme.spacingSm),
           Expanded(
@@ -706,13 +703,9 @@ class _LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 20,
-      height: 20,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        color: AdminColors.background,
-      ),
+    return const CupertinoActivityIndicator(
+      radius: 10,
+      color: AdminColors.background,
     );
   }
 }

@@ -92,12 +92,18 @@ class MockAuthController extends AuthController {
   }
 
   @override
-  Future<void> registerPasskey() async {
+  Future<PasskeyRegisterResult> registerPasskey({
+    bool confirmUnlinkDevice = false,
+  }) async {
     state = mockAuthenticatedState;
+    return const PasskeyRegisterResult.success();
   }
 
   @override
-  Future<void> registerPasskeyOnboarding(String sessionId) async {
+  Future<void> registerPasskeyOnboarding(
+    String sessionId, {
+    bool confirmUnlinkDevice = false,
+  }) async {
     state = mockAuthenticatedState;
   }
 
@@ -365,6 +371,7 @@ class MockBitcoinAccountsService implements BitcoinAccountsService {
     required int amountSats,
     int? feeRate,
     List<String> selectedUtxoIds = const [],
+    String? totpCode,
   }) async {
     final workflow = PsbtWorkflowView(
       id: 'psbt-storybook-${_psbts.length + 1}',

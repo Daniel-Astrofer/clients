@@ -44,7 +44,6 @@ dependencies:
   flutter_local_notifications: ^21.0.0
   flutter_background_service: ^5.1.0
 
-  audioplayers: ^6.0.0
   dio_smart_retry: ^7.0.1
   google_fonts: ^8.0.2
   slip39: ^0.3.0
@@ -66,6 +65,10 @@ dependencies:
   dio_cache_interceptor: ^3.5.1
   cached_network_image: ^3.4.1
   dio_cache_interceptor_hive_store: ^4.0.0
+  bitcoin_base: ^7.0.0
+  # Vendored: IconData became final in Flutter 3.32+/3.44; pub 2.1.0 still extends it.
+  phosphor_flutter:
+    path: third_party/phosphor_flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -93,8 +96,8 @@ flutter:
 
   assets:
     - 'assets/welcome_phone_mockup.png'
+    - 'assets/feed/cards/'
     - 'assets/google_fonts/'
-    - 'assets/sounds/'
     - 'assets/logo/'
 
   shaders:

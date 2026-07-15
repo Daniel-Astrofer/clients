@@ -109,7 +109,14 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
   Widget _buildBody(BuildContext context, WalletState walletState) {
     return switch (walletState) {
       WalletInitial() || WalletLoading() => const Center(
-          child: CircularProgressIndicator(color: _text),
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              valueColor: AlwaysStoppedAnimation<Color>(_text),
+            ),
+          ),
         ),
       WalletError(:final message) => _buildError(context, message),
       WalletLoaded(:final wallets) => wallets.isEmpty
@@ -181,26 +188,20 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
     return Semantics(
       label: widget.subtitle,
       container: true,
-      child: _buildVerticalWalletList(wallets, selectedWallet),
+      child: _buildWalletList(wallets, selectedWallet),
     );
   }
 
-  Widget _buildVerticalWalletList(
-      List<Wallet> wallets, Wallet? selectedWallet) {
+  Widget _buildWalletList(List<Wallet> wallets, Wallet? selectedWallet) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
         final compact = width < 380 || height < 720 || wallets.length >= 3;
-        final maxWidth = width;
-        final canFitWithoutScrolling = wallets.length <= 3;
-        final gap = canFitWithoutScrolling
-            ? 0.0
-            : compact
-                ? 10.0
-                : 14.0;
+        final isSideBySide = wallets.length > 1 && wallets.length <= 3;
+        final isSingle = wallets.length <= 1;
 
-        Widget itemBuilder(Wallet wallet, {required bool fill}) {
+        Widget itemBuilder(Wallet wallet, {required bool fill, required bool isRow}) {
           final selected = _sameWallet(wallet, selectedWallet);
           final tile = WalletHoldSelectionTile(
             wallet: wallet,
@@ -213,22 +214,28 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
             key: ValueKey('wallet-flow-tile-${wallet.id}'),
             duration: const Duration(milliseconds: 320),
             curve: Curves.easeOutCubic,
-            width: maxWidth,
+            width: isRow ? null : width,
             child: fill ? SizedBox.expand(child: tile) : tile,
           );
         }
 
-        if (canFitWithoutScrolling) {
+        if (isSingle) {
           return SizedBox.expand(
-            child: Column(
+            child: wallets.isEmpty
+                ? const SizedBox.shrink()
+                : itemBuilder(wallets[0], fill: true, isRow: false),
+          );
+        }
+
+        if (isSideBySide) {
+          return SizedBox.expand(
+            child: Row(
               children: [
                 for (var index = 0; index < wallets.length; index++) ...[
                   Expanded(
-                    flex: _sameWallet(wallets[index], selectedWallet) ? 2 : 1,
-                    child: itemBuilder(wallets[index], fill: true),
+                    flex: _sameWallet(wallets[index], selectedWallet) ? 5 : 4,
+                    child: itemBuilder(wallets[index], fill: true, isRow: true),
                   ),
-                  if (gap > 0 && index < wallets.length - 1)
-                    SizedBox(height: gap),
                 ],
               ],
             ),
@@ -239,16 +246,11 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          padding: const EdgeInsets.fromLTRB(
-            0,
-            84,
-            0,
-            28,
-          ),
+          padding: const EdgeInsets.fromLTRB(0, 84, 0, 28),
           itemCount: wallets.length,
-          separatorBuilder: (_, __) => SizedBox(height: gap),
+          separatorBuilder: (_, __) => const SizedBox(height: 14),
           itemBuilder: (context, index) =>
-              itemBuilder(wallets[index], fill: false),
+              itemBuilder(wallets[index], fill: false, isRow: false),
         );
       },
     );

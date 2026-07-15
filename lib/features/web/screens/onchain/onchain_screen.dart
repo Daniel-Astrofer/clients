@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/admin_providers.dart';
@@ -115,7 +116,8 @@ class OnchainScreen extends ConsumerWidget {
               loading: () => const Center(
                 child: Padding(
                   padding: EdgeInsets.all(AdminTheme.spacing3xl),
-                  child: CircularProgressIndicator(
+                  child: CupertinoActivityIndicator(
+                    radius: 10,
                     color: AdminColors.textTertiary,
                   ),
                 ),

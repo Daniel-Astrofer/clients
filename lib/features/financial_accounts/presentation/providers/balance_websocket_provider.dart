@@ -209,20 +209,69 @@ final balanceWebSocketServiceProvider =
       unawaited(ref.read(walletProvider.notifier).refresh());
 
       if (_isTransactionNotification(notification)) {
+        String finalTitle = notification.title;
+        String finalBody = notification.body;
+
+        final isIncoming = _isIncomingTransactionNotification(notification);
+        if (isIncoming) {
+          String rede = 'Interna';
+          if (notification.kind == SessionNotificationItem.kindDepositDetected || 
+              notification.kind == SessionNotificationItem.kindDepositConfirmed) {
+            rede = 'Onchain';
+          } else if (notification.kind == SessionNotificationItem.kindPaymentRequestPaid) {
+            rede = 'Lightning';
+          }
+
+          finalTitle = 'Transferência $rede recebida';
+
+          String amount = notification.metadata['amount'] ?? '';
+          String walletName = notification.metadata['walletName'] ?? notification.metadata['wallet_name'] ?? '';
+
+          if (amount.isEmpty || walletName.isEmpty) {
+             final btcMatch = RegExp(r'([\d\.]+)\s*BTC', caseSensitive: false).firstMatch(notification.body);
+             if (btcMatch != null) amount = btcMatch.group(1)!;
+
+             final emMatch = RegExp(r'em\s+([\w\s]+)', caseSensitive: false).firstMatch(notification.body);
+             if (emMatch != null) walletName = emMatch.group(1)!.trim();
+          }
+          
+          if (walletName.isEmpty) {
+            walletName = 'Principal';
+          }
+
+          if (amount.isNotEmpty) {
+            if (amount.contains('.')) {
+              amount = amount.replaceAll(RegExp(r'0+$'), '');
+              if (amount.endsWith('.')) amount = amount.substring(0, amount.length - 1);
+            }
+            finalBody = 'Sua carteira $walletName recebeu $amount BTC.';
+          } else {
+            finalBody = notification.body.replaceAllMapped(RegExp(r'\d+\.\d+'), (match) {
+               String num = match.group(0)!;
+               num = num.replaceAll(RegExp(r'0+$'), '');
+               if (num.endsWith('.')) num = num.substring(0, num.length - 1);
+               return num;
+             });
+          }
+        }
+
         unawaited(
           NotificationService().showTransactionNotification(
             id: _notificationIdFrom(notification.dedupeKey),
-            title: notification.title,
-            body: notification.body,
-            summary: 'Kerosene',
+            title: finalTitle,
+            body: finalBody,
+            summary: null,
             payload: notification.deeplink,
-            incoming: _isIncomingTransactionNotification(notification),
+            incoming: isIncoming,
             dedupeKey: notification.dedupeKey,
           ),
         );
-      } else if (alertPreferences.inAppBannersEnabled) {
-        ref.read(notificationBannerProvider.notifier).show(notification);
       }
+      
+      // Banners in-app desativados.
+      // if (alertPreferences.inAppBannersEnabled) {
+      //   ref.read(notificationBannerProvider.notifier).show(notification);
+      // }
     },
   );
 
@@ -293,24 +342,10 @@ String? _normalizeSessionToken(String? token) {
   return normalized;
 }
 
-bool _isMockedBackendBitcoinEngagement(SessionNotificationItem notification) {
-  final title = notification.title.toLowerCase();
-  final entityType = notification.entityType?.toLowerCase();
-  final source = notification.metadata['source']?.toLowerCase();
-
-  return notification.kind == SessionNotificationItem.kindSystemInfo &&
-      (title.contains('bitcoin em alta') || entityType == 'price_alert') &&
-      source != 'pricetickerstream';
-}
-
 bool _shouldKeepNotification(
   SessionNotificationItem notification,
   AlertPreferencesState preferences,
 ) {
-  if (_isMockedBackendBitcoinEngagement(notification)) {
-    return false;
-  }
-
   if (_isSecurityNotification(notification)) {
     return preferences.securityAlertsEnabled;
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/services/balance_websocket_service.dart';
@@ -65,7 +66,7 @@ class NotificationsScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CupertinoActivityIndicator(radius: 10)),
         error: (err, stack) => Center(
           child: Text(
             AdminCopy.loadFailure('notificações'),

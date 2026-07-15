@@ -1,4 +1,5 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -11,6 +12,7 @@ import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/widgets/statement_transaction_card.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
@@ -147,11 +149,7 @@ class AccountOptionActionButton extends StatelessWidget {
       ),
       onPressed: busy ? null : onPressed,
       icon: busy
-          ? const SizedBox(
-              width: 15,
-              height: 15,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+          ? const CupertinoActivityIndicator(radius: 7.5)
           : Icon(icon, size: 15),
       label: Text(label),
     );
@@ -487,32 +485,71 @@ class InlineLoadingState extends StatelessWidget {
     return const SizedBox(
       height: 48,
       child: Center(
-        child: SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+        child: CupertinoActivityIndicator(radius: 9),
       ),
     );
   }
 }
 
-class FocusedAccountHistory extends StatelessWidget {
+class FocusedAccountHistory extends StatefulWidget {
   final BitcoinAccount account;
   final AsyncValue<List<Transaction>> transactionsAsync;
   final AsyncValue<List<ReceivingRequestView>> requestsAsync;
 
   const FocusedAccountHistory({
+    super.key,
     required this.account,
     required this.transactionsAsync,
     required this.requestsAsync,
   });
 
   @override
+  State<FocusedAccountHistory> createState() => _FocusedAccountHistoryState();
+}
+
+class _FocusedAccountHistoryState extends State<FocusedAccountHistory> {
+  final Set<String> _expandedTransactionIds = <String>{};
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final txDate = DateTime(date.year, date.month, date.day);
+
+    String label;
+    if (txDate == today) {
+      label = 'Hoje';
+    } else if (txDate == yesterday) {
+      label = 'Ontem';
+    } else {
+      final months = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+      ];
+      label = '${date.day} de ${months[date.month - 1]}';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0, top: 12.0),
+      child: Text(
+        label,
+        style: AppTypography.display.copyWith(
+          color: Colors.white,
+          fontSize: 26,
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = BitcoinAccountsColors.of(context);
     final requests =
-        requestsAsync.asData?.value ?? const <ReceivingRequestView>[];
+        widget.requestsAsync.asData?.value ?? const <ReceivingRequestView>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -548,14 +585,14 @@ class FocusedAccountHistory extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        transactionsAsync.when(
+        widget.transactionsAsync.when(
           loading: () => const CompactLoadingPanel(),
           error: (_, __) => BareHistoryMessage(
             text: context.tr.bitcoinAccountsErrorMessage,
           ),
           data: (transactions) {
             final rows = transactionsForAccount(
-              account: account,
+              account: widget.account,
               transactions: transactions,
               requests: requests,
             ).take(8).toList(growable: false);
@@ -566,14 +603,52 @@ class FocusedAccountHistory extends StatelessWidget {
               );
             }
 
-            return Column(
-              children: [
-                for (var index = 0; index < rows.length; index++)
-                  FocusedHistoryRow(
-                    transaction: rows[index],
-                    showDivider: index != rows.length - 1,
-                  ),
-              ],
+            return StatementTransactionScrollStack(
+              itemCount: rows.length,
+              itemGap: 12,
+              itemBuilder: (context, index) {
+                final tx = rows[index];
+                
+                Widget? dateHeader;
+                if (index == 0) {
+                  dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+                } else {
+                  final previousTx = rows[index - 1];
+                  if (!_isSameDay(tx.timestamp.toLocal(), previousTx.timestamp.toLocal())) {
+                    dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+                  }
+                }
+
+                final expanded = _expandedTransactionIds.contains(tx.id);
+                final tile = StatementTransactionCard(
+                  transaction: tx,
+                  expanded: expanded,
+                  mode: StatementTransactionCardMode.stacked,
+                  onTap: () {
+                    setState(() {
+                      if (expanded) {
+                        _expandedTransactionIds.remove(tx.id);
+                      } else {
+                        _expandedTransactionIds.add(tx.id);
+                      }
+                    });
+                  },
+                );
+
+                if (dateHeader != null) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (index > 0) const SizedBox(height: 16),
+                      dateHeader,
+                      const SizedBox(height: 8),
+                      tile,
+                    ],
+                  );
+                }
+                return tile;
+              },
             );
           },
         ),

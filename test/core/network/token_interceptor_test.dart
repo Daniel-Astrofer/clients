@@ -152,5 +152,49 @@ void main() {
         isTrue,
       );
     });
+
+    test('does not log out on wrong app entry PIN (AUTH_019 / 401)', () {
+      expect(
+        TokenInterceptor.shouldInvalidateSessionForError(
+          statusCode: 401,
+          path: '/auth/security/app-pin/verify',
+          errorCode: 'AUTH_019',
+          responseDataText: 'PIN numerico incorreto.',
+          requestHadAuthorizationHeader: true,
+        ),
+        isFalse,
+      );
+      expect(
+        TokenInterceptor.shouldInvalidateSessionForError(
+          statusCode: 400,
+          path: '/auth/security/app-pin/verify',
+          errorCode: 'AUTH_019',
+          responseDataText: 'PIN numerico incorreto.',
+          requestHadAuthorizationHeader: true,
+        ),
+        isFalse,
+      );
+      expect(
+        TokenInterceptor.shouldInvalidateSessionForError(
+          statusCode: 429,
+          path: '/auth/security/app-pin/verify',
+          errorCode: 'AUTH_020',
+          responseDataText: 'PIN temporariamente bloqueado',
+          requestHadAuthorizationHeader: true,
+        ),
+        isFalse,
+      );
+      // Code alone must also protect non-verify app-pin routes
+      expect(
+        TokenInterceptor.shouldInvalidateSessionForError(
+          statusCode: 401,
+          path: '/auth/security/app-pin',
+          errorCode: 'AUTH_019',
+          responseDataText: 'PIN atual incorreto.',
+          requestHadAuthorizationHeader: true,
+        ),
+        isFalse,
+      );
+    });
   });
 }

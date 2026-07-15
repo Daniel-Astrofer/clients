@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 
@@ -35,11 +36,9 @@ class AppButton extends StatelessWidget {
     final child = AnimatedSwitcher(
       duration: KeroseneMotion.fast,
       child: loading
-          ? const SizedBox(
+          ? const CupertinoActivityIndicator(
               key: ValueKey('loading'),
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              radius: 9,
             )
           : Row(
               key: const ValueKey('content'),

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -331,12 +332,9 @@ class _BlockchainSyncAction extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: isSyncing ? null : onPressed,
           icon: isSyncing
-              ? const SizedBox.square(
-                  dimension: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AdminColors.textTertiary,
-                  ),
+              ? const CupertinoActivityIndicator(
+                  radius: 7,
+                  color: AdminColors.textTertiary,
                 )
               : const Icon(KeroseneIcons.sync, size: 16),
           label: Text(isSyncing ? AdminCopy.syncInProgress : AdminCopy.syncNow),

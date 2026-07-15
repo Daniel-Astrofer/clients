@@ -1,4 +1,5 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -686,9 +687,7 @@ class CompactLoadingPanel extends StatelessWidget {
 
     return SizedBox(
       height: 88,
-      child: Center(
-        child: CircularProgressIndicator(color: colors.text, strokeWidth: 2),
-      ),
+        child: CupertinoActivityIndicator(color: colors.text, radius: 10),
     );
   }
 }

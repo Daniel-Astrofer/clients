@@ -1,6 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/design_system/icons.dart';
 
 import '../../../../core/theme/app_typography.dart';
@@ -163,30 +163,18 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                           const Spacer(flex: 2),
                           AnimatedSwitcher(
                             duration: KeroseneMotion.short,
-                            child: widget.busy
-                                ? const SizedBox(
-                                    key: ValueKey('pin_pad_loading'),
-                                    height: 180,
-                                    child: Center(
-                                      child: TorLoadingDots(
-                                        dotSize: 8,
-                                        spacing: 10,
-                                        travel: 14,
-                                      ),
-                                    ),
+                            child: _showPad
+                                ? PinNumericPad(
+                                    key: const ValueKey('pin_pad_visible'),
+                                    enabled: widget.enabled && !widget.busy,
+                                    onDigit: widget.onDigit,
+                                    onDelete: widget.onDelete,
+                                    keySize: padKeySize,
+                                    digitFontSize: digitFontSize,
                                   )
-                                : _showPad
-                                    ? PinNumericPad(
-                                        key: const ValueKey('pin_pad_visible'),
-                                        enabled: widget.enabled && !widget.busy,
-                                        onDigit: widget.onDigit,
-                                        onDelete: widget.onDelete,
-                                        keySize: padKeySize,
-                                        digitFontSize: digitFontSize,
-                                      )
-                                    : const SizedBox.shrink(
-                                        key: ValueKey('pin_pad_hidden'),
-                                      ),
+                                : const SizedBox.shrink(
+                                    key: ValueKey('pin_pad_hidden'),
+                                  ),
                           ),
                           if (widget.confirmLabel != null) ...[
                             const SizedBox(height: 18),
@@ -214,13 +202,9 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                                   ),
                                 ),
                                 child: widget.busy
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.black,
-                                        ),
+                                    ? const CupertinoActivityIndicator(
+                                        radius: 9,
+                                        color: Colors.black,
                                       )
                                     : Text(widget.confirmLabel!),
                               ),

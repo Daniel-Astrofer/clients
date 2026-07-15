@@ -14,13 +14,21 @@ import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
-import 'package:kerosene/features/home/presentation/screens/qr_scanner_screen.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/presentation/widgets/app_notice.dart';
+import 'package:kerosene/core/providers/network_status_provider.dart';
+import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
+import 'package:kerosene/features/movement/domain/payment_intent.dart';
+import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
+import 'package:kerosene/features/movement/domain/payment_intent_resolver.dart';
+import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
+import 'package:kerosene/features/movement/widgets/destination_capture_sheet.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
 import 'package:kerosene/features/movement/domain/entities/withdraw_fee_quote_calculation.dart';
+import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
 import 'package:kerosene/features/movement/flow/movement_flow_coordinator.dart';
 import 'package:kerosene/app/providers/kfe_receiving_capabilities_provider.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
@@ -29,6 +37,7 @@ import 'package:kerosene/features/financial_accounts/presentation/providers/wall
     hide transactionRepositoryProvider;
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_key_vault.dart';
 import 'package:kerosene/features/movement/widgets/send_money_components.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -72,9 +81,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   static const Color internalText = KeroseneBrandTokens.textPrimary;
   static const Color internalMutedText = KeroseneBrandTokens.textMuted;
   static const Color internalOutline = KeroseneBrandTokens.borderStrong;
-  static const double _defaultLightningRoutingFeeBtc = 0.000001;
-
   String? _pendingPaymentLinkId;
+  NetworkFeeTier _selectedFeeTier = NetworkFeeTier.standard;
+  SendDestinationType? _lastHapticDestinationType;
   String _lockedRecipientAddress = '';
   String? _recentDestinationAddressForSave;
   double _lockedAmountBtc = 0.0;
@@ -82,6 +91,14 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   Wallet? _selectedWallet;
   bool _destinationResolutionBusy = false;
   int _destinationEditVersion = 0;
+
+  /// Live capabilities resolve for username destinations (PR3).
+  ResolvedPaymentIntent? _liveResolvedIntent;
+  PaymentRail? _userSelectedRail;
+  bool _liveResolving = false;
+  String? _liveResolveError;
+  Timer? _liveResolveTimer;
+  int _liveResolveToken = 0;
 
   final _receiverController = TextEditingController();
 
@@ -117,11 +134,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       if (widget.initialAddress != null && widget.initialAddress!.isNotEmpty) {
         unawaited(_parsePaymentRequest(widget.initialAddress!));
       }
+      // Cold stays in the same wizard (PR6) — local seed signs at confirm.
     });
   }
 
   @override
   void dispose() {
+    _liveResolveTimer?.cancel();
     _pageController.dispose();
     _receiverController.dispose();
     super.dispose();
@@ -158,10 +177,20 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
           );
 
     setState(() => _selectedCurrency = nextCurrency);
-    _amount.value = MoneyDisplay.rawInputFromAmount(
-      amount: nextAmount,
-      currency: nextCurrency,
-    );
+    // Natural keypad string (no fixed trailing zero buffer).
+    if (nextAmount <= 0) {
+      _amount.value = '0';
+    } else if (nextCurrency == Currency.btc) {
+      _amount.value = nextAmount
+          .toStringAsFixed(8)
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
+    } else {
+      _amount.value = nextAmount
+          .toStringAsFixed(2)
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
+    }
   }
 
   double _amountAsDouble(String amountVal) =>
@@ -216,6 +245,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
     final currentWallet = _resolveWallet(walletState);
     final destinationAnalysis = _currentDestinationAnalysis();
+    final isOnline = ref.watch(networkStatusProvider);
     final AsyncValue<FeeEstimate>? feeEstimateAsync =
         destinationAnalysis.isOnChain && amountBtc > 0
             ? ref.watch(feeEstimateProvider(amountBtc))
@@ -227,31 +257,67 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       feeEstimateAsync: feeEstimateAsync,
     );
 
+    _maybeHapticDestination(destinationAnalysis);
+
     return Scaffold(
       backgroundColor: internalBlack,
       resizeToAvoidBottomInset: true,
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
+      body: Column(
         children: [
-          _buildWalletSelectionStep(context, walletState),
-          SafeArea(child: _buildDestinationStep(context)),
-          SafeArea(
-            child: _buildAmountStep(
-              context,
-              btcUsd: btcUsd,
-              btcEur: btcEur,
-              btcBrl: btcBrl,
-              amountBtc: amountBtc,
-              wallet: currentWallet,
-              destination: destinationAnalysis,
-              feeQuote: feeQuote,
-              isLoading: isLoading,
+          if (!isOnline) _OfflineSendBanner(onRetry: _retryOnline),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _buildWalletSelectionStep(context, walletState),
+                SafeArea(child: _buildDestinationStep(context)),
+                SafeArea(
+                  child: _buildAmountStep(
+                    context,
+                    btcUsd: btcUsd,
+                    btcEur: btcEur,
+                    btcBrl: btcBrl,
+                    amountBtc: amountBtc,
+                    wallet: currentWallet,
+                    destination: destinationAnalysis,
+                    feeQuote: feeQuote,
+                    isLoading: isLoading,
+                    isOnline: isOnline,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _maybeHapticDestination(SendDestinationAnalysis analysis) {
+    if (!analysis.isValid) {
+      _lastHapticDestinationType = analysis.type;
+      return;
+    }
+    if (_lastHapticDestinationType == analysis.type) return;
+    _lastHapticDestinationType = analysis.type;
+    // Schedule outside build to avoid side effects mid-frame issues.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      HapticFeedback.selectionClick();
+    });
+  }
+
+  Future<void> _retryOnline() async {
+    HapticFeedback.lightImpact();
+    await ref.read(networkStatusProvider.notifier).checkConnection();
+  }
+
+  bool _ensureOnline() {
+    final online = ref.read(networkStatusProvider);
+    if (online) return true;
+    SnackbarHelper.showError(SendMoneyCopy.offlineBlocked(context));
+    return false;
   }
 
   void _handleBack() {
@@ -293,6 +359,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   }
 
   Future<void> _handleContinue() async {
+    if (!_ensureOnline()) return;
     final insufficientBalanceMessage =
         SendMoneyCopy.insufficientBalance(context);
     final walletState = ref.read(walletProvider);
@@ -352,7 +419,19 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     }
     destination = resolvedDestination;
 
-    if (_isOwnInternalDestination(walletState, destination)) {
+    final ownColdOnchain = _ownColdWalletOnchainDestination(
+      walletState,
+      destination,
+    );
+    if (ownColdOnchain != null) {
+      // Internal UUID of own cold wallet → fund via on-chain address instead.
+      destination = ownColdOnchain;
+    } else if (_isSameSourceWalletDestination(
+      currentWallet,
+      destination,
+    )) {
+      // Only block sending to the *same* source wallet (true self-loop).
+      // INTERNAL → CUSTODIAL_ONCHAIN (same user, different wallets) is allowed.
       setState(() => _destinationResolutionBusy = false);
       SnackbarHelper.showError(context.tr.errLedgerPaymentRequestSelfPay);
       return;
@@ -364,13 +443,38 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       return;
     }
 
-    final feeQuote = await _resolveSubmitFeeQuote(
+    var feeQuote = await _resolveSubmitFeeQuote(
       wallet: currentWallet,
       destination: destination,
       amountBtc: amountBtc,
     );
     if (feeQuote == null) {
       setState(() => _destinationResolutionBusy = false);
+      return;
+    }
+
+    // Fail-closed: never submit with a stale on-chain quote.
+    if (destination.isOnChain && feeQuote.isQuoteExpired) {
+      ref.invalidate(feeEstimateProvider(amountBtc));
+      feeQuote = await _resolveSubmitFeeQuote(
+        wallet: currentWallet,
+        destination: destination,
+        amountBtc: amountBtc,
+      );
+      if (feeQuote == null || feeQuote.isQuoteExpired) {
+        setState(() => _destinationResolutionBusy = false);
+        SnackbarHelper.showError(
+          SendMoneyCopy.networkFeeUnavailable(context),
+        );
+        return;
+      }
+    }
+
+    if (destination.isOnChain && !feeQuote.isReadyForOnchainSubmit) {
+      setState(() => _destinationResolutionBusy = false);
+      SnackbarHelper.showError(
+        SendMoneyCopy.networkFeeUnavailable(context),
+      );
       return;
     }
 
@@ -413,15 +517,30 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
         platformFeeBtc: 0,
         networkFeeBtc: 0,
         totalDebitedBtc: amountBtc,
+        feeTier: _selectedFeeTier,
       );
     }
 
-    final platformFeeRate = wallet.withdrawalFeeRate;
+    // Cold has no Kerosene platform fee — only chain network fee.
+    final platformFeeRate =
+        _isColdSource(wallet) ? 0.0 : wallet.withdrawalFeeRate;
     if (destination.isLightning) {
-      return _buildExternalFeeQuote(
+      if (_isColdSource(wallet)) {
+        return SendFeeQuote(
+          requestedAmountBtc: amountBtc,
+          receiverAmountBtc: amountBtc,
+          platformFeeRate: 0,
+          platformFeeBtc: 0,
+          networkFeeBtc: 0,
+          totalDebitedBtc: amountBtc,
+          error: 'cold_no_lightning',
+          feeTier: _selectedFeeTier,
+        );
+      }
+      // Honest LN: do not invent a routing fee constant as if it were exact.
+      return _buildLightningFeeQuote(
         amountBtc: amountBtc,
         platformFeeRate: platformFeeRate,
-        networkFeeBtc: _defaultLightningRoutingFeeBtc,
       );
     }
 
@@ -434,21 +553,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
         networkFeeBtc: 0,
         totalDebitedBtc: amountBtc,
         isLoading: true,
+        feeTier: _selectedFeeTier,
+        networkFeeCertainty: NetworkFeeCertainty.loading,
       );
     }
 
-    double networkFeeBtc = 0;
-    double? feeRateSatPerByte;
     FeeEstimate? resolvedFee;
     bool isLoading = false;
     Object? error;
 
     feeEstimateAsync.when(
-      data: (fee) {
-        resolvedFee = fee;
-        networkFeeBtc = fee.estimatedStandardBtc;
-        feeRateSatPerByte = fee.standardSatPerByte;
-      },
+      data: (fee) => resolvedFee = fee,
       loading: () => isLoading = true,
       error: (err, _) => error = err,
     );
@@ -461,9 +576,12 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
         platformFeeBtc: 0,
         networkFeeBtc: 0,
         totalDebitedBtc: amountBtc,
-        feeRateSatPerByte: feeRateSatPerByte,
         isLoading: isLoading,
         error: error,
+        feeTier: _selectedFeeTier,
+        networkFeeCertainty: isLoading
+            ? NetworkFeeCertainty.loading
+            : NetworkFeeCertainty.known,
       );
     }
 
@@ -471,14 +589,22 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       return _buildOnchainFeeQuote(
         amountBtc: amountBtc,
         fee: resolvedFee!,
+        tier: _selectedFeeTier,
       );
     }
 
+    final tierPick = FeeTierSelection.fromEstimate(
+      resolvedFee!,
+      tier: _selectedFeeTier,
+    );
     return _buildExternalFeeQuote(
       amountBtc: amountBtc,
       platformFeeRate: platformFeeRate,
-      networkFeeBtc: networkFeeBtc,
-      feeRateSatPerByte: feeRateSatPerByte,
+      networkFeeBtc: tierPick.networkFeeBtc,
+      feeRateSatPerByte: tierPick.feeRateSatPerByte,
+      estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
+      feeSource: resolvedFee!.feeSource,
+      quoteExpiresAt: resolvedFee!.quoteExpiresAt,
     );
   }
 
@@ -497,27 +623,37 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
         platformFeeBtc: 0,
         networkFeeBtc: 0,
         totalDebitedBtc: amountBtc,
+        feeTier: _selectedFeeTier,
       );
     }
 
     if (destination.isLightning) {
-      return _buildExternalFeeQuote(
+      if (_isColdSource(wallet)) {
+        SnackbarHelper.showError(SendMoneyCopy.coldNoLightning(context));
+        return null;
+      }
+      return _buildLightningFeeQuote(
         amountBtc: amountBtc,
         platformFeeRate: wallet.withdrawalFeeRate,
-        networkFeeBtc: _defaultLightningRoutingFeeBtc,
       );
     }
 
     try {
       final fee = await ref.read(feeEstimateProvider(amountBtc).future);
-      if (fee.serverPriced) {
-        return _buildOnchainFeeQuote(amountBtc: amountBtc, fee: fee);
+      if (fee.quoteExpiresAt != null &&
+          !DateTime.now().toUtc().isBefore(fee.quoteExpiresAt!.toUtc())) {
+        ref.invalidate(feeEstimateProvider(amountBtc));
+        final refreshed = await ref.read(feeEstimateProvider(amountBtc).future);
+        return _quoteFromFeeEstimate(
+          amountBtc: amountBtc,
+          wallet: wallet,
+          fee: refreshed,
+        );
       }
-      return _buildExternalFeeQuote(
+      return _quoteFromFeeEstimate(
         amountBtc: amountBtc,
-        platformFeeRate: wallet.withdrawalFeeRate,
-        networkFeeBtc: fee.estimatedStandardBtc,
-        feeRateSatPerByte: fee.standardSatPerByte,
+        wallet: wallet,
+        fee: fee,
       );
     } catch (error) {
       SnackbarHelper.showError(networkFeeUnavailableMessage);
@@ -525,10 +661,45 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     }
   }
 
+  SendFeeQuote _quoteFromFeeEstimate({
+    required double amountBtc,
+    required Wallet wallet,
+    required FeeEstimate fee,
+  }) {
+    if (fee.serverPriced) {
+      return _buildOnchainFeeQuote(
+        amountBtc: amountBtc,
+        fee: fee,
+        tier: _selectedFeeTier,
+      );
+    }
+    final tierPick =
+        FeeTierSelection.fromEstimate(fee, tier: _selectedFeeTier);
+    return _buildExternalFeeQuote(
+      amountBtc: amountBtc,
+      platformFeeRate: _isColdSource(wallet) ? 0.0 : wallet.withdrawalFeeRate,
+      networkFeeBtc: tierPick.networkFeeBtc,
+      feeRateSatPerByte: tierPick.feeRateSatPerByte,
+      estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
+      feeSource: fee.feeSource,
+      quoteExpiresAt: fee.quoteExpiresAt,
+    );
+  }
+
   SendFeeQuote _buildOnchainFeeQuote({
     required double amountBtc,
     required FeeEstimate fee,
+    required NetworkFeeTier tier,
   }) {
+    final tierPick = FeeTierSelection.fromEstimate(fee, tier: tier);
+    // Server-priced quotes currently price the standard tier as totalToSend.
+    // When another tier is selected, recompute debit from network fee delta.
+    final standardNet = fee.estimatedStandardBtc;
+    final tierNet = tierPick.networkFeeBtc;
+    final delta = tierNet - standardNet;
+    final totalDebited = fee.serverPriced
+        ? (fee.totalToSend + delta).clamp(0.0, double.infinity)
+        : fee.totalToSend;
     final platformFeeRate =
         amountBtc > 0 ? fee.keroseneFeeBtc / amountBtc : 0.0;
     return SendFeeQuote(
@@ -536,12 +707,38 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       receiverAmountBtc: fee.amountReceived,
       platformFeeRate: platformFeeRate,
       platformFeeBtc: fee.keroseneFeeBtc,
-      networkFeeBtc: fee.estimatedStandardBtc,
-      totalDebitedBtc: fee.totalToSend,
-      feeRateSatPerByte: fee.standardSatPerByte,
-      estimatedSettlementSeconds: fee.standardEstimatedSeconds,
+      networkFeeBtc: tierNet,
+      totalDebitedBtc: totalDebited,
+      feeRateSatPerByte: tierPick.feeRateSatPerByte,
+      estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
       feeSource: fee.feeSource,
       quoteExpiresAt: fee.quoteExpiresAt,
+      feeTier: tier,
+      networkFeeCertainty: NetworkFeeCertainty.known,
+    );
+  }
+
+  SendFeeQuote _buildLightningFeeQuote({
+    required double amountBtc,
+    required double platformFeeRate,
+  }) {
+    final calculation = WithdrawFeeQuoteCalculation.resolve(
+      mode: WithdrawFeeMode.senderPays,
+      requestedAmountBtc: amountBtc,
+      platformFeeRate: platformFeeRate,
+      networkFeeBtc: 0,
+    );
+    return SendFeeQuote(
+      requestedAmountBtc: amountBtc,
+      receiverAmountBtc: calculation.receiverAmountBtc,
+      platformFeeRate: calculation.platformFeeRate,
+      platformFeeBtc: calculation.platformFeeBtc,
+      networkFeeBtc: 0,
+      // Debit shown without invented routing fee; network fee settles at pay time.
+      totalDebitedBtc: calculation.totalDebitedBtc,
+      feeSource: 'lightning_routing_unknown',
+      feeTier: _selectedFeeTier,
+      networkFeeCertainty: NetworkFeeCertainty.unknownUntilPay,
     );
   }
 
@@ -550,6 +747,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     required double platformFeeRate,
     required double networkFeeBtc,
     double? feeRateSatPerByte,
+    int? estimatedSettlementSeconds,
+    String? feeSource,
+    DateTime? quoteExpiresAt,
   }) {
     final calculation = WithdrawFeeQuoteCalculation.resolve(
       mode: WithdrawFeeMode.senderPays,
@@ -565,6 +765,11 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       networkFeeBtc: calculation.networkFeeBtc,
       totalDebitedBtc: calculation.totalDebitedBtc,
       feeRateSatPerByte: feeRateSatPerByte,
+      estimatedSettlementSeconds: estimatedSettlementSeconds,
+      feeSource: feeSource,
+      quoteExpiresAt: quoteExpiresAt,
+      feeTier: _selectedFeeTier,
+      networkFeeCertainty: NetworkFeeCertainty.known,
     );
   }
 
@@ -614,6 +819,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     );
   }
 
+  bool _isColdSource(Wallet? wallet) =>
+      wallet != null && (wallet.isColdWallet || wallet.isSelfCustody);
+
   Widget _buildDestinationStep(BuildContext context) {
     final recentDestinations = ref
         .watch(recentTransactionDestinationsProvider)
@@ -624,7 +832,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       receiverController: _receiverController,
       analysis: analysis,
       recentDestinations: recentDestinations,
-      isLoading: _destinationResolutionBusy,
+      isLoading: _destinationResolutionBusy || _liveResolving,
       onDestinationChanged: () {
         setState(() {
           _destinationEditVersion += 1;
@@ -633,13 +841,49 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
           _lockedRecipientAddress = '';
           _recentDestinationAddressForSave = null;
           _lockedRecipientLabel = null;
+          _liveResolvedIntent = null;
+          _userSelectedRail = null;
+          _liveResolveError = null;
+          _liveResolving = false;
           if (widget.initialAmountBtc == null) {
             _lockedAmountBtc = 0;
           }
         });
+        _scheduleLiveResolve();
       },
       onScan: _scanInternalDestination,
       onRecentDestinationSelected: _applyRecentInternalDestination,
+      resolvedIntent: _liveResolvedIntent,
+      isLiveResolving: _liveResolving,
+      liveResolveError: _liveResolveError,
+      onRailSelected: (rail) {
+        setState(() {
+          _userSelectedRail = rail;
+          final current = _liveResolvedIntent;
+          if (current != null) {
+            _liveResolvedIntent = ResolvedPaymentIntent(
+              intent: current.intent,
+              source: current.source,
+              selectedRail: rail,
+              alternatives: current.alternatives
+                  .map(
+                    (o) => RailOption(
+                      rail: o.rail,
+                      title: o.title,
+                      subtitle: o.subtitle,
+                      recommended: o.rail == rail,
+                    ),
+                  )
+                  .toList(growable: false),
+              destWalletId: current.destWalletId,
+              destOnchainAddress: current.destOnchainAddress,
+              explainWhy: current.explainWhy,
+              amountLocked: current.amountLocked,
+              blockers: current.blockers,
+            );
+          }
+        });
+      },
       onContinue: () {
         final currentDestination = _receiverController.text.trim();
         final currentAnalysis = _currentDestinationAnalysis();
@@ -651,9 +895,93 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
           );
           return;
         }
+        if (_liveResolvedIntent != null &&
+            !_liveResolvedIntent!.canContinue) {
+          final msg = _liveResolvedIntent!.blockers.isNotEmpty
+              ? _liveResolvedIntent!.blockers.first.message
+              : context.tr.errReceiverNotReady;
+          SnackbarHelper.showError(msg);
+          return;
+        }
         unawaited(_continueFromDestinationStep(currentAnalysis));
       },
     );
+  }
+
+  void _scheduleLiveResolve() {
+    _liveResolveTimer?.cancel();
+    final intent = const PaymentIntentParser().parse(_receiverController.text);
+    if (!shouldLiveResolveInternal(intent)) {
+      // Local-only resolve for external destinations (network/self-pay hints).
+      final wallet = _selectedWallet ??
+          (_resolveWallet(ref.read(walletProvider)));
+      final local = PaymentIntentResolver.instance.resolveLocal(
+        intent: intent,
+        source: sourceCustodyOf(wallet),
+        sourceWalletId: wallet?.id,
+        sourceWalletAddress: wallet?.address,
+        userSelectedRail: _userSelectedRail,
+        expectedNetwork: expectedBitcoinNetwork,
+      );
+      if (!intent.isEmpty && !intent.isInvalid && !intent.isInternal) {
+        setState(() {
+          _liveResolvedIntent = local;
+          _liveResolveError = local.blockers.isNotEmpty
+              ? local.blockers.first.message
+              : null;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _liveResolving = true;
+      _liveResolveError = null;
+    });
+    final token = ++_liveResolveToken;
+    _liveResolveTimer = Timer(const Duration(milliseconds: 350), () {
+      unawaited(_runLiveResolve(token: token, intent: intent));
+    });
+  }
+
+  Future<void> _runLiveResolve({
+    required int token,
+    required PaymentIntent intent,
+  }) async {
+    final wallet = _selectedWallet ?? _resolveWallet(ref.read(walletProvider));
+    final source = sourceCustodyOf(wallet);
+    try {
+      final capabilities = await ref
+          .read(kfeReceivingCapabilitiesServiceProvider)
+          .receivingCapabilities(intent.normalizedValue);
+      if (!mounted || token != _liveResolveToken) return;
+      final resolved =
+          PaymentIntentResolver.instance.resolveWithCapabilities(
+        intent: intent,
+        source: source,
+        capabilities: capabilities,
+        userSelectedRail: _userSelectedRail,
+        sourceWalletId: wallet?.id,
+        sourceWalletAddress: wallet?.address,
+        expectedNetwork: expectedBitcoinNetwork,
+        destOnchainAddress: capabilities.onchainReceiveAddress,
+      );
+      setState(() {
+        _liveResolvedIntent = resolved;
+        _liveResolving = false;
+        _liveResolveError = resolved.blockers.isNotEmpty
+            ? resolved.blockers.first.message
+            : null;
+      });
+    } catch (error) {
+      if (!mounted || token != _liveResolveToken) return;
+      setState(() {
+        _liveResolving = false;
+        _liveResolvedIntent = null;
+        _liveResolveError =
+            ErrorTranslator.translate(context.tr, error.toString());
+      });
+    }
   }
 
   Future<void> _continueFromDestinationStep(
@@ -662,10 +990,12 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     if (_destinationResolutionBusy) {
       return;
     }
+    if (!_ensureOnline()) return;
 
     FocusScope.of(context).unfocus();
     final editVersion = _destinationEditVersion;
     var destination = analysis;
+    final sourceWallet = _resolveWallet(ref.read(walletProvider));
 
     setState(() => _destinationResolutionBusy = true);
     try {
@@ -676,6 +1006,21 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
               : SendMoneyCopy.unrecognizedDestination(context),
         );
         return;
+      }
+
+      // Cold source: require local seed and on-chain destination only.
+      if (_isColdSource(sourceWallet)) {
+        final hasSeed =
+            await ColdWalletKeyVault.instance.hasSeed(sourceWallet!.id.trim());
+        if (!mounted || editVersion != _destinationEditVersion) return;
+        if (!hasSeed) {
+          SnackbarHelper.showError(SendMoneyCopy.coldSeedMissing(context));
+          return;
+        }
+        if (destination.isPaymentLink || destination.isLightning) {
+          SnackbarHelper.showError(SendMoneyCopy.coldOnlyOnchain(context));
+          return;
+        }
       }
 
       if (destination.isPaymentLink) {
@@ -746,11 +1091,12 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     );
   }
 
-  bool _isOwnInternalDestination(
-    WalletState walletState,
+  /// True when destination is the same wallet used as the send source.
+  bool _isSameSourceWalletDestination(
+    Wallet? sourceWallet,
     SendDestinationAnalysis destination,
   ) {
-    if (!destination.isInternal || walletState is! WalletLoaded) {
+    if (sourceWallet == null) {
       return false;
     }
     final normalizedDestination =
@@ -758,47 +1104,151 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     if (normalizedDestination.isEmpty) {
       return false;
     }
-    return walletState.wallets.any((wallet) {
+    final sourceId = sourceWallet.id.trim().toLowerCase();
+    final sourceAddress = sourceWallet.address.trim().toLowerCase();
+    return normalizedDestination == sourceId ||
+        (sourceAddress.isNotEmpty && normalizedDestination == sourceAddress);
+  }
+
+  /// If destination points at the user's own cold wallet (by id), rewrite as
+  /// on-chain send to that wallet's receive address.
+  SendDestinationAnalysis? _ownColdWalletOnchainDestination(
+    WalletState walletState,
+    SendDestinationAnalysis destination,
+  ) {
+    if (!destination.isInternal || walletState is! WalletLoaded) {
+      return null;
+    }
+    final normalized = destination.normalizedValue.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    for (final wallet in walletState.wallets) {
+      if (!wallet.isColdWallet && !wallet.isSelfCustody) {
+        continue;
+      }
       final walletId = wallet.id.trim().toLowerCase();
-      final walletAddress = wallet.address.trim().toLowerCase();
-      return normalizedDestination == walletId ||
-          (walletAddress.isNotEmpty && normalizedDestination == walletAddress);
-    });
+      if (walletId != normalized) {
+        continue;
+      }
+      final address = wallet.address.trim();
+      if (address.isEmpty || !looksLikeBitcoinAddress(address)) {
+        return null;
+      }
+      return SendDestinationAnalysis(
+        type: SendDestinationType.onChain,
+        normalizedValue: address,
+        amountBtc: destination.amountBtc,
+        label: wallet.name.isNotEmpty ? wallet.name : destination.label,
+        message: destination.message,
+        detectedOnchainNetwork: inferBitcoinNetworkFromAddress(address),
+      );
+    }
+    return null;
   }
 
   Future<SendDestinationAnalysis?> _resolveDestinationForKfe(
     SendDestinationAnalysis analysis,
   ) async {
-    if (!analysis.isInternal) {
-      return analysis;
+    final parser = const PaymentIntentParser();
+    final intent = analysis.isInternal
+        ? parser.parse(analysis.normalizedValue).copyWith(
+              amountBtc: analysis.amountBtc,
+              label: analysis.label,
+              message: analysis.message,
+            )
+        : parser.parse(_receiverController.text).copyWith(
+              amountBtc: analysis.amountBtc ?? analysis.amountBtc,
+              label: analysis.label,
+              message: analysis.message,
+            );
+
+    // Prefer fresh parse of the free-text field when not locked internal.
+    final workingIntent = () {
+      if (analysis.isInternal &&
+          analysis.normalizedValue.contains('-') &&
+          analysis.normalizedValue.length > 30) {
+        // Already a wallet UUID lock from a previous resolve.
+        return PaymentIntent(
+          kind: PaymentDestinationKind.internal,
+          rawInput: analysis.normalizedValue,
+          normalizedValue: analysis.normalizedValue,
+          amountBtc: analysis.amountBtc,
+          label: analysis.label,
+          message: analysis.message,
+        );
+      }
+      final fromField = parser.parse(_receiverController.text);
+      if (fromField.isValid) {
+        return fromField.copyWith(
+          amountBtc: analysis.amountBtc ?? fromField.amountBtc,
+          label: analysis.label ?? fromField.label,
+          message: analysis.message ?? fromField.message,
+        );
+      }
+      return intent;
+    }();
+
+    final wallet = _selectedWallet ?? _resolveWallet(ref.read(walletProvider));
+    final source = sourceCustodyOf(wallet);
+    final resolver = PaymentIntentResolver.instance;
+
+    if (!workingIntent.isInternal) {
+      final local = resolver.resolveLocal(
+        intent: workingIntent,
+        source: source,
+        sourceWalletId: wallet?.id,
+        sourceWalletAddress: wallet?.address,
+        userSelectedRail: _userSelectedRail,
+        expectedNetwork: expectedBitcoinNetwork,
+      );
+      if (!local.canContinue) {
+        if (mounted && local.blockers.isNotEmpty) {
+          SnackbarHelper.showError(local.blockers.first.message);
+        }
+        return null;
+      }
+      setState(() => _liveResolvedIntent = local);
+      return resolver.toLockedDestination(local);
     }
 
     try {
-      final requestedIdentifier = analysis.normalizedValue.trim();
+      final requestedIdentifier = workingIntent.normalizedValue.trim();
       final capabilities = await ref
           .read(kfeReceivingCapabilitiesServiceProvider)
           .receivingCapabilities(requestedIdentifier);
       if (!mounted) return null;
-      final walletId = capabilities.internalWalletId?.trim();
-      if (!capabilities.canReceiveInternal ||
-          walletId == null ||
-          walletId.isEmpty) {
-        SnackbarHelper.showError(context.tr.errReceiverNotReady);
+
+      final resolved = resolver.resolveWithCapabilities(
+        intent: workingIntent,
+        source: source,
+        capabilities: capabilities,
+        userSelectedRail: _userSelectedRail,
+        sourceWalletId: wallet?.id,
+        sourceWalletAddress: wallet?.address,
+        expectedNetwork: expectedBitcoinNetwork,
+        destOnchainAddress: capabilities.onchainReceiveAddress,
+      );
+      setState(() {
+        _liveResolvedIntent = resolved;
+        _liveResolveError = resolved.blockers.isNotEmpty
+            ? resolved.blockers.first.message
+            : null;
+      });
+
+      if (!resolved.canContinue) {
+        SnackbarHelper.showError(
+          resolved.blockers.isNotEmpty
+              ? resolved.blockers.first.message
+              : context.tr.errReceiverNotReady,
+        );
         return null;
       }
 
-      final resolved = SendDestinationAnalysis(
-        type: SendDestinationType.internal,
-        normalizedValue: walletId,
-        amountBtc: analysis.amountBtc,
-        label: capabilities.receiverDisplayName.trim().isNotEmpty
-            ? capabilities.receiverDisplayName.trim()
-            : requestedIdentifier,
-        message: analysis.message,
-      );
-
-      _recentDestinationAddressForSave = requestedIdentifier;
-      return resolved;
+      if (resolved.selectedRail == PaymentRail.internal) {
+        _recentDestinationAddressForSave = requestedIdentifier;
+      }
+      return resolver.toLockedDestination(resolved);
     } catch (error) {
       if (!mounted) return null;
       SnackbarHelper.showError(
@@ -869,7 +1319,19 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     required SendDestinationAnalysis destination,
     required SendFeeQuote feeQuote,
     required bool isLoading,
+    required bool isOnline,
   }) {
+    // Auto-refresh when quote is stale so the user is not stuck on a dead CTA.
+    if (destination.isOnChain &&
+        feeQuote.isQuoteExpired &&
+        amountBtc > 0 &&
+        !_destinationResolutionBusy) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.invalidate(feeEstimateProvider(amountBtc));
+      });
+    }
+
     return SendAmountStep(
       onBack: _handleBack,
       amount: _amount,
@@ -882,7 +1344,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       wallet: wallet,
       destination: destination,
       feeQuote: feeQuote,
-      isLoading: isLoading,
+      isLoading: isLoading || !isOnline,
+      feeTier: _selectedFeeTier,
+      onFeeTierChanged: (tier) {
+        if (tier == _selectedFeeTier) return;
+        HapticFeedback.selectionClick();
+        setState(() => _selectedFeeTier = tier);
+      },
       onAmountChanged: _onAmountChanged,
       onContinue: _handleContinue,
       resolveAmountBtc: (amountValue) => _currentAmountBtc(
@@ -958,7 +1426,24 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     required SendDestinationAnalysis destination,
     required double amount,
     required String toAddress,
-  }) async {}
+  }) async {
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    final amountLabel = formatBtcValue(amount);
+    final destLabel = _currentRecipientLabel();
+    final shortDest = destLabel.length > 22
+        ? '${destLabel.substring(0, 10)}…${destLabel.substring(destLabel.length - 6)}'
+        : destLabel;
+    AppNotice.showSuccess(
+      context,
+      title: SendMoneyCopy.sendSuccessTitle(context),
+      message: SendMoneyCopy.sendSuccessBody(
+        context,
+        amountLabel: '$amountLabel BTC',
+        destinationLabel: shortDest,
+      ),
+    );
+  }
 
   Future<dynamic> _confirmPayment({
     required BuildContext confirmationContext,
@@ -1067,14 +1552,69 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   }
 
   Future<void> _scanInternalDestination() async {
-    final payload = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-    );
+    // Sheet: QR camera · NFC tag · clipboard paste → same PaymentIntentParser path.
+    if (!_ensureOnline()) return;
+    final payload = await DestinationCaptureSheet.show(context);
     final value = payload?.trim();
     if (!mounted || value == null || value.isEmpty) {
       return;
     }
 
+    HapticFeedback.selectionClick();
     await _parsePaymentRequest(value);
+  }
+}
+
+class _OfflineSendBanner extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _OfflineSendBanner({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: KeroseneBrandTokens.error.withValues(alpha: 0.12),
+      child: SafeArea(
+        bottom: false,
+        child: Semantics(
+          liveRegion: true,
+          label: SendMoneyCopy.offlineBanner(context),
+          child: InkWell(
+            onTap: onRetry,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.wifi_off_rounded,
+                    size: 18,
+                    color: KeroseneBrandTokens.error,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      SendMoneyCopy.offlineBanner(context),
+                      style: AppTypography.inter(
+                        color: KeroseneBrandTokens.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    KeroseneUiCopy.offlineRetryHint,
+                    style: AppTypography.inter(
+                      color: KeroseneBrandTokens.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

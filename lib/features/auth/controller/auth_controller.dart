@@ -10,9 +10,11 @@ import '../../../core/services/passkey_service.dart';
 import '../../../core/errors/failures.dart';
 import '../../../core/providers/alert_preferences_provider.dart';
 import '../presentation/state/auth_state.dart';
+import '../presentation/state/passkey_register_result.dart';
 import 'auth_providers.dart';
 
 export '../presentation/state/auth_state.dart';
+export '../presentation/state/passkey_register_result.dart';
 
 /// @nodoc
 /// Role: AI-Native Controller for Authentication feature.
@@ -69,8 +71,16 @@ class AuthController extends Notifier<AuthState> {
     authRepository = ref.watch(authRepositoryProvider);
     ref.onDispose(_stopOnboardingPolling);
 
-    _checkAuthStatus();
-    return const AuthInitial();
+    // Stay on AuthLoading (K logo shell) until the first session probe finishes,
+    // so cold start never flashes Welcome/PIN before the K loading.
+    Future.microtask(() async {
+      if (!ref.mounted) return;
+      if (state is AuthInitial) {
+        state = const AuthLoading();
+      }
+      await _checkAuthStatus();
+    });
+    return const AuthLoading();
   }
 
   void _stopOnboardingPolling() {
@@ -395,6 +405,21 @@ class AuthController extends Notifier<AuthState> {
     });
   }
 
+  /// After password (+ optional TOTP) succeeded and JWT is stored, load `/auth/me`
+  /// and mark the session authenticated. Used when this device has no local passkey.
+  Future<void> establishSessionAfterPasswordLogin() async {
+    state = const AuthLoading();
+    await _checkAuthStatus(forceRemote: true);
+    if (state is AuthAuthenticated) {
+      unawaited(_syncBackgroundAlertsService());
+    } else if (state is! AuthError && state is! AuthServerUnavailable) {
+      // Token present but profile fetch failed — still treat as unauthenticated for UX.
+      state = const AuthError(
+        'Não conseguimos carregar sua sessão. Tente novamente.',
+      );
+    }
+  }
+
   Future<void> logout() async {
     _stopOnboardingPolling();
     try {
@@ -457,7 +482,7 @@ class AuthController extends Notifier<AuthState> {
           // 3. Finish login with backend (credential already has the right structure)
           final finishResult = await authRepository.passkeyLoginFinish(
             username: username,
-            credential: credential,
+            credential: PasskeyService.toWirePayload(credential),
           );
 
           await finishResult.fold(
@@ -482,7 +507,7 @@ class AuthController extends Notifier<AuthState> {
               );
               final renewedFinish = await authRepository.passkeyLoginFinish(
                 username: username,
-                credential: renewedCredential,
+                credential: PasskeyService.toWirePayload(renewedCredential),
               );
               await renewedFinish.fold(
                 (secondFailure) async {
@@ -497,11 +522,17 @@ class AuthController extends Notifier<AuthState> {
                   }
                   state = _mapFailureToAuthError(secondFailure);
                 },
-                (loginResult) async =>
-                    _completePasskeyLogin(username, loginResult),
+                (loginResult) async {
+                  await passkeyService
+                      .commitAuthenticationCounter(renewedCredential);
+                  _completePasskeyLogin(username, loginResult);
+                },
               );
             },
-            (loginResult) async => _completePasskeyLogin(username, loginResult),
+            (loginResult) async {
+              await passkeyService.commitAuthenticationCounter(credential);
+              _completePasskeyLogin(username, loginResult);
+            },
           );
         } catch (e) {
           state = _mapPasskeyExceptionToAuthError(
@@ -551,60 +582,112 @@ class AuthController extends Notifier<AuthState> {
     return null;
   }
 
-  Future<void> registerPasskey() async {
+  /// Registers a passkey for the **currently authenticated** session.
+  ///
+  /// Must not transition global auth to [AuthLoading]/[AuthError]: the mobile
+  /// shell only keeps the home/settings tree when state is [AuthAuthenticated].
+  /// Device-binding conflicts (AUTH_024) are returned as
+  /// [PasskeyRegisterResult.deviceConflict] so settings can confirm unlink and
+  /// retry while the session stays alive.
+  Future<PasskeyRegisterResult> registerPasskey({
+    bool confirmUnlinkDevice = false,
+  }) async {
     final currentState = state;
     if (currentState is! AuthAuthenticated) {
-      state = const AuthError(
-          'Você precisa estar logado para registrar uma passkey');
-      return;
+      return const PasskeyRegisterResult.notAuthenticated();
     }
 
-    final username = currentState.user.name;
-    state = const AuthLoading();
+    final sessionUser = currentState.user;
+    final username = sessionUser.name;
 
-    // 1. Get challenge from backend
     final startResult = await authRepository.passkeyRegisterStart(username);
+    final challengeHex = startResult.fold<String?>(
+      (failure) => null,
+      (value) => value,
+    );
+    if (challengeHex == null) {
+      final failure = startResult.fold((f) => f, (_) => null)!;
+      return PasskeyRegisterResult.failure(
+        message: failure.message,
+        errorCode: failure.errorCode,
+        data: failure.data,
+      );
+    }
 
-    await startResult.fold(
-      (failure) async {
-        state = _mapFailureToAuthError(failure);
-      },
-      (challengeHex) async {
-        try {
-          // 2. Register passkey (generates key pair + signs challenge with biometric)
-          final credential = await passkeyService.register(
-            challengeHex: challengeHex,
-            username: username,
-          );
+    try {
+      if (confirmUnlinkDevice) {
+        await passkeyService.prepareDeviceRebind(newUsername: username);
+      }
+      final credential = await passkeyService.register(
+        challengeHex: challengeHex,
+        username: username,
+        confirmUnlinkDevice: confirmUnlinkDevice,
+      );
 
-          // 3. Finish registration with backend
-          final finishResult =
-              await authRepository.passkeyRegisterFinish(credential);
+      final finishResult =
+          await authRepository.passkeyRegisterFinish(credential);
 
-          await finishResult.fold(
-            (failure) async {
-              state = _mapFailureToAuthError(failure);
-            },
-            (_) async {
-              final refreshedUser = await authRepository.getCurrentUser();
-              refreshedUser.fold(
-                (_) => state = AuthAuthenticated(currentState.user),
-                (user) => state = AuthAuthenticated(user),
-              );
-              debugPrint('Passkey registered successfully.');
-            },
-          );
-        } catch (e) {
-          state = _mapPasskeyExceptionToAuthError(
-            e,
-            fallbackMessage: 'Erro no registro de passkey',
+      final finishFailure = finishResult.fold((f) => f, (_) => null);
+      if (finishFailure != null) {
+        if (_isDeviceBindingConflict(finishFailure)) {
+          return PasskeyRegisterResult.deviceConflict(
+            message: finishFailure.message,
+            errorCode: finishFailure.errorCode,
+            data: finishFailure.data,
           );
         }
-      },
-    );
+        return PasskeyRegisterResult.failure(
+          message: finishFailure.message,
+          errorCode: finishFailure.errorCode,
+          data: finishFailure.data,
+        );
+      }
+
+      await passkeyService.markDeviceBound(username: username);
+      final refreshedUser = await authRepository.getCurrentUser();
+      // Always keep an authenticated session after a successful bind.
+      refreshedUser.fold(
+        (_) {
+          if (state is! AuthAuthenticated) {
+            state = AuthAuthenticated(sessionUser);
+          }
+        },
+        (user) => state = AuthAuthenticated(user),
+      );
+      debugPrint('Passkey registered successfully.');
+      return const PasskeyRegisterResult.success();
+    } catch (e) {
+      final mapped = _mapPasskeyExceptionToAuthError(
+        e,
+        fallbackMessage: 'Erro no registro de passkey',
+      );
+      return PasskeyRegisterResult.failure(
+        message: mapped.message,
+        errorCode: mapped.errorCode,
+        data: mapped.data,
+      );
+    }
   }
 
-  Future<void> registerPasskeyOnboarding(String sessionId) async {
+  bool _isDeviceBindingConflict(Failure failure) {
+    final code = (failure.errorCode ?? '').toUpperCase();
+    if (code == 'AUTH_024' ||
+        code == 'ERR_AUTH_DEVICE_ALREADY_BOUND' ||
+        code.endsWith('AUTH_DEVICE_ALREADY_BOUND')) {
+      return true;
+    }
+    final data = failure.data;
+    if (data is Map &&
+        data['action']?.toString() == 'CONFIRM_UNLINK_DEVICE') {
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> registerPasskeyOnboarding(
+    String sessionId, {
+    bool confirmUnlinkDevice = false,
+  }) async {
     final currentState = state;
     String? username;
     if (currentState is AuthTotpVerified) {
@@ -628,10 +711,17 @@ class AuthController extends Notifier<AuthState> {
           final effectiveUsername =
               username ?? 'User_${sessionId.substring(0, 4)}';
 
+          if (confirmUnlinkDevice) {
+            await passkeyService.prepareDeviceRebind(
+              newUsername: effectiveUsername,
+            );
+          }
+
           // 2. Register passkey (generates key pair + signs challenge with biometric)
           final credential = await passkeyService.register(
             challengeHex: challengeHex,
             username: effectiveUsername,
+            confirmUnlinkDevice: confirmUnlinkDevice,
           );
 
           // 3. Finish registration with backend
@@ -646,6 +736,7 @@ class AuthController extends Notifier<AuthState> {
               state = _mapFailureToAuthError(failure);
             },
             (_) async {
+              await passkeyService.markDeviceBound(username: effectiveUsername);
               await _checkAuthStatus();
             },
           );

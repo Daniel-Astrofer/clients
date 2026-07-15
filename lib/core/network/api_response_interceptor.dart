@@ -72,29 +72,42 @@ class ApiResponseInterceptor extends Interceptor {
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     dynamic data = response.data;
 
-    // Parse stringified JSON if needed
+    // Parse stringified JSON (Tor relay / odd content-types often leave strings).
     if (data is String) {
       final trimmed = data.trim();
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
           data = jsonDecode(trimmed);
+          response.data = data;
         } catch (_) {}
       }
     }
 
-    if (data is Map<String, dynamic>) {
+    // Dio may return Map<String, dynamic> or other Map implementations.
+    if (data is Map) {
       // Check for standardized ApiResponse payload
       if (data.containsKey('success')) {
         final success = data['success'] == true;
 
         if (success) {
-          // Successfully obtained wrapper. Unwrap 'data' unconditionally avoiding defensive nulls checking.
-          response.data = data.containsKey('data') ? data['data'] : null;
+          // Successfully obtained wrapper. Unwrap 'data'.
+          var unwrapped = data.containsKey('data') ? data['data'] : null;
+          // Some transports double-encode the payload as JSON text.
+          if (unwrapped is String) {
+            final t = unwrapped.trim();
+            if (t.startsWith('{') || t.startsWith('[')) {
+              try {
+                unwrapped = jsonDecode(t);
+              } catch (_) {}
+            }
+          }
+          response.data = unwrapped;
         } else {
           // Explicit API failure payload (e.g., success: false)
           final String errMsg =
-              data['message'] ?? 'Não conseguimos concluir agora.';
-          final String errCode = data['errorCode'] ?? 'UNKNOWN_ERROR';
+              data['message']?.toString() ?? 'Não conseguimos concluir agora.';
+          final String errCode =
+              data['errorCode']?.toString() ?? 'UNKNOWN_ERROR';
 
           throw DioException(
             requestOptions: response.requestOptions,

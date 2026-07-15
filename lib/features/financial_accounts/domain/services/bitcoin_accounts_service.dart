@@ -70,6 +70,7 @@ abstract class BitcoinAccountsService {
     required int amountSats,
     int? feeRate,
     List<String> selectedUtxoIds = const [],
+    String? totpCode,
   });
 
   Future<PsbtWorkflowView> getPsbtWorkflow(String workflowId);

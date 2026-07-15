@@ -36,6 +36,7 @@ class PasskeyService {
   Future<Map<String, dynamic>> register({
     required String challengeHex,
     required String username,
+    bool confirmUnlinkDevice = false,
   }) async {
     final subject = _subject(username);
     final credentialId = SovereignAuthService.generateCredentialId();
@@ -65,6 +66,12 @@ class PasskeyService {
         ? deviceMetadata.deviceName
         : await _cryptographyService.getDeviceName();
 
+    // Persist registration counter only after local key material is ready.
+    await _cryptographyService.commitSignatureCounter(
+      assertion.signatureCounter,
+      subject: subject,
+    );
+
     return {
       'publicKey': publicKeyBase64,
       'public_key': publicKeyBase64,
@@ -80,6 +87,8 @@ class PasskeyService {
       'signature': signatureBase64Url,
       'authData': authDataBase64Url,
       'clientDataJSON': assertion.clientDataJson,
+      'confirmUnlinkDevice': confirmUnlinkDevice,
+      'confirm_unlink_device': confirmUnlinkDevice,
     };
   }
 
@@ -114,6 +123,7 @@ class PasskeyService {
     );
     final signatureBase64Url = _toBase64Url(signature);
     final authDataBase64Url = _toBase64Url(assertion.authDataBytes);
+    final deviceMetadata = await DeviceHelper.getDeviceMetadata();
 
     return {
       'username': username,
@@ -123,7 +133,32 @@ class PasskeyService {
       'credentialId': _toBase64(credentialId),
       'credential_id': _toBase64(credentialId),
       'id': _toBase64(credentialId),
+      'deviceInstallId': deviceMetadata.deviceInstallId,
+      'device_install_id': deviceMetadata.deviceInstallId,
+      // Counter is committed by the caller after a successful server verify.
+      '_signatureCounter': assertion.signatureCounter,
+      '_subject': subject,
     };
+  }
+
+  /// Persist the signature counter after a successful passkey verify response.
+  Future<void> commitAuthenticationCounter(Map<String, dynamic> credential) async {
+    final counter = credential['_signatureCounter'];
+    final subject = credential['_subject']?.toString();
+    if (counter is int) {
+      await _cryptographyService.commitSignatureCounter(
+        counter,
+        subject: subject,
+      );
+    }
+  }
+
+  /// Removes client-only metadata before the map is posted to the API.
+  static Map<String, dynamic> toWirePayload(Map<String, dynamic> credential) {
+    final copy = Map<String, dynamic>.from(credential);
+    copy.remove('_signatureCounter');
+    copy.remove('_subject');
+    return copy;
   }
 
   /// Builds a proper COSE key map for Ed25519 (alg -8).
@@ -141,6 +176,28 @@ class PasskeyService {
     );
   }
 
+  /// Clears local sovereign material for a username (after device unlink).
+  Future<void> clearLocalPasskey({required String username}) async {
+    await _cryptographyService.clearSubjectMaterial(
+      subject: _subject(username),
+    );
+  }
+
+  /// Before rebinding this device to [newUsername], remove local keys of the
+  /// previously bound account on this install (if different).
+  Future<void> prepareDeviceRebind({required String newUsername}) async {
+    final previous = await DeviceHelper.getDeviceBoundUsername();
+    final next = _subject(newUsername);
+    if (previous != null && previous.isNotEmpty && previous != next) {
+      await clearLocalPasskey(username: previous);
+    }
+  }
+
+  /// Mark [username] as the account bound to this install after successful register.
+  Future<void> markDeviceBound({required String username}) async {
+    await DeviceHelper.setDeviceBoundUsername(_subject(username));
+  }
+
   Future<_PasskeyAssertionContext> _buildAssertionContext({
     required String challengeHex,
     required _PasskeyRequestType requestType,
@@ -154,9 +211,9 @@ class PasskeyService {
         'crossOrigin': false,
       }),
     );
-    final authDataBytes = _buildAuthenticatorDataBytes(
-      await _cryptographyService.nextSignatureCounter(subject: subject),
-    );
+    final signatureCounter =
+        await _cryptographyService.nextSignatureCounter(subject: subject);
+    final authDataBytes = _buildAuthenticatorDataBytes(signatureCounter);
     final clientDataHash = sha256.convert(clientDataJsonBytes).bytes;
 
     return _PasskeyAssertionContext(
@@ -166,6 +223,7 @@ class PasskeyService {
         ...authDataBytes,
         ...clientDataHash,
       ]),
+      signatureCounter: signatureCounter,
     );
   }
 
@@ -221,10 +279,12 @@ class _PasskeyAssertionContext {
   final String clientDataJson;
   final Uint8List authDataBytes;
   final Uint8List signaturePayload;
+  final int signatureCounter;
 
   const _PasskeyAssertionContext({
     required this.clientDataJson,
     required this.authDataBytes,
     required this.signaturePayload,
+    required this.signatureCounter,
   });
 }

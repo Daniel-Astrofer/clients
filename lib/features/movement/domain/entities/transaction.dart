@@ -33,6 +33,9 @@ final class Transaction extends Equatable {
   /// Taxa de rede em satoshis
   final int feeSatoshis;
 
+  /// Taxa de serviço da plataforma (Kerosene) em satoshis.
+  final int serviceFeeSatoshis;
+
   /// Status da transação
   final TransactionStatus status;
 
@@ -116,6 +119,7 @@ final class Transaction extends Equatable {
     this.receiverDisplayName,
     required this.amountSatoshis,
     required this.feeSatoshis,
+    this.serviceFeeSatoshis = 0,
     required this.status,
     required this.type,
     required this.confirmations,
@@ -151,6 +155,11 @@ final class Transaction extends Equatable {
   /// Taxa em BTC
   double get feeBTC => feeSatoshis / 100000000.0;
 
+  /// Taxa de serviço em BTC
+  double get serviceFeeBTC => serviceFeeSatoshis / 100000000.0;
+
+  bool get hasServiceFee => serviceFeeSatoshis > 0;
+
   /// Movimentos que reduzem o saldo do usuario.
   bool get isDebit =>
       type == TransactionType.send ||
@@ -170,6 +179,9 @@ final class Transaction extends Equatable {
   /// Verifica se a transação está pendente
   bool get isPending => status == TransactionStatus.pending;
 
+  /// Cancelled or expired entries — hidden from the main home feed.
+  bool get isCancelled => status == TransactionStatus.cancelled;
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -182,6 +194,7 @@ final class Transaction extends Equatable {
       'receiverDisplayName': receiverDisplayName,
       'amountSatoshis': amountSatoshis,
       'feeSatoshis': feeSatoshis,
+      'serviceFeeSatoshis': serviceFeeSatoshis,
       'status': status.name,
       'type': type.name,
       'confirmations': confirmations,
@@ -235,6 +248,11 @@ final class Transaction extends Equatable {
         feeSatoshis: json['feeSatoshis'] is int
             ? json['feeSatoshis']
             : (json['feeSatoshis'] as num).toInt(),
+        serviceFeeSatoshis: json['serviceFeeSatoshis'] is int
+            ? json['serviceFeeSatoshis'] as int
+            : ((json['serviceFeeSatoshis'] as num?)?.toInt() ??
+                (json['keroseneFeeSats'] as num?)?.toInt() ??
+                0),
         status: TransactionStatus.values.firstWhere(
           (e) => e.name == json['status'],
         ),
@@ -398,6 +416,7 @@ final class Transaction extends Equatable {
       destinationWalletId: rawDestinationWalletId,
       amountSatoshis: (amountVal.abs() * 100000000).round(),
       feeSatoshis: (networkFee.abs() * 100000000).round(),
+      serviceFeeSatoshis: _parseServiceFeeSats(json, networkFeeBtc: networkFee),
       status: txStatus,
       type: txType,
       confirmations: confirmations,
@@ -474,6 +493,10 @@ final class Transaction extends Equatable {
     final receiverAmountSats =
         _parseInt(json['receiverAmountSats']) ?? grossAmountSats;
     final networkFeeSats = _parseInt(json['networkFeeSats']) ?? 0;
+    final serviceFeeSats = _parseInt(json['keroseneFeeSats']) ??
+        _parseInt(json['serviceFeeSats']) ??
+        _parseInt(json['platformFeeSats']) ??
+        0;
     final confirmations = _parseInt(json['confirmations']) ?? 0;
     final isLightning = rail == 'LIGHTNING';
     final isInternal = rail == 'INTERNAL' || direction == 'INTERNAL';
@@ -512,6 +535,7 @@ final class Transaction extends Equatable {
       destinationWalletId: destinationWalletId,
       amountSatoshis: receiverAmountSats.abs(),
       feeSatoshis: networkFeeSats.abs(),
+      serviceFeeSatoshis: serviceFeeSats.abs(),
       status: status,
       type: txType,
       confirmations: confirmations,
@@ -558,6 +582,29 @@ final class Transaction extends Equatable {
         'btcBrl',
       ])),
     );
+  }
+
+  static int _parseServiceFeeSats(
+    Map<String, dynamic> json, {
+    double networkFeeBtc = 0,
+  }) {
+    final fromSats = _parseInt(json['keroseneFeeSats']) ??
+        _parseInt(json['serviceFeeSats']) ??
+        _parseInt(json['platformFeeSats']) ??
+        _parseInt(json['serviceFeeSatoshis']);
+    if (fromSats != null) {
+      return fromSats.abs();
+    }
+    final fromBtc = _parseDouble(_firstJsonValue(json, const [
+      'serviceFeeBtc',
+      'platformFeeBtc',
+      'keroseneFeeBtc',
+    ]));
+    if (fromBtc != null && fromBtc != 0) {
+      return (fromBtc.abs() * 100000000).round();
+    }
+    // Ignore networkFeeBtc — only service fee fields count.
+    return 0;
   }
 
   static int? _parseInt(dynamic value) {
@@ -755,6 +802,7 @@ final class Transaction extends Equatable {
       case 'CANCELED':
       case 'CANCELLED':
       case 'EXPIRED':
+        return TransactionStatus.cancelled;
       case 'FAILED':
         return TransactionStatus.failed;
       default:
@@ -771,6 +819,11 @@ final class Transaction extends Equatable {
     switch (rawStatus?.toUpperCase()) {
       case 'SETTLED':
         return TransactionStatus.confirmed;
+      case 'CANCELLED':
+      case 'CANCELED':
+      case 'EXPIRED':
+      case 'HIDDEN':
+        return TransactionStatus.cancelled;
       case 'FAILED':
       case 'REQUIRES_RECONCILIATION':
         return TransactionStatus.failed;
@@ -799,6 +852,7 @@ final class Transaction extends Equatable {
         receiverDisplayName,
         amountSatoshis,
         feeSatoshis,
+        serviceFeeSatoshis,
         status,
         type,
         confirmations,
@@ -836,6 +890,9 @@ enum TransactionStatus {
 
   /// Confirmada (6+ confirmações)
   confirmed('Confirmed', 'Transaction confirmed'),
+
+  /// Cancelada ou expirada (sem liquidação)
+  cancelled('Cancelled', 'Transaction cancelled'),
 
   /// Falhou
   failed('Failed', 'Transaction failed');

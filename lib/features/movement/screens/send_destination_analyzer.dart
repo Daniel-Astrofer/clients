@@ -1,8 +1,8 @@
-import 'package:kerosene/core/utils/bitcoin_network.dart';
-import 'package:kerosene/core/utils/qr_payment_parser.dart';
+import 'package:kerosene/features/movement/domain/payment_intent.dart';
+import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
-import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
 
+/// Legacy bridge: keeps existing call sites working while domain uses [PaymentIntent].
 SendDestinationAnalysis currentSendDestinationAnalysis({
   required String? pendingPaymentLinkId,
   required String lockedRecipientAddress,
@@ -41,65 +41,35 @@ SendDestinationAnalysis currentSendDestinationAnalysis({
 }
 
 SendDestinationAnalysis analyzeSendDestination(String raw) {
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty) {
-    return const SendDestinationAnalysis(
-      type: SendDestinationType.empty,
-      normalizedValue: '',
-    );
-  }
-
-  final linkId = QrPaymentParser.extractPaymentLinkId(trimmed);
-  if (linkId != null) {
-    return SendDestinationAnalysis(
-      type: SendDestinationType.paymentLink,
-      normalizedValue: linkId,
-      paymentLinkId: linkId,
-    );
-  }
-
-  final parsed = QrPaymentParser.decode(trimmed);
-  final normalized = parsed?.preferredDestination.trim().isNotEmpty == true
-      ? parsed!.preferredDestination.trim()
-      : stripLightningPrefix(trimmed);
-
-  if (looksLikeLightningRequest(normalized)) {
-    return SendDestinationAnalysis(
-      type: SendDestinationType.lightning,
-      normalizedValue: normalized,
-      amountBtc: parsed?.amountBtc ?? extractLightningAmountBtc(normalized),
-      label: parsed?.label,
-      message: parsed?.message,
-    );
-  }
-
-  if (looksLikeBitcoinAddress(normalized)) {
-    return SendDestinationAnalysis(
-      type: SendDestinationType.onChain,
-      normalizedValue: normalized,
-      amountBtc: parsed?.amountBtc,
-      label: parsed?.label,
-      message: parsed?.message,
-      detectedOnchainNetwork: inferBitcoinNetworkFromAddress(normalized),
-    );
-  }
-
-  final internalCandidate = normalizeInternalDestination(normalized);
-  if (isValidInternalDestination(internalCandidate)) {
-    return SendDestinationAnalysis(
-      type: SendDestinationType.internal,
-      normalizedValue: internalCandidate,
-      amountBtc: parsed?.amountBtc,
-      label: parsed?.label,
-      message: parsed?.message,
-    );
-  }
-
-  return SendDestinationAnalysis(
-    type: SendDestinationType.invalid,
-    normalizedValue: normalized,
+  return sendDestinationAnalysisFromIntent(
+    const PaymentIntentParser().parse(raw),
   );
 }
+
+SendDestinationAnalysis sendDestinationAnalysisFromIntent(PaymentIntent intent) {
+  return SendDestinationAnalysis(
+    type: _mapKind(intent.kind),
+    normalizedValue: intent.normalizedValue,
+    paymentLinkId: intent.paymentLinkId,
+    amountBtc: intent.amountBtc,
+    label: intent.label,
+    message: intent.message,
+    detectedOnchainNetwork: intent.detectedOnchainNetwork,
+  );
+}
+
+SendDestinationType _mapKind(PaymentDestinationKind kind) {
+  return switch (kind) {
+    PaymentDestinationKind.empty => SendDestinationType.empty,
+    PaymentDestinationKind.internal => SendDestinationType.internal,
+    PaymentDestinationKind.paymentLink => SendDestinationType.paymentLink,
+    PaymentDestinationKind.onchain => SendDestinationType.onChain,
+    PaymentDestinationKind.lightning => SendDestinationType.lightning,
+    PaymentDestinationKind.invalid => SendDestinationType.invalid,
+  };
+}
+
+// --- Helpers retained for call sites / tests ---
 
 String stripLightningPrefix(String value) {
   final trimmed = value.trim();
@@ -109,12 +79,7 @@ String stripLightningPrefix(String value) {
 }
 
 bool looksLikeLightningRequest(String value) {
-  final trimmed = stripLightningPrefix(value);
-  if (trimmed.isEmpty) return false;
-  final lower = trimmed.toLowerCase();
-  return RegExp(r'^(lnbc|lntb|lnbcrt)[0-9][0-9a-z]+$').hasMatch(lower) ||
-      RegExp(r'^lnurl[0-9a-z]+$').hasMatch(lower) ||
-      looksLikeLightningAddress(trimmed);
+  return const PaymentIntentParser().parse(value).isLightning;
 }
 
 bool looksLikeLightningAddress(String value) {
@@ -134,20 +99,6 @@ bool looksLikeUuid(String value) {
 }
 
 double? extractLightningAmountBtc(String value) {
-  final withoutPrefix = stripLightningPrefix(value);
-  final match = RegExp(
-    r'^ln(?:bc|tb|bcrt)(\d+)([munp]?)1',
-  ).firstMatch(withoutPrefix.toLowerCase());
-  if (match == null) return null;
-  final amount = double.tryParse(match.group(1) ?? '');
-  if (amount == null || amount <= 0) return null;
-
-  final multiplier = switch (match.group(2)) {
-    'm' => 0.001,
-    'u' => 0.000001,
-    'n' => 0.000000001,
-    'p' => 0.000000000001,
-    _ => 1.0,
-  };
-  return amount * multiplier;
+  final intent = const PaymentIntentParser().parse(value);
+  return intent.isLightning ? intent.amountBtc : null;
 }

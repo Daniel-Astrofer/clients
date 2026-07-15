@@ -1,10 +1,17 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'package:flutter/cupertino.dart';
 import 'package:bip39/bip39.dart' as bip39;
+
+import 'package:kerosene/core/security/secure_screen_guard.dart';
+import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';
+import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
+import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
 
 import '../bitcoin_accounts_dependencies.dart';
 import '../bitcoin_accounts_screen.dart';
 import '../bitcoin_widgets/bottom_sheets.dart';
+import 'cold_wallet_success_screen.dart';
 import 'internal_account_creation_screen.dart';
 
 class ColdWalletCreationScreen extends ConsumerStatefulWidget {
@@ -23,13 +30,21 @@ class ColdWalletCreationScreenState
   final TextEditingController extraWordController = TextEditingController();
   final List<TextEditingController> verificationControllers = [];
   final deriver = const ColdWalletPublicMaterialDeriver();
+  late final SecureSeedVisibility _seedVisibility;
 
   ColdWalletLevel level = ColdWalletLevel.recommended;
   late ColdWalletStep step;
+  bool _secureScopeActive = false;
 
   @override
   void initState() {
     super.initState();
+    _seedVisibility = SecureSeedVisibility(
+      onChanged: () {
+        if (mounted) setState(() {});
+      },
+    );
+    _seedVisibility.attach();
     if (widget.initialStepName == 'prepare') {
       step = ColdWalletStep.prepare;
       walletNameController.text = 'Carteira fria';
@@ -45,8 +60,9 @@ class ColdWalletCreationScreenState
   bool privatePlace = false;
   bool offlineReady = false;
   bool noPhotos = false;
-  bool showWords = false;
   bool busy = false;
+
+  bool get showWords => _seedVisibility.visible;
 
   bool get canGenerate =>
       walletNameController.text.trim().isNotEmpty &&
@@ -71,6 +87,8 @@ class ColdWalletCreationScreenState
 
   @override
   void dispose() {
+    _seedVisibility.detach();
+    _leaveSecureScope();
     walletNameController.dispose();
     extraWordController.dispose();
     for (final controller in verificationControllers) {
@@ -78,6 +96,18 @@ class ColdWalletCreationScreenState
     }
     mnemonic = '';
     super.dispose();
+  }
+
+  void _enterSecureScope() {
+    if (_secureScopeActive) return;
+    _secureScopeActive = true;
+    SecureScreenGuard.enter();
+  }
+
+  void _leaveSecureScope() {
+    if (!_secureScopeActive) return;
+    _secureScopeActive = false;
+    SecureScreenGuard.leave();
   }
 
   void goBack() {
@@ -126,7 +156,8 @@ class ColdWalletCreationScreenState
   void discardGeneratedMaterial() {
     mnemonic = '';
     publicMaterial = null;
-    showWords = false;
+    _seedVisibility.hide();
+    _leaveSecureScope();
     verificationIndexes = const [];
     for (final controller in verificationControllers) {
       controller.dispose();
@@ -143,11 +174,13 @@ class ColdWalletCreationScreenState
     final generatedPublicMaterial = deriver.derive(
       mnemonic: generatedMnemonic,
       extraWord: level.usesExtraWord ? extraWordController.text : '',
+      derivationPath: appColdWalletDerivationPath,
     );
+    _enterSecureScope();
+    _seedVisibility.hide();
     setState(() {
       mnemonic = generatedMnemonic;
       publicMaterial = generatedPublicMaterial;
-      showWords = false;
       step = ColdWalletStep.backup;
     });
     HapticFeedback.mediumImpact();
@@ -155,23 +188,29 @@ class ColdWalletCreationScreenState
 
   void startVerification() {
     final mnemonicWords = words;
-    final indexes = <int>{
-      0,
-      mnemonicWords.length ~/ 2,
-      max(0, mnemonicWords.length - 1),
-    }.toList()
-      ..sort();
+    // Three distinct random indices (more robust than fixed 0 / mid / last).
+    final indexes = _pickVerificationIndexes(mnemonicWords.length);
     for (final controller in verificationControllers) {
       controller.dispose();
     }
     verificationControllers
       ..clear()
       ..addAll(List.generate(indexes.length, (_) => TextEditingController()));
+    _seedVisibility.hide();
     setState(() {
       verificationIndexes = indexes;
       step = ColdWalletStep.verify;
-      showWords = false;
     });
+  }
+
+  List<int> _pickVerificationIndexes(int wordCount) {
+    if (wordCount <= 0) return const [];
+    if (wordCount <= 3) {
+      return List<int>.generate(wordCount, (i) => i);
+    }
+    final pool = List<int>.generate(wordCount, (i) => i)..shuffle();
+    final picked = pool.take(3).toList()..sort();
+    return picked;
   }
 
   bool verificationMatches() {
@@ -191,8 +230,7 @@ class ColdWalletCreationScreenState
   }
 
   Future<void> importWatchOnly() async {
-    final material = publicMaterial;
-    if (material == null || !verificationMatches()) {
+    if (publicMaterial == null || !verificationMatches()) {
       AppNotice.showWarning(
         context,
         title: context.tr.coldWalletVerifyFailedTitle,
@@ -203,34 +241,38 @@ class ColdWalletCreationScreenState
 
     setState(() => busy = true);
     try {
-      final notifier = ref.read(bitcoinAccountsProvider.notifier);
-      await notifier.importColdWallet(
-        label: walletLabel,
-        xpub: material.xpub,
-        fingerprint: material.fingerprint,
-        derivationPath: material.derivationPath,
-        scriptPolicy: material.scriptPolicy,
+      final seedToStore = mnemonic.trim().toLowerCase();
+      final passphraseToStore =
+          level.usesExtraWord ? extraWordController.text.trim() : '';
+      final useCase = RegisterColdWalletUseCase(
+        importColdWallet: ref.read(bitcoinAccountsProvider.notifier).importColdWallet,
       );
-      final state = ref.read(bitcoinAccountsProvider);
-      if (state.hasError) {
-        throw state.error ?? Exception('Import failed');
-      }
+      final result = await useCase.registerFromMnemonic(
+        label: walletLabel,
+        mnemonic: seedToStore,
+        passphrase: passphraseToStore,
+        derivationPath: appColdWalletDerivationPath,
+        storeSeed: true,
+      );
       mnemonic = '';
       extraWordController.clear();
+      _leaveSecureScope();
       if (!mounted) return;
-      AppNotice.showSuccess(
-        context,
-        title: context.tr.coldWalletImportedTitle,
-        message: context.tr.coldWalletImportedMessage,
+      // Replace wizard with success (Enviar / Concluir). Hub awaits outcome.
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<ColdWalletFlowOutcome>(
+          builder: (_) => ColdWalletSuccessScreen(
+            result: result,
+            walletLabel: walletLabel,
+          ),
+        ),
       );
-      Navigator.of(context).pop(true);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       AppNotice.showError(
         context,
         title: context.tr.coldWalletImportErrorTitle,
-        message:
-            'A carteira fria não foi criada. Revise o material público/descriptor e tente novamente.',
+        message: coldWalletRegisterErrorMessage(error),
       );
     } finally {
       if (mounted) {
@@ -325,8 +367,9 @@ class ColdWalletCreationScreenState
         const <BitcoinAccount>[];
     final coldWalletLimitReached =
         activeColdWalletCountFrom(accounts) >= maxActiveColdWallets;
-    const introLabel =
-        'A Kerosene guardara apenas o material publico para acompanhar saldo e UTXOs.';
+    final introLabel =
+        'A Kerosene guarda apenas o material público para acompanhar saldo on-chain. '
+        'A semente fica só neste aparelho. Rede: ${coldWalletNetworkLabel(expectedBitcoinNetwork)}.';
     const title = 'Nomeie sua carteira fria';
 
     return Scaffold(
@@ -537,7 +580,10 @@ class ColdWalletCreationScreenState
                 const SizedBox(height: AppSpacing.md),
                 OutlinedButton.icon(
                   style: colors.outlinedButtonStyle(),
-                  onPressed: () => setState(() => showWords = !showWords),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _seedVisibility.toggle();
+                  },
                   icon: Icon(
                       showWords ? KeroseneIcons.eyeOff : KeroseneIcons.eye),
                   label: Text(
@@ -589,11 +635,7 @@ class ColdWalletCreationScreenState
               onPressed:
                   busy || !verificationMatches() ? null : importWatchOnly,
               icon: busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const CupertinoActivityIndicator(radius: 9)
                   : const Icon(KeroseneIcons.security, size: 18),
               label: Text(
                 busy

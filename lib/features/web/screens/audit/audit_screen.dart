@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/admin_providers.dart';
@@ -163,8 +164,8 @@ class _MerkleRootCard extends StatelessWidget {
               );
             },
             loading: () => const Center(
-                child:
-                    CircularProgressIndicator(color: AdminColors.textTertiary)),
+                child: CupertinoActivityIndicator(
+                    radius: 10, color: AdminColors.textTertiary)),
             error: (e, _) =>
                 Text(AdminCopy.loadIssue, style: AdminTypography.caption),
           ),
@@ -238,8 +239,8 @@ class _SovereigntyCard extends StatelessWidget {
               );
             },
             loading: () => const Center(
-                child:
-                    CircularProgressIndicator(color: AdminColors.textTertiary)),
+                child: CupertinoActivityIndicator(
+                    radius: 10, color: AdminColors.textTertiary)),
             error: (e, _) =>
                 Text(AdminCopy.loadIssue, style: AdminTypography.caption),
           ),
@@ -311,8 +312,8 @@ class _AuditHistoryCard extends StatelessWidget {
               );
             },
             loading: () => const Center(
-                child:
-                    CircularProgressIndicator(color: AdminColors.textTertiary)),
+                child: CupertinoActivityIndicator(
+                    radius: 10, color: AdminColors.textTertiary)),
             error: (e, _) =>
                 Text(AdminCopy.loadIssue, style: AdminTypography.caption),
           ),

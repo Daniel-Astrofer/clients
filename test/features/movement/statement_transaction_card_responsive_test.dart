@@ -194,12 +194,12 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('stack expands and collapses following items smoothly', (
+    testWidgets('list expands downward and can open multiple cards', (
       tester,
     ) async {
       configureViewport(tester, regularPortrait);
 
-      Widget buildStack({int? expandedIndex}) {
+      Widget buildStack({Set<int> expandedIndices = const {}}) {
         return MaterialApp(
           home: Scaffold(
             backgroundColor: Colors.black,
@@ -209,15 +209,9 @@ void main() {
                 width: 320,
                 child: StatementTransactionScrollStack(
                   itemCount: 3,
-                  itemExtent: 100,
-                  expandedItemExtent: 180,
                   itemGap: 10,
-                  stackGap: 70,
-                  collapseStartFraction: 0,
-                  topAnchorOffset: 0,
-                  expandedIndex: expandedIndex,
                   itemBuilder: (context, index) {
-                    final expanded = index == expandedIndex;
+                    final expanded = expandedIndices.contains(index);
                     return SizedBox(
                       key: ValueKey('stack-item-$index'),
                       height: expanded ? 180 : 100,
@@ -238,17 +232,24 @@ void main() {
       final collapsedTop =
           tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
 
-      await tester.pumpWidget(buildStack(expandedIndex: 0));
+      // Expand first card — only pushes the following items down.
+      await tester.pumpWidget(buildStack(expandedIndices: {0}));
       await tester.pumpAndSettle();
-      final expandedTop =
+      final afterFirstExpandTop =
           tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
+      expect(afterFirstExpandTop, closeTo(collapsedTop + 80, 0.5));
+
+      // Open second while first stays open — multi-expand.
+      await tester.pumpWidget(buildStack(expandedIndices: {0, 1}));
+      await tester.pumpAndSettle();
+      final afterSecondExpandTop =
+          tester.getTopLeft(find.byKey(const ValueKey('stack-item-2'))).dy;
+      expect(afterSecondExpandTop, closeTo(collapsedTop + 80 + 80, 0.5));
 
       await tester.pumpWidget(buildStack());
       await tester.pumpAndSettle();
       final collapsedAgainTop =
           tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
-
-      expect(expandedTop, closeTo(collapsedTop + 80, 0.5));
       expect(collapsedAgainTop, closeTo(collapsedTop, 0.5));
       expect(takeAllExceptions(tester), isEmpty);
     });

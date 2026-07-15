@@ -1,21 +1,17 @@
-// ignore_for_file: unused_element
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/domain/entities/statement_report.dart'
-    as statement;
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/services/statement_report_calculator.dart';
-
-enum StatementInsightPeriod { monthly, weekly, annual }
+import 'package:kerosene/features/movement/domain/entities/statement_report.dart';
+import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 
 const _primary = AppColors.hexFFFFFFFF;
 const _onSurfaceVariant = AppColors.hexFFC4C7C8;
@@ -25,27 +21,23 @@ const _border = AppColors.hexFF2A2A2A;
 const _surfaceContainerLow = AppColors.hexFF1C1B1B;
 const _singleWalletColor = AppColors.hexFF444748;
 const _chartMinimumFraction = 0.055;
+const _positive = AppColors.hexFF63FEA7;
+const _negative = AppColors.hexFFFF6B6B;
+const _neutralAccent = AppColors.hexFFFFCC6E;
 
-class TransactionStatementInsights extends StatefulWidget {
-  final List<Transaction> transactions;
-  final List<Wallet> wallets;
-
-  const TransactionStatementInsights({
-    super.key,
-    required this.transactions,
-    required this.wallets,
-  });
+class TransactionStatementInsights extends ConsumerStatefulWidget {
+  const TransactionStatementInsights({super.key});
 
   @override
-  State<TransactionStatementInsights> createState() =>
+  ConsumerState<TransactionStatementInsights> createState() =>
       _TransactionStatementInsightsState();
 }
 
 class _TransactionStatementInsightsState
-    extends State<TransactionStatementInsights> {
-  StatementInsightPeriod _period = StatementInsightPeriod.monthly;
+    extends ConsumerState<TransactionStatementInsights> {
+  StatementReportPeriod _period = StatementReportPeriod.monthly;
 
-  void _setPeriod(StatementInsightPeriod period) {
+  void _setPeriod(StatementReportPeriod period) {
     if (_period == period) return;
     HapticFeedback.selectionClick();
     setState(() => _period = period);
@@ -53,197 +45,299 @@ class _TransactionStatementInsightsState
 
   @override
   Widget build(BuildContext context) {
-    final report = _StatementReport.from(
-      context: context,
-      transactions: widget.transactions,
-      wallets: widget.wallets,
-      period: _period,
-    );
+    final asyncReport = ref.watch(statementInsightsReportProvider(_period));
 
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(
-        'statement-report-${widget.wallets.length}-${widget.transactions.length}',
+    return asyncReport.when(
+      loading: () => const SizedBox(
+        height: 280,
+        child: Center(child: TorLoadingDots()),
       ),
-      tween: Tween(begin: 0, end: 1),
-      duration: KeroseneMotion.duration(context, KeroseneMotion.slow),
-      curve: KeroseneMotion.standard,
-      builder: (context, progress, child) {
-        return Opacity(
-          opacity: progress,
-          child: Transform.translate(
-            offset: Offset(0, 24 * (1 - progress)),
-            child: child,
+      error: (error, _) => _SoftPanel(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        child: Column(
+          children: [
+            const Icon(KeroseneIcons.warning, color: _onSurfaceVariant, size: 28),
+            const SizedBox(height: 12),
+            Text(
+              context.tr.financialStatementLoadErrorTitle,
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                color: _primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              ErrorTranslator.translate(context.tr, error.toString()),
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                color: _onSurfaceVariant,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+      data: (report) {
+        final view = _InsightViewModel.from(report);
+        return TweenAnimationBuilder<double>(
+          key: ValueKey(
+            'statement-report-${_period.name}-${report.loadedTransactionCount}-${report.walletCount}',
+          ),
+          tween: Tween(begin: 0, end: 1),
+          duration: KeroseneMotion.duration(context, KeroseneMotion.slow),
+          curve: KeroseneMotion.standard,
+          builder: (context, progress, child) {
+            return Opacity(
+              opacity: progress,
+              child: Transform.translate(
+                offset: Offset(0, 24 * (1 - progress)),
+                child: child,
+              ),
+            );
+          },
+          child: RepaintBoundary(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 760;
+                final kpis = _KpiSummaryPanel(report: report);
+                final volume = _MovementVolumePanel(
+                  view: view,
+                  period: _period,
+                  onPeriodChanged: _setPeriod,
+                );
+                final monthly = _MonthlyMovementPanel(
+                  report: report,
+                  selected: _period,
+                  onChanged: _setPeriod,
+                );
+                final distribution = _FundDistributionPanel(view: view);
+
+                if (!wide) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      kpis,
+                      const SizedBox(height: 18),
+                      volume,
+                      const SizedBox(height: 18),
+                      monthly,
+                      const SizedBox(height: 18),
+                      distribution,
+                    ],
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    kpis,
+                    const SizedBox(height: 18),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 8, child: volume),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 4, child: distribution),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    monthly,
+                  ],
+                );
+              },
+            ),
           ),
         );
       },
-      child: RepaintBoundary(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 760;
-            final volume = _MovementVolumePanel(
-              report: report,
-              period: _period,
-              onPeriodChanged: _setPeriod,
-            );
-            final monthly = _MonthlyMovementPanel(
-              report: report,
-              selected: _period,
-              onChanged: _setPeriod,
-            );
-            final distribution = _FundDistributionPanel(report: report);
-            final audit = _AuditSummaryPanel(report: report);
-
-            if (!wide) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  audit,
-                  const SizedBox(height: 18),
-                  volume,
-                  const SizedBox(height: 18),
-                  monthly,
-                  const SizedBox(height: 18),
-                  distribution,
-                ],
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                audit,
-                const SizedBox(height: 18),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 8, child: volume),
-                    const SizedBox(width: 16),
-                    Expanded(flex: 4, child: distribution),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                monthly,
-              ],
-            );
-          },
-        ),
-      ),
     );
   }
 }
 
-class _AuditSummaryPanel extends StatelessWidget {
-  final _StatementReport report;
+class _KpiSummaryPanel extends StatelessWidget {
+  final StatementReport report;
 
-  const _AuditSummaryPanel({required this.report});
+  const _KpiSummaryPanel({required this.report});
 
   @override
   Widget build(BuildContext context) {
-    final chips = [
-      _AuditChip(
-        icon: KeroseneIcons.wallet,
-        label: _pluralPt(report.walletCount, 'carteira', 'carteiras'),
-      ),
-      _AuditChip(
-        icon: KeroseneIcons.database,
-        label: _pluralPt(
-          report.loadedTransactionCount,
-          'transação carregada',
-          'transações carregadas',
-        ),
-      ),
-      _AuditChip(
-        icon: KeroseneIcons.success,
-        label: _pluralPt(
-          report.includedTransactionCount,
-          'transação considerada',
-          'transações consideradas',
-        ),
-      ),
-      _AuditChip(
-        icon: KeroseneIcons.warning,
-        label: _pluralPt(
-          report.ignoredFailedTransactionCount,
-          'falha ignorada',
-          'falhas ignoradas',
-        ),
-      ),
-      if (report.ignoredOutOfPeriodTransactionCount > 0)
-        _AuditChip(
-          icon: KeroseneIcons.calendar,
-          label: _pluralPt(
-            report.ignoredOutOfPeriodTransactionCount,
-            'fora do período',
-            'fora do período',
-          ),
-        ),
-      if (report.isPartial)
-        const _AuditChip(
-          icon: KeroseneIcons.info,
-          label: 'Histórico parcial',
-        ),
-    ];
+    final hasMovement = report.includedTransactionCount > 0 ||
+        report.incomingSats > 0 ||
+        report.outgoingSats > 0;
 
     return _SoftPanel(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(KeroseneIcons.database,
-              color: _onSurfaceVariant, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Base auditada',
+          Row(
+            children: [
+              const Icon(KeroseneIcons.chart, color: _onSurfaceVariant, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  context.tr.financialStatementReportTitle,
                   style: AppTypography.inter(
                     color: _primary,
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     height: 1.25,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Wrap(spacing: 8, runSpacing: 8, children: chips),
-              ],
-            ),
+              ),
+              Text(
+                _pluralPt(
+                  report.includedTransactionCount,
+                  'tx',
+                  'txs',
+                ),
+                style: AppTypography.inter(
+                  color: _onSurfaceVariant,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
+          if (report.isPartial) ...[
+            const SizedBox(height: 12),
+            const _PartialHistoryBanner(),
+          ],
+          if (!hasMovement) ...[
+            const SizedBox(height: 14),
+            Text(
+              context.tr.financialStatementEmptyMessage,
+              style: AppTypography.inter(
+                color: _onSurfaceVariant,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                height: 1.35,
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final twoCol = constraints.maxWidth >= 420;
+                final items = [
+                  _KpiTile(
+                    icon: KeroseneIcons.down,
+                    label: context.tr.financialStatementInflows,
+                    value: _formatBtc(report.incomingSats),
+                    accent: _positive,
+                  ),
+                  _KpiTile(
+                    icon: KeroseneIcons.up,
+                    label: context.tr.financialStatementOutflows,
+                    value: _formatBtc(report.outgoingSats),
+                    accent: _negative,
+                  ),
+                  _KpiTile(
+                    icon: KeroseneIcons.fee,
+                    label: 'Taxas',
+                    value: _formatBtc(report.totalFeesSats),
+                    accent: _neutralAccent,
+                    subtitle: report.serviceFeeSats > 0
+                        ? 'rede ${_formatCompactSats(report.feeSats)} · svc ${_formatCompactSats(report.serviceFeeSats)}'
+                        : null,
+                  ),
+                  _KpiTile(
+                    icon: KeroseneIcons.trendUp,
+                    label: 'Líquido',
+                    value: _formatSignedBtc(report.netSats),
+                    accent: report.netSats >= 0 ? _positive : _negative,
+                  ),
+                ];
+
+                if (twoCol) {
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: items[0]),
+                          const SizedBox(width: 10),
+                          Expanded(child: items[1]),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: items[2]),
+                          const SizedBox(width: 10),
+                          Expanded(child: items[3]),
+                        ],
+                      ),
+                    ],
+                  );
+                }
+
+                return Column(
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 10),
+                      items[i],
+                    ],
+                  ],
+                );
+              },
+            ),
+            if (report.internalTransferSats > 0) ...[
+              const SizedBox(height: 12),
+              _SecondaryMetricRow(
+                icon: KeroseneIcons.swap,
+                label: 'Transferências internas',
+                value: _formatBtc(report.internalTransferSats),
+              ),
+            ],
+            if (report.unclassifiedTransactionCount > 0) ...[
+              const SizedBox(height: 10),
+              _SecondaryMetricRow(
+                icon: KeroseneIcons.info,
+                label: _pluralPt(
+                  report.unclassifiedTransactionCount,
+                  'sem carteira identificada',
+                  'sem carteira identificada',
+                ),
+                value: '',
+              ),
+            ],
+          ],
         ],
       ),
     );
   }
 }
 
-class _AuditChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _AuditChip({required this.icon, required this.label});
+class _PartialHistoryBanner extends StatelessWidget {
+  const _PartialHistoryBanner();
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        color: _neutralAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _neutralAccent.withValues(alpha: 0.22)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: _onSurfaceVariant, size: 13),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: AppTypography.inter(
-                color: _onSurfaceVariant,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.15,
+            const Icon(KeroseneIcons.info, color: _neutralAccent, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Histórico parcial — o período selecionado pode exceder o que está carregado no dispositivo.',
+                style: AppTypography.inter(
+                  color: _onSurfaceVariant,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  height: 1.35,
+                ),
               ),
             ),
           ],
@@ -253,13 +347,131 @@ class _AuditChip extends StatelessWidget {
   }
 }
 
+class _KpiTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color accent;
+  final String? subtitle;
+
+  const _KpiTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: accent, size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.inter(
+                      color: _onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.financial(
+                color: _primary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.inter(
+                  color: _onSurfaceVariant.withValues(alpha: 0.85),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryMetricRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _SecondaryMetricRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: _onSurfaceVariant, size: 14),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTypography.inter(
+              color: _onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        if (value.isNotEmpty)
+          Text(
+            value,
+            style: AppTypography.financial(
+              color: _primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _MovementVolumePanel extends StatelessWidget {
-  final _StatementReport report;
-  final StatementInsightPeriod period;
-  final ValueChanged<StatementInsightPeriod> onPeriodChanged;
+  final _InsightViewModel view;
+  final StatementReportPeriod period;
+  final ValueChanged<StatementReportPeriod> onPeriodChanged;
 
   const _MovementVolumePanel({
-    required this.report,
+    required this.view,
     required this.period,
     required this.onPeriodChanged,
   });
@@ -291,7 +503,7 @@ class _MovementVolumePanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Expanded(child: _MovementBarChart(report: report)),
+          Expanded(child: _MovementBarChart(view: view)),
         ],
       ),
     );
@@ -299,21 +511,21 @@ class _MovementVolumePanel extends StatelessWidget {
 }
 
 class _RangeSelector extends StatelessWidget {
-  final StatementInsightPeriod selected;
-  final ValueChanged<StatementInsightPeriod> onChanged;
+  final StatementReportPeriod selected;
+  final ValueChanged<StatementReportPeriod> onChanged;
 
   const _RangeSelector({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<StatementInsightPeriod>(
+    return PopupMenuButton<StatementReportPeriod>(
       initialValue: selected,
       color: _surfaceContainerLow,
       elevation: 10,
       tooltip: context.tr.financialStatementPeriodTooltip,
       onSelected: onChanged,
       itemBuilder: (context) {
-        return StatementInsightPeriod.values
+        return StatementReportPeriod.values
             .map(
               (value) => PopupMenuItem(
                 value: value,
@@ -363,9 +575,9 @@ class _RangeSelector extends StatelessWidget {
 }
 
 class _MovementBarChart extends StatefulWidget {
-  final _StatementReport report;
+  final _InsightViewModel view;
 
-  const _MovementBarChart({required this.report});
+  const _MovementBarChart({required this.view});
 
   @override
   State<_MovementBarChart> createState() => _MovementBarChartState();
@@ -404,11 +616,11 @@ class _MovementBarChartState extends State<_MovementBarChart> {
 
   @override
   Widget build(BuildContext context) {
-    final report = widget.report;
-    final axisValues = _axisValues(report.axisMaxSats);
+    final view = widget.view;
+    final axisValues = _axisValues(view.axisMaxSats);
     return TweenAnimationBuilder<double>(
       key: ValueKey(
-        'movement-volume-${report.buckets.map((bucket) => bucket.values.map((value) => value.sats).join(':')).join('|')}',
+        'movement-volume-${view.buckets.map((bucket) => bucket.values.map((value) => value.sats).join(':')).join('|')}',
       ),
       tween: Tween(begin: 0, end: 1),
       duration: KeroseneMotion.duration(context, KeroseneMotion.slow),
@@ -418,8 +630,7 @@ class _MovementBarChartState extends State<_MovementBarChart> {
           builder: (context, constraints) {
             final chartWidth = math.max<double>(
               constraints.maxWidth - 48,
-              report.buckets.length *
-                  math.max(44.0, report.wallets.length * 18),
+              view.buckets.length * math.max(44.0, view.walletCount * 18),
             );
             return Stack(
               children: [
@@ -478,7 +689,7 @@ class _MovementBarChartState extends State<_MovementBarChart> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          for (final bucket in report.buckets)
+                          for (final bucket in view.buckets)
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -486,7 +697,7 @@ class _MovementBarChartState extends State<_MovementBarChart> {
                                 ),
                                 child: _WalletBarGroup(
                                   bucket: bucket,
-                                  axisMaxSats: report.axisMaxSats,
+                                  axisMaxSats: view.axisMaxSats,
                                   progress: progress,
                                 ),
                               ),
@@ -509,7 +720,7 @@ class _MovementBarChartState extends State<_MovementBarChart> {
                       width: chartWidth,
                       child: Row(
                         children: [
-                          for (final bucket in report.buckets)
+                          for (final bucket in view.buckets)
                             Expanded(
                               child: Text(
                                 bucket.label,
@@ -596,9 +807,9 @@ class _GradientBar extends StatelessWidget {
 }
 
 class _MonthlyMovementPanel extends StatelessWidget {
-  final _StatementReport report;
-  final StatementInsightPeriod selected;
-  final ValueChanged<StatementInsightPeriod> onChanged;
+  final StatementReport report;
+  final StatementReportPeriod selected;
+  final ValueChanged<StatementReportPeriod> onChanged;
 
   const _MonthlyMovementPanel({
     required this.report,
@@ -627,7 +838,7 @@ class _MonthlyMovementPanel extends StatelessWidget {
           const SizedBox(height: 28),
           Wrap(
             alignment: WrapAlignment.center,
-            spacing: 52,
+            spacing: 40,
             runSpacing: 20,
             children: [
               _MonthlyMetric(
@@ -640,6 +851,17 @@ class _MonthlyMovementPanel extends StatelessWidget {
                 label: context.tr.financialStatementInflows,
                 value: _formatBtc(report.incomingSats),
               ),
+              if (report.totalFeesSats > 0)
+                _MonthlyMetric(
+                  icon: KeroseneIcons.fee,
+                  label: 'Taxas',
+                  value: _formatBtc(report.totalFeesSats),
+                ),
+              _MonthlyMetric(
+                icon: KeroseneIcons.trendUp,
+                label: 'Líquido',
+                value: _formatSignedBtc(report.netSats),
+              ),
             ],
           ),
         ],
@@ -649,8 +871,8 @@ class _MonthlyMovementPanel extends StatelessWidget {
 }
 
 class _PeriodTabs extends StatelessWidget {
-  final StatementInsightPeriod selected;
-  final ValueChanged<StatementInsightPeriod> onChanged;
+  final StatementReportPeriod selected;
+  final ValueChanged<StatementReportPeriod> onChanged;
 
   const _PeriodTabs({required this.selected, required this.onChanged});
 
@@ -660,7 +882,7 @@ class _PeriodTabs extends StatelessWidget {
       alignment: WrapAlignment.center,
       spacing: 20,
       runSpacing: 8,
-      children: StatementInsightPeriod.values.map((period) {
+      children: StatementReportPeriod.values.map((period) {
         final active = selected == period;
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -735,9 +957,9 @@ class _MonthlyMetric extends StatelessWidget {
 }
 
 class _FundDistributionPanel extends StatelessWidget {
-  final _StatementReport report;
+  final _InsightViewModel view;
 
-  const _FundDistributionPanel({required this.report});
+  const _FundDistributionPanel({required this.view});
 
   @override
   Widget build(BuildContext context) {
@@ -760,11 +982,10 @@ class _FundDistributionPanel extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Expanded(
-            child: Center(child: _DistributionDonut(report: report)),
+            child: Center(child: _DistributionDonut(view: view)),
           ),
           const SizedBox(height: 16),
-          for (final segment in report.distribution)
-            _DistributionLegend(segment),
+          for (final segment in view.distribution) _DistributionLegend(segment),
         ],
       ),
     );
@@ -772,16 +993,16 @@ class _FundDistributionPanel extends StatelessWidget {
 }
 
 class _DistributionDonut extends StatelessWidget {
-  final _StatementReport report;
+  final _InsightViewModel view;
 
-  const _DistributionDonut({required this.report});
+  const _DistributionDonut({required this.view});
 
   @override
   Widget build(BuildContext context) {
-    final dominant = report.dominantDistributionSegment;
+    final dominant = view.dominantDistributionSegment;
     return TweenAnimationBuilder<double>(
       key: ValueKey(
-        'fund-distribution-${report.distribution.map((segment) => segment.visualSats).join('|')}',
+        'fund-distribution-${view.distribution.map((segment) => segment.visualSats).join('|')}',
       ),
       tween: Tween(begin: 0, end: 1),
       duration: KeroseneMotion.duration(context, KeroseneMotion.slow),
@@ -796,7 +1017,7 @@ class _DistributionDonut extends StatelessWidget {
               CustomPaint(
                 size: const Size.square(214),
                 painter: _DistributionDonutPainter(
-                  segments: report.distribution,
+                  segments: view.distribution,
                   progress: progress,
                 ),
               ),
@@ -1024,37 +1245,19 @@ class _SoftPanel extends StatelessWidget {
   }
 }
 
-class _StatementReport {
-  final List<_WalletInsight> wallets;
+class _InsightViewModel {
   final List<_MovementBucket> buckets;
   final List<_DistributionSegment> distribution;
-  final int incomingSats;
-  final int outgoingSats;
   final int axisMaxSats;
-  final int totalBalanceSats;
-  final String dominantWalletName;
-  final bool isPartial;
   final int walletCount;
-  final int loadedTransactionCount;
-  final int includedTransactionCount;
-  final int ignoredFailedTransactionCount;
-  final int ignoredOutOfPeriodTransactionCount;
+  final String dominantWalletName;
 
-  const _StatementReport({
-    required this.wallets,
+  const _InsightViewModel({
     required this.buckets,
     required this.distribution,
-    required this.incomingSats,
-    required this.outgoingSats,
     required this.axisMaxSats,
-    required this.totalBalanceSats,
-    required this.dominantWalletName,
-    required this.isPartial,
     required this.walletCount,
-    required this.loadedTransactionCount,
-    required this.includedTransactionCount,
-    required this.ignoredFailedTransactionCount,
-    required this.ignoredOutOfPeriodTransactionCount,
+    required this.dominantWalletName,
   });
 
   _DistributionSegment get dominantDistributionSegment {
@@ -1076,39 +1279,16 @@ class _StatementReport {
     });
   }
 
-  factory _StatementReport.from({
-    required BuildContext context,
-    required List<Transaction> transactions,
-    required List<Wallet> wallets,
-    required StatementInsightPeriod period,
-  }) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final calculated = StatementReportCalculator.calculate(
-      transactions: transactions,
-      wallets: wallets,
-      period: _statementReportPeriod(period),
-      locale: locale,
-      emptyWalletName: context.tr.noWalletsFound,
-    );
+  factory _InsightViewModel.from(StatementReport report) {
     final colorsByWalletId = <String, Color>{};
-    for (var index = 0; index < calculated.wallets.length; index++) {
-      colorsByWalletId[calculated.wallets[index].id] =
-          calculated.wallets.length == 1
-              ? _singleWalletColor
-              : _walletColor(index);
+    for (var index = 0; index < report.wallets.length; index++) {
+      colorsByWalletId[report.wallets[index].id] = report.wallets.length == 1
+          ? _singleWalletColor
+          : _walletColor(index);
     }
-    final insights = [
-      for (final wallet in calculated.wallets)
-        _WalletInsight(
-          id: wallet.id,
-          name: wallet.name,
-          matchKeys: wallet.matchKeys,
-          balanceSats: wallet.balanceSats,
-          color: colorsByWalletId[wallet.id] ?? _singleWalletColor,
-        ),
-    ];
+
     final buckets = [
-      for (final bucket in calculated.buckets)
+      for (final bucket in report.buckets)
         _MovementBucket(
           label: bucket.label,
           values: [
@@ -1120,63 +1300,31 @@ class _StatementReport {
           ],
         ),
     ];
+
+    final dominantId =
+        report.distribution.isEmpty ? null : report.distribution.first.walletId;
+
     final distribution = [
-      for (final segment in calculated.distribution)
+      for (final segment in report.distribution)
         _DistributionSegment(
           label: segment.label,
           sats: segment.sats,
           visualSats: segment.visualSats,
           percent: segment.percent,
           color: colorsByWalletId[segment.walletId] ?? _singleWalletColor,
-          isDominant: calculated.totalBalanceSats > 0 &&
-              segment.walletId == calculated.distribution.first.walletId,
+          isDominant: report.totalBalanceSats > 0 &&
+              segment.walletId == dominantId,
         ),
     ];
 
-    return _StatementReport(
-      wallets: insights,
+    return _InsightViewModel(
       buckets: buckets,
       distribution: distribution,
-      incomingSats: calculated.incomingSats,
-      outgoingSats: calculated.outgoingSats,
-      axisMaxSats: calculated.axisMaxSats,
-      totalBalanceSats: calculated.totalBalanceSats,
-      dominantWalletName: calculated.dominantWalletName,
-      isPartial: calculated.isPartial,
-      walletCount: calculated.walletCount,
-      loadedTransactionCount: calculated.loadedTransactionCount,
-      includedTransactionCount: calculated.includedTransactionCount,
-      ignoredFailedTransactionCount: calculated.ignoredFailedTransactionCount,
-      ignoredOutOfPeriodTransactionCount:
-          calculated.ignoredOutOfPeriodTransactionCount,
+      axisMaxSats: report.axisMaxSats,
+      walletCount: report.walletCount,
+      dominantWalletName: report.dominantWalletName,
     );
   }
-}
-
-statement.StatementReportPeriod _statementReportPeriod(
-  StatementInsightPeriod period,
-) {
-  return switch (period) {
-    StatementInsightPeriod.monthly => statement.StatementReportPeriod.monthly,
-    StatementInsightPeriod.weekly => statement.StatementReportPeriod.weekly,
-    StatementInsightPeriod.annual => statement.StatementReportPeriod.annual,
-  };
-}
-
-class _WalletInsight {
-  final String id;
-  final String name;
-  final Set<String> matchKeys;
-  final int balanceSats;
-  final Color color;
-
-  const _WalletInsight({
-    required this.id,
-    required this.name,
-    required this.matchKeys,
-    required this.balanceSats,
-    required this.color,
-  });
 }
 
 class _MovementBucket {
@@ -1209,105 +1357,6 @@ class _DistributionSegment {
     required this.color,
     required this.isDominant,
   });
-
-  factory _DistributionSegment.fromActual({
-    required String label,
-    required int sats,
-    required int visualSats,
-    required int totalSats,
-    required Color color,
-  }) {
-    return _DistributionSegment(
-      label: label,
-      sats: sats,
-      visualSats: totalSats > 0 ? math.max(0, visualSats) : 0,
-      percent: totalSats <= 0 ? 0 : sats / totalSats * 100,
-      color: color,
-      isDominant: false,
-    );
-  }
-}
-
-int _walletBalanceAt(
-  _WalletInsight wallet,
-  List<Transaction> transactions,
-  DateTime end, {
-  required bool fallbackToOnlyWallet,
-}) {
-  var balance = wallet.balanceSats;
-  for (final tx in transactions) {
-    final local = tx.timestamp.toLocal();
-    if (local.isBefore(end)) continue;
-    balance -= _walletDelta(wallet, tx, fallbackToWallet: fallbackToOnlyWallet);
-  }
-  return math.max(0, balance);
-}
-
-int _periodDeltaTotal(
-  List<_WalletInsight> wallets,
-  List<Transaction> transactions,
-  DateTime start,
-  DateTime end, {
-  required bool positive,
-  required bool fallbackToOnlyWallet,
-}) {
-  var total = 0;
-  for (final tx in transactions) {
-    final local = tx.timestamp.toLocal();
-    if (local.isBefore(start) || !local.isBefore(end)) continue;
-    for (final wallet in wallets) {
-      final delta = _walletDelta(
-        wallet,
-        tx,
-        fallbackToWallet: fallbackToOnlyWallet,
-      );
-      if (positive && delta > 0) total += delta;
-      if (!positive && delta < 0) total += delta.abs();
-    }
-  }
-  return total;
-}
-
-int _walletDelta(
-  _WalletInsight wallet,
-  Transaction tx, {
-  required bool fallbackToWallet,
-}) {
-  final amount = tx.amountSatoshis.abs();
-  final debitAmount = amount + tx.feeSatoshis.abs();
-  final walletMatches = _matchesWallet(wallet, [tx.walletId]);
-  final sourceMatches = _matchesWallet(wallet, [
-    tx.sourceWalletId,
-    tx.fromAddress,
-  ]);
-  final destinationMatches = _matchesWallet(wallet, [
-    tx.destinationWalletId,
-    tx.toAddress,
-  ]);
-  final matched = walletMatches || sourceMatches || destinationMatches;
-
-  if (!matched && !fallbackToWallet) return 0;
-  if (tx.isInternal) {
-    if (sourceMatches && !destinationMatches) return -debitAmount;
-    if (destinationMatches && !sourceMatches) return amount;
-  }
-  if (tx.isCredit &&
-      (destinationMatches || walletMatches || fallbackToWallet)) {
-    return amount;
-  }
-  if (tx.isDebit && (sourceMatches || walletMatches || fallbackToWallet)) {
-    return -debitAmount;
-  }
-  return 0;
-}
-
-bool _matchesWallet(_WalletInsight wallet, List<String?> candidates) {
-  for (final candidate in candidates) {
-    final normalized = candidate?.trim().toLowerCase();
-    if (normalized == null || normalized.isEmpty) continue;
-    if (wallet.matchKeys.contains(normalized)) return true;
-  }
-  return false;
 }
 
 List<int> _axisValues(int maxSats) {
@@ -1318,20 +1367,6 @@ List<int> _axisValues(int maxSats) {
 double _barFraction(int sats, int axisMaxSats) {
   if (sats <= 0) return 0;
   return math.max(_chartMinimumFraction, sats / math.max(1, axisMaxSats));
-}
-
-int _niceAxisMax(int rawMax) {
-  if (rawMax <= 0) return 250000;
-  final magnitude = math.pow(10, rawMax.toString().length - 1).toInt();
-  final normalized = rawMax / magnitude;
-  final nice = normalized <= 1
-      ? 1
-      : normalized <= 2
-          ? 2
-          : normalized <= 5
-              ? 5
-              : 10;
-  return nice * magnitude;
 }
 
 Color _walletColor(int index) {
@@ -1345,41 +1380,49 @@ Color _walletColor(int index) {
   };
 }
 
-String _rangeLabel(BuildContext context, StatementInsightPeriod period) {
+String _rangeLabel(BuildContext context, StatementReportPeriod period) {
   return switch (period) {
-    StatementInsightPeriod.monthly =>
+    StatementReportPeriod.monthly =>
       context.tr.financialStatementPeriodLastSixMonths,
-    StatementInsightPeriod.weekly =>
+    StatementReportPeriod.weekly =>
       context.tr.financialStatementPeriodYearToDate,
-    StatementInsightPeriod.annual => context.tr.financialStatementPeriodOneYear,
+    StatementReportPeriod.annual => context.tr.financialStatementPeriodOneYear,
   };
 }
 
-String _periodTabLabel(BuildContext context, StatementInsightPeriod period) {
+String _periodTabLabel(BuildContext context, StatementReportPeriod period) {
   return switch (period) {
-    StatementInsightPeriod.monthly =>
+    StatementReportPeriod.monthly =>
       context.tr.financialStatementPeriodMonthly,
-    StatementInsightPeriod.weekly => context.tr.financialStatementPeriodWeekly,
-    StatementInsightPeriod.annual => context.tr.financialStatementPeriodAnnual,
+    StatementReportPeriod.weekly => context.tr.financialStatementPeriodWeekly,
+    StatementReportPeriod.annual => context.tr.financialStatementPeriodAnnual,
   };
 }
 
 String _formatCompactSats(int sats) {
-  if (sats >= 100000000) {
-    final btc = sats / 100000000.0;
+  final abs = sats.abs();
+  if (abs >= 100000000) {
+    final btc = abs / 100000000.0;
     return '${btc.toStringAsFixed(btc >= 10 ? 0 : 1)} BTC';
   }
-  if (sats >= 1000) {
-    return '${(sats / 1000).round()}k';
+  if (abs >= 1000) {
+    return '${(abs / 1000).round()}k';
   }
-  return '$sats';
+  return '$abs';
 }
 
 String _formatBtc(int sats) {
-  if (sats == 0) return '0 BTC';
-  if (sats < 10000) return '$sats sats';
-  final btc = sats / 100000000.0;
+  final abs = sats.abs();
+  if (abs == 0) return '0 BTC';
+  if (abs < 10000) return '$abs sats';
+  final btc = abs / 100000000.0;
   return '${btc.toStringAsFixed(btc >= 1 ? 4 : 6)} BTC';
+}
+
+String _formatSignedBtc(int sats) {
+  if (sats == 0) return '0 BTC';
+  final sign = sats > 0 ? '+' : '−';
+  return '$sign${_formatBtc(sats.abs())}';
 }
 
 String _formatPercent(double percent) {
@@ -1394,5 +1437,3 @@ String _pluralPt(int count, String singular, String plural) {
   final unit = count == 1 ? singular : plural;
   return '$count $unit';
 }
-
-int _btcToSats(double btc) => math.max(0, (btc * 100000000).round());

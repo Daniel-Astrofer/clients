@@ -116,7 +116,10 @@ class ErrorTranslator {
         return l10n.appEntryPinUnavailableMessage;
       case 'AUTH_019':
       case 'ERR_AUTH_APP_PIN_INVALID':
-        return l10n.errAuthInvalidCredentials;
+        // Entry PIN only — never use login "invalid credentials" copy here.
+        return extractedMessage?.trim().isNotEmpty == true
+            ? extractedMessage!.trim()
+            : 'PIN incorreto. Tente novamente.';
       case 'AUTH_020':
       case 'ERR_AUTH_APP_PIN_LOCKED':
         return l10n.appEntryLockedHelper;
@@ -126,6 +129,9 @@ class ErrorTranslator {
       case 'AUTH_022':
       case 'ERR_AUTH_PASSKEY_INVALID_ORIGIN':
         return l10n.errPasskeyRejected;
+      case 'AUTH_024':
+      case 'ERR_AUTH_DEVICE_ALREADY_BOUND':
+        return safeExtractedMessage ?? l10n.errAuthDeviceAlreadyBound;
       case 'AUTH_099':
       case 'ERR_AUTH_GENERIC':
         return l10n.errUnexpected;

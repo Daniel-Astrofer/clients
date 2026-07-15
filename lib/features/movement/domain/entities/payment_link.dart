@@ -71,8 +71,11 @@ class PaymentLink extends Equatable {
   bool get isPaid => status == 'paid';
   bool get isCompleted => status == 'completed';
   bool get isVerifyingOnboarding => status == 'verifying_onboarding';
-  bool get isCancelled => status == 'cancelled';
-  bool get isExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
+  bool get isCancelled =>
+      status == 'cancelled' || status == 'canceled' || status == 'hidden';
+  bool get isExpired =>
+      status == 'expired' ||
+      (expiresAt != null && DateTime.now().isAfter(expiresAt!));
   bool get isValidatingSettlement =>
       settlementStatus == 'VALIDATING' ||
       settlementStatus == 'QUORUM_SYNC' ||
@@ -234,12 +237,14 @@ class PaymentLink extends Equatable {
         terminal ||
         (!isOnchain && status == 'paid') ||
         (isOnchain && status == 'paid' && confirmations >= 3);
-    final bool isFailed = status == 'cancelled' || isExpired;
-    final transactionDescription = isCancelled
-        ? 'Link de pagamento cancelado'
-        : isExpired
+    final bool cancelledOrExpired = isCancelled || isExpired;
+    final transactionDescription = cancelledOrExpired
+        ? (isExpired && !isCancelled
             ? 'Link de pagamento expirado'
-            : (description.isNotEmpty ? description : 'Link de Pagamento');
+            : 'Link de pagamento cancelado')
+        : (description.isNotEmpty ? description : 'Link de Pagamento');
+    final hasObservedOnchainPayment =
+        txid != null && txid!.trim().isNotEmpty && !cancelledOrExpired && !isCompleted;
 
     return Transaction(
       id: "pl_$id",
@@ -249,8 +254,8 @@ class PaymentLink extends Equatable {
       feeSatoshis: 0,
       status: isCompleted
           ? TransactionStatus.confirmed
-          : isFailed
-              ? TransactionStatus.failed
+          : cancelledOrExpired
+              ? TransactionStatus.cancelled
               : hasObservedOnchainPayment
                   ? TransactionStatus.confirming
                   : TransactionStatus.pending,
@@ -303,6 +308,7 @@ class PaymentLink extends Equatable {
       return 'pending';
     }
     switch (normalized) {
+      case 'OPEN':
       case 'ACTIVE':
       case 'PENDING':
       case 'CREATED':
@@ -318,6 +324,7 @@ class PaymentLink extends Equatable {
         return 'expired';
       case 'CANCELED':
       case 'CANCELLED':
+      case 'HIDDEN':
         return 'cancelled';
       case 'FAILED':
         return 'failed';

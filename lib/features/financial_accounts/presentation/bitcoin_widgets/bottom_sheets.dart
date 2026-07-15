@@ -100,11 +100,7 @@ class SubmitPsbtSheetState extends ConsumerState<SubmitPsbtSheet> {
           style: colors.filledButtonStyle(),
           onPressed: busy ? null : submit,
           icon: busy
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+              ? const CupertinoActivityIndicator(radius: 9)
               : const Icon(KeroseneIcons.security, size: 18),
           label: Text(
             busy
@@ -743,6 +739,8 @@ String transactionStatusLabel(
     TransactionStatus.pending => context.tr.bitcoinReceiveStatusWaiting,
     TransactionStatus.confirming => context.tr.bitcoinReceiveStatusConfirming,
     TransactionStatus.confirmed => context.tr.bitcoinReceiveStatusPaid,
+    TransactionStatus.cancelled =>
+      context.tr.financialStatementFilterCancelled,
     TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
   };
 }

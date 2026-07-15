@@ -92,6 +92,11 @@ class AppConfig {
   static const String authPasskeyRegister = '/auth/passkey/register';
   static const String authPasskeyVerify = '/auth/passkey/verify';
   static const String authPasskeyDevices = '/auth/passkey/devices';
+  static const String authDeviceKeyChallenge = '/auth/device-key/challenge';
+  static const String authDeviceKeyRegisterStart = '/auth/device-key/register/start';
+  static const String authDeviceKeyRegisterFinish =
+      '/auth/device-key/register/finish';
+  static const String authDeviceKeyVerify = '/auth/device-key/verify';
   static const String authPasskeyOnboardingStart =
       '/auth/passkey/onboarding/start';
   static const String authPasskeyOnboardingFinish =
@@ -176,6 +181,24 @@ class AppConfig {
   static const String kfeReserveOverview = '/api/admin/kfe/reserves/overview';
   static String kfeReceivingCapabilities(String receiverIdentifier) =>
       '/kfe/users/${Uri.encodeComponent(receiverIdentifier.trim())}/receiving-capabilities';
+
+  /// Personalized home education / announcement / promo feed (rule-based catalog).
+  static String contentHomeFeed({
+    required String balanceView,
+    required String locale,
+    String? timeZone,
+  }) {
+    final buffer = StringBuffer(
+      '/content/home-feed'
+      '?balanceView=${Uri.encodeComponent(balanceView)}'
+      '&locale=${Uri.encodeComponent(locale)}',
+    );
+    final tz = timeZone?.trim();
+    if (tz != null && tz.isNotEmpty) {
+      buffer.write('&timeZone=${Uri.encodeComponent(tz)}');
+    }
+    return buffer.toString();
+  }
 
   static String kfeColdWalletPsbtCreate(String walletId) =>
       '$kfeWallets/$walletId/cold-wallet/psbt';

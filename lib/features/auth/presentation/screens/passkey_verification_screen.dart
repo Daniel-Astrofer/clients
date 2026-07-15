@@ -342,6 +342,25 @@ class _PasskeyVerificationScreenState
     return code == 'CHALLENGE_EXPIRED' || code == 'AUTH_012';
   }
 
+  /// True when we arrived from password login and passkey cannot complete.
+  bool _canFallbackToPasswordSession(AuthError error) {
+    // Only when primary password login already ran (JWT may be stored).
+    if (widget.fallbackPassphrase == null) {
+      return false;
+    }
+    final code = (error.errorCode ?? '').toUpperCase();
+    final message = error.message.toUpperCase();
+    return code == 'AUTH_014' ||
+        code == 'AUTH_017' ||
+        code == 'ERR_AUTH_PASSKEY_NOT_REGISTERED' ||
+        code == 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS' ||
+        code == 'ERR_AUTH_PASSKEY_CORRUPTED_KEY_MATERIAL' ||
+        code == 'ERR_AUTH_PASSKEY_LINK_REQUIRED' ||
+        message.contains('NENHUMA PASSKEY') ||
+        message.contains('NOT REGISTERED') ||
+        message.contains('NO DEVICE KEY');
+  }
+
   String _authTitle() {
     if (_phase == _PasskeyPhase.success) {
       return _copy(
@@ -445,6 +464,14 @@ class _PasskeyVerificationScreenState
               _issuePulseKey += 1;
             });
           }
+          return;
+        }
+        // Password login may already have stored a JWT. If passkey is unavailable
+        // (unlinked device / no server credential), complete with password session.
+        if (_canFallbackToPasswordSession(next)) {
+          await ref
+              .read(authControllerProvider.notifier)
+              .establishSessionAfterPasswordLogin();
           return;
         }
         if (mounted) {

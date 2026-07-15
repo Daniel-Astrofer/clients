@@ -6365,6 +6365,60 @@ abstract class AppLocalizations {
   /// **'Sign in with passphrase and authenticator code, then link a passkey compatible with this device.'**
   String get errPasskeyLinkGuidance;
 
+  /// No description provided for @errAuthDeviceAlreadyBound.
+  ///
+  /// In en, this message translates to:
+  /// **'This device is already linked to another account. Confirm to remove the previous passkey.'**
+  String get errAuthDeviceAlreadyBound;
+
+  /// No description provided for @authDeviceUnlinkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch account on this device?'**
+  String get authDeviceUnlinkTitle;
+
+  /// No description provided for @authDeviceUnlinkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device is linked to account {previousUsername}.\n\n{guidance}'**
+  String authDeviceUnlinkBody(String previousUsername, String guidance);
+
+  /// No description provided for @authDeviceUnlinkDefaultGuidance.
+  ///
+  /// In en, this message translates to:
+  /// **'If you continue, the previous account\'s passkey will be removed from this device and that account will only be accessible with a password.'**
+  String get authDeviceUnlinkDefaultGuidance;
+
+  /// No description provided for @authDeviceUnlinkConfirmSignup.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue and create new account'**
+  String get authDeviceUnlinkConfirmSignup;
+
+  /// No description provided for @authDeviceUnlinkConfirmLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue and link'**
+  String get authDeviceUnlinkConfirmLink;
+
+  /// No description provided for @authDeviceUnlinkCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get authDeviceUnlinkCancel;
+
+  /// No description provided for @authDeviceUnlinkCancelledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device already linked'**
+  String get authDeviceUnlinkCancelledTitle;
+
+  /// No description provided for @authDeviceUnlinkCancelledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Signup cancelled. This device remains linked to {previousUsername}.'**
+  String authDeviceUnlinkCancelledMessage(String previousUsername);
+
   /// No description provided for @errReceiverNotReady.
   ///
   /// In en, this message translates to:
@@ -11074,6 +11128,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed'**
   String get financialStatementFilterFailed;
+
+  /// No description provided for @financialStatementFilterCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get financialStatementFilterCancelled;
 
   /// No description provided for @financialStatementNoResultsTitle.
   ///

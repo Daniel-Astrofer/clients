@@ -34,6 +34,9 @@ class KfeReceivingCapabilities {
   final List<String> missingRequirements;
   final String receiverDisplayName;
   final String? internalWalletId;
+  /// Active on-chain receive address for dual-rail send (Fase A).
+  final String? onchainReceiveAddress;
+  final String? onchainWalletId;
   final List<String> availableRails;
 
   const KfeReceivingCapabilities({
@@ -44,6 +47,8 @@ class KfeReceivingCapabilities {
     required this.missingRequirements,
     required this.receiverDisplayName,
     this.internalWalletId,
+    this.onchainReceiveAddress,
+    this.onchainWalletId,
     required this.availableRails,
   });
 
@@ -58,6 +63,8 @@ class KfeReceivingCapabilities {
       receiverDisplayName:
           _trimmedOrNull(payload['receiverDisplayName']) ?? 'Kerosene user',
       internalWalletId: _trimmedOrNull(payload['internalWalletId']),
+      onchainReceiveAddress: _trimmedOrNull(payload['onchainReceiveAddress']),
+      onchainWalletId: _trimmedOrNull(payload['onchainWalletId']),
       availableRails: _stringList(payload['availableRails']),
     );
   }

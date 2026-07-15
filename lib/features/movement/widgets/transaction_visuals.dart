@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/design_system/icons.dart';
 
 enum TransactionVisualFamily {
@@ -52,9 +53,9 @@ enum TransactionVisualLabel {
 }
 
 class TransactionVisualSpec {
-  static const Color _creditColor = AppColors.hexFFA8C7B1;
-  static const Color _debitColor = AppColors.hexFFD59A9A;
-  static const Color _neutralAmountColor = AppColors.hexFF8FA7C2;
+  static const Color _creditColor = TransactionPalette.amountCredit;
+  static const Color _debitColor = TransactionPalette.amountDebit;
+  static const Color _neutralAmountColor = TransactionPalette.amountNeutral;
 
   final TransactionVisualFamily family;
   final TransactionVisualDirection direction;
@@ -116,15 +117,15 @@ class TransactionVisualSpec {
         transaction.type == TransactionType.withdrawal;
     final description = (transaction.description ?? '').toLowerCase();
 
-    if (_looksCancelled(transaction)) {
+    if (transaction.isCancelled || _looksCancelled(transaction)) {
       return const TransactionVisualSpec(
         family: TransactionVisualFamily.cancelled,
         direction: TransactionVisualDirection.neutral,
         labelKey: TransactionVisualLabel.cancelled,
         prefix: '',
         icon: KeroseneIcons.blocked,
-        iconColor: AppColors.hexFFB38A8A,
-        amountColor: _neutralAmountColor,
+        iconColor: TransactionPalette.statusCancelled,
+        amountColor: TransactionPalette.statusCancelled,
       );
     }
 
@@ -146,8 +147,8 @@ class TransactionVisualSpec {
         labelKey: TransactionVisualLabel.failed,
         prefix: '',
         icon: KeroseneIcons.error,
-        iconColor: AppColors.hexFFD59A9A,
-        amountColor: _debitColor,
+        iconColor: TransactionPalette.statusFailed,
+        amountColor: TransactionPalette.statusFailed,
       );
     }
 
@@ -390,6 +391,11 @@ class TransactionVisualSpec {
   }
 
   static bool _looksCancelled(Transaction transaction) {
+    if (transaction.isCancelled) return true;
+    final external = (transaction.externalTransferStatus ?? '').toUpperCase();
+    if (const {'CANCELLED', 'CANCELED', 'EXPIRED', 'HIDDEN'}.contains(external)) {
+      return true;
+    }
     final description = (transaction.description ?? '').toLowerCase();
     return description.contains('cancelado') ||
         description.contains('cancelled') ||

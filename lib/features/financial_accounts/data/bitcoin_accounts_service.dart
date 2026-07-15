@@ -84,7 +84,8 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
         'derivationPath': derivationPath.trim(),
         if (normalizedScriptPolicy.isNotEmpty)
           'descriptor': normalizedScriptPolicy,
-        'issueInitialAddress': false,
+        // Always request first receive address so cold can be funded / receive.
+        'issueInitialAddress': true,
       },
     );
     return _accountFromKfeWallet(
@@ -339,6 +340,7 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
     required int amountSats,
     int? feeRate,
     List<String> selectedUtxoIds = const [],
+    String? totpCode,
   }) async {
     final response = await _api.post(
       AppConfig.kfeColdWalletPsbtCreate(coldWalletId),
@@ -347,6 +349,8 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
         'amountSats': amountSats,
         if (feeRate != null) 'feeRateSatsPerVbyte': feeRate,
         if (selectedUtxoIds.isNotEmpty) 'inputs': _psbtInputs(selectedUtxoIds),
+        if (totpCode != null && totpCode.trim().isNotEmpty)
+          'totpCode': totpCode.trim(),
       },
     );
     return PsbtWorkflowView.fromJson({

@@ -31,12 +31,19 @@ class _RecordingTorService implements TorService {
   }
 
   @override
-  Future<int> startRelay(String targetHost, int targetPort) async {
+  Future<int> startRelay(
+    String targetHost,
+    int targetPort, {
+    bool warmUpCircuit = false,
+  }) async {
     relayStartCallCount++;
     relayTargetHost = targetHost;
     relayTargetPort = targetPort;
     return 43123;
   }
+
+  @override
+  Future<void> warmOnionCircuit(String targetHost, int targetPort) async {}
 
   @override
   Future<void> stop() async {}

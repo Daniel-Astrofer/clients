@@ -2,6 +2,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -721,13 +722,9 @@ class ActionButton extends StatelessWidget {
               ),
               child: Center(
                 child: isLoading
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: foreground,
-                        ),
+                    ? CupertinoActivityIndicator(
+                        radius: 9,
+                        color: foreground,
                       )
                     : Text(
                         text,

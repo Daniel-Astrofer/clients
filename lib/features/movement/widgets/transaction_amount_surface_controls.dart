@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
@@ -419,15 +420,11 @@ class TransactionPrimaryButton extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: _surfaceDuration(disableAnimations, KeroseneMotion.short),
             child: isLoading
-                ? SizedBox(
-                    key: const ValueKey('loading'),
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                  ? CupertinoActivityIndicator(
+                      key: const ValueKey('loading'),
+                      radius: 9,
                       color: foregroundColor,
-                    ),
-                  )
+                    )
                 : Text(
                     label.toUpperCase(),
                     key: ValueKey(label),

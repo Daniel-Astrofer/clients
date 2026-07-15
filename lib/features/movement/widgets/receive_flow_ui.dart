@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/presentation/widgets/kerosene_logo.dart';
@@ -591,19 +592,15 @@ class ReceiveFlowPrimaryButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-        child: isLoading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
+          child: isLoading
+              ? CupertinoActivityIndicator(
+                  radius: 9,
                   color: foregroundColor,
-                  strokeWidth: 2,
-                ),
-              )
-            : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
                       Icon(icon, size: 15, color: foregroundColor),

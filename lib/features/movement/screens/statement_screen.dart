@@ -13,10 +13,9 @@ import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
-import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
 import 'package:kerosene/features/movement/widgets/statement_transaction_card.dart';
@@ -88,6 +87,7 @@ class _TransactionStatementScreenState
   Future<void> _refreshData() async {
     await HapticFeedback.lightImpact();
     ref.invalidate(transactionHistoryProvider);
+    ref.invalidate(statementInsightsReportProvider);
     await Future.wait([
       ref.read(walletProvider.notifier).refresh(),
       ref.read(transactionHistoryProvider.future),
@@ -127,9 +127,6 @@ class _TransactionStatementScreenState
   @override
   Widget build(BuildContext context) {
     final historyAsync = ref.watch(transactionHistoryProvider);
-    final walletState = ref.watch(walletProvider);
-    final wallets =
-        walletState is WalletLoaded ? walletState.wallets : const <Wallet>[];
     final bottomPadding =
         AppPrimaryNavigationBar.scaffoldBottomClearance(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -204,11 +201,8 @@ class _TransactionStatementScreenState
                               AppSpacing.xl2,
                               bottomPadding,
                             ),
-                            sliver: SliverToBoxAdapter(
-                              child: TransactionStatementInsights(
-                                transactions: transactions,
-                                wallets: wallets,
-                              ),
+                            sliver: const SliverToBoxAdapter(
+                              child: TransactionStatementInsights(),
                             ),
                           );
                         }
@@ -827,6 +821,7 @@ String _transactionStatusLabel(Transaction transaction) {
     TransactionStatus.confirmed => 'Confirmado',
     TransactionStatus.confirming => '${transaction.confirmations} confirmações',
     TransactionStatus.pending => 'Pendente',
+    TransactionStatus.cancelled => 'Cancelada',
     TransactionStatus.failed => 'Falhou',
   };
 }

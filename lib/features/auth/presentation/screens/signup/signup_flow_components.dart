@@ -1,5 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -492,13 +493,9 @@ class SignupPrimaryButton extends StatelessWidget {
             textStyle: SignupTypography.button(color: foreground),
           ),
           child: isLoading
-              ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: foreground,
-                  ),
+              ? CupertinoActivityIndicator(
+                  radius: 9,
+                  color: foreground,
                 )
               : Text(text),
         ),
@@ -568,14 +565,9 @@ class SignupSpinnerState extends State<SignupSpinner>
   @override
   Widget build(BuildContext context) {
     if (AuthMotion.reduce(context)) {
-      return SizedBox(
-        width: widget.size,
-        height: widget.size,
-        child: CircularProgressIndicator(
-          strokeWidth: widget.strokeWidth,
-          color: _signupText,
-          backgroundColor: Colors.white.withValues(alpha: 0.08),
-        ),
+      return CupertinoActivityIndicator(
+        radius: widget.size / 2,
+        color: _signupText,
       );
     }
 

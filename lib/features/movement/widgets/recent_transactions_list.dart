@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/currency_provider.dart';
@@ -12,8 +13,7 @@ import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
-/// Lista de transações recentes com design premium e animações staggered
+import 'package:intl/intl.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 
 class RecentTransactionsList extends ConsumerWidget {
@@ -231,13 +231,28 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                               .onPrimary
                               .withValues(alpha: 0.05)),
                       const SizedBox(height: AppSpacing.sm),
+                      _buildDetailRow('VALOR BASE', MoneyDisplay.format(amount: t.amountBTC, currency: Currency.btc)),
+                      const SizedBox(height: AppSpacing.xs),
+                      _buildDetailRow('TAXA DE REDE', t.isInternal || t.feeSatoshis == 0 ? 'ISENTA' : MoneyDisplay.format(amount: t.feeBTC, currency: Currency.btc)),
+                      const SizedBox(height: AppSpacing.xs),
+                      _buildDetailRow('VALOR TOTAL', MoneyDisplay.format(amount: (t.amountSatoshis + t.feeSatoshis) / 100000000.0, currency: Currency.btc)),
+                      
+                      if (!t.isInternal) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        _buildDetailRow('REDE', t.isLightning ? 'LIGHTNING NETWORK' : 'BITCOIN ON-CHAIN'),
+                        if (!t.isLightning) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          _buildDetailRow('CONFIRMAÇÕES', t.confirmations >= 6 ? '6+ (SEGURO)' : '${t.confirmations}/6'),
+                          if (t.blockHeight != null && t.blockHeight! > 0) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            _buildDetailRow('BLOCO', '#${t.blockHeight}'),
+                          ],
+                        ],
+                      ],
+                      const SizedBox(height: AppSpacing.xs),
                       _buildDetailRow('TXID', t.id),
                       const SizedBox(height: AppSpacing.xs),
-                      _buildDetailRow(
-                          'TIMESTAMP', t.timestamp.toIso8601String()),
-                      const SizedBox(height: AppSpacing.xs),
-                      _buildDetailRow(
-                          'BLOCKCHAIN FEE', '${t.feeSatoshis} SATS'),
+                      _buildDetailRow('DATA E HORA', DateFormat('dd/MM/yyyy HH:mm:ss').format(t.timestamp.toLocal())),
                     ],
                   ),
                 ),
@@ -281,6 +296,9 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
       case TransactionStatus.confirmed:
         text = 'CONFIRMADO';
         break;
+      case TransactionStatus.cancelled:
+        text = 'CANCELADA';
+        break;
       case TransactionStatus.failed:
         text = 'FALHOU';
         break;
@@ -302,12 +320,8 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isProcessing) ...[
-            const SizedBox(
-              width: 6,
-              height: 6,
-              child: CircularProgressIndicator(
-                  strokeWidth: 1, color: AppColors.warning),
-            ),
+            const CupertinoActivityIndicator(
+                radius: 3, color: AppColors.warning),
             const SizedBox(width: 4),
           ],
           Text(

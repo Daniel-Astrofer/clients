@@ -29,29 +29,57 @@ Future<void> initializeCookieSupport(Dio dio) async {
   dio.interceptors.add(CookieManager(CookieJar()));
 }
 
+/// Ensures Tor relay is usable before the request leaves the device.
+///
+/// Retries bootstrap while the user is already past the PIN pad (held PIN →
+/// dots). Does not throw on the first transient failure.
 Future<void> ensureNetworkReady({
   required Ref ref,
   required ApiClientRoutePolicy routePolicy,
   required String baseUrl,
 }) async {
   final torService = ref.read(torServiceProvider);
-  final bootstrapped = AppConfig.isTorEnabled && torService.isRunning;
+  final onionRequired =
+      resolveTorBootstrapTarget(AppConfig.onionBaseUrl).requiresTor;
 
-  if (!bootstrapped) {
+  // Pure clearnet builds never block on Tor.
+  if (!onionRequired && !_isOnionUrl(baseUrl)) {
+    return;
+  }
+
+  if (AppConfig.isTorEnabled && torService.isRunning) {
+    return;
+  }
+
+  // Onion path required — wait/retry rather than immediate "Tor not ready".
+  const maxAttempts = 24; // ~30s with backoff
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    if (AppConfig.isTorEnabled && torService.isRunning) {
+      return;
+    }
+
     final started = await bootstrapTorNetwork(
       torService: torService,
       updateApiUrl: (url) {
         ref.read(torApiUrlProvider.notifier).updateUrl(url);
       },
+      ignoreFailureCooldown: attempt > 0,
     );
 
-    if (!started) {
-      throw const NetworkException(
-        message:
-            'A rede Tor ainda não está pronta. Nenhuma requisição foi enviada.',
-      );
+    if (started && torService.isRunning) {
+      return;
     }
+
+    // Brief pause while Arti/relay comes up (or cold-start bootstrap finishes).
+    await Future<void>.delayed(
+      Duration(milliseconds: attempt < 4 ? 400 : 900),
+    );
   }
+
+  throw const NetworkException(
+    message:
+        'A rede Tor ainda não está pronta. Nenhuma requisição foi enviada.',
+  );
 }
 
 void configureProxyRouting({

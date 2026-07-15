@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/icons.dart';
@@ -267,13 +268,9 @@ class AuthEntryButton extends StatelessWidget {
               ),
               child: Center(
                 child: isLoading
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          color: foreground,
-                          strokeWidth: 2,
-                        ),
+                    ? CupertinoActivityIndicator(
+                        radius: 9,
+                        color: foreground,
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,

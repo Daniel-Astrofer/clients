@@ -2,6 +2,9 @@
 
 import 'dart:math' as math;
 
+import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
+import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
+
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
@@ -29,7 +32,13 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final view = ref.watch(homeLedgerBalanceViewProvider);
-    final cards = homeEducationCards(context, view);
+    final remoteAsync = ref.watch(homeFeedProvider);
+    final remote = remoteAsync.asData?.value;
+    final cards = resolveHomeFeedCards(
+      context: context,
+      view: view,
+      remote: remote,
+    );
 
     if (_lastView != view) {
       _lastView = view;
@@ -39,6 +48,10 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
           _pageController.jumpToPage(0);
         }
       });
+    }
+
+    if (cards.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     return Column(
@@ -60,74 +73,90 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                   left: index == 0 ? 0 : homeSize(4),
                   right: index == cards.length - 1 ? 0 : homeSize(4),
                 ),
-                child: HomeGlassPanel(
-                  borderRadius: BorderRadius.circular(homeSize(16)),
-                  padding: EdgeInsets.all(homeSize(18)),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: homeSize(46),
-                        height: homeSize(46),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(homeSize(16)),
+                    onTap: card.cta?.isNavigate == true
+                        ? () => _openFeedCta(context, card.cta!)
+                        : null,
+                    child: HomeGlassPanel(
+                      borderRadius: BorderRadius.circular(homeSize(16)),
+                      padding: EdgeInsets.all(homeSize(18)),
+                      child: Row(
+                        children: [
+                          _HomeFeedMediaThumb(
+                            media: card.media,
+                            kind: card.kind,
                           ),
-                        ),
-                        child: Icon(
-                          card.icon,
-                          color: Colors.white,
-                          size: homeSize(21),
-                        ),
+                          SizedBox(width: homeSize(16)),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  card.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.newsreader(
+                                    textStyle: theme.textTheme.titleMedium,
+                                    color: Colors.white,
+                                    fontSize: homeFontSize(20),
+                                    fontWeight: FontWeight.w300,
+                                    height: 1.1,
+                                    letterSpacing: 0,
+                                  ),
+                                ),
+                                SizedBox(height: homeSize(8)),
+                                Text(
+                                  card.body,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: homeMutedTextColor,
+                                    fontSize: homeFontSize(12),
+                                    height: 1.45,
+                                    letterSpacing: 0,
+                                  ),
+                                ),
+                                SizedBox(height: homeSize(12)),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        card.tag.toUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            theme.textTheme.labelSmall?.copyWith(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.72),
+                                          fontSize: homeFontSize(10),
+                                          fontWeight: FontWeight.w300,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                    ),
+                                    if (card.cta?.isNavigate == true)
+                                      Text(
+                                        card.cta!.label,
+                                        style:
+                                            theme.textTheme.labelSmall?.copyWith(
+                                          color: homeAmberColor,
+                                          fontSize: homeFontSize(10),
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: homeSize(16)),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              card.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.newsreader(
-                                textStyle: theme.textTheme.titleMedium,
-                                color: Colors.white,
-                                fontSize: homeFontSize(20),
-                                fontWeight: FontWeight.w300,
-                                height: 1.1,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                            SizedBox(height: homeSize(8)),
-                            Text(
-                              card.body,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: homeMutedTextColor,
-                                fontSize: homeFontSize(12),
-                                height: 1.45,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                            SizedBox(height: homeSize(12)),
-                            Text(
-                              card.tag.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.72),
-                                fontSize: homeFontSize(10),
-                                fontWeight: FontWeight.w300,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -144,6 +173,105 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
   }
 }
 
+void _openFeedCta(BuildContext context, HomeFeedCta cta) {
+  HapticFeedback.selectionClick();
+  final target = cta.target.trim();
+  if (target.isEmpty) return;
+  if (target.startsWith('/')) {
+    Navigator.of(context).pushNamed(target);
+    return;
+  }
+  // Unknown scheme — ignore safely.
+}
+
+class _HomeFeedMediaThumb extends StatelessWidget {
+  final HomeFeedMedia media;
+  final HomeFeedKind kind;
+
+  const _HomeFeedMediaThumb({
+    required this.media,
+    required this.kind,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (kind) {
+      HomeFeedKind.promo => homeAmberColor,
+      HomeFeedKind.announcement => Colors.white70,
+      HomeFeedKind.feature => const Color(0xFF5EE9A0),
+      _ => Colors.white,
+    };
+
+    Widget child;
+    final url = media.url?.trim() ?? '';
+    final poster = media.posterUrl?.trim() ?? '';
+    final imageUrl = poster.isNotEmpty ? poster : url;
+    final isAsset = imageUrl.startsWith('asset:');
+    final assetPath =
+        isAsset ? imageUrl.substring('asset:'.length) : imageUrl;
+
+    final isImageCard = media.type == HomeFeedMediaType.image ||
+        media.type == HomeFeedMediaType.video ||
+        media.type == HomeFeedMediaType.lottie;
+    // Card product shots need a wider thumb so they are recognizable.
+    final thumbW = isImageCard && imageUrl.isNotEmpty ? homeSize(72) : homeSize(56);
+    final thumbH = isImageCard && imageUrl.isNotEmpty ? homeSize(46) : homeSize(46);
+    final imgH = isImageCard && imageUrl.isNotEmpty ? homeSize(42) : homeSize(36);
+
+    if (isImageCard && imageUrl.isNotEmpty) {
+      final image = isAsset
+          ? Image.asset(
+              assetPath,
+              width: thumbW,
+              height: imgH,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(
+                media.resolveIcon(),
+                color: accent,
+                size: homeSize(21),
+              ),
+            )
+          : Image.network(
+              imageUrl,
+              width: thumbW,
+              height: imgH,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(
+                media.resolveIcon(),
+                color: accent,
+                size: homeSize(21),
+              ),
+            );
+      child = ClipRRect(
+        borderRadius: BorderRadius.circular(homeSize(8)),
+        child: image,
+      );
+    } else {
+      child = Icon(
+        media.resolveIcon(),
+        color: accent,
+        size: homeSize(21),
+      );
+    }
+
+    return Container(
+      width: thumbW,
+      height: thumbH,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(homeSize(12)),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+/// Legacy local model kept for tests/callers that still import the name.
 class HomeEducationCardData {
   final IconData icon;
   final String title;
@@ -162,70 +290,16 @@ List<HomeEducationCardData> homeEducationCards(
   BuildContext context,
   HomeLedgerBalanceView view,
 ) {
-  final tr = context.tr;
-
-  return switch (view) {
-    HomeLedgerBalanceView.platform => [
-        HomeEducationCardData(
-          icon: KeroseneIcons.internalTransfer,
-          title: tr.homeEducationInternalTitle,
-          body: tr.homeEducationInternalBody,
-          tag: tr.homeEducationInternalTag,
+  return localEducationFallback(context, view)
+      .map(
+        (item) => HomeEducationCardData(
+          icon: item.media.resolveIcon(),
+          title: item.title,
+          body: item.body,
+          tag: item.tag,
         ),
-        HomeEducationCardData(
-          icon: KeroseneIcons.biometric,
-          title: tr.homeEducationWalletHashTitle,
-          body: tr.homeEducationWalletHashBody,
-          tag: tr.homeEducationWalletHashTag,
-        ),
-        HomeEducationCardData(
-          icon: KeroseneIcons.lightning,
-          title: tr.homeEducationLightningTitle,
-          body: tr.homeEducationLightningBody,
-          tag: tr.homeEducationLightningTag,
-        ),
-      ],
-    HomeLedgerBalanceView.onChain => [
-        HomeEducationCardData(
-          icon: KeroseneIcons.bitcoin,
-          title: tr.homeEducationOnchainTitle,
-          body: tr.homeEducationOnchainBody,
-          tag: tr.homeEducationOnchainTag,
-        ),
-        HomeEducationCardData(
-          icon: KeroseneIcons.sync,
-          title: tr.homeEducationConfirmationsTitle,
-          body: tr.homeEducationConfirmationsBody,
-          tag: tr.homeEducationConfirmationsTag,
-        ),
-        HomeEducationCardData(
-          icon: KeroseneIcons.gauge,
-          title: tr.homeEducationFeesTitle,
-          body: tr.homeEducationFeesBody,
-          tag: tr.homeEducationFeesTag,
-        ),
-      ],
-    _ => [
-        HomeEducationCardData(
-          icon: KeroseneIcons.bitcoin,
-          title: tr.homeEducationBitcoinTitle,
-          body: tr.homeEducationBitcoinBody,
-          tag: tr.homeEducationBitcoinTag,
-        ),
-        HomeEducationCardData(
-          icon: KeroseneIcons.lightning,
-          title: tr.homeEducationLightningTitle,
-          body: tr.homeEducationLightningGeneralBody,
-          tag: tr.homeEducationLightningGeneralTag,
-        ),
-        HomeEducationCardData(
-          icon: KeroseneIcons.wallet,
-          title: tr.homeEducationInternalTitle,
-          body: tr.homeEducationKeroseneGeneralBody,
-          tag: tr.homeEducationKeroseneGeneralTag,
-        ),
-      ],
-  };
+      )
+      .toList(growable: false);
 }
 
 class HomeFundsDistributionSection extends ConsumerWidget {
@@ -622,6 +696,7 @@ class HomeActivityFilterChips extends ConsumerWidget {
       HomeActivityFilter.outgoing,
       HomeActivityFilter.pending,
       HomeActivityFilter.failed,
+      HomeActivityFilter.cancelled,
     ];
 
     void selectFilter(HomeActivityFilter filter) {
@@ -732,6 +807,8 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
     HomeActivityFilter.outgoing => context.tr.financialStatementFilterOutgoing,
     HomeActivityFilter.pending => context.tr.financialStatementFilterPending,
     HomeActivityFilter.failed => context.tr.financialStatementFilterFailed,
+    HomeActivityFilter.cancelled =>
+      context.tr.financialStatementFilterCancelled,
   };
 }
 

@@ -52,6 +52,7 @@ import 'package:kerosene/features/movement/screens/send_money_screen.dart'
     deferred as send_money;
 import '../widgets/animated_balance_display.dart';
 import '../widgets/home_bitcoin_market_chart_card.dart';
+import '../widgets/home_onboarding_progress_card.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
@@ -66,9 +67,22 @@ import 'home_screen_balance.dart';
 import 'home_screen_navigation.dart';
 import 'home_screen_transactions.dart';
 
-enum HomeLedgerBalanceView { total, platform, onChain }
+/// Home balance carousel pages — only pages the user actually has appear.
+enum HomeLedgerBalanceView {
+  /// Sum of every active balance.
+  total,
 
-enum HomeActivityFilter { all, incoming, outgoing, pending, failed }
+  /// Custodial on-chain (hot chain custody).
+  onChain,
+
+  /// Watch-only / cold vault.
+  cold,
+
+  /// Internal Kerosene ledger (global / card).
+  platform,
+}
+
+enum HomeActivityFilter { all, incoming, outgoing, pending, failed, cancelled }
 
 final homeLedgerBalanceViewProvider = StateProvider<HomeLedgerBalanceView>((
   ref,
@@ -470,10 +484,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         _firstUseActionPanelUserId == authenticatedUserId;
     final showPrimaryActionPanel =
         !isReadyActionsVariant || showFirstUseReadyPanel;
-    final showHomeLoading = walletState is WalletInitial ||
-        walletState is WalletLoading ||
-        (!transactionHistoryAsync.hasValue &&
-            transactionHistoryAsync.isLoading);
+    // Full-body dots only while wallets have never loaded.
+    // History loading must not replace the home with a second (higher) dots
+    // strip after the post-PIN TorNavigationLoadingScreen already finished.
+    final showHomeLoading =
+        walletState is WalletInitial || walletState is WalletLoading;
 
     void openStatement() {
       unawaited(
@@ -517,6 +532,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
           fit: StackFit.expand,
           children: [
             const HomePageBackground(),
+            const HomeTopAmbientGlow(),
             const HomeRealtimeBootstrap(),
             SafeArea(
               bottom: false,
@@ -564,6 +580,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                           AppPrimaryDestination.card,
                                         ),
                                       ),
+                                      const HomeOnboardingProgressCard(),
                                       SizedBox(height: homeSize(18)),
                                       const HomeBitcoinMarketChartCard(),
                                       if (showPrimaryActionPanel) ...[

@@ -356,6 +356,16 @@ class _NotificationCenterHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        IconButton(
+          tooltip: _copy(context, pt: 'Voltar', en: 'Back', es: 'Volver'),
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(KeroseneIcons.back),
+          color: Colors.white,
+          iconSize: 24,
+          padding: const EdgeInsets.only(right: 14),
+          visualDensity: VisualDensity.compact,
+          alignment: Alignment.centerLeft,
+        ),
         Expanded(
           child: Text(
             _copy(

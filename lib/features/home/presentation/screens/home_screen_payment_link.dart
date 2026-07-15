@@ -1,5 +1,8 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'package:kerosene/features/movement/domain/payment_intent.dart';
+import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
+
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 
@@ -60,107 +63,78 @@ class PaymentPayloadDraft {
 
   static PaymentPayloadDraft analyze(BuildContext context, String raw) {
     final l10n = context.tr;
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) {
-      return PaymentPayloadDraft(
-        kind: PaymentPayloadKind.empty,
-        normalizedPayload: '',
-        title: l10n.homePendingLinkTitle,
-        destinationLabel: l10n.homePendingLinkMessage,
-        actionLabel: l10n.homePayloadActionContinue,
-        icon: KeroseneIcons.onchain,
-      );
-    }
+    final intent = const PaymentIntentParser().parse(raw);
+    return fromPaymentIntent(context, intent);
+  }
 
-    final explicitLinkId = QrPaymentParser.extractPaymentLinkId(trimmed);
-    if (explicitLinkId != null) {
-      return paymentLink(context, explicitLinkId, normalizedPayload: trimmed);
+  /// Maps the canonical [PaymentIntent] into home paste UI copy.
+  static PaymentPayloadDraft fromPaymentIntent(
+    BuildContext context,
+    PaymentIntent intent,
+  ) {
+    final l10n = context.tr;
+    switch (intent.kind) {
+      case PaymentDestinationKind.empty:
+        return PaymentPayloadDraft(
+          kind: PaymentPayloadKind.empty,
+          normalizedPayload: '',
+          title: l10n.homePendingLinkTitle,
+          destinationLabel: l10n.homePendingLinkMessage,
+          actionLabel: l10n.homePayloadActionContinue,
+          icon: KeroseneIcons.onchain,
+        );
+      case PaymentDestinationKind.paymentLink:
+        return paymentLink(
+          context,
+          intent.paymentLinkId ?? intent.normalizedValue,
+          normalizedPayload: intent.rawInput,
+        );
+      case PaymentDestinationKind.lightning:
+        return PaymentPayloadDraft(
+          kind: PaymentPayloadKind.lightning,
+          normalizedPayload: intent.normalizedValue,
+          title: l10n.homeLightningPaymentTitle,
+          destinationLabel: _shortPaymentValue(intent.normalizedValue),
+          supportingLabel:
+              intent.message ?? intent.label ?? l10n.homeInvoiceOrLnurl,
+          actionLabel: l10n.homePayloadActionContinueLightning,
+          amountBtc: intent.amountBtc,
+          icon: KeroseneIcons.lightning,
+        );
+      case PaymentDestinationKind.onchain:
+        return PaymentPayloadDraft(
+          kind: PaymentPayloadKind.onChain,
+          normalizedPayload: intent.rawInput,
+          title: l10n.homeOnchainPaymentTitle,
+          destinationLabel: _shortPaymentValue(intent.normalizedValue),
+          supportingLabel:
+              intent.message ?? intent.label ?? l10n.homeBitcoinAddress,
+          actionLabel: l10n.homePayloadActionContinueOnchain,
+          amountBtc: intent.amountBtc,
+          icon: KeroseneIcons.onchain,
+        );
+      case PaymentDestinationKind.internal:
+        final user = intent.normalizedValue;
+        return PaymentPayloadDraft(
+          kind: PaymentPayloadKind.internal,
+          normalizedPayload: user,
+          title: l10n.homeInternalTransferTitle,
+          destinationLabel: user.contains('-') ? user : '@$user',
+          supportingLabel: l10n.homeKeroseneUser,
+          actionLabel: l10n.homePayloadActionContinueInternal,
+          amountBtc: intent.amountBtc,
+          icon: KeroseneIcons.internalTransfer,
+        );
+      case PaymentDestinationKind.invalid:
+        return PaymentPayloadDraft(
+          kind: PaymentPayloadKind.invalid,
+          normalizedPayload: '',
+          title: l10n.homeInvalidLinkTitle,
+          destinationLabel: l10n.homeInvalidLinkMessage,
+          actionLabel: l10n.homePayloadActionContinue,
+          icon: KeroseneIcons.warning,
+        );
     }
-
-    final parsed = QrPaymentParser.decode(trimmed);
-    final candidate = parsed?.preferredDestination ?? trimmed;
-    if (isLightningPaymentPayload(candidate)) {
-      final normalized = candidate.toLowerCase().startsWith('lightning:')
-          ? candidate.substring(10).trim()
-          : candidate;
-      return PaymentPayloadDraft(
-        kind: PaymentPayloadKind.lightning,
-        normalizedPayload: normalized,
-        title: l10n.homeLightningPaymentTitle,
-        destinationLabel: _shortPaymentValue(normalized),
-        supportingLabel:
-            parsed?.message ?? parsed?.label ?? l10n.homeInvoiceOrLnurl,
-        actionLabel: l10n.homePayloadActionContinueLightning,
-        amountBtc: parsed?.amountBtc ?? extractLightningAmountBtc(normalized),
-        icon: KeroseneIcons.lightning,
-      );
-    }
-
-    if (isOnChainPaymentPayload(trimmed, candidate)) {
-      return PaymentPayloadDraft(
-        kind: PaymentPayloadKind.onChain,
-        normalizedPayload: trimmed,
-        title: l10n.homeOnchainPaymentTitle,
-        destinationLabel: _shortPaymentValue(candidate),
-        supportingLabel:
-            parsed?.message ?? parsed?.label ?? l10n.homeBitcoinAddress,
-        actionLabel: l10n.homePayloadActionContinueOnchain,
-        amountBtc: parsed?.amountBtc,
-        icon: KeroseneIcons.onchain,
-      );
-    }
-
-    if (trimmed.toLowerCase().startsWith('kerosene:pay') &&
-        parsed != null &&
-        parsed.address.trim().isNotEmpty) {
-      return PaymentPayloadDraft(
-        kind: PaymentPayloadKind.internal,
-        normalizedPayload: trimmed,
-        title: l10n.homeInternalTransferTitle,
-        destinationLabel: parsed.label?.trim().isNotEmpty == true
-            ? parsed.label!.trim()
-            : parsed.address.trim(),
-        supportingLabel: parsed.address.trim(),
-        actionLabel: l10n.homePayloadActionContinueInternal,
-        amountBtc: parsed.amountBtc,
-        icon: KeroseneIcons.internalTransfer,
-      );
-    }
-
-    if (trimmed.startsWith('@') &&
-        RegExp(r'^@[a-zA-Z0-9_]{3,30}$').hasMatch(trimmed)) {
-      final username = trimmed.substring(1);
-      return PaymentPayloadDraft(
-        kind: PaymentPayloadKind.internal,
-        normalizedPayload: username,
-        title: l10n.homeInternalTransferTitle,
-        destinationLabel: '@$username',
-        supportingLabel: l10n.homeKeroseneUser,
-        actionLabel: l10n.homePayloadActionContinueInternal,
-        icon: KeroseneIcons.internalTransfer,
-      );
-    }
-
-    if (RegExp(r'\s').hasMatch(trimmed)) {
-      return PaymentPayloadDraft(
-        kind: PaymentPayloadKind.invalid,
-        normalizedPayload: '',
-        title: l10n.homeInvalidLinkTitle,
-        destinationLabel: l10n.homeInvalidLinkMessage,
-        actionLabel: l10n.homePayloadActionContinue,
-        icon: KeroseneIcons.warning,
-      );
-    }
-
-    final uri = Uri.tryParse(trimmed);
-    if (uri != null && uri.scheme.isNotEmpty && uri.pathSegments.isNotEmpty) {
-      final last = uri.pathSegments.last.trim();
-      if (last.isNotEmpty) {
-        return paymentLink(context, last);
-      }
-    }
-
-    return paymentLink(context, trimmed);
   }
 
   static PaymentPayloadDraft paymentLink(

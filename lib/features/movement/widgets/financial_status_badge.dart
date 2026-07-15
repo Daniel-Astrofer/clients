@@ -146,6 +146,16 @@ class FinancialStatusBadge extends StatelessWidget {
           color: errorColor,
           icon: KeroseneIcons.error,
         );
+      case TransactionStatus.cancelled:
+        return const FinancialStatusMeta(
+          label: LocalizedCopy(
+            en: 'Cancelled',
+            pt: 'Cancelada',
+            es: 'Cancelada',
+          ),
+          color: errorColor,
+          icon: KeroseneIcons.blocked,
+        );
       case TransactionStatus.pending:
         return const FinancialStatusMeta(
           label: LocalizedCopy(

@@ -57,9 +57,21 @@ class _InMemorySovereignKeyStore implements SovereignKeyStore {
   @override
   Future<int> nextSignatureCounter({String? subject}) async {
     final key = _key(subject);
-    final next = (signatureCounters[key] ?? 0) + 1;
-    signatureCounters[key] = next;
-    return next;
+    return (signatureCounters[key] ?? 0) + 1;
+  }
+
+  @override
+  Future<void> commitSignatureCounter(int counter, {String? subject}) async {
+    signatureCounters[_key(subject)] = counter;
+  }
+
+  @override
+  Future<void> clearSubjectMaterial({String? subject}) async {
+    final key = _key(subject);
+    privateKeySeeds.remove(key);
+    publicKeys.remove(key);
+    credentialIds.remove(key);
+    signatureCounters.remove(key);
   }
 
   String _key(String? subject) => subject ?? '';
@@ -178,11 +190,12 @@ void main() {
       expect(signature, isNotEmpty);
     });
 
-    test('increments the signature counter through the injected store',
-        () async {
+    test('peeks counter without persisting until commit', () async {
       expect(await service.nextSignatureCounter(), 1);
+      expect(await service.nextSignatureCounter(), 1);
+      await service.commitSignatureCounter(1);
       expect(await service.nextSignatureCounter(), 2);
-      expect(keyStore.signatureCounters[''], 2);
+      expect(keyStore.signatureCounters[''], 1);
     });
 
     test('throws a typed error when the challenge is not valid hex', () async {

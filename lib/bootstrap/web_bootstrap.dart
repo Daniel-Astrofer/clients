@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:http/http.dart' as http;
 import 'package:kerosene/core/config/app_config.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
@@ -14,7 +13,6 @@ import 'package:kerosene/core/performance/kerosene_performance_boundary.dart';
 import 'package:kerosene/core/providers/session_invalidation_provider.dart';
 import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/web/theme/admin_theme.dart';
@@ -369,27 +367,13 @@ class _AdminAuthGate extends ConsumerWidget {
       return const Scaffold(
         backgroundColor: KeroseneBrandTokens.backgroundSoft,
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: KeroseneBrandTokens.textMuted,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                KeroseneUiCopy.secureConnectionLoading,
-                style: TextStyle(
-                  fontFamily: AppTypography.financialFontFamily,
-                  fontSize: 12,
-                  color: KeroseneBrandTokens.textMuted,
-                ),
-              ),
-            ],
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: KeroseneBrandTokens.textMuted,
+            ),
           ),
         ),
       );

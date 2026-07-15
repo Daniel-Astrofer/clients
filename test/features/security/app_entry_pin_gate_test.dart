@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/errors/failures.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/domain/entities/user.dart';
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
@@ -26,13 +27,14 @@ void main() {
           authControllerProvider.overrideWith(
             () => _AuthenticatedAuthController(),
           ),
-          appPinStatusProvider.overrideWith((ref) async {
-            return const AppPinStatus(
+          appPinGateStatusProvider.overrideWithValue(
+            const AppPinStatus(
               configured: false,
               minPinLength: 4,
-              maxPinLength: 8,
-            );
-          }),
+              maxPinLength: 4,
+            ),
+          ),
+          appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
           balanceWebSocketServiceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(
@@ -70,14 +72,15 @@ void main() {
           authControllerProvider.overrideWith(
             () => _AuthenticatedAuthController(),
           ),
-          appPinStatusProvider.overrideWith((ref) async {
-            return const AppPinStatus(
+          appPinGateStatusProvider.overrideWithValue(
+            const AppPinStatus(
               enabled: true,
               configured: true,
               minPinLength: 4,
-              maxPinLength: 8,
-            );
-          }),
+              maxPinLength: 4,
+            ),
+          ),
+          appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
           balanceWebSocketServiceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(
@@ -96,63 +99,23 @@ void main() {
     expect(find.text('Digite o PIN para acessar sua conta'), findsOneWidget);
   });
 
-  testWidgets('retries a transient PIN status failure before showing the app',
+  testWidgets('shows PIN pad immediately without waiting for network status',
       (tester) async {
-    var statusLoadCount = 0;
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(
             () => _AuthenticatedAuthController(),
           ),
-          appPinStatusProvider.overrideWith((ref) async {
-            statusLoadCount += 1;
-            if (statusLoadCount == 1) {
-              throw Exception('PIN status temporarily unavailable');
-            }
-            return const AppPinStatus(configured: true);
-          }),
-          appEntryPinUnlockedProvider.overrideWith(
-            () => _UnlockedAppEntryPinNotifier(),
+          appPinGateStatusProvider.overrideWithValue(
+            const AppPinStatus(
+              enabled: true,
+              configured: true,
+              minPinLength: 6,
+              maxPinLength: 6,
+            ),
           ),
-          balanceWebSocketServiceProvider.overrideWith((ref) async => null),
-        ],
-        child: const MaterialApp(
-          home: AppEntryPinGate(
-            child: Text('home ready'),
-          ),
-        ),
-      ),
-    );
-
-    await tester.pump();
-
-    expect(find.text('PIN indisponível'), findsNothing);
-    expect(find.text('home ready'), findsNothing);
-
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump();
-
-    expect(statusLoadCount, 2);
-    expect(find.text('PIN indisponível'), findsNothing);
-    expect(find.text('home ready'), findsOneWidget);
-  });
-
-  testWidgets('shows a retryable connection error when PIN status cannot load',
-      (tester) async {
-    var statusLoadCount = 0;
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _AuthenticatedAuthController(),
-          ),
-          appPinStatusProvider.overrideWith((ref) async {
-            statusLoadCount += 1;
-            throw StateError('PIN status unavailable');
-          }),
+          appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
           balanceWebSocketServiceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(
@@ -166,23 +129,11 @@ void main() {
       ),
     );
 
+    // First frame — pad must be ready (no Tor dots).
     await tester.pump();
-    await tester.pump();
-
-    expect(find.text('Conexão indisponível'), findsOneWidget);
-    expect(
-      find.text(
-        'Não foi possível confirmar o PIN do app. Verifique a conexão segura e tente novamente.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Digite o PIN para acessar sua conta'), findsOneWidget);
+    expect(find.byType(TorLoadingDots), findsNothing);
     expect(find.text('home ready'), findsNothing);
-
-    await tester.tap(find.text('Tentar Novamente'));
-    await tester.pump();
-    await tester.pump();
-
-    expect(statusLoadCount, 2);
   });
 
   testWidgets('hides the numeric pad and shows loading while verifying PIN',
@@ -199,14 +150,15 @@ void main() {
             () => _AuthenticatedAuthController(),
           ),
           securityRepositoryProvider.overrideWithValue(repository),
-          appPinStatusProvider.overrideWith((ref) async {
-            return const AppPinStatus(
+          appPinGateStatusProvider.overrideWithValue(
+            const AppPinStatus(
               enabled: true,
               configured: true,
               minPinLength: 4,
-              maxPinLength: 8,
-            );
-          }),
+              maxPinLength: 4,
+            ),
+          ),
+          appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
           balanceWebSocketServiceProvider.overrideWith((ref) async => null),
         ],
         child: const MaterialApp(
@@ -265,6 +217,7 @@ void main() {
         authControllerProvider.overrideWith(
           () => _SwitchableAuthController(_testUser),
         ),
+        appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
       ],
     );
     addTearDown(container.dispose);
@@ -294,9 +247,21 @@ class _AuthenticatedAuthController extends AuthController {
   AuthState build() => AuthAuthenticated(_testUser);
 }
 
-class _UnlockedAppEntryPinNotifier extends AppEntryPinUnlockNotifier {
+class _TorReadyColdStart extends AppColdStartNotifier {
   @override
-  bool build() => true;
+  AppColdStartState build() {
+    return const AppColdStartState(
+      torSettled: true,
+      minSplashElapsed: true,
+    );
+  }
+
+  @override
+  Future<bool> waitUntilTorReadyForApi({
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    return true;
+  }
 }
 
 class _SwitchableAuthController extends AuthController {

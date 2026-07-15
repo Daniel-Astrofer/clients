@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/features/movement/widgets/transaction_list_item.dart';
@@ -36,10 +37,7 @@ class TransactionList extends StatelessWidget {
         icon: KeroseneIcons.receipt,
         title: 'Carregando transações',
         message: 'Sincronizando seu histórico recente.',
-        trailing: const SizedBox.square(
-          dimension: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+        trailing: const CupertinoActivityIndicator(radius: 11),
       );
     } else if ((errorMessage ?? '').trim().isNotEmpty && transactions.isEmpty) {
       child = _StateContainer(

@@ -14,6 +14,20 @@ void main() {
       expect(NfcPaymentRequestCodec.decodeMessage(message), uri);
     });
 
+    test('round trips a live-style publicId payment URI', () {
+      const uri = 'kerosene://payment/pay/euk1dbtccw7fo31lpzciveyf';
+      final message = NfcPaymentRequestCodec.encodeUri(uri);
+      expect(NfcPaymentRequestCodec.decodeMessage(message), uri);
+      expect(NfcPaymentRequestCodec.isPaymentPayload(uri), isTrue);
+    });
+
+    test('accepts bitcoin BIP-21 URI for NFC tags', () {
+      const uri =
+          'bitcoin:tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x?amount=0.00025';
+      final message = NfcPaymentRequestCodec.encodeUri(uri);
+      expect(NfcPaymentRequestCodec.decodeMessage(message), uri);
+    });
+
     test('decodes a prefixed NDEF URI record', () {
       final record = NdefRecord(
         typeNameFormat: TypeNameFormat.wellKnown,

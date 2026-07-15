@@ -1,5 +1,7 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'package:kerosene/core/utils/app_date_time.dart';
+
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
@@ -20,7 +22,8 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
 }
 
 class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
-  String? _expandedTransactionId;
+  /// Multiple cards may stay open; expansion only grows downward.
+  final Set<String> _expandedTransactionIds = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -89,25 +92,41 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
         }
 
         final visibleTxs = filteredTxs.take(6).toList(growable: false);
-        final expandedIndex = _expandedTransactionId == null
-            ? -1
-            : visibleTxs.indexWhere(
-                (tx) => tx.id == _expandedTransactionId,
-              );
 
         return StatementTransactionScrollStack(
           itemCount: visibleTxs.length,
-          itemExtent: homeSize(174),
-          expandedItemExtent: homeSize(376),
-          expandedIndex: expandedIndex >= 0 ? expandedIndex : null,
           itemGap: homeSize(12),
-          stackGap: homeSize(114),
-          topAnchorOffset: homeSize(10),
           itemBuilder: (context, index) {
-            return _buildTransactionTile(
-              visibleTxs[index],
-              expanded: visibleTxs[index].id == _expandedTransactionId,
+            final tx = visibleTxs[index];
+            
+            Widget? dateHeader;
+            if (index == 0) {
+              dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+            } else {
+              final previousTx = visibleTxs[index - 1];
+              if (!_isSameDay(tx.timestamp.toLocal(), previousTx.timestamp.toLocal())) {
+                dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+              }
+            }
+
+            final tile = _buildTransactionTile(
+              tx,
+              expanded: _expandedTransactionIds.contains(tx.id),
             );
+
+            if (dateHeader != null) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (index > 0) const SizedBox(height: 16),
+                  dateHeader,
+                  const SizedBox(height: 8),
+                  tile,
+                ],
+              );
+            }
+            return tile;
           },
         );
       },
@@ -129,16 +148,41 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     );
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildDateHeader(DateTime date) {
+    final label = AppDateTime.formatDate(context, date);
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0, top: 12.0),
+      child: Text(
+        label,
+        style: AppTypography.display.copyWith(
+          color: Colors.white,
+          fontSize: 26,
+        ),
+      ),
+    );
+  }
+
   List<Transaction> _filterHomeTransactions(
     List<Transaction> txs,
     HomeActivityFilter filter,
   ) {
+    // Cancelled/expired activity stays off the principal feed and other
+    // operational filters; it only appears under [HomeActivityFilter.cancelled].
     return switch (filter) {
-      HomeActivityFilter.all => txs,
-      HomeActivityFilter.incoming =>
-        txs.where((tx) => tx.isCredit).toList(growable: false),
-      HomeActivityFilter.outgoing =>
-        txs.where((tx) => tx.isDebit).toList(growable: false),
+      HomeActivityFilter.all => txs
+          .where((tx) => !tx.isCancelled)
+          .toList(growable: false),
+      HomeActivityFilter.incoming => txs
+          .where((tx) => tx.isCredit && !tx.isCancelled)
+          .toList(growable: false),
+      HomeActivityFilter.outgoing => txs
+          .where((tx) => tx.isDebit && !tx.isCancelled)
+          .toList(growable: false),
       HomeActivityFilter.pending => txs
           .where(
             (tx) =>
@@ -148,6 +192,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
           .toList(growable: false),
       HomeActivityFilter.failed => txs
           .where((tx) => tx.status == TransactionStatus.failed)
+          .toList(growable: false),
+      HomeActivityFilter.cancelled => txs
+          .where((tx) => tx.isCancelled)
           .toList(growable: false),
     };
   }
@@ -163,7 +210,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() {
-          _expandedTransactionId = expanded ? null : tx.id;
+          if (expanded) {
+            _expandedTransactionIds.remove(tx.id);
+          } else {
+            _expandedTransactionIds.add(tx.id);
+          }
         });
       },
     );
@@ -339,11 +390,7 @@ Color homeNotificationAccent(AppNotificationTone tone) {
 }
 
 String homeNotificationTimeLabel(BuildContext context, DateTime timestamp) {
-  return MaterialLocalizations.of(context).formatTimeOfDay(
-    TimeOfDay.fromDateTime(timestamp.toLocal()),
-    alwaysUse24HourFormat:
-        MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? false,
-  );
+  return AppDateTime.formatTime(context, timestamp);
 }
 
 String homeNoticeEmptyTitle(BuildContext context) {

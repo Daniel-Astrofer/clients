@@ -75,6 +75,12 @@ class TokenInterceptor extends QueuedInterceptor {
       return false;
     }
 
+    // Wrong / locked app PIN is a local factor failure, not a dead JWT session.
+    // Backend historically returned 401 AUTH_019 which must never clear login.
+    if (_isAppPinFactorFailure(path: path, errorCode: errorCode)) {
+      return false;
+    }
+
     if (_isExplicitSessionInvalidation(errorCode, responseDataText)) {
       return true;
     }
@@ -99,6 +105,28 @@ class TokenInterceptor extends QueuedInterceptor {
         path.contains('/auth/signup') ||
         path.contains('/auth/passkey/') ||
         path.contains('/auth/hardware/');
+  }
+
+  /// App entry PIN / security PIN endpoints and their factor error codes.
+  @visibleForTesting
+  static bool _isAppPinFactorFailure({
+    required String path,
+    required String errorCode,
+  }) {
+    final requestPath = Uri.tryParse(path)?.path ?? path;
+    if (requestPath.contains('/auth/security/app-pin')) {
+      return true;
+    }
+
+    final code = errorCode.trim();
+    return code == 'AUTH_018' ||
+        code == 'AUTH_019' ||
+        code == 'AUTH_020' ||
+        code == 'AUTH_021' ||
+        code == 'ERR_AUTH_APP_PIN_NOT_CONFIGURED' ||
+        code == 'ERR_AUTH_APP_PIN_INVALID' ||
+        code == 'ERR_AUTH_APP_PIN_LOCKED' ||
+        code == 'ERR_AUTH_APP_PIN_DEVICE_REQUIRED';
   }
 
   static bool _matchesPathPrefix(String path, String prefix) {

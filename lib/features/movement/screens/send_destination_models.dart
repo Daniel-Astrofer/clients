@@ -39,6 +39,21 @@ class SendDestinationAnalysis {
   bool get hasLockedAmount => amountBtc != null && amountBtc! > 0;
 }
 
+/// On-chain network fee speed preference (maps to FeeEstimate tiers).
+enum NetworkFeeTier { fast, standard, slow }
+
+/// How network fee was obtained for display honesty.
+enum NetworkFeeCertainty {
+  /// Exact/estimated number from server or client calc.
+  known,
+
+  /// Lightning routing not quoted — never invent a constant as "exact".
+  unknownUntilPay,
+
+  /// Fee estimate still loading.
+  loading,
+}
+
 class SendFeeQuote {
   final double requestedAmountBtc;
   final double receiverAmountBtc;
@@ -52,6 +67,8 @@ class SendFeeQuote {
   final DateTime? quoteExpiresAt;
   final bool isLoading;
   final Object? error;
+  final NetworkFeeTier feeTier;
+  final NetworkFeeCertainty networkFeeCertainty;
 
   const SendFeeQuote({
     required this.requestedAmountBtc,
@@ -66,9 +83,29 @@ class SendFeeQuote {
     this.quoteExpiresAt,
     this.isLoading = false,
     this.error,
+    this.feeTier = NetworkFeeTier.standard,
+    this.networkFeeCertainty = NetworkFeeCertainty.known,
   });
 
   bool get hasAmount => requestedAmountBtc > 0;
-  bool get isReady => hasAmount && !isLoading && error == null;
+
+  bool get isQuoteExpired {
+    final expires = quoteExpiresAt;
+    if (expires == null) return false;
+    return !DateTime.now().toUtc().isBefore(expires.toUtc());
+  }
+
+  /// Ready for display / continue when we have a usable quote and it is not stale.
+  bool get isReady =>
+      hasAmount &&
+      !isLoading &&
+      error == null &&
+      !isQuoteExpired &&
+      (networkFeeCertainty != NetworkFeeCertainty.loading);
+
+  /// External on-chain requires a known network fee number.
+  bool get isReadyForOnchainSubmit =>
+      isReady && networkFeeCertainty == NetworkFeeCertainty.known;
+
   double get totalFeesBtc => platformFeeBtc + networkFeeBtc;
 }

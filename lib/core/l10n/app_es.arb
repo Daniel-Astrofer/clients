@@ -1160,6 +1160,27 @@
   "errPasskeyWrongDevice": "Esta passkey no sirve para este acceso. Entra con contraseña y código del autenticador, luego vincula una nueva passkey en este dispositivo.",
   "errPasskeyRejected": "La passkey fue rechazada en esta operación. Si el problema persiste, vincula otra passkey compatible.",
   "errPasskeyLinkGuidance": "Entra con contraseña y código del autenticador, luego vincula una passkey compatible con este dispositivo.",
+  "errAuthDeviceAlreadyBound": "Este dispositivo ya está vinculado a otra cuenta. Confirma para desvincular la passkey anterior.",
+  "authDeviceUnlinkTitle": "¿Cambiar de cuenta en este dispositivo?",
+  "authDeviceUnlinkBody": "Este dispositivo está vinculado a la cuenta {previousUsername}.\n\n{guidance}",
+  "@authDeviceUnlinkBody": {
+    "placeholders": {
+      "previousUsername": { "type": "String" },
+      "guidance": { "type": "String" }
+    }
+  },
+  "authDeviceUnlinkDefaultGuidance": "Si continúas, la passkey de la cuenta anterior se eliminará de este dispositivo y esa cuenta solo se podrá acceder con contraseña.",
+  "authDeviceUnlinkConfirmSignup": "Continuar y crear nueva cuenta",
+  "authDeviceUnlinkConfirmLink": "Continuar y vincular",
+  "authDeviceUnlinkCancel": "Cancelar",
+  "authDeviceUnlinkCancelledTitle": "Dispositivo ya vinculado",
+  "authDeviceUnlinkCancelledMessage": "Registro cancelado. Este dispositivo sigue vinculado a {previousUsername}.",
+  "@authDeviceUnlinkCancelledMessage": {
+    "placeholders": {
+      "previousUsername": { "type": "String" }
+    }
+  },
+
   "errReceiverNotReady": "Este usuario todavía no está listo para recibir fondos.",
   "errOnchainReceiverMethodNotFound": "Este usuario no tiene una billetera on-chain registrada para recibir.",
   "errOnchainInvalidAddress": "La dirección Bitcoin informada no es válida para esta red.",
@@ -2199,6 +2220,7 @@
   "financialStatementFilterOutgoing": "Enviadas",
   "financialStatementFilterPending": "Pendientes",
   "financialStatementFilterFailed": "Fallidas",
+  "financialStatementFilterCancelled": "Canceladas",
   "financialStatementNoResultsTitle": "No se encontraron transacciones",
   "financialStatementNoResultsMessage": "Prueba otra búsqueda o borra los filtros.",
   "financialStatementClearFilters": "Borrar filtros",

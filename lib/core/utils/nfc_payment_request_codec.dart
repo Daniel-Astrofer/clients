@@ -3,9 +3,14 @@ import 'dart:typed_data';
 
 import 'package:nfc_manager/ndef_record.dart';
 
+import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
+
 import 'qr_payment_parser.dart';
 
 /// Encodes and decodes payment requests stored in NDEF tags.
+///
+/// Encode/decode must round-trip through [PaymentIntentParser] so receive NFC
+/// tags are understood by the same send destination brain as QR/paste.
 class NfcPaymentRequestCodec {
   const NfcPaymentRequestCodec._();
 
@@ -79,7 +84,14 @@ class NfcPaymentRequestCodec {
   static String? _normalizePaymentPayload(String value) {
     final normalized = value.trim().replaceFirst('\u0000', '');
     if (normalized.isEmpty) return null;
-    return QrPaymentParser.decode(normalized) != null ? normalized : null;
+    // BIP-21 / kerosene URIs preferred when decode succeeds.
+    if (QrPaymentParser.decode(normalized) != null) {
+      return normalized;
+    }
+    // Also accept any destination the canonical send parser understands
+    // (payment links, invoices, usernames, on-chain addresses).
+    final intent = const PaymentIntentParser().parse(normalized);
+    return intent.isValid ? normalized : null;
   }
 
   static String _decodeBytes(List<int> value) {
