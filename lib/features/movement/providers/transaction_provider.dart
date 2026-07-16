@@ -14,6 +14,7 @@ import 'package:kerosene/core/services/sovereign_auth_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
     show authControllerProvider, sessionStorageScopeProvider;
 import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
+import 'package:kerosene/core/telemetry/device_credential_telemetry.dart';
 import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
@@ -1313,6 +1314,10 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
         'type': 'DEVICE_KEY',
         ...assertion,
       }),
+      commitOnSuccess: () => DeviceCredentialTelemetry.recordStepUp(
+        kind: 'DEVICE_KEY',
+        success: true,
+      ),
     );
   }
 
@@ -1324,8 +1329,13 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
   );
   return TransactionalPasskeyAssertion(
     json: jsonEncode(PasskeyService.toWirePayload(credential)),
-    commitOnSuccess: () =>
-        PasskeyService.instance.commitAuthenticationCounter(credential),
+    commitOnSuccess: () async {
+      await PasskeyService.instance.commitAuthenticationCounter(credential);
+      await DeviceCredentialTelemetry.recordStepUp(
+        kind: 'WEBAUTHN_SHAPED',
+        success: true,
+      );
+    },
   );
 }
 

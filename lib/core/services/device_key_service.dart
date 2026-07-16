@@ -8,6 +8,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../constants/app_copy.dart';
 import '../security/device_credential_capabilities.dart';
+import '../telemetry/device_credential_telemetry.dart';
 import '../utils/device_helper.dart';
 
 class DeviceKeyChallenge {
@@ -90,7 +91,9 @@ class DeviceKeyService {
       );
     }
 
-    await _assertEnrollAllowed(appPinConfigured: appPinConfigured);
+    final capabilities = await _assertEnrollAllowed(
+      appPinConfigured: appPinConfigured,
+    );
     final keyPair = await _algorithm.newKeyPair();
     final privateKeySeed =
         Uint8List.fromList(await keyPair.extractPrivateKeyBytes());
@@ -136,6 +139,11 @@ class DeviceKeyService {
       publicKey: publicKey,
     );
 
+    await DeviceCredentialTelemetry.recordEnroll(
+      kind: 'DEVICE_KEY',
+      capabilities: capabilities,
+    );
+
     return {
       'publicKey': _base64Url(publicKey),
       'publicKeySha256': publicKeySha256,
@@ -144,6 +152,9 @@ class DeviceKeyService {
       'deviceName': metadata.deviceName,
       'deviceInstallId': metadata.deviceInstallId,
       'keyStorage': 'SECURE_STORAGE',
+      'hardwareBacked': DeviceCredentialTelemetry.estimateHardwareBacked(
+        capabilities,
+      ).name,
       ...metadata.toJson(),
       'signedPayload': payload,
       'signature': signature,
@@ -198,12 +209,18 @@ class DeviceKeyService {
       privateKeySeed: privateKeySeed,
     );
 
+    await DeviceCredentialTelemetry.recordAssertion(
+      kind: 'DEVICE_KEY',
+      outcome: 'signed',
+    );
+
     return {
       'username': normalizedUsername,
       'credentialId': credentialId,
       'deviceInstallId': metadata.deviceInstallId,
       'signedPayload': payload,
       'signature': signature,
+      'type': 'DEVICE_KEY',
     };
   }
 
@@ -230,12 +247,21 @@ class DeviceKeyService {
     return _base64Url(signature.bytes);
   }
 
-  Future<void> _assertEnrollAllowed({bool appPinConfigured = false}) async {
+  Future<DeviceCredentialCapabilities> _assertEnrollAllowed({
+    bool appPinConfigured = false,
+  }) async {
     try {
-      await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
+      return await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
         appPinConfigured: appPinConfigured,
       );
     } on DeviceCredentialCapabilityException catch (error) {
+      final caps = await DeviceCredentialCapabilitiesResolver.instance.resolve(
+        appPinConfigured: appPinConfigured,
+      );
+      await DeviceCredentialTelemetry.recordEnrollBlocked(
+        code: error.code,
+        capabilities: caps,
+      );
       throw DeviceKeyException(error.code, error.message);
     }
   }

@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 
 import '../config/app_config.dart';
 import '../security/device_credential_capabilities.dart';
+import '../telemetry/device_credential_telemetry.dart';
 import '../utils/device_helper.dart';
 import 'sovereign_auth_service.dart';
 
@@ -40,11 +41,20 @@ class PasskeyService {
     bool confirmUnlinkDevice = false,
     bool appPinConfigured = false,
   }) async {
+    late final DeviceCredentialCapabilities capabilities;
     try {
-      await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
+      capabilities =
+          await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
         appPinConfigured: appPinConfigured,
       );
     } on DeviceCredentialCapabilityException catch (error) {
+      final caps = await DeviceCredentialCapabilitiesResolver.instance.resolve(
+        appPinConfigured: appPinConfigured,
+      );
+      await DeviceCredentialTelemetry.recordEnrollBlocked(
+        code: error.code,
+        capabilities: caps,
+      );
       throw Exception('${error.code}: ${error.message}');
     }
 
@@ -80,6 +90,11 @@ class PasskeyService {
     await _cryptographyService.commitSignatureCounter(
       assertion.signatureCounter,
       subject: subject,
+    );
+
+    await DeviceCredentialTelemetry.recordEnroll(
+      kind: 'WEBAUTHN_SHAPED',
+      capabilities: capabilities,
     );
 
     return {
@@ -134,6 +149,11 @@ class PasskeyService {
     final signatureBase64Url = _toBase64Url(signature);
     final authDataBase64Url = _toBase64Url(assertion.authDataBytes);
     final deviceMetadata = await DeviceHelper.getDeviceMetadata();
+
+    await DeviceCredentialTelemetry.recordAssertion(
+      kind: 'WEBAUTHN_SHAPED',
+      outcome: 'signed',
+    );
 
     return {
       'username': username,
