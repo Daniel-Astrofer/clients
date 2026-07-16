@@ -126,6 +126,16 @@ abstract class AuthRepository {
     Map<String, dynamic> credential,
   );
 
+  /// Device Key — login challenge.
+  Future<Either<Failure, Map<String, dynamic>>> deviceKeyLoginStart(
+    String username,
+  );
+
+  /// Device Key — login verify.
+  Future<Either<Failure, LoginResult>> deviceKeyLoginFinish(
+    Map<String, dynamic> credential,
+  );
+
   Future<Either<Failure, ActivationStatusResult>> getActivationStatus();
 
   Future<Either<Failure, ActivationStatusResult>> createActivationDepositLink();

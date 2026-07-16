@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/security/device_credential_capabilities.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
-import 'package:kerosene/core/services/passkey_service.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
@@ -197,26 +196,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   /// After password (+ optional TOTP) issued a session:
-  /// - if Device Key login is preferred on this platform and a local key exists
-  ///   → biometric / device step-up
-  /// - otherwise complete login with password only (unlinked / password-only /
-  ///   Linux third-class without preferred device login)
+  /// - if Device Key is preferred and enrolled → biometric step-up
+  /// - N+2: legacy WebAuthn-shaped alone does not trigger step-up on tier A
+  /// - otherwise complete login with password only
   Future<void> _continueAfterPrimaryAuth(String username) async {
     final capabilities =
         await DeviceCredentialCapabilitiesResolver.instance.resolve();
-    final hasLocalPasskey = await PasskeyService.instance.hasRegisteredPasskey(
-      username: username,
-    );
     final hasLocalDeviceKey =
         await DeviceKeyService.instance.hasRegisteredDeviceKey(username);
     if (!mounted) {
       return;
     }
 
-    final preferDeviceStepUp = capabilities.deviceKeyLoginPreferred &&
-        (hasLocalPasskey || hasLocalDeviceKey);
+    final preferDeviceStepUp =
+        capabilities.deviceKeyLoginPreferred && hasLocalDeviceKey;
 
-    if (preferDeviceStepUp && hasLocalPasskey) {
+    if (preferDeviceStepUp) {
       _openDeviceKeyVerification(
         username,
         fallbackPassphrase: _passwordController.text,

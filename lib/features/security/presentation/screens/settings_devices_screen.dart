@@ -69,7 +69,7 @@ class SettingsDevicesScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
-                            'Passkeys e chaves de dispositivo vinculadas à sua conta. Bloqueie ou revogue acessos que não reconhece.',
+                            'Chaves do dispositivo vinculadas à sua conta. Use este aparelho para assinar transferências. Bloqueie ou revogue acessos que não reconhece.',
                             style: AppTypography.inter(
                               color: KeroseneBrandTokens.textSecondary,
                               fontSize: 16,
@@ -102,7 +102,7 @@ class SettingsDevicesScreen extends ConsumerWidget {
                                         context,
                                         title: context.tr.settingsDevicesPasskeyRegistered,
                                         message:
-                                            'Este aparelho foi vinculado. A lista foi atualizada.',
+                                            'Chave do dispositivo vinculada. A lista foi atualizada.',
                                       );
                                     } else if (result.isDeviceConflict) {
                                       AppNotice.showInfo(

@@ -295,6 +295,10 @@ abstract class AuthRemoteDataSource {
     Map<String, dynamic> credential,
   );
 
+  Future<Map<String, dynamic>> deviceKeyLoginStart(String username);
+
+  Future<LoginResult> deviceKeyLoginFinish(Map<String, dynamic> credential);
+
   Future<ActivationStatusResult> getActivationStatus();
 
   Future<ActivationStatusResult> createActivationDepositLink();
@@ -834,6 +838,47 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw ServerException(
         message:
             'Não conseguimos concluir a chave do dispositivo no onboarding.',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> deviceKeyLoginStart(String username) async {
+    try {
+      final response = await apiClient.get(
+        AppConfig.authDeviceKeyChallenge,
+        queryParameters: {'username': username},
+      );
+      return _asStringKeyedMap(response.data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message: 'Não conseguimos iniciar a entrada com a chave do dispositivo.',
+      );
+    }
+  }
+
+  @override
+  Future<LoginResult> deviceKeyLoginFinish(
+    Map<String, dynamic> credential,
+  ) async {
+    try {
+      final response = await apiClient.post(
+        AppConfig.authDeviceKeyVerify,
+        data: {
+          'username': credential['username'],
+          'credentialId': credential['credentialId'],
+          'deviceInstallId': credential['deviceInstallId'],
+          'signedPayload': credential['signedPayload'],
+          'signature': credential['signature'],
+        },
+      );
+      return LoginResult.fromResponseData(response.data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message:
+            'Não conseguimos concluir a entrada com a chave do dispositivo.',
       );
     }
   }

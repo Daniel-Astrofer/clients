@@ -462,12 +462,26 @@ class AuthController extends Notifier<AuthState> {
     username = username.trim();
     if (username.isEmpty) {
       state = const AuthError(
-          'Por favor, insira o usuário para entrar com Passkey');
+          'Por favor, insira o usuário para entrar com a chave do dispositivo');
       return;
     }
     state = const AuthLoading();
 
-    // 1. Get challenge from backend
+    // N+2: prefer Device Key login when local material exists.
+    if (await DeviceKeyService.instance.hasRegisteredDeviceKey(username)) {
+      await _loginWithDeviceKey(username);
+      return;
+    }
+
+    if (!await DeviceCredentialEnrollPolicy.allowWebAuthnShapedAuth()) {
+      state = const AuthError(
+        DeviceCredentialEnrollPolicy.reconfigureRequiredMessage,
+        errorCode: DeviceCredentialEnrollPolicy.reconfigureRequiredCode,
+      );
+      return;
+    }
+
+    // Legacy WebAuthn-shaped login (rollback path only on tier A).
     final startResult = await authRepository.passkeyLoginStart(username);
 
     await startResult.fold(
@@ -592,6 +606,39 @@ class AuthController extends Notifier<AuthState> {
   /// Device-binding conflicts (AUTH_024) are returned as
   /// [PasskeyRegisterResult.deviceConflict] so settings can confirm unlink and
   /// retry while the session stays alive.
+  Future<void> _loginWithDeviceKey(String username) async {
+    final startResult = await authRepository.deviceKeyLoginStart(username);
+    await startResult.fold(
+      (failure) async {
+        state = _mapFailureToAuthError(failure);
+      },
+      (challengeJson) async {
+        try {
+          final challenge = DeviceKeyChallenge.fromJson(challengeJson);
+          final assertion = await DeviceKeyService.instance.authenticate(
+            challenge: challenge,
+            username: username,
+          );
+          final finishResult =
+              await authRepository.deviceKeyLoginFinish(assertion);
+          await finishResult.fold(
+            (failure) async {
+              state = _mapFailureToAuthError(failure);
+            },
+            (loginResult) async {
+              _completePasskeyLogin(username, loginResult);
+            },
+          );
+        } catch (e) {
+          state = _mapPasskeyExceptionToAuthError(
+            e,
+            fallbackMessage: 'Erro na autenticação com a chave do dispositivo',
+          );
+        }
+      },
+    );
+  }
+
   Future<PasskeyRegisterResult> registerPasskey({
     bool confirmUnlinkDevice = false,
   }) async {

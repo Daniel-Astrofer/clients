@@ -14,6 +14,7 @@ import 'package:kerosene/core/services/sovereign_auth_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
     show authControllerProvider, sessionStorageScopeProvider;
 import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
+import 'package:kerosene/core/security/device_credential_enroll_policy.dart';
 import 'package:kerosene/core/telemetry/device_credential_telemetry.dart';
 import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
@@ -1262,7 +1263,10 @@ class TransactionalPasskeyAssertion {
 ///    next attempt replayed the same counter and the server answered AUTH_016 /
 ///    "passkey not linked" guidance.
 ///
-/// Prefers device-key (mobile beta) when enrolled; otherwise sovereign passkey.
+/// Prefers device-key when enrolled.
+///
+/// Release N+2 (mobile tier A): no WebAuthn-shaped step-up fallback — user must
+/// reconfigure Device Key if only a legacy sovereign key exists.
 ///
 /// When [actionRequired] carries typed `challenges.DEVICE_KEY`, the FE signs
 /// without an extra GET to `/auth/device-key/challenge` (release N 428).
@@ -1318,6 +1322,18 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
         kind: 'DEVICE_KEY',
         success: true,
       ),
+    );
+  }
+
+  // N+2: dual path removed on first-class platforms — no shaped fallback.
+  if (await DeviceCredentialEnrollPolicy.requireDeviceKeyForStepUp()) {
+    await DeviceCredentialTelemetry.recordStepUp(
+      kind: 'WEBAUTHN_SHAPED',
+      success: false,
+    );
+    throw const ServerException(
+      message: DeviceCredentialEnrollPolicy.reconfigureRequiredMessage,
+      errorCode: DeviceCredentialEnrollPolicy.reconfigureRequiredCode,
     );
   }
 

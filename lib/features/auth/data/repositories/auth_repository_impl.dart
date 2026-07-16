@@ -482,6 +482,49 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> deviceKeyLoginStart(
+    String username,
+  ) async {
+    try {
+      final challenge = await remoteDataSource.deviceKeyLoginStart(username);
+      return Right(challenge);
+    } on AppException catch (e) {
+      return Left(ServerFailure(
+        message: e.message,
+        statusCode: e.statusCode,
+        errorCode: e.errorCode,
+        data: e.data,
+      ));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, LoginResult>> deviceKeyLoginFinish(
+    Map<String, dynamic> credential,
+  ) async {
+    try {
+      final result = await remoteDataSource.deviceKeyLoginFinish(credential);
+      if (!result.requiresTotp &&
+          result.jwt.isNotEmpty &&
+          result.jwt.contains('.')) {
+        await localDataSource.saveToken(result.jwt);
+      }
+      return Right(result);
+    } on AppException catch (e) {
+      return Left(ServerFailure(
+        message: e.message,
+        statusCode: e.statusCode,
+        errorCode: e.errorCode,
+        data: e.data,
+      ));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
   // ─── Account activation deposit flow ─────────────────────────────────────────
   @override
   Future<Either<Failure, ActivationStatusResult>> getActivationStatus() async {

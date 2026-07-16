@@ -145,6 +145,18 @@ class PasskeyService {
     required String challengeHex,
     required String username,
   }) async {
+    // N+2: shaped auth removed on tier A unless emergency rollback flag is set.
+    if (!await DeviceCredentialEnrollPolicy.allowWebAuthnShapedAuth()) {
+      await DeviceCredentialTelemetry.recordAssertion(
+        kind: 'WEBAUTHN_SHAPED',
+        outcome: 'auth_deprecated',
+      );
+      throw Exception(
+        '${DeviceCredentialEnrollPolicy.reconfigureRequiredCode}: '
+        '${DeviceCredentialEnrollPolicy.reconfigureRequiredMessage}',
+      );
+    }
+
     final subject = _subject(username);
     final publicKey = await _cryptographyService.getPublicKey(
       subject: subject,

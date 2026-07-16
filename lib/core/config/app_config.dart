@@ -152,6 +152,14 @@ class AppConfig {
     defaultValue: false,
   );
 
+  /// Release N+2: WebAuthn-shaped authentication disabled on tier-A by default
+  /// (step-up + biometric login). Password + TOTP and Device Key remain.
+  /// Set true only for emergency rollback.
+  static const bool allowWebAuthnShapedAuth = bool.fromEnvironment(
+    'ALLOW_WEBAUTHN_SHAPED_AUTH',
+    defaultValue: false,
+  );
+
   // 1.3 Profile
   static const String authMe = '/auth/me';
   static const String authSecurityProfile = '/auth/security/profile';
