@@ -7,6 +7,7 @@ import 'package:kerosene/features/home/presentation/providers/home_bitcoin_marke
 import 'home_bitcoin_market_chart_motion.dart';
 import '../screens/home_screen_dependencies.dart';
 import '../screens/home_screen.dart';
+import '../screens/home_screen_surface.dart';
 
 class HomeBitcoinMarketChartCard extends ConsumerStatefulWidget {
   const HomeBitcoinMarketChartCard({super.key});
@@ -325,13 +326,13 @@ class _HomeBitcoinMarketChartCardState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SkeletonBlock(width: homeSize(82), height: homeSize(12)),
+                    HomeSkeletonBox(width: homeSize(82), height: homeSize(12)),
                     SizedBox(height: homeSize(10)),
-                    _SkeletonBlock(width: homeSize(188), height: homeSize(28)),
+                    HomeSkeletonBox(width: homeSize(188), height: homeSize(28)),
                   ],
                 ),
               ),
-              _SkeletonBlock(width: homeSize(74), height: homeSize(24)),
+              HomeSkeletonBox(width: homeSize(74), height: homeSize(24)),
             ],
           ),
           SizedBox(height: homeSize(18)),
@@ -781,22 +782,7 @@ class _ChartTooltip extends StatelessWidget {
   }
 }
 
-class _SkeletonBlock extends StatelessWidget {
-  final double width;
-  final double height;
-  const _SkeletonBlock({required this.width, required this.height});
 
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(homeSize(8)),
-      ),
-      child: SizedBox(width: width, height: height),
-    );
-  }
-}
 
 class _BitcoinMarketChartPainter extends CustomPainter {
   final BitcoinMarketChartSnapshot snapshot;
