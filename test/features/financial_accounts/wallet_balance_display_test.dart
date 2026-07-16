@@ -32,8 +32,8 @@ void main() {
       });
       expect(wallet.isCustodialOnchain, isTrue);
       expect(wallet.balance, closeTo(1.0, 1e-9));
-      expect(wallet.primaryBalanceLabel, 'Saldo disponível');
-      expect(wallet.chainObservedSubtitle, 'Na rede: 2 BTC');
+      expect(wallet.primaryBalanceLabel, 'Disponível para enviar');
+      expect(wallet.chainObservedSubtitle, 'Na rede (cadeia): 2 BTC');
     });
 
     test('bitcoin account visible balance + chain label', () {
