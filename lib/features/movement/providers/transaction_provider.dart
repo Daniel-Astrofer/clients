@@ -25,6 +25,7 @@ import 'package:kerosene/features/movement/domain/entities/deposit.dart';
 import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/domain/entities/wallet_network_address.dart';
+import 'package:kerosene/features/security/domain/entities/passkey_action_required.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     show ledgerRepositoryProvider, walletProvider;
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
@@ -587,10 +588,11 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
       state = AsyncActionState(result: result);
       return result;
     } catch (e) {
-      final challenge = _extractPasskeyChallenge(e);
-      if (challenge != null) {
+      final stepUp = _extractStepUpChallenge(e);
+      if (stepUp != null) {
         return _retrySendWithPasskeyChallenge(
-          initialChallenge: challenge,
+          initialChallenge: stepUp.legacyChallenge,
+          actionRequired: stepUp.actionRequired,
           toAddress: toAddress,
           amount: amount,
           feeSatoshis: feeSatoshis,
@@ -612,6 +614,7 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
 
   Future<TxStatus?> _retrySendWithPasskeyChallenge({
     required String initialChallenge,
+    PasskeyActionRequired? actionRequired,
     required String toAddress,
     required double amount,
     required int feeSatoshis,
@@ -625,11 +628,13 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
     String? appPin,
   }) async {
     var challenge = initialChallenge;
+    var stepUpAction = actionRequired;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final assertion = await buildTransactionalPasskeyAssertion(
           ref: ref,
           challenge: challenge,
+          actionRequired: stepUpAction,
         );
         final result = await _repository.sendTransaction(
           toAddress: toAddress,
@@ -655,14 +660,15 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
           state = const AsyncActionState();
           return null;
         }
-        final renewedChallenge = _extractPasskeyChallenge(signErr);
-        if (renewedChallenge == null ||
-            renewedChallenge == challenge ||
+        final renewed = _extractStepUpChallenge(signErr);
+        if (renewed == null ||
+            renewed.legacyChallenge == challenge ||
             attempt == 1) {
           state = AsyncActionState(error: signErr.toString());
           return null;
         }
-        challenge = renewedChallenge;
+        challenge = renewed.legacyChallenge;
+        stepUpAction = renewed.actionRequired;
       }
     }
     return null;
@@ -754,10 +760,11 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
       state = AsyncActionState(result: result);
       return result;
     } catch (e) {
-      final challenge = _extractPasskeyChallenge(e);
-      if (challenge != null) {
+      final stepUp = _extractStepUpChallenge(e);
+      if (stepUp != null) {
         return _retryPaymentLinkWithPasskeyChallenge(
-          initialChallenge: challenge,
+          initialChallenge: stepUp.legacyChallenge,
+          actionRequired: stepUp.actionRequired,
           linkId: linkId,
           payerWalletId: payerWalletId,
           confirmationPassphrase: confirmationPassphrase,
@@ -838,6 +845,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
 
   Future<TxStatus?> _retryPaymentLinkWithPasskeyChallenge({
     required String initialChallenge,
+    PasskeyActionRequired? actionRequired,
     required String linkId,
     required String payerWalletId,
     String? confirmationPassphrase,
@@ -846,6 +854,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     String? appPin,
   }) async {
     var challenge = initialChallenge;
+    var stepUpAction = actionRequired;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final link = await _repository.getPaymentLink(linkId);
@@ -859,6 +868,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
           assertion = await buildTransactionalPasskeyAssertion(
             ref: ref,
             challenge: challenge,
+            actionRequired: stepUpAction,
           );
         }
         final result = await _repository.withdraw(
@@ -885,14 +895,15 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
           state = const AsyncActionState();
           return null;
         }
-        final renewedChallenge = _extractPasskeyChallenge(signErr);
-        if (renewedChallenge == null ||
-            renewedChallenge == challenge ||
+        final renewed = _extractStepUpChallenge(signErr);
+        if (renewed == null ||
+            renewed.legacyChallenge == challenge ||
             attempt == 1) {
           state = AsyncActionState(error: signErr.toString());
           return null;
         }
-        challenge = renewedChallenge;
+        challenge = renewed.legacyChallenge;
+        stepUpAction = renewed.actionRequired;
       }
     }
     return null;
@@ -956,10 +967,11 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
       state = AsyncActionState(result: result);
       return result;
     } catch (e) {
-      final challenge = _extractPasskeyChallenge(e);
-      if (challenge != null) {
+      final stepUp = _extractStepUpChallenge(e);
+      if (stepUp != null) {
         return _retryWithdrawWithPasskeyChallenge(
-          initialChallenge: challenge,
+          initialChallenge: stepUp.legacyChallenge,
+          actionRequired: stepUp.actionRequired,
           fromWalletName: fromWalletName,
           toAddress: toAddress,
           paymentRequest: paymentRequest,
@@ -982,6 +994,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
 
   Future<TxStatus?> _retryWithdrawWithPasskeyChallenge({
     required String initialChallenge,
+    PasskeyActionRequired? actionRequired,
     required String fromWalletName,
     String? toAddress,
     String? paymentRequest,
@@ -996,11 +1009,13 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     String? appPin,
   }) async {
     var challenge = initialChallenge;
+    var stepUpAction = actionRequired;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final assertion = await buildTransactionalPasskeyAssertion(
           ref: ref,
           challenge: challenge,
+          actionRequired: stepUpAction,
         );
         final result = await _repository.withdraw(
           fromWalletName: fromWalletName,
@@ -1027,14 +1042,15 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
           state = const AsyncActionState();
           return null;
         }
-        final renewedChallenge = _extractPasskeyChallenge(signErr);
-        if (renewedChallenge == null ||
-            renewedChallenge == challenge ||
+        final renewed = _extractStepUpChallenge(signErr);
+        if (renewed == null ||
+            renewed.legacyChallenge == challenge ||
             attempt == 1) {
           state = AsyncActionState(error: signErr.toString());
           return null;
         }
-        challenge = renewedChallenge;
+        challenge = renewed.legacyChallenge;
+        stepUpAction = renewed.actionRequired;
       }
     }
     return null;
@@ -1077,6 +1093,52 @@ bool isAuthUserCancellation(Object error) {
     return true;
   }
   return false;
+}
+
+class _StepUpChallenge {
+  final String legacyChallenge;
+  final PasskeyActionRequired? actionRequired;
+
+  const _StepUpChallenge({
+    required this.legacyChallenge,
+    this.actionRequired,
+  });
+}
+
+/// Extracts typed 428 payload when present, plus a legacy challenge string for
+/// older backends / test doubles that only embed PASSKEY_CHALLENGE_REQUIRED.
+_StepUpChallenge? _extractStepUpChallenge(Object error) {
+  PasskeyActionRequired? action;
+  if (error is AppException) {
+    action = PasskeyActionRequired.fromErrorPayload(error.data);
+  } else if (error is Failure) {
+    action = PasskeyActionRequired.fromErrorPayload(error.data);
+  }
+
+  final legacyFromTyped = action?.legacyOrPasskeyChallenge;
+  if (legacyFromTyped != null && legacyFromTyped.isNotEmpty) {
+    return _StepUpChallenge(
+      legacyChallenge: legacyFromTyped,
+      actionRequired: action,
+    );
+  }
+
+  final legacy = _extractPasskeyChallenge(error);
+  if (legacy == null) {
+    // Typed DEVICE_KEY-only 428 without PASSKEY hex: still usable.
+    final deviceOnly = action?.challengeFor('DEVICE_KEY');
+    if (deviceOnly != null && deviceOnly.isComplete) {
+      return _StepUpChallenge(
+        legacyChallenge: deviceOnly.challenge,
+        actionRequired: action,
+      );
+    }
+    return null;
+  }
+  return _StepUpChallenge(
+    legacyChallenge: legacy,
+    actionRequired: action,
+  );
 }
 
 String? _extractPasskeyChallenge(Object error) {
@@ -1200,9 +1262,13 @@ class TransactionalPasskeyAssertion {
 ///    "passkey not linked" guidance.
 ///
 /// Prefers device-key (mobile beta) when enrolled; otherwise sovereign passkey.
+///
+/// When [actionRequired] carries typed `challenges.DEVICE_KEY`, the FE signs
+/// without an extra GET to `/auth/device-key/challenge` (release N 428).
 Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
   required Ref ref,
   required String challenge,
+  PasskeyActionRequired? actionRequired,
 }) async {
   final authState = ref.read(authControllerProvider);
   if (authState is! AuthAuthenticated) {
@@ -1222,10 +1288,22 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
 
   final deviceKey = DeviceKeyService.instance;
   if (await deviceKey.hasRegisteredDeviceKey(username)) {
-    // Device-key AUTH must use a server-issued device_key_challenge UUID, not
-    // the passkey transactional challenge embedded in the 428 body.
-    final deviceChallenge =
-        await _fetchDeviceKeyAuthChallenge(ref: ref, username: username);
+    final typed = actionRequired?.challengeFor('DEVICE_KEY');
+    final DeviceKeyChallenge deviceChallenge;
+    if (typed != null && typed.isComplete) {
+      deviceChallenge = DeviceKeyChallenge(
+        challengeId: typed.challengeId!,
+        challenge: typed.challenge,
+        expiresInSeconds: typed.expiresInSeconds ?? 90,
+        onionServiceId: typed.onionServiceId ?? '',
+        algorithm: typed.algorithm ?? 'Ed25519',
+        canonicalization: typed.canonicalization ?? 'KEROSENE_JSON_V1',
+      );
+    } else {
+      // Compat: older 428 bodies only had PASSKEY hex.
+      deviceChallenge =
+          await _fetchDeviceKeyAuthChallenge(ref: ref, username: username);
+    }
     final assertion = await deviceKey.authenticate(
       challenge: deviceChallenge,
       username: username,
@@ -1238,8 +1316,10 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
     );
   }
 
+  final passkeyChallenge =
+      actionRequired?.legacyOrPasskeyChallenge ?? challenge;
   final credential = await PasskeyService.instance.authenticate(
-    challengeHex: challenge,
+    challengeHex: passkeyChallenge,
     username: username,
   );
   return TransactionalPasskeyAssertion(
