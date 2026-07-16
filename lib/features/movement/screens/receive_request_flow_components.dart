@@ -4,19 +4,20 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
 
-const _receiveBackground = AppColors.hexFF050505;
-const _receiveSurface = AppColors.hexFF121212;
-const _receiveSurfaceLowest = AppColors.hexFF0E0E0E;
-const _receiveSurfaceHigh = AppColors.hexFF2A2A2A;
-const _receiveWarning = AppColors.hexFFF59E0B;
-const _receiveSuccess = AppColors.hexFF4ADE80;
-const _receiveSurfaceLow = AppColors.hexFF1C1B1B;
-const _receiveBorder = AppColors.hexFF2A2A2A;
-const _receiveText = AppColors.hexFFFFFFFF;
-const _receiveMuted = AppColors.hexFFA3A3A3;
-const _receiveBody = AppColors.hexFFC4C7C8;
+const _receiveBackground = KeroseneBrandTokens.background;
+const _receiveSurface = KeroseneBrandTokens.surface;
+const _receiveSurfaceLowest = KeroseneBrandTokens.surfaceMuted;
+const _receiveSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
+const _receiveWarning = KeroseneBrandTokens.warning;
+const _receiveSuccess = KeroseneBrandTokens.success;
+const _receiveSurfaceLow = KeroseneBrandTokens.surfaceElevated;
+const _receiveBorder = KeroseneBrandTokens.border;
+const _receiveText = KeroseneBrandTokens.textPrimary;
+const _receiveMuted = KeroseneBrandTokens.textMuted;
+const _receiveBody = KeroseneBrandTokens.textSecondary;
 
 class ReceiveContextHeader extends StatelessWidget {
   final String title;
@@ -51,13 +52,14 @@ class ReceiveContextHeader extends StatelessWidget {
               ),
             ),
             Text(
-              title.toUpperCase(),
+              // Title case — softer than micro ALL-CAPS (matches send review).
+              title,
               style: AppTypography.inter(
                 color: _receiveMuted,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 height: 1.2,
-                letterSpacing: 1.2,
+                letterSpacing: 0,
               ),
             ),
             const Align(
@@ -248,27 +250,28 @@ class ReceiveActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = primary ? Colors.black : _receiveText;
+    final foreground =
+        primary ? KeroseneBrandTokens.background : _receiveText;
     return SizedBox(
       height: 56,
       child: TextButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, size: 20),
+        icon: Icon(icon, size: 18),
         label: Text(label),
         style: TextButton.styleFrom(
           foregroundColor: foreground,
           backgroundColor: primary ? _receiveText : _receiveSurface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: primary ? _receiveText : _receiveBorder,
             ),
           ),
           textStyle: AppTypography.inter(
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             height: 1.2,
-            letterSpacing: 1.2,
+            letterSpacing: -0.1,
           ),
         ),
       ),
@@ -369,7 +372,7 @@ class StatusChip extends StatelessWidget {
           Text(
             label,
             style: AppTypography.inter(
-              color: AppColors.hexFFE5E2E1,
+              color: _receiveBody,
               fontSize: 12,
               fontWeight: FontWeight.w400,
               height: 1.2,
@@ -546,18 +549,34 @@ class ReceiveNetworkStatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
     final waitingLabel = onChainWallet
-        ? 'Aguardando confirmações ($currentConfirmations/$requiredConfirmations)'
+        ? switch (lang) {
+            'en' =>
+              'Waiting for confirmations ($currentConfirmations/$requiredConfirmations)',
+            'es' =>
+              'Esperando confirmaciones ($currentConfirmations/$requiredConfirmations)',
+            _ =>
+              'Aguardando confirmações ($currentConfirmations/$requiredConfirmations)',
+          }
         : identified
-            ? 'Confirmado'
-            : 'Aguardando confirmação';
+            ? switch (lang) {
+                'en' => 'Confirmed',
+                'es' => 'Confirmado',
+                _ => 'Confirmado',
+              }
+            : switch (lang) {
+                'en' => 'Waiting for confirmation',
+                'es' => 'Esperando confirmación',
+                _ => 'Aguardando confirmação',
+              };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.hexFF0A0A0A,
-        border: Border.all(color: AppColors.hexFF222222),
-        borderRadius: BorderRadius.circular(8),
+        color: _receiveSurface,
+        border: Border.all(color: _receiveBorder),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [

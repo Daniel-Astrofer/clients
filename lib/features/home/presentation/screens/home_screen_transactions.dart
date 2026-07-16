@@ -320,9 +320,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
       padding: const EdgeInsets.only(left: 4.0, top: 12.0),
       child: Text(
         label,
-        style: AppTypography.display.copyWith(
-          color: Colors.white,
-          fontSize: 26,
+        style: AppTypography.label.copyWith(
+          color: HomeColors.textMuted,
+          fontSize: homeFontSize(12),
+          letterSpacing: 1.0,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -607,20 +609,12 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
           Text(
             title,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,
-            style: serifTitle
-                ? AppTypography.newsreader(
-                    color: Colors.white,
-                    fontSize: homeFontSize(24),
-                    fontWeight: FontWeight.w500,
-                    height: 1.12,
-                    letterSpacing: -0.2,
-                  )
-                : theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontSize: homeFontSize(16),
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 0,
-                  ),
+            style: AppTypography.h3.copyWith(
+              color: HomeColors.textPrimary,
+              fontSize: homeFontSize(16),
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
+            ),
           ),
           SizedBox(height: homeSize(AppSpacing.sm)),
           Text(
