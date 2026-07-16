@@ -42,7 +42,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
               sliver: SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
+                    constraints: context.responsive.appColumnConstraints,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [

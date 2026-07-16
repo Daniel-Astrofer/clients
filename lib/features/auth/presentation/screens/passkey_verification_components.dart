@@ -267,7 +267,7 @@ class PasskeyIssueView extends StatelessWidget {
         );
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 390),
+      constraints: responsive.formConstraints,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -438,7 +438,7 @@ class TotpFallbackView extends StatelessWidget {
     final keypadGap = isShort ? AppSpacing.xs : AppSpacing.md;
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 480),
+      constraints: responsive.formConstraints,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

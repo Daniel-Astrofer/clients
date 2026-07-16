@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -157,8 +158,7 @@ class _TransactionStatementScreenState
         (lastHistory.isNotEmpty ? lastHistory : null);
     final bottomPadding =
         AppPrimaryNavigationBar.scaffoldBottomClearance(context);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final maxWidth = screenWidth >= 900 ? 980.0 : 430.0;
+    final maxWidth = context.responsive.appColumnMaxWidth;
 
     if (historyValue == null && historyAsync.isLoading) {
       return const Center(child: TorLoadingDots());
