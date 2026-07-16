@@ -119,12 +119,21 @@ class ErrorTranslator {
         return l10n.errPasskeyDeviceNotLinked;
       case 'AUTH_015':
       case 'ERR_AUTH_PASSKEY_ASSERTION_FAILED':
+      case 'ERR_AUTH_DEVICE_CRED_ASSERTION':
         return l10n.errPasskeyRejected;
       case 'AUTH_016':
       case 'ERR_AUTH_PASSKEY_REPLAY':
-        return l10n.errPasskeyRejected;
+      case 'ERR_AUTH_DEVICE_CRED_REPLAY':
+        // Counter desync / clone signal — not "link a new passkey".
+        return safeExtractedMessage ??
+            'Possível conflito de segurança na chave deste dispositivo. Tente novamente.';
+      case 'AUTH_025':
+      case 'ERR_AUTH_DEVICE_CRED_REPLAY_LOCKED':
+        return safeExtractedMessage ??
+            'Chave do dispositivo temporariamente bloqueada. Aguarde ou entre com senha e TOTP.';
       case 'AUTH_017':
       case 'ERR_AUTH_PASSKEY_CREDENTIAL_NOT_FOUND':
+      case 'ERR_AUTH_DEVICE_CRED_NOT_FOUND':
         return l10n.errPasskeyDeviceNotLinked;
       case 'AUTH_018':
       case 'ERR_AUTH_APP_PIN_NOT_CONFIGURED':

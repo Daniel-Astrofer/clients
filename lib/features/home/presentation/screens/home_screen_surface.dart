@@ -93,22 +93,8 @@ class HomeGlassPanel extends StatelessWidget {
     final content = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        color: backgroundColor,
-        gradient: backgroundColor == null
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [homePanelTopColor, homePanelBottomColor],
-              )
-            : null,
-        border: Border.all(color: homePanelBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: HomeColors.overlayDim,
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: backgroundColor ?? HomeColors.surfaceDim,
+        border: Border.all(color: HomeColors.surfaceBorder),
       ),
       child: Padding(padding: padding, child: child),
     );

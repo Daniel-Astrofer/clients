@@ -30,31 +30,12 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
   int _index = 0;
   bool _finishedOnce = false;
   String _sessionKey = '';
-  AnimationController? _marquee;
-  Animation<double>? _marqueeAnim;
-
   @override
   void dispose() {
     _advanceTimer?.cancel();
-    _marquee?.dispose();
-    // Don't touch ref after dispose if possible — schedule idle on next frame only if mounted path.
     super.dispose();
   }
 
-  void _ensureMarquee({required int durationMs}) {
-    final d = Duration(milliseconds: durationMs.clamp(4000, 14000));
-    if (_marquee == null) {
-      _marquee = AnimationController(vsync: this, duration: d)..repeat();
-      _marqueeAnim = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _marquee!, curve: Curves.linear),
-      );
-    } else if (_marquee!.duration != d) {
-      _marquee!.duration = d;
-      if (!_marquee!.isAnimating) {
-        _marquee!.repeat();
-      }
-    }
-  }
 
   void _publishPlayback({
     required HomeGreetingConfig greeting,
@@ -106,7 +87,6 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     final dwell = current.durationMs > 0
         ? current.durationMs
         : greeting.rotation.intervalMs;
-    _ensureMarquee(durationMs: dwell);
 
     _advanceTimer = Timer(Duration(milliseconds: dwell.clamp(1000, 20000)), () {
       if (!mounted) return;
@@ -142,7 +122,6 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final responsive = context.responsive;
     final greeting = ref.watch(
       homeSurfaceProvider.select((s) => s.header.greeting),
@@ -165,44 +144,19 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
         ? message!.resolveText(widget.userName)
         : _localizedTimeOfDay(context, widget.userName, greeting.fallback);
     final color = _resolveColor(message);
-    final useMarquee = showMarket &&
-        (message?.animation == HomeGreetingAnimation.marquee ||
-            text.runes.length >= 28);
-
     final baseFontSize = responsive.compactFontSize(
       tiny: homeFontSize(20),
       compact: homeFontSize(22),
       regular: homeFontSize(24),
     );
 
-    final textStyle = AppTypography.newsreader(
-      textStyle: theme.textTheme.titleLarge,
+    final textStyle = AppTypography.h3.copyWith(
       color: color,
       fontSize: baseFontSize,
-      fontWeight: FontWeight.w300,
+      fontWeight: FontWeight.w400,
       height: 1.15,
       letterSpacing: 0,
     );
-
-    if (useMarquee) {
-      final dwell = message?.durationMs ?? greeting.rotation.intervalMs;
-      _ensureMarquee(durationMs: dwell);
-      return AnimatedSize(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.centerLeft,
-        child: SizedBox(
-          height: baseFontSize * 1.4,
-          width: double.infinity,
-          child: _MarqueeText(
-            key: ValueKey('mq-$text'),
-            text: text,
-            style: textStyle,
-            animation: _marqueeAnim!,
-          ),
-        ),
-      );
-    }
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 320),
@@ -260,60 +214,3 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
   }
 }
 
-class _MarqueeText extends StatelessWidget {
-  final String text;
-  final TextStyle style;
-  final Animation<double> animation;
-
-  const _MarqueeText({
-    super.key,
-    required this.text,
-    required this.style,
-    required this.animation,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final painter = TextPainter(
-          text: TextSpan(text: text, style: style),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        )..layout();
-        final textWidth = painter.width;
-        final viewport = constraints.maxWidth;
-        if (textWidth <= viewport) {
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: Text(text, maxLines: 1, style: style),
-          );
-        }
-
-        final gap = 56.0;
-        final loopWidth = textWidth + gap;
-
-        return ClipRect(
-          child: AnimatedBuilder(
-            animation: animation,
-            builder: (context, _) {
-              final dx = -animation.value * loopWidth;
-              return Stack(
-                children: [
-                  Transform.translate(
-                    offset: Offset(dx, 0),
-                    child: Text(text, maxLines: 1, style: style),
-                  ),
-                  Transform.translate(
-                    offset: Offset(dx + loopWidth, 0),
-                    child: Text(text, maxLines: 1, style: style),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-}
