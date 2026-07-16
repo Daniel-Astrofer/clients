@@ -9,6 +9,9 @@ import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
+import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/flow/movement_flow_coordinator.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
@@ -66,9 +69,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
 
       if (widget.method == ReceiveAmountMethod.nfc) {
         if (paymentLink == null || paymentLink.id.trim().isEmpty) {
-          throw const FormatException(
-            'A solicitação NFC não retornou um identificador público.',
-          );
+          throw FormatException(ReceiveMoneyCopy.nfcIdMissing(context));
         }
         await Navigator.of(context).push<void>(
           MaterialPageRoute(
@@ -113,16 +114,22 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     required double amountBtc,
     required int expiresInMinutes,
   }) async {
+    // All receive methods that need a shareable request create a link.
+    // P2P uses INTERNAL rail so the request is trackable (was empty before).
     if (widget.method != ReceiveAmountMethod.paymentLink &&
         widget.method != ReceiveAmountMethod.qrCode &&
-        widget.method != ReceiveAmountMethod.nfc) {
+        widget.method != ReceiveAmountMethod.nfc &&
+        widget.method != ReceiveAmountMethod.p2p) {
       return null;
     }
 
     final paymentLink =
         await ref.read(transactionRepositoryProvider).createPaymentLink(
       amount: amountBtc,
-      description: 'Recebimento ${widget.wallet.name}',
+      description: ReceiveMoneyCopy.paymentLinkDescription(
+        context,
+        widget.wallet.name,
+      ),
       expiresInMinutes: expiresInMinutes,
       visibility: 'PRIVATE',
       confirmationMode: 'USER_ACTION_REQUIRED',
@@ -200,19 +207,16 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
             appLocale: money.locale,
           )}';
 
-    final title = switch (widget.method) {
-      ReceiveAmountMethod.qrCode => 'Receber via QR',
-      ReceiveAmountMethod.paymentLink => 'Link de pagamento',
-      ReceiveAmountMethod.nfc => 'Receber via NFC',
-      ReceiveAmountMethod.p2p => 'Receber P2P',
-    };
+    final title = ReceiveMoneyCopy.amountTitle(context, widget.method);
+    final intoWallet =
+        ReceiveMoneyCopy.amountIntoWallet(context, widget.wallet.name);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: KeroseneBrandTokens.background,
       body: TransactionValueEntrySurface(
         onBack: () => Navigator.of(context).maybePop(),
         title: title,
-        subtitle: widget.wallet.name,
+        subtitle: intoWallet.isEmpty ? widget.wallet.name : intoWallet,
         amountInput: flowState.amountInput,
         unitLabel: MoneyDisplay.tickerSymbolFor(_selectedCurrency),
         currency: _selectedCurrency,
@@ -320,8 +324,32 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
   }
 
   Widget? _configuration(MovementFlowState flowState) {
+    final rail = ReceiveMoneyCopy.railLabel(
+      context,
+      widget.method,
+      onChainWallet: widget.onChainWallet,
+    );
+    final railChip = Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: KeroseneBrandTokens.surfaceHigh,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: KeroseneBrandTokens.border),
+        ),
+        child: Text(
+          rail,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+
     if (widget.method != ReceiveAmountMethod.paymentLink) {
-      return null;
+      return railChip;
     }
 
     final options = [
@@ -331,19 +359,25 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     ];
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        railChip,
+        const SizedBox(height: 18),
         Text(
           context.tr.receiveExpirationLabel,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.72),
-                height: 1.3,
-              ),
+          textAlign: TextAlign.center,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            height: 1.3,
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
+          alignment: WrapAlignment.center,
           children: [
             for (final option in options) _expirationButton(flowState, option),
           ],
@@ -362,14 +396,25 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
           .read(movementFlowCoordinatorProvider.notifier)
           .selectPaymentLinkExpiration(option.minutes),
       style: TextButton.styleFrom(
-        foregroundColor: selected ? Colors.black : Colors.white,
-        backgroundColor:
-            selected ? Colors.white : Colors.white.withValues(alpha: 0.08),
+        foregroundColor: selected
+            ? KeroseneBrandTokens.background
+            : KeroseneBrandTokens.textPrimary,
+        backgroundColor: selected
+            ? KeroseneBrandTokens.textPrimary
+            : KeroseneBrandTokens.surfaceHigh,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+          side: BorderSide(
+            color: selected
+                ? KeroseneBrandTokens.textPrimary
+                : KeroseneBrandTokens.border,
+          ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        textStyle: AppTypography.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       child: Text(option.label),
     );

@@ -8,7 +8,9 @@ import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
+import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/flow/movement_flow_coordinator.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -129,12 +131,14 @@ class _CircularRevealClipper extends CustomClipper<Path> {
   }
 }
 
-const _receiveBackground = AppColors.hexFF0D0D0D;
-const _receiveSurfaceHigh = AppColors.hexFF2A2A2A;
-const _receiveTextColor = AppColors.hexFFFFFFFF;
-const _receiveMutedTextColor = AppColors.hexFFA3A3A3;
-const _receiveBodyTextColor = AppColors.hexFFC4C7C8;
-const _receiveSubtleTextColor = AppColors.hexFF737373;
+// Align receive hub with platform brand tokens (same language as send).
+const _receiveBackground = KeroseneBrandTokens.background;
+const _receiveSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
+const _receiveTextColor = KeroseneBrandTokens.textPrimary;
+const _receiveMutedTextColor = KeroseneBrandTokens.textMuted;
+const _receiveBodyTextColor = KeroseneBrandTokens.textSecondary;
+const _receiveSubtleTextColor = KeroseneBrandTokens.textMuted;
+const _receiveBorder = KeroseneBrandTokens.border;
 
 class MovementHubScreen extends ConsumerStatefulWidget {
   final Wallet? initialWallet;
@@ -255,48 +259,67 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
     final showNfcOption = actions.any(
       (action) => action.kind == MovementReceiveActionKind.nfc,
     );
-    const receiveMethodLabel = 'Como deseja receber';
-    final subtitle = switch (kind) {
-      MovementReceiveWalletKind.internal => showNfcOption
-          ? 'Escolha NFC, P2P, link, QR Code ou gateway para receber na plataforma.'
-          : 'Escolha P2P, link, QR Code ou gateway para receber na plataforma.',
-      MovementReceiveWalletKind.custodialOnchain =>
-        'Escolha QR Code ou link de pagamento para receber on-chain.',
-      MovementReceiveWalletKind.coldWallet =>
-        'Escolha QR Code ou link de pagamento para receber na cold wallet.',
-    };
+    final receiveMethodLabel = ReceiveMoneyCopy.hubTitle(context);
+    final subtitle = ReceiveMoneyCopy.hubSubtitle(
+      context,
+      isInternal: kind == MovementReceiveWalletKind.internal,
+      isCold: kind == MovementReceiveWalletKind.coldWallet,
+      showNfc: showNfcOption,
+    );
+    final walletChip = wallet == null
+        ? ''
+        : ReceiveMoneyCopy.hubWalletChip(context, wallet.name);
 
     return SingleChildScrollView(
       key: ValueKey('receive-method-${wallet?.id ?? kind.name}'),
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 40, 24, 48),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (walletChip.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: _receiveSurfaceHigh,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: _receiveBorder),
+              ),
+              child: Text(
+                walletChip,
+                style: AppTypography.inter(
+                  color: _receiveTextColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           Text(
             receiveMethodLabel,
             style: AppTypography.newsreader(
               color: _receiveTextColor,
-              fontSize: 40,
-              fontWeight: FontWeight.w600,
-              height: 1.08,
-              letterSpacing: 0,
+              fontSize: 34,
+              fontWeight: FontWeight.w500,
+              height: 1.12,
+              letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             subtitle,
             style: AppTypography.inter(
               color: _receiveBodyTextColor,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w400,
-              height: 1.5,
+              height: 1.45,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 38),
+          const SizedBox(height: 32),
           _ReceiveActionList(
             children: [
               for (var index = 0; index < actions.length; index++)
@@ -331,7 +354,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
         ),
       MovementReceiveActionKind.p2p => _ReceiveActionTile(
           icon: KeroseneIcons.internalTransfer,
-          title: 'P2P',
+          title: ReceiveMoneyCopy.p2pTitle(context),
           subtitle: context.tr.movementHubReceiveInternal,
           onTap: isLoading ? () {} : () => _openReceive(ReceiveAmountMethod.p2p),
           showDivider: showDivider,
@@ -845,9 +868,9 @@ class _GatewayEmptyState extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.hexFF121212,
+              color: KeroseneBrandTokens.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.hexFF2A2A2A),
+              border: Border.all(color: KeroseneBrandTokens.border),
             ),
             child: Text(
               message,
@@ -963,7 +986,7 @@ class _GatewayProviderTile extends StatelessWidget {
                     height: 40,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.hexFF1E1E1E,
+                      color: KeroseneBrandTokens.surfaceHigh,
                     ),
                     child: Icon(
                       provider.icon,
@@ -1060,7 +1083,7 @@ class _GatewayProviderTile extends StatelessWidget {
             const SizedBox(width: 12),
             const Icon(
               KeroseneIcons.chevronRight,
-              color: AppColors.hexFF525252,
+              color: KeroseneBrandTokens.textMuted,
               size: 18,
             ),
           ],

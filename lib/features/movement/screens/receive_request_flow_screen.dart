@@ -1,5 +1,3 @@
-import 'package:kerosene/core/theme/app_colors.dart';
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -12,11 +10,13 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
+import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
 import 'package:kerosene/features/movement/domain/entities/onchain_address_allocation.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
@@ -28,9 +28,9 @@ import 'receive_request_flow_components.dart';
 
 enum ReceiveRequestStage { qr, confirmations, identified }
 
-const _receiveBackground = AppColors.hexFF050505;
-const _receiveText = AppColors.hexFFFFFFFF;
-const _receiveMuted = AppColors.hexFFA3A3A3;
+const _receiveBackground = KeroseneBrandTokens.background;
+const _receiveText = KeroseneBrandTokens.textPrimary;
+const _receiveMuted = KeroseneBrandTokens.textMuted;
 
 class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final Wallet wallet;
@@ -146,15 +146,7 @@ class _ReceiveRequestFlowScreenState
       if (nextAddress.isEmpty || !allocation.hasTransferId) {
         setState(() {
           _isLoadingRequest = false;
-          _errorMessage = switch (
-              Localizations.localeOf(context).languageCode) {
-            'en' =>
-              'Could not prepare tracking for this receive request.',
-            'es' =>
-              'No se pudo preparar el seguimiento de este cobro.',
-            _ =>
-              'Não foi possível preparar o acompanhamento deste recebimento.',
-          };
+          _errorMessage = ReceiveMoneyCopy.prepareTrackingFailed(context);
         });
         return;
       }
@@ -552,8 +544,10 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _sharePaymentValue() async {
-    final successMessage = context.tr.apiDisplayDataCopied;
+    // Platform share sheet is not wired globally; clipboard + clear toast for now.
+    final successMessage = ReceiveMoneyCopy.shareReceiptHint(context);
     await Clipboard.setData(ClipboardData(text: _paymentValue));
+    if (!mounted) return;
     await HapticFeedback.selectionClick();
     SnackbarHelper.showSuccess(successMessage);
   }
@@ -595,23 +589,10 @@ class _ReceiveRequestFlowScreenState
   }
 
   Widget _buildQrScreen(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
     final receiveTitle = _isOnChainReceive
-        ? switch (lang) {
-            'en' => 'Receive Bitcoin',
-            'es' => 'Recibir Bitcoin',
-            _ => 'Receber Bitcoin',
-          }
-        : switch (lang) {
-            'en' => 'Receive on Kerosene',
-            'es' => 'Recibir en Kerosene',
-            _ => 'Receber na Kerosene',
-          };
-    final pendingTitle = switch (lang) {
-      'en' => 'Pending',
-      'es' => 'Pendiente',
-      _ => 'Pendente',
-    };
+        ? ReceiveMoneyCopy.receiveBitcoinTitle(context)
+        : ReceiveMoneyCopy.receiveKeroseneTitle(context);
+    final pendingTitle = ReceiveMoneyCopy.qrPendingTitle(context);
     return Column(
       children: [
         ReceiveContextHeader(
@@ -681,31 +662,40 @@ class _ReceiveRequestFlowScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.hexFF0A0A0A,
-        border: Border.all(color: AppColors.hexFF222222),
-        borderRadius: BorderRadius.circular(8),
+        color: KeroseneBrandTokens.surface,
+        border: Border.all(color: KeroseneBrandTokens.border),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
-          DetailRow(label: context.tr.sendReviewWallet, value: widget.wallet.name),
+          DetailRow(
+            label: context.tr.sendReviewWallet,
+            value: widget.wallet.name,
+          ),
           const ReceiveDivider(),
-          DetailRow(label: 'Rede', value: _networkLabel),
+          DetailRow(
+            label: ReceiveMoneyCopy.detailNetwork(context),
+            value: _networkLabel,
+          ),
           const ReceiveDivider(),
-          DetailRow(label: 'Solicitado', value: _requestedAmountLabel),
+          DetailRow(
+            label: ReceiveMoneyCopy.detailRequested(context),
+            value: _requestedAmountLabel,
+          ),
           const ReceiveDivider(),
-          _buildAddressPill(),
+          _buildAddressPill(context),
         ],
       ),
     );
   }
 
-  Widget _buildAddressPill() {
+  Widget _buildAddressPill(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
           Text(
-            'Endereço',
+            ReceiveMoneyCopy.detailAddress(context),
             style: AppTypography.inter(
               color: _receiveMuted,
               fontSize: 14,
@@ -750,12 +740,14 @@ class _ReceiveRequestFlowScreenState
   Future<void> _copyRawAddress() async {
     await Clipboard.setData(ClipboardData(text: _addressValue));
     await HapticFeedback.selectionClick();
-    SnackbarHelper.showSuccess('Endereço copiado');
+    if (!mounted) return;
+    SnackbarHelper.showSuccess(ReceiveMoneyCopy.addressCopied(context));
   }
 
   Widget _buildConfirmationsScreen(BuildContext context) {
-    final receiveTitle =
-        _isOnChainReceive ? 'Receber Bitcoin' : 'Receber na Kerosene';
+    final receiveTitle = _isOnChainReceive
+        ? ReceiveMoneyCopy.receiveBitcoinTitle(context)
+        : ReceiveMoneyCopy.receiveKeroseneTitle(context);
     return Column(
       children: [
         ReceiveContextHeader(
@@ -824,28 +816,34 @@ class _ReceiveRequestFlowScreenState
   }
 
   Widget _buildIdentifiedScreen(BuildContext context) {
-    const identifiedLabel = 'Pagamento\nIdentificado!';
+    final identifiedLabel = ReceiveMoneyCopy.paymentIdentifiedTitle(context);
     return Column(
       children: [
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
             child: MovementConfirmationSurface(
               leading: ReceiveSuccessGraphic(animation: _scanController),
               title: identifiedLabel,
               amountLabel: _amountLabel,
               supportingLabel: _fiatLabel,
               rows: [
-                MovementConfirmationRow(label: context.tr.sendReviewStatus, value: _statusLabel),
+                MovementConfirmationRow(
+                  label: context.tr.sendReviewStatus,
+                  value: _statusLabel,
+                ),
                 MovementConfirmationRow(
                   label: context.tr.sendReviewDestination,
                   value: shortenReceiveAddress(_addressValue),
                   technical: true,
                 ),
-                MovementConfirmationRow(label: 'Rede', value: _networkLabel),
                 MovementConfirmationRow(
-                  label: 'Data',
+                  label: ReceiveMoneyCopy.detailNetwork(context),
+                  value: _networkLabel,
+                ),
+                MovementConfirmationRow(
+                  label: ReceiveMoneyCopy.detailDate(context),
                   value: formatReceiveDateTime(_identifiedAt),
                 ),
               ],
@@ -853,27 +851,50 @@ class _ReceiveRequestFlowScreenState
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-          child: SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: TextButton(
-              onPressed: _goHome,
-              style: TextButton.styleFrom(
-                backgroundColor: _receiveText,
-                foregroundColor: AppColors.hexFF2F3131,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                textStyle: AppTypography.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                  height: 1.2,
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 56,
+                child: FilledButton(
+                  onPressed: _goHome,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: KeroseneBrandTokens.textPrimary,
+                    foregroundColor: KeroseneBrandTokens.background,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: AppTypography.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  child: Text(ReceiveMoneyCopy.doneAction(context)),
                 ),
               ),
-              child: Text(context.tr.goToHome.toUpperCase()),
-            ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: _sharePaymentValue,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: KeroseneBrandTokens.textPrimary,
+                    side: const BorderSide(color: KeroseneBrandTokens.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: AppTypography.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  icon: const Icon(KeroseneIcons.share, size: 17),
+                  label: Text(context.tr.share),
+                ),
+              ),
+            ],
           ),
         ),
       ],
