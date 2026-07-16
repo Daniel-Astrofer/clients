@@ -3317,6 +3317,34 @@
   "statementExportLongAddressesNote": "Las direcciones largas se acortan. CSV es mejor para conciliar.",
   "statementExportShareLimit": "Hasta 200 líneas · legible para compartir",
   "statementEmptyOnDevice": "El extracto está vacío en este dispositivo.",
+  "statementScreenTitle": "Extracto",
+  "statementTabInsights": "Insights",
+  "statementExportTitle": "Exportar extracto",
+  "statementExportCsvSubtitle": "Copia y comparte · montos en sats",
+  "statementExportNothingTitle": "Nada que exportar",
+  "statementExportSharedTitle": "Extracto compartido",
+  "statementExportCsvCopiedTitle": "CSV copiado",
+  "statementExportGenericTitle": "Exportación",
+  "statementExportSharedMessage": "{count} movimientos ({format}).",
+  "@statementExportSharedMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "statementExportCsvCopiedMessage": "{count} movimientos copiados al portapapeles.",
+  "@statementExportCsvCopiedMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statementExportPdfFailed": "No se pudo compartir el PDF.",
   "movementHubReceiveInternal": "Recibir por transferencia de usuario interno",
   "notifCloseNotification": "Cerrar notificación",
   "btcAccountsRotateAddress": "Rotar dirección",
@@ -3329,5 +3357,150 @@
   "settingsDevicesUnlinkHint": "Confirma la desvinculación en Ajustes → Biometría si se solicita.",
   "settingsRecoveryEmergencyBody": "Rota contraseña, TOTP y passkey con códigos offline. Cierra la sesión actual.",
   "securityTotpValidating": "Validando seguridad de la cuenta",
-  "homeFeedCardsTitle": "Tarjetas Kerosene"
+  "homeFeedCardsTitle": "Tarjetas Kerosene",
+  "homeFilterEmptyTitle": "Nada en este filtro",
+  "homeFilterEmptyDesc": "No hay actividad para este filtro. Intente “Todos” o deslice para actualizar.",
+  "homeClearFilter": "Limpiar filtro",
+  "homeHistoryEmptyTitle": "El historial está vacío",
+  "homeHistoryEmptyDesc": "Hay saldo, pero no hay historial local. Deslice para sincronizar con el servidor.",
+  "homeSyncing": "Sincronizando historial…",
+  "homeOfflineExtract": "Offline · historial local",
+  "homeOfflineExtractDate": "Offline · historial local · {date}",
+  "@homeOfflineExtractDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeUpdatedDate": "{count} entradas · actualizado {date}",
+  "@homeUpdatedDate": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeBalanceInternal": "Saldo interno",
+  "homeBalanceOnchain": "Saldo on-chain",
+  "homeBalanceCold": "Cold wallet (en cadena)",
+  "homeBalanceTotal": "Saldo",
+  "homeBalancePlatform": "Saldo",
+  "homeBtcMarketChange": "BTC mercado {sign}{percent}% (24h)",
+  "@homeBtcMarketChange": {
+    "placeholders": {
+      "sign": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "homeQuoteUnavailable": "{currency} no disponible",
+  "@homeQuoteUnavailable": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "homeWalletInternal": "Interno",
+  "homeWalletOnchain": "On-chain",
+  "homeWalletCold": "Cold",
+  "homeWalletPlatform": "Plataforma",
+  "homeWalletTotalLabel": "Kerosene",
+  "homeWalletInternalDesc": "Instantáneo (Lighting offchain)",
+  "homeWalletOnchainDesc": "Auto-custodia en la red Bitcoin",
+  "homeWalletColdDesc": "Monitoreado (Solo lectura)",
+  "homeWalletPlatformDesc": "Saldo interno (disponible al instante)",
+  "homeCardAvailable": "Tarjeta Kerosene · lista para usar",
+  "homeInternalCustody": "Interno + custodia · frío no incluido",
+  "homeOnchainTab": "On-chain",
+  "homeColdTab": "Frío",
+  "homeOnchainWalletCardTitle": "Cartera on-chain",
+  "homeStatementAction": "Ir al extracto",
+  "activityFilterInstant": "Instantáneo",
+  "activityFilterOnchain": "On-chain",
+  "activityFilterLightning": "Lightning",
+  "activityFilterCold": "Cold",
+  "activityFilterInProgress": "En curso",
+  "activityFilterProblems": "Problemas",
+  "activityFilterAllWallets": "Todas las billeteras",
+  "activityFilterThisWallet": "Esta billetera",
+  "activityFilterThisWalletNamed": "Esta: {name}",
+  "@activityFilterThisWalletNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "txListSent": "Enviado",
+  "txListReceived": "Recibido",
+  "txListTo": "Para",
+  "txListFrom": "De",
+  "txListViewDetails": "Ver detalles",
+  "txListWhen": "Cuándo",
+  "txListYourWallet": "Tu billetera",
+  "txListAmount": "Monto",
+  "txListNetworkFee": "Tarifa de red",
+  "txListServiceFee": "Tarifa de servicio",
+  "txListTotalDebited": "Total debitado",
+  "txListNetwork": "Red",
+  "txListStatus": "Estado",
+  "txListConfirmations": "Confirmaciones",
+  "txListConfirmed": "Confirmada",
+  "txListPending": "Pendiente",
+  "txListConfirming": "Confirmando",
+  "txListFailed": "Falló",
+  "txListCancelled": "Cancelada",
+  "txListNeedsReview": "En revisión",
+  "txListUnconfirmed": "Sin confirmar",
+  "txListLink": "Link",
+  "txListDeposit": "Depósito",
+  "txListWithdraw": "Retiro",
+  "txListFee": "Tarifa",
+  "txListSwap": "Swap",
+  "txListInstant": "Instantáneo",
+  "txListId": "ID",
+  "txListPaymentHash": "Payment hash",
+  "txListBlock": "Bloque",
+  "txListBlockHash": "Hash del bloque",
+  "txListOnchainTxid": "TXID on-chain",
+  "txListInvoiceId": "Invoice ID",
+  "txListLightningInvoice": "Invoice Lightning",
+  "txListExternalRef": "Referencia externa",
+  "txListExternalTransferId": "ID transferencia externa",
+  "txListExternalStatus": "Estado externo",
+  "txListExternalType": "Tipo externo",
+  "txListSourceWallet": "Billetera origen",
+  "txListDestinationWallet": "Billetera destino",
+  "txListFromAddress": "Dirección origen",
+  "txListToAddress": "Dirección destino",
+  "txListDescription": "Descripción",
+  "txListInternalId": "ID interno",
+  "txListAmountBtc": "Monto (BTC)",
+  "txListReason": "Motivo",
+  "txListType": "Tipo",
+  "txListDateTime": "Fecha y hora",
+  "txListFrozenUsd": "Monto USD (congelado)",
+  "txListFrozenBrl": "Monto BRL (congelado)",
+  "txListFrozenEur": "Monto EUR (congelado)",
+  "txListPartyGlobalWallet": "Billetera global",
+  "txListPartyKeroseneWallet": "Billetera Kerosene",
+  "txListPartyLightningInvoice": "Invoice Lightning",
+  "txListPartyExternalAddress": "Dirección externa",
+  "txListPartyOffApp": "Envío off-app",
+  "txListPartyOnchainOffApp": "Envío on-chain (fuera de la app)",
+  "txListPartyInternalPayer": "Pagador (link interno)",
+  "txListPartyInternalKerosene": "Kerosene (interno)",
+  "txListPartyOnchainPayer": "Pagador (link on-chain)",
+  "txListPartyColdNetwork": "Red Bitcoin (cold)",
+  "txListPartyOnchainNetwork": "Red Bitcoin (on-chain)",
+  "txListPartyLinkRecipient": "Destinatario (link interno)",
+  "txListPartyLinkAddress": "Dirección del link on-chain"
 }

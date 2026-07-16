@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/core/providers/session_invalidation_provider.dart';
+import 'package:kerosene/core/services/background_service.dart';
+import 'package:kerosene/core/services/native_notification_presenter.dart';
 import 'package:kerosene/core/services/notification_service.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 import '../../../../core/services/balance_websocket_service.dart';
@@ -15,6 +17,7 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
+import 'package:kerosene/features/home/presentation/providers/incoming_transfer_theater.dart';
 import '../../../../core/utils/device_helper.dart';
 import 'financial_dirty_provider.dart';
 import 'financial_refresh.dart';
@@ -226,6 +229,24 @@ final balanceWebSocketServiceProvider =
               context: update.context,
             );
       }
+
+      // Fallback theater path: credits can land on /queue/balance without a
+      // parallel /queue/notifications push (KFE→Auth notify is best-effort).
+      final creditPayload = payloadFromBalanceCredit(
+        walletId: update.walletId,
+        walletName: update.walletName,
+        amountBtc: update.amount,
+        context: update.context,
+        kind: update.kind,
+        bucket: update.bucket,
+      );
+      if (creditPayload != null && ref.mounted) {
+        presentIncomingTheater(
+          ref.read(homeEducationQueueProvider.notifier),
+          ref.read(homeBalanceReceivePulseProvider.notifier),
+          creditPayload,
+        );
+      }
     },
     onNotification: (event) {
       final notification = SessionNotificationItem(
@@ -242,103 +263,41 @@ final balanceWebSocketServiceProvider =
       );
 
       final alertPreferences = ref.read(alertPreferencesProvider);
-      if (!_shouldKeepNotification(notification, alertPreferences)) {
-        return;
+      final keepForAlerts =
+          _shouldKeepNotification(notification, alertPreferences);
+
+      // In-app feed + financial refresh + theater must not depend on OS alert
+      // preferences. Prefs only gate system notifications.
+      if (keepForAlerts) {
+        ref.read(sessionNotificationFeedProvider.notifier).add(notification);
       }
 
-      ref.read(sessionNotificationFeedProvider.notifier).add(notification);
       // Single coordinator: balance + extrato + links.
       ref.read(financialDirtyProvider.notifier).markDirty();
       unawaited(refreshFinancialProjection(ref).then((_) {
         ref.read(financialDirtyProvider.notifier).clear();
       }));
 
-      if (_isTransactionNotification(notification)) {
-        String finalTitle = notification.title;
-        String finalBody = notification.body;
-
-        final isIncoming = _isIncomingTransactionNotification(notification);
-        final isOutgoing = notification.kind ==
-                SessionNotificationItem.kindPaymentSent ||
-            notification.kind == SessionNotificationItem.kindTransferSent;
-        if (isIncoming) {
-          String rede = 'Interna';
-          if (notification.kind == SessionNotificationItem.kindDepositDetected ||
-              notification.kind == SessionNotificationItem.kindDepositConfirmed) {
-            rede = 'Onchain';
-          } else if (notification.kind ==
-              SessionNotificationItem.kindPaymentRequestPaid) {
-            rede = 'Lightning';
-          }
-
-          finalTitle = 'Transferência $rede recebida';
-
-          String amount = notification.metadata['amount'] ??
-              notification.metadata['amountSats'] ??
-              '';
-          String walletName = notification.metadata['walletName'] ??
-              notification.metadata['wallet_name'] ??
-              '';
-
-          if (amount.isEmpty || walletName.isEmpty) {
-            final btcMatch = RegExp(r'([\d\.]+)\s*BTC', caseSensitive: false)
-                .firstMatch(notification.body);
-            if (btcMatch != null) amount = btcMatch.group(1)!;
-
-            final emMatch = RegExp(r'em\s+([\w\s]+)', caseSensitive: false)
-                .firstMatch(notification.body);
-            if (emMatch != null) walletName = emMatch.group(1)!.trim();
-          }
-
-          if (walletName.isEmpty) {
-            walletName = 'Principal';
-          }
-
-          if (amount.isNotEmpty) {
-            if (amount.contains('.')) {
-              amount = amount.replaceAll(RegExp(r'0+$'), '');
-              if (amount.endsWith('.')) {
-                amount = amount.substring(0, amount.length - 1);
-              }
-            }
-            finalBody = 'Sua carteira $walletName recebeu $amount BTC.';
-          } else {
-            finalBody = notification.body;
-          }
-
-          // In-app education dialog + balance pulse on the home surface.
-          final amountLabel =
-              amount.isNotEmpty ? '$amount BTC' : 'fundos';
-          enqueueIncomingTransfer(
+      // Theater for receives (independent of OS alert prefs).
+      if (isIncomingTransactionNotification(notification)) {
+        final theater = payloadFromNotification(notification);
+        if (theater != null) {
+          presentIncomingTheater(
             ref.read(homeEducationQueueProvider.notifier),
             ref.read(homeBalanceReceivePulseProvider.notifier),
-            id: notification.dedupeKey.isNotEmpty
-                ? notification.dedupeKey
-                : notification.id,
-            amountLabel: amountLabel,
-            walletName: walletName,
-            networkLabel: rede,
-            subtitle: notification.body,
+            theater,
           );
-        } else if (isOutgoing) {
-          // Prefer server copy (cold outbound uses specific pt-BR titles).
-          finalTitle = notification.title.isNotEmpty
-              ? notification.title
-              : 'Envio on-chain detectado';
-          finalBody = notification.body;
         }
+      }
 
+      // Native Android/iOS shade: financial + security when prefs allow.
+      if (keepForAlerts &&
+          NativeNotificationPresenter.isNativeAlertKind(notification.kind)) {
         unawaited(
-          NotificationService().showTransactionNotification(
-            id: _notificationIdFrom(notification.dedupeKey),
-            title: finalTitle,
-            body: finalBody,
-            summary: null,
-            payload: notification.deeplink,
-            incoming: isIncoming,
-            dedupeKey: notification.dedupeKey,
-          ),
+          NotificationService().showSessionNotification(notification),
         );
+        // Mark seen in BG isolate so the next REST poll does not re-alert.
+        unawaited(markBackgroundNotificationsSeen([notification.id]));
       }
     },
     onHomeUiEvent: (event) {
@@ -397,11 +356,11 @@ bool _shouldKeepNotification(
   SessionNotificationItem notification,
   AlertPreferencesState preferences,
 ) {
-  if (_isSecurityNotification(notification)) {
+  if (NativeNotificationPresenter.isSecurityKind(notification.kind)) {
     return preferences.securityAlertsEnabled;
   }
 
-  if (_isTransactionNotification(notification)) {
+  if (NativeNotificationPresenter.isFinancialKind(notification.kind)) {
     return preferences.transactionAlertsEnabled;
   }
 
@@ -409,48 +368,6 @@ bool _shouldKeepNotification(
     return preferences.marketAlertsEnabled;
   }
 
+  // System / account — allow unless all alerts disabled (default on).
   return true;
-}
-
-bool _isSecurityNotification(SessionNotificationItem notification) {
-  return notification.kind ==
-          SessionNotificationItem.kindSecurityLoginDetected ||
-      notification.kind ==
-          SessionNotificationItem.kindSecurityAdminAccessAttempt ||
-      notification.kind ==
-          SessionNotificationItem.kindSecurityRecoveryCompleted;
-}
-
-bool _isTransactionNotification(SessionNotificationItem notification) {
-  return {
-    SessionNotificationItem.kindTransferReceived,
-    SessionNotificationItem.kindTransferSent,
-    SessionNotificationItem.kindPaymentRequestCreated,
-    SessionNotificationItem.kindPaymentRequestPaid,
-    SessionNotificationItem.kindDepositDetected,
-    SessionNotificationItem.kindDepositConfirmed,
-    SessionNotificationItem.kindPaymentSent,
-  }.contains(notification.kind);
-}
-
-bool _isIncomingTransactionNotification(SessionNotificationItem notification) {
-  return {
-    SessionNotificationItem.kindTransferReceived,
-    SessionNotificationItem.kindPaymentRequestPaid,
-    SessionNotificationItem.kindDepositDetected,
-    SessionNotificationItem.kindDepositConfirmed,
-  }.contains(notification.kind);
-}
-
-int _notificationIdFrom(String value) {
-  var hash = 0;
-  for (final codeUnit in value.codeUnits) {
-    hash = 0x1fffffff & (hash + codeUnit);
-    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
-    hash ^= hash >> 6;
-  }
-  hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
-  hash ^= hash >> 11;
-  hash = 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
-  return hash == 0 ? DateTime.now().millisecondsSinceEpoch ~/ 1000 : hash;
 }

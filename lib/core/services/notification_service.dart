@@ -25,6 +25,9 @@ class NotificationService {
 
   bool _initialized = false;
 
+  /// Optional deeplink handler when user taps a system notification.
+  void Function(String payload)? onNotificationTap;
+
   Future<void> init() async {
     if (_initialized) return;
 
@@ -63,7 +66,31 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.initialize(
       settings: initializationSettings,
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload?.trim();
+        if (payload == null || payload.isEmpty) return;
+        if (kDebugMode) {
+          debugPrint('NotificationService: tap payload=$payload');
+        }
+        onNotificationTap?.call(payload);
+      },
     );
+
+    // Cold start from notification tap.
+    try {
+      final launch = await flutterLocalNotificationsPlugin
+          .getNotificationAppLaunchDetails();
+      final payload = launch?.notificationResponse?.payload?.trim();
+      if (launch?.didNotificationLaunchApp == true &&
+          payload != null &&
+          payload.isNotEmpty) {
+        // Defer until UI tree mounts.
+        Future<void>.delayed(const Duration(milliseconds: 800), () {
+          onNotificationTap?.call(payload);
+        });
+      }
+    } catch (_) {}
+
     await _ensureAndroidChannels();
     await requestPermissions();
     _initialized = true;

@@ -97,22 +97,18 @@ class SendAmountStep extends StatelessWidget {
                 ? context.tr.sendFeeQuoteExpired
                 : null);
 
-        final recipientLabel = _stickyRecipientLabel();
-        final fromWallet = wallet?.name.trim() ?? '';
-        final configuration = _amountConfiguration(context);
-
         return TransactionValueEntrySurface(
           onBack: onBack,
-          // Bank sticky party: keep "To / From" visible while entering amount.
-          title: SendMoneyCopy.amountToTitle(context, recipientLabel),
-          subtitle: fromWallet.isEmpty
-              ? null
-              : SendMoneyCopy.amountFromSubtitle(context, fromWallet),
           amountInput: amountValue,
           unitLabel: MoneyDisplay.tickerSymbolFor(selectedCurrency),
           currency: selectedCurrency,
           fiatReference: secondaryLabel,
-          configuration: configuration,
+          configuration: destination.isOnChain && onFeeTierChanged != null
+              ? _FeeTierBar(
+                  selected: feeTier,
+                  onSelected: onFeeTierChanged!,
+                )
+              : null,
           showKeypad: !amountLocked,
           onKeyTap: amountLocked
               ? null
@@ -163,33 +159,6 @@ class SendAmountStep extends StatelessWidget {
     );
   }
 
-  Widget? _amountConfiguration(BuildContext context) {
-    final railChip = _NetworkRailChip(
-      label: SendMoneyCopy.networkLabel(
-        context,
-        isPaymentLink: destination.isPaymentLink,
-        isLightning: destination.isLightning,
-        isOnChain: destination.isOnChain,
-      ),
-    );
-    final showFeeTiers =
-        destination.isOnChain && onFeeTierChanged != null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        railChip,
-        if (showFeeTiers) ...[
-          const SizedBox(height: 14),
-          _FeeTierBar(
-            selected: feeTier,
-            onSelected: onFeeTierChanged!,
-          ),
-        ],
-      ],
-    );
-  }
-
   String? _feeLabel(BuildContext context) {
     if (destination.isLightning) {
       if (feeQuote.networkFeeCertainty ==
@@ -219,31 +188,6 @@ class SendAmountStep extends StatelessWidget {
     );
     if (eta.isEmpty) return fee;
     return '$fee · $eta';
-  }
-
-  /// Human label for sticky header — prefers contact/username over raw address.
-  String _stickyRecipientLabel() {
-    final labeled = destination.label?.trim() ?? '';
-    if (labeled.isNotEmpty) {
-      if (destination.isInternal) {
-        final bare = labeled.startsWith('@') ? labeled.substring(1) : labeled;
-        return bare.length <= 28 ? '@$bare' : '@${bare.substring(0, 24)}…';
-      }
-      return labeled.length <= 28 ? labeled : '${labeled.substring(0, 24)}…';
-    }
-    final raw = destination.normalizedValue.trim();
-    if (raw.isEmpty) return '';
-    if (destination.isInternal) {
-      final bare = raw.startsWith('@') ? raw.substring(1) : raw;
-      return bare.length <= 28 ? '@$bare' : '@${bare.substring(0, 24)}…';
-    }
-    if (destination.isPaymentLink) {
-      return raw.length <= 22
-          ? raw
-          : '${raw.substring(0, 10)}…${raw.substring(raw.length - 6)}';
-    }
-    if (raw.length <= 18) return raw;
-    return '${raw.substring(0, 8)}…${raw.substring(raw.length - 6)}';
   }
 
   void _applyQuickPercent({
@@ -288,34 +232,6 @@ class SendAmountStep extends StatelessWidget {
     return value
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'\.$'), '');
-  }
-}
-
-class _NetworkRailChip extends StatelessWidget {
-  final String label;
-
-  const _NetworkRailChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: KeroseneBrandTokens.surfaceHigh,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: KeroseneBrandTokens.border),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.inter(
-            color: KeroseneBrandTokens.textPrimary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
   }
 }
 

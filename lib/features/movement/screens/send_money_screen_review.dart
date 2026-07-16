@@ -748,65 +748,77 @@ class _AuthorizeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Matches destination / amount CTAs: light fill when ready, muted surface when not.
     final ready = enabled && !isSubmitting;
-    final backgroundColor =
-        ready ? _C.text : _C.surfaceHigh.withValues(alpha: 0.64);
-    final foregroundColor = ready ? _C.background : _C.muted;
 
     return SizedBox(
       height: 56,
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: ready ? onPressed : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          disabledBackgroundColor: _C.surfaceHigh.withValues(alpha: 0.64),
-          disabledForegroundColor: _C.muted,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: AppTypography.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-          ),
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          child: isSubmitting
-              ? Row(
-                  key: const ValueKey('submitting'),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: _C.muted,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: ready ? onPressed : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: ready ? _C.button : _C.surfaceHigh.withValues(alpha: 0.64),
+              border: Border.all(color: _C.border),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Green progress wipe on authorize (original motion).
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: isSubmitting ? 1 : 0),
+                    duration: const Duration(milliseconds: 920),
+                    curve: Curves.easeInOutCubic,
+                    builder: (context, value, child) {
+                      return FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: value,
+                        child: child,
+                      );
+                    },
+                    child: const ColoredBox(color: _C.success),
+                  ),
+                  Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: Row(
+                        key: ValueKey<bool>(isSubmitting),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isSubmitting ? submittingLabel : label,
+                            style: AppTypography.inter(
+                              color: ready || isSubmitting
+                                  ? _C.buttonText
+                                  : _C.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 2.4,
+                              height: 1,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            isSubmitting
+                                ? KeroseneIcons.security
+                                : KeroseneIcons.lock,
+                            color: ready || isSubmitting
+                                ? _C.buttonText
+                                : _C.muted,
+                            size: 16,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(submittingLabel),
-                  ],
-                )
-              : Row(
-                  key: const ValueKey('idle'),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(label),
-                    const SizedBox(width: 8),
-                    Icon(
-                      KeroseneIcons.lock,
-                      size: 16,
-                      color: foregroundColor,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -983,4 +995,7 @@ class _C {
   static const secondary = KeroseneBrandTokens.textSecondary;
   static const muted = KeroseneBrandTokens.textMuted;
   static const success = KeroseneBrandTokens.success;
+  /// Dark authorize chrome (pre-wipe), matching original send review button.
+  static const button = KeroseneBrandTokens.surfaceElevated;
+  static const buttonText = KeroseneBrandTokens.textSecondary;
 }

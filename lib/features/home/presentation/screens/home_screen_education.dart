@@ -710,6 +710,7 @@ class HomeActivityFilterChips extends ConsumerWidget {
       HomeActivityFilter.outgoing,
       HomeActivityFilter.internal,
       HomeActivityFilter.onchain,
+      HomeActivityFilter.lightning,
       HomeActivityFilter.cold,
       HomeActivityFilter.pending,
       HomeActivityFilter.failed,
@@ -721,66 +722,21 @@ class HomeActivityFilterChips extends ConsumerWidget {
       ref.read(homeActivityFilterProvider.notifier).state = filter;
     }
 
-    final walletScope = ref.watch(homeExtratoWalletScopeProvider);
-    final walletState = ref.watch(walletProvider);
-    final selectedWallet = walletState is WalletLoaded
-        ? walletState.selectedWallet ??
-            (walletState.wallets.isNotEmpty ? walletState.wallets.first : null)
-        : null;
-    final selectedWalletLabel = (selectedWallet?.name.trim().isNotEmpty == true)
-        ? selectedWallet!.name.trim()
-        : 'carteira';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              HomeActivityFilterChip(
-                label: 'Todas',
-                selected: walletScope == HomeExtratoWalletScope.all,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  ref.read(homeExtratoWalletScopeProvider.notifier).state =
-                      HomeExtratoWalletScope.all;
-                },
-              ),
-              SizedBox(width: homeSize(8)),
-              HomeActivityFilterChip(
-                label: selectedWallet == null
-                    ? 'Esta carteira'
-                    : 'Esta: $selectedWalletLabel',
-                selected: walletScope == HomeExtratoWalletScope.selected,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  ref.read(homeExtratoWalletScopeProvider.notifier).state =
-                      HomeExtratoWalletScope.selected;
-                },
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: homeSize(10)),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              for (var index = 0; index < filters.length; index++) ...[
-                if (index > 0) SizedBox(width: homeSize(8)),
-                HomeActivityFilterChip(
-                  label: homeFilterLabel(context, filters[index]),
-                  selected: selectedFilter == filters[index],
-                  onTap: () => selectFilter(filters[index]),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          for (var index = 0; index < filters.length; index++) ...[
+            if (index > 0) SizedBox(width: homeSize(8)),
+            HomeActivityFilterChip(
+              label: homeFilterLabel(context, filters[index]),
+              selected: selectedFilter == filters[index],
+              onTap: () => selectFilter(filters[index]),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -865,11 +821,12 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
     HomeActivityFilter.all => context.tr.financialStatementFilterAll,
     HomeActivityFilter.incoming => context.tr.financialStatementFilterIncoming,
     HomeActivityFilter.outgoing => context.tr.financialStatementFilterOutgoing,
-    HomeActivityFilter.internal => 'Interna',
-    HomeActivityFilter.onchain => 'On-chain',
-    HomeActivityFilter.cold => 'Cold',
-    HomeActivityFilter.pending => context.tr.financialStatementFilterPending,
-    HomeActivityFilter.failed => context.tr.financialStatementFilterFailed,
+    HomeActivityFilter.internal => context.tr.activityFilterInstant,
+    HomeActivityFilter.onchain => context.tr.activityFilterOnchain,
+    HomeActivityFilter.lightning => context.tr.activityFilterLightning,
+    HomeActivityFilter.cold => context.tr.activityFilterCold,
+    HomeActivityFilter.pending => context.tr.activityFilterInProgress,
+    HomeActivityFilter.failed => context.tr.activityFilterProblems,
     HomeActivityFilter.cancelled =>
       context.tr.financialStatementFilterCancelled,
   };
@@ -877,18 +834,26 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
 
 class HomeSectionHeader extends StatelessWidget {
   final String title;
-  final String actionLabel;
   final VoidCallback onAction;
+
+  /// Optional legacy text action; when null, shows open-statement icon (white).
+  final String? actionLabel;
+  final IconData actionIcon;
+  final String? actionTooltip;
 
   const HomeSectionHeader({
     required this.title,
-    required this.actionLabel,
     required this.onAction,
+    this.actionLabel,
+    this.actionIcon = KeroseneIcons.history,
+    this.actionTooltip,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tooltip =
+        actionTooltip ?? context.tr.statementScreenTitle;
 
     return Row(
       children: [
@@ -904,20 +869,34 @@ class HomeSectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(
-          onPressed: onAction,
-          style: TextButton.styleFrom(
-            foregroundColor: homeAmberColor,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            minimumSize: const Size(0, 36),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w300,
-              letterSpacing: 0,
+        if (actionLabel != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: homeAmberColor,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w300,
+                letterSpacing: 0,
+              ),
+            ),
+            child: Text(actionLabel!),
+          )
+        else
+          IconButton(
+            onPressed: onAction,
+            tooltip: tooltip,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              actionIcon,
+              color: Colors.white,
+              size: homeSize(22),
             ),
           ),
-          child: Text(actionLabel),
-        ),
       ],
     );
   }

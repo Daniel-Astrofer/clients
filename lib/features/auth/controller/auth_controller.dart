@@ -8,6 +8,7 @@ import '../domain/entities/user.dart';
 import 'package:kerosene/features/auth/domain/entities/login_result.dart';
 import '../../../core/services/background_service.dart';
 import '../../../core/services/device_key_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/services/passkey_service.dart';
 import '../../../core/security/device_credential_enroll_policy.dart';
 import '../../../core/errors/failures.dart';
@@ -93,6 +94,12 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> _syncBackgroundAlertsService() async {
+    // Ensure channels + OS permission path is warm before background isolate.
+    try {
+      await NotificationService().init();
+    } catch (_) {
+      // Non-fatal — background service still starts.
+    }
     final backgroundAlertsEnabled = await loadBackgroundAlertsEnabled();
     if (backgroundAlertsEnabled) {
       await startBackgroundService();

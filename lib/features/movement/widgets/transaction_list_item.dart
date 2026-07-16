@@ -6,8 +6,8 @@ import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
+import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
-import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
@@ -23,19 +23,16 @@ class TransactionListItem extends ConsumerWidget {
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final amountLabel = money.formatFrozenAmountFromBtc(
-      btcAmount: transaction.signedAmountBTC,
+    final presentation = TransactionPresentation.fromTransaction(
+      context,
+      transaction,
+      displayCurrency: money.currency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
-      displayAmountUsd: transaction.displayAmountUsd,
-      displayAmountEur: transaction.displayAmountEur,
-      displayAmountBrl: transaction.displayAmountBrl,
-      displayBtcUsd: transaction.displayBtcUsd,
-      displayBtcEur: transaction.displayBtcEur,
-      displayBtcBrl: transaction.displayBtcBrl,
-      signed: true,
+      appLocale: money.locale,
     );
+    final amountLabel = presentation.primaryAmountLabel;
     final btcAmountLabel = money.formatAmountFromBtc(
       btcAmount: transaction.signedAmountBTC,
       currency: Currency.btc,
@@ -45,10 +42,8 @@ class TransactionListItem extends ConsumerWidget {
       signed: true,
     );
 
-    final title = resolveTransactionActionTitle(context, transaction);
-    final counterparty = transaction.isDebit
-        ? resolveTransactionToParty(transaction, compactHash: true)
-        : resolveTransactionFromParty(transaction);
+    final title = presentation.title;
+    final counterparty = presentation.subtitle;
     final displayAddress = SafeDisplayText.displayAddress(
       context,
       counterparty,

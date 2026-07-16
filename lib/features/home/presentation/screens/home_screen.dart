@@ -96,21 +96,17 @@ enum HomeActivityFilter {
   all,
   incoming,
   outgoing,
+  /// Internal ledger (instant).
   internal,
   onchain,
+  /// Lightning rail (was missing from home chips).
+  lightning,
   cold,
+  /// pending + confirming + reconciling.
   pending,
+  /// failed + unconfirmed expired.
   failed,
   cancelled,
-}
-
-/// Extrato scope relative to the active wallet card.
-enum HomeExtratoWalletScope {
-  /// All wallets / accounts.
-  all,
-
-  /// Only rows that touch the selected wallet (source, dest, or walletId).
-  selected,
 }
 
 final homeLedgerBalanceViewProvider = StateProvider<HomeLedgerBalanceView>((
@@ -123,11 +119,6 @@ final homeLedgerBalancePageProvider = StateProvider<int>((ref) => 0);
 
 final homeActivityFilterProvider = StateProvider<HomeActivityFilter>((ref) {
   return HomeActivityFilter.all;
-});
-
-final homeExtratoWalletScopeProvider =
-    StateProvider<HomeExtratoWalletScope>((ref) {
-  return HomeExtratoWalletScope.all;
 });
 
 final homeRouteActiveProvider = StateProvider<bool>((ref) => true);
@@ -692,7 +683,6 @@ class HomeScreenState extends ConsumerState<HomeScreen>
                                     HomeSectionHeader(
                                       title:
                                           homeRecentActivitiesTitle(context),
-                                      actionLabel: homeViewAllLabel(context),
                                       onAction: openStatement,
                                     ),
                                     SizedBox(height: homeSize(AppSpacing.md)),

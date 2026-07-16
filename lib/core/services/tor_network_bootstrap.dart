@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import 'background_network_bridge.dart';
 import 'tor_service.dart';
 
 typedef TorApiUrlUpdater = void Function(String url);
@@ -146,6 +147,17 @@ Future<bool> _bootstrapTorNetworkInternal({
     AppConfig.apiUrl = newApiUrl;
     AppConfig.isTorEnabled = true;
     updateApiUrl(newApiUrl);
+
+    // Share local relay URL with background isolate (direct HTTP to 127.0.0.1,
+    // no SOCKS needed there — main isolate already owns Tor).
+    unawaited(
+      BackgroundNetworkBridge.publishMainIsolateRouting(
+        apiBaseUrl: newApiUrl,
+        torEnabled: true,
+        socksHost: '127.0.0.1',
+        socksPort: torService.socksPort,
+      ),
+    );
 
     // Prime onion path while the user is on PIN / welcome (does not block UI).
     unawaited(

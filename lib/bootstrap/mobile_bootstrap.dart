@@ -51,6 +51,7 @@ import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';
 import '../features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import '../app/providers/price_alert_provider.dart';
+import '../core/services/notification_delivery_bootstrap.dart';
 
 Future<void> bootstrapMobile() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,7 +100,23 @@ Future<void> _bootstrapTor(ProviderContainer container) async {
 
 Future<void> _bootstrapPeripheralServices() async {
   try {
-    await local_notifications.NotificationService().init();
+    final notif = local_notifications.NotificationService();
+    // Tap on system shade → navigate via app navigator.
+    notif.onNotificationTap = (payload) {
+      final route = payload.trim();
+      if (route.isEmpty) return;
+      final nav = SnackbarHelper.navigatorKey.currentState;
+      if (nav == null) return;
+      try {
+        // Absolute path deeplinks from backend (e.g. /home, /settings/security).
+        if (route.startsWith('/')) {
+          unawaited(nav.pushNamed(route));
+        }
+      } catch (e) {
+        debugPrint('Notification tap navigation failed for "$route": $e');
+      }
+    };
+    await notif.init();
     await initializeBackgroundService();
   } catch (error) {
     debugPrint('Peripheral service bootstrap failed: $error');
@@ -392,6 +409,10 @@ class _AppRealtimeBootstrap extends ConsumerWidget {
       ref.watch(balanceWebSocketServiceProvider);
       // Trigger market-price alert notifications (BTC up/down X%).
       ref.watch(priceAlertProvider);
+      // Permissions + channels + background poll + device token registry.
+      unawaited(
+        ref.read(notificationDeliveryBootstrapProvider).ensureReady(),
+      );
     }
     return child;
   }

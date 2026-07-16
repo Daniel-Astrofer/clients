@@ -269,13 +269,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       body: Column(
         children: [
           if (!isOnline) _OfflineSendBanner(onRetry: _retryOnline),
-          SafeArea(
-            bottom: false,
-            child: _SendWizardProgress(
-              currentStep: _currentStep,
-              firstStep: _firstStep,
-            ),
-          ),
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -1599,47 +1592,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
     HapticFeedback.selectionClick();
     await _parsePaymentRequest(value);
-  }
-}
-
-/// Discrete 1–2–3 progress for the send wizard (not review/receipt).
-class _SendWizardProgress extends StatelessWidget {
-  final int currentStep;
-  final int firstStep;
-
-  const _SendWizardProgress({
-    required this.currentStep,
-    required this.firstStep,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final total = 3 - firstStep; // 2 or 3 pages in the active path
-    final active = (currentStep - firstStep).clamp(0, total - 1);
-    if (total <= 1) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var i = 0; i < total; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            AnimatedContainer(
-              duration: KeroseneMotion.fast,
-              width: i == active ? 18 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: i == active
-                    ? KeroseneBrandTokens.textPrimary
-                    : KeroseneBrandTokens.surfaceHigh,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 

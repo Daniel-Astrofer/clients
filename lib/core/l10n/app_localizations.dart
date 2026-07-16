@@ -16182,6 +16182,72 @@ abstract class AppLocalizations {
   /// **'The statement is empty on this device.'**
   String get statementEmptyOnDevice;
 
+  /// No description provided for @statementScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement'**
+  String get statementScreenTitle;
+
+  /// No description provided for @statementTabInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get statementTabInsights;
+
+  /// No description provided for @statementExportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export statement'**
+  String get statementExportTitle;
+
+  /// No description provided for @statementExportCsvSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy and share · amounts in sats'**
+  String get statementExportCsvSubtitle;
+
+  /// No description provided for @statementExportNothingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to export'**
+  String get statementExportNothingTitle;
+
+  /// No description provided for @statementExportSharedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement shared'**
+  String get statementExportSharedTitle;
+
+  /// No description provided for @statementExportCsvCopiedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV copied'**
+  String get statementExportCsvCopiedTitle;
+
+  /// No description provided for @statementExportGenericTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get statementExportGenericTitle;
+
+  /// No description provided for @statementExportSharedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} entries ({format}).'**
+  String statementExportSharedMessage(int count, String format);
+
+  /// No description provided for @statementExportCsvCopiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} entries copied to the clipboard.'**
+  String statementExportCsvCopiedMessage(int count);
+
+  /// No description provided for @statementExportPdfFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share the PDF.'**
+  String get statementExportPdfFailed;
+
   /// No description provided for @movementHubReceiveInternal.
   ///
   /// In en, this message translates to:
@@ -16259,6 +16325,630 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Kerosene cards'**
   String get homeFeedCardsTitle;
+
+  /// No description provided for @homeFilterEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in this filter'**
+  String get homeFilterEmptyTitle;
+
+  /// No description provided for @homeFilterEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity found for this filter. Try “All” or pull to refresh.'**
+  String get homeFilterEmptyDesc;
+
+  /// No description provided for @homeClearFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filter'**
+  String get homeClearFilter;
+
+  /// No description provided for @homeHistoryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'History is empty'**
+  String get homeHistoryEmptyTitle;
+
+  /// No description provided for @homeHistoryEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'There is balance, but no local history. Pull to sync with server.'**
+  String get homeHistoryEmptyDesc;
+
+  /// No description provided for @homeSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing history…'**
+  String get homeSyncing;
+
+  /// No description provided for @homeOfflineExtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline · local history'**
+  String get homeOfflineExtract;
+
+  /// No description provided for @homeOfflineExtractDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline · local history · {date}'**
+  String homeOfflineExtractDate(String date);
+
+  /// No description provided for @homeUpdatedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} entries · updated {date}'**
+  String homeUpdatedDate(int count, String date);
+
+  /// No description provided for @homeBalanceInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal balance'**
+  String get homeBalanceInternal;
+
+  /// No description provided for @homeBalanceOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain balance'**
+  String get homeBalanceOnchain;
+
+  /// No description provided for @homeBalanceCold.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold wallet (on-chain)'**
+  String get homeBalanceCold;
+
+  /// No description provided for @homeBalanceTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get homeBalanceTotal;
+
+  /// No description provided for @homeBalancePlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get homeBalancePlatform;
+
+  /// No description provided for @homeBtcMarketChange.
+  ///
+  /// In en, this message translates to:
+  /// **'BTC market {sign}{percent}% (24h)'**
+  String homeBtcMarketChange(String sign, String percent);
+
+  /// No description provided for @homeQuoteUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{currency} unavailable'**
+  String homeQuoteUnavailable(String currency);
+
+  /// No description provided for @homeWalletInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal'**
+  String get homeWalletInternal;
+
+  /// No description provided for @homeWalletOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain'**
+  String get homeWalletOnchain;
+
+  /// No description provided for @homeWalletCold.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold'**
+  String get homeWalletCold;
+
+  /// No description provided for @homeWalletPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform'**
+  String get homeWalletPlatform;
+
+  /// No description provided for @homeWalletTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene'**
+  String get homeWalletTotalLabel;
+
+  /// No description provided for @homeWalletInternalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant (Lighting offchain)'**
+  String get homeWalletInternalDesc;
+
+  /// No description provided for @homeWalletOnchainDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-custody on Bitcoin network'**
+  String get homeWalletOnchainDesc;
+
+  /// No description provided for @homeWalletColdDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored (Read only)'**
+  String get homeWalletColdDesc;
+
+  /// No description provided for @homeWalletPlatformDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal balance (instantly available)'**
+  String get homeWalletPlatformDesc;
+
+  /// No description provided for @homeCardAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene Card · ready to use'**
+  String get homeCardAvailable;
+
+  /// No description provided for @homeInternalCustody.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal + custody · cold not included'**
+  String get homeInternalCustody;
+
+  /// No description provided for @homeOnchainTab.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain'**
+  String get homeOnchainTab;
+
+  /// No description provided for @homeColdTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold'**
+  String get homeColdTab;
+
+  /// No description provided for @homeOnchainWalletCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain wallet'**
+  String get homeOnchainWalletCardTitle;
+
+  /// No description provided for @homeStatementAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to statement'**
+  String get homeStatementAction;
+
+  /// No description provided for @activityFilterInstant.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant'**
+  String get activityFilterInstant;
+
+  /// No description provided for @activityFilterOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain'**
+  String get activityFilterOnchain;
+
+  /// No description provided for @activityFilterLightning.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning'**
+  String get activityFilterLightning;
+
+  /// No description provided for @activityFilterCold.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold'**
+  String get activityFilterCold;
+
+  /// No description provided for @activityFilterInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get activityFilterInProgress;
+
+  /// No description provided for @activityFilterProblems.
+  ///
+  /// In en, this message translates to:
+  /// **'Issues'**
+  String get activityFilterProblems;
+
+  /// No description provided for @activityFilterAllWallets.
+  ///
+  /// In en, this message translates to:
+  /// **'All wallets'**
+  String get activityFilterAllWallets;
+
+  /// No description provided for @activityFilterThisWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'This wallet'**
+  String get activityFilterThisWallet;
+
+  /// No description provided for @activityFilterThisWalletNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'This: {name}'**
+  String activityFilterThisWalletNamed(String name);
+
+  /// No description provided for @txListSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get txListSent;
+
+  /// No description provided for @txListReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get txListReceived;
+
+  /// No description provided for @txListTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get txListTo;
+
+  /// No description provided for @txListFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get txListFrom;
+
+  /// No description provided for @txListViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get txListViewDetails;
+
+  /// No description provided for @txListWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get txListWhen;
+
+  /// No description provided for @txListYourWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Your wallet'**
+  String get txListYourWallet;
+
+  /// No description provided for @txListAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get txListAmount;
+
+  /// No description provided for @txListNetworkFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get txListNetworkFee;
+
+  /// No description provided for @txListServiceFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Service fee'**
+  String get txListServiceFee;
+
+  /// No description provided for @txListTotalDebited.
+  ///
+  /// In en, this message translates to:
+  /// **'Total debited'**
+  String get txListTotalDebited;
+
+  /// No description provided for @txListNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get txListNetwork;
+
+  /// No description provided for @txListStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get txListStatus;
+
+  /// No description provided for @txListConfirmations.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmations'**
+  String get txListConfirmations;
+
+  /// No description provided for @txListConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get txListConfirmed;
+
+  /// No description provided for @txListPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get txListPending;
+
+  /// No description provided for @txListConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming'**
+  String get txListConfirming;
+
+  /// No description provided for @txListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get txListFailed;
+
+  /// No description provided for @txListCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get txListCancelled;
+
+  /// No description provided for @txListNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get txListNeedsReview;
+
+  /// No description provided for @txListUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unconfirmed'**
+  String get txListUnconfirmed;
+
+  /// No description provided for @txListLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get txListLink;
+
+  /// No description provided for @txListDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit'**
+  String get txListDeposit;
+
+  /// No description provided for @txListWithdraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get txListWithdraw;
+
+  /// No description provided for @txListFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee'**
+  String get txListFee;
+
+  /// No description provided for @txListSwap.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap'**
+  String get txListSwap;
+
+  /// No description provided for @txListInstant.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant'**
+  String get txListInstant;
+
+  /// No description provided for @txListId.
+  ///
+  /// In en, this message translates to:
+  /// **'ID'**
+  String get txListId;
+
+  /// No description provided for @txListPaymentHash.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment hash'**
+  String get txListPaymentHash;
+
+  /// No description provided for @txListBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get txListBlock;
+
+  /// No description provided for @txListBlockHash.
+  ///
+  /// In en, this message translates to:
+  /// **'Block hash'**
+  String get txListBlockHash;
+
+  /// No description provided for @txListOnchainTxid.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain TXID'**
+  String get txListOnchainTxid;
+
+  /// No description provided for @txListInvoiceId.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice ID'**
+  String get txListInvoiceId;
+
+  /// No description provided for @txListLightningInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning invoice'**
+  String get txListLightningInvoice;
+
+  /// No description provided for @txListExternalRef.
+  ///
+  /// In en, this message translates to:
+  /// **'External reference'**
+  String get txListExternalRef;
+
+  /// No description provided for @txListExternalTransferId.
+  ///
+  /// In en, this message translates to:
+  /// **'External transfer ID'**
+  String get txListExternalTransferId;
+
+  /// No description provided for @txListExternalStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'External status'**
+  String get txListExternalStatus;
+
+  /// No description provided for @txListExternalType.
+  ///
+  /// In en, this message translates to:
+  /// **'External type'**
+  String get txListExternalType;
+
+  /// No description provided for @txListSourceWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Source wallet'**
+  String get txListSourceWallet;
+
+  /// No description provided for @txListDestinationWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination wallet'**
+  String get txListDestinationWallet;
+
+  /// No description provided for @txListFromAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Source address'**
+  String get txListFromAddress;
+
+  /// No description provided for @txListToAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination address'**
+  String get txListToAddress;
+
+  /// No description provided for @txListDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get txListDescription;
+
+  /// No description provided for @txListInternalId.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal ID'**
+  String get txListInternalId;
+
+  /// No description provided for @txListAmountBtc.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (BTC)'**
+  String get txListAmountBtc;
+
+  /// No description provided for @txListReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get txListReason;
+
+  /// No description provided for @txListType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get txListType;
+
+  /// No description provided for @txListDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Date and time'**
+  String get txListDateTime;
+
+  /// No description provided for @txListFrozenUsd.
+  ///
+  /// In en, this message translates to:
+  /// **'USD amount (frozen)'**
+  String get txListFrozenUsd;
+
+  /// No description provided for @txListFrozenBrl.
+  ///
+  /// In en, this message translates to:
+  /// **'BRL amount (frozen)'**
+  String get txListFrozenBrl;
+
+  /// No description provided for @txListFrozenEur.
+  ///
+  /// In en, this message translates to:
+  /// **'EUR amount (frozen)'**
+  String get txListFrozenEur;
+
+  /// No description provided for @txListPartyGlobalWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Global wallet'**
+  String get txListPartyGlobalWallet;
+
+  /// No description provided for @txListPartyKeroseneWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene wallet'**
+  String get txListPartyKeroseneWallet;
+
+  /// No description provided for @txListPartyLightningInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning invoice'**
+  String get txListPartyLightningInvoice;
+
+  /// No description provided for @txListPartyExternalAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'External address'**
+  String get txListPartyExternalAddress;
+
+  /// No description provided for @txListPartyOffApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Off-app send'**
+  String get txListPartyOffApp;
+
+  /// No description provided for @txListPartyOnchainOffApp.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain send (off-app)'**
+  String get txListPartyOnchainOffApp;
+
+  /// No description provided for @txListPartyInternalPayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Payer (internal link)'**
+  String get txListPartyInternalPayer;
+
+  /// No description provided for @txListPartyInternalKerosene.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene (internal)'**
+  String get txListPartyInternalKerosene;
+
+  /// No description provided for @txListPartyOnchainPayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Payer (on-chain link)'**
+  String get txListPartyOnchainPayer;
+
+  /// No description provided for @txListPartyColdNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin network (cold)'**
+  String get txListPartyColdNetwork;
+
+  /// No description provided for @txListPartyOnchainNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin network (on-chain)'**
+  String get txListPartyOnchainNetwork;
+
+  /// No description provided for @txListPartyLinkRecipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient (internal link)'**
+  String get txListPartyLinkRecipient;
+
+  /// No description provided for @txListPartyLinkAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain link address'**
+  String get txListPartyLinkAddress;
 }
 
 class _AppLocalizationsDelegate

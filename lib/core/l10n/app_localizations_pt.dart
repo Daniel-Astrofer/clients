@@ -8983,6 +8983,44 @@ class AppLocalizationsPt extends AppLocalizations {
   String get statementEmptyOnDevice => 'O extrato está vazio neste aparelho.';
 
   @override
+  String get statementScreenTitle => 'Extrato';
+
+  @override
+  String get statementTabInsights => 'Insights';
+
+  @override
+  String get statementExportTitle => 'Exportar extrato';
+
+  @override
+  String get statementExportCsvSubtitle =>
+      'Copia e compartilha · valores em sats';
+
+  @override
+  String get statementExportNothingTitle => 'Nada para exportar';
+
+  @override
+  String get statementExportSharedTitle => 'Extrato compartilhado';
+
+  @override
+  String get statementExportCsvCopiedTitle => 'CSV copiado';
+
+  @override
+  String get statementExportGenericTitle => 'Exportação';
+
+  @override
+  String statementExportSharedMessage(int count, String format) {
+    return '$count lançamentos ($format).';
+  }
+
+  @override
+  String statementExportCsvCopiedMessage(int count) {
+    return '$count lançamentos copiados para a área de transferência.';
+  }
+
+  @override
+  String get statementExportPdfFailed => 'Não foi possível compartilhar o PDF.';
+
+  @override
   String get movementHubReceiveInternal =>
       'Receber por transferência de usuário interno';
 
@@ -9024,4 +9062,329 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get homeFeedCardsTitle => 'Cartões Kerosene';
+
+  @override
+  String get homeFilterEmptyTitle => 'Nada neste filtro';
+
+  @override
+  String get homeFilterEmptyDesc =>
+      'Não há lançamentos para este filtro. Tente “Tudo” ou puxe para atualizar.';
+
+  @override
+  String get homeClearFilter => 'Limpar filtro';
+
+  @override
+  String get homeHistoryEmptyTitle => 'Histórico ainda vazio';
+
+  @override
+  String get homeHistoryEmptyDesc =>
+      'Há saldo, mas nenhum lançamento na projeção local. Puxe para sincronizar com o servidor.';
+
+  @override
+  String get homeSyncing => 'Sincronizando extrato…';
+
+  @override
+  String get homeOfflineExtract => 'Offline · extrato local';
+
+  @override
+  String homeOfflineExtractDate(String date) {
+    return 'Offline · extrato local · $date';
+  }
+
+  @override
+  String homeUpdatedDate(int count, String date) {
+    return '$count lançamentos · atualizado $date';
+  }
+
+  @override
+  String get homeBalanceInternal => 'Saldo Interno';
+
+  @override
+  String get homeBalanceOnchain => 'Saldo Onchain';
+
+  @override
+  String get homeBalanceCold => 'Cold wallet (na rede)';
+
+  @override
+  String get homeBalanceTotal => 'Saldo';
+
+  @override
+  String get homeBalancePlatform => 'Saldo';
+
+  @override
+  String homeBtcMarketChange(String sign, String percent) {
+    return 'BTC mercado $sign$percent% (24h)';
+  }
+
+  @override
+  String homeQuoteUnavailable(String currency) {
+    return '$currency indisponível';
+  }
+
+  @override
+  String get homeWalletInternal => 'Interno';
+
+  @override
+  String get homeWalletOnchain => 'Onchain';
+
+  @override
+  String get homeWalletCold => 'Cold';
+
+  @override
+  String get homeWalletPlatform => 'Plataforma';
+
+  @override
+  String get homeWalletTotalLabel => 'Kerosene';
+
+  @override
+  String get homeWalletInternalDesc => 'Instantâneo (Lighting offchain)';
+
+  @override
+  String get homeWalletOnchainDesc => 'Auto-custódia na rede Bitcoin';
+
+  @override
+  String get homeWalletColdDesc => 'Monitorado (Somente leitura)';
+
+  @override
+  String get homeWalletPlatformDesc =>
+      'Saldo interno (disponível instantaneamente)';
+
+  @override
+  String get homeCardAvailable => 'Cartão Kerosene · disponível para uso';
+
+  @override
+  String get homeInternalCustody => 'Interno + custódia · frio não incluso';
+
+  @override
+  String get homeOnchainTab => 'Onchain';
+
+  @override
+  String get homeColdTab => 'Frio';
+
+  @override
+  String get homeOnchainWalletCardTitle => 'Carteira Onchain';
+
+  @override
+  String get homeStatementAction => 'Ir para extrato';
+
+  @override
+  String get activityFilterInstant => 'Instantâneo';
+
+  @override
+  String get activityFilterOnchain => 'On-chain';
+
+  @override
+  String get activityFilterLightning => 'Lightning';
+
+  @override
+  String get activityFilterCold => 'Cold';
+
+  @override
+  String get activityFilterInProgress => 'Em andamento';
+
+  @override
+  String get activityFilterProblems => 'Problemas';
+
+  @override
+  String get activityFilterAllWallets => 'Todas as carteiras';
+
+  @override
+  String get activityFilterThisWallet => 'Esta carteira';
+
+  @override
+  String activityFilterThisWalletNamed(String name) {
+    return 'Esta: $name';
+  }
+
+  @override
+  String get txListSent => 'Enviado';
+
+  @override
+  String get txListReceived => 'Recebido';
+
+  @override
+  String get txListTo => 'Para';
+
+  @override
+  String get txListFrom => 'De';
+
+  @override
+  String get txListViewDetails => 'Ver detalhes';
+
+  @override
+  String get txListWhen => 'Quando';
+
+  @override
+  String get txListYourWallet => 'Sua carteira';
+
+  @override
+  String get txListAmount => 'Valor';
+
+  @override
+  String get txListNetworkFee => 'Taxa de rede';
+
+  @override
+  String get txListServiceFee => 'Taxa de serviço';
+
+  @override
+  String get txListTotalDebited => 'Total debitado';
+
+  @override
+  String get txListNetwork => 'Rede';
+
+  @override
+  String get txListStatus => 'Status';
+
+  @override
+  String get txListConfirmations => 'Confirmações';
+
+  @override
+  String get txListConfirmed => 'Confirmada';
+
+  @override
+  String get txListPending => 'Pendente';
+
+  @override
+  String get txListConfirming => 'Confirmando';
+
+  @override
+  String get txListFailed => 'Falhou';
+
+  @override
+  String get txListCancelled => 'Cancelada';
+
+  @override
+  String get txListNeedsReview => 'Em revisão';
+
+  @override
+  String get txListUnconfirmed => 'Não confirmada';
+
+  @override
+  String get txListLink => 'Link';
+
+  @override
+  String get txListDeposit => 'Depósito';
+
+  @override
+  String get txListWithdraw => 'Saque';
+
+  @override
+  String get txListFee => 'Taxa';
+
+  @override
+  String get txListSwap => 'Swap';
+
+  @override
+  String get txListInstant => 'Instantâneo';
+
+  @override
+  String get txListId => 'ID';
+
+  @override
+  String get txListPaymentHash => 'Payment hash';
+
+  @override
+  String get txListBlock => 'Bloco';
+
+  @override
+  String get txListBlockHash => 'Hash do bloco';
+
+  @override
+  String get txListOnchainTxid => 'TXID on-chain';
+
+  @override
+  String get txListInvoiceId => 'Invoice ID';
+
+  @override
+  String get txListLightningInvoice => 'Invoice Lightning';
+
+  @override
+  String get txListExternalRef => 'Referência externa';
+
+  @override
+  String get txListExternalTransferId => 'ID transferência externa';
+
+  @override
+  String get txListExternalStatus => 'Status externo';
+
+  @override
+  String get txListExternalType => 'Tipo externo';
+
+  @override
+  String get txListSourceWallet => 'Carteira origem';
+
+  @override
+  String get txListDestinationWallet => 'Carteira destino';
+
+  @override
+  String get txListFromAddress => 'Endereço origem';
+
+  @override
+  String get txListToAddress => 'Endereço destino';
+
+  @override
+  String get txListDescription => 'Descrição';
+
+  @override
+  String get txListInternalId => 'ID interno';
+
+  @override
+  String get txListAmountBtc => 'Valor (BTC)';
+
+  @override
+  String get txListReason => 'Motivo';
+
+  @override
+  String get txListType => 'Tipo';
+
+  @override
+  String get txListDateTime => 'Data e hora';
+
+  @override
+  String get txListFrozenUsd => 'Valor USD (congelado)';
+
+  @override
+  String get txListFrozenBrl => 'Valor BRL (congelado)';
+
+  @override
+  String get txListFrozenEur => 'Valor EUR (congelado)';
+
+  @override
+  String get txListPartyGlobalWallet => 'Carteira global';
+
+  @override
+  String get txListPartyKeroseneWallet => 'Carteira Kerosene';
+
+  @override
+  String get txListPartyLightningInvoice => 'Invoice Lightning';
+
+  @override
+  String get txListPartyExternalAddress => 'Endereço externo';
+
+  @override
+  String get txListPartyOffApp => 'Envio off-app';
+
+  @override
+  String get txListPartyOnchainOffApp => 'Envio on-chain (fora do app)';
+
+  @override
+  String get txListPartyInternalPayer => 'Pagador (link interno)';
+
+  @override
+  String get txListPartyInternalKerosene => 'Kerosene (interno)';
+
+  @override
+  String get txListPartyOnchainPayer => 'Pagador (link on-chain)';
+
+  @override
+  String get txListPartyColdNetwork => 'Rede Bitcoin (cold)';
+
+  @override
+  String get txListPartyOnchainNetwork => 'Rede Bitcoin (on-chain)';
+
+  @override
+  String get txListPartyLinkRecipient => 'Destinatário (link interno)';
+
+  @override
+  String get txListPartyLinkAddress => 'Endereço do link on-chain';
 }

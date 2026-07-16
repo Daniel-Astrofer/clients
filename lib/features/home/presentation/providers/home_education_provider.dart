@@ -2,11 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
+import 'package:kerosene/features/home/presentation/providers/theater_atmosphere_presets.dart';
+import 'package:kerosene/features/home/presentation/providers/theater_catalog.dart';
 
 /// Events that become **theater stages** (communication stage), not modals.
 enum HomeEducationKind {
   totpRecommend,
   incomingTransfer,
+  /// Recurring catalog tip (blockchain, product, security…).
+  educationTip,
 }
 
 @immutable
@@ -17,6 +21,8 @@ class HomeEducationEvent {
   final String? walletName;
   final String? networkLabel;
   final String? subtitle;
+  /// Catalog piece id when [kind] is [HomeEducationKind.educationTip].
+  final String? catalogPieceId;
 
   const HomeEducationEvent({
     required this.kind,
@@ -25,6 +31,7 @@ class HomeEducationEvent {
     this.walletName,
     this.networkLabel,
     this.subtitle,
+    this.catalogPieceId,
   });
 }
 
@@ -48,11 +55,18 @@ final homeEducationQueueProvider =
 );
 
 class HomeEducationQueue extends Notifier<List<HomeEducationEvent>> {
+  /// Session-level dedupe so notif + extrato + balance credit don't re-play
+  /// the same receive after the piece was already shown (or queued).
+  final Set<String> _sessionSeenIds = <String>{};
+
   @override
   List<HomeEducationEvent> build() => const [];
 
   void enqueue(HomeEducationEvent event) {
-    if (state.any((e) => e.id == event.id)) return;
+    if (_sessionSeenIds.contains(event.id) || state.any((e) => e.id == event.id)) {
+      return;
+    }
+    _sessionSeenIds.add(event.id);
     state = [...state, event];
   }
 
@@ -63,7 +77,10 @@ class HomeEducationQueue extends Notifier<List<HomeEducationEvent>> {
     ];
   }
 
-  void clear() => state = const [];
+  void clear() {
+    _sessionSeenIds.clear();
+    state = const [];
+  }
 }
 
 String totpEducationDismissKey(String userId) =>
@@ -125,12 +142,71 @@ void enqueueIncomingTransfer(
   pulse.trigger();
 }
 
+void enqueueEducationTip(
+  HomeEducationQueue queue, {
+  required TheaterCatalogPiece piece,
+}) {
+  queue.enqueue(
+    HomeEducationEvent(
+      kind: HomeEducationKind.educationTip,
+      id: 'local-edu-${piece.id}',
+      catalogPieceId: piece.id,
+    ),
+  );
+}
+
 /// Builds a Communication Stage piece for the home theater.
 HomeStage homeEducationToStage(HomeEducationEvent event, {String lang = 'pt'}) {
   return switch (event.kind) {
     HomeEducationKind.totpRecommend => _totpStage(lang),
     HomeEducationKind.incomingTransfer => _incomingStage(event, lang),
+    HomeEducationKind.educationTip => _educationTipStage(event, lang),
   };
+}
+
+HomeStage _educationTipStage(HomeEducationEvent event, String lang) {
+  final pieceId = event.catalogPieceId ?? '';
+  final piece = theaterPieceById(pieceId);
+  if (piece == null) {
+    return HomeStage.idle();
+  }
+  final copy = piece.copyFor(lang);
+  final plain = copy.blocks
+      .where((b) => b.hasVisibleText)
+      .map((b) => b.text)
+      .join('\n');
+
+  return HomeStage(
+    id: event.id,
+    kind: HomeStageKind.feature,
+    playPolicy: HomeStagePlayPolicy.once,
+    priority: piece.priority,
+    content: HomeStageContent(
+      title: copy.title,
+      body: plain,
+      textMode: HomeStageTextMode.staticText,
+      blocks: copy.blocks,
+      cta: piece.cta,
+    ),
+    layout: const HomeStageLayout(
+      maxHeight: 260,
+      gap: 10,
+      paddingTop: 4,
+      paddingBottom: 10,
+    ),
+    motion: HomeStageMotion(
+      content: HomeStageMotionStep(
+        type: HomeStageMotionType.none,
+        durationMs: piece.showDurationMs,
+      ),
+      bodyShift: const HomeStageBodyShift(enabled: true, offsetPx: 30),
+    ),
+    lifecycle: HomeStageLifecycle(
+      showDurationMs: piece.showDurationMs,
+      restoreOnComplete: true,
+    ),
+    atmosphere: theaterAtmosphereFor(piece.atmosphere),
+  );
 }
 
 HomeStage _totpStage(String lang) {

@@ -15,6 +15,7 @@ import 'package:kerosene/features/home/presentation/providers/home_surface_provi
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_surface.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_media.dart';
+import 'package:kerosene/features/home/presentation/widgets/rich_theater_text.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
 
@@ -339,7 +340,16 @@ class _StageBody extends StatelessWidget {
     final hasMedia = media.hasVisual;
 
     Widget textBlock;
-    if (useMarquee && !useTypewriter) {
+    final richBlocks = stage.content.hasRichBlocks;
+    if (richBlocks && !useMarquee) {
+      // Structured H1/H2/body/bullets — preferred for education tips.
+      textBlock = RichTheaterText(
+        title: title,
+        blocks: stage.content.blocks,
+        maxHeight: softCeiling,
+        titleAsH1: true,
+      );
+    } else if (useMarquee && !useTypewriter) {
       textBlock = SizedBox(
         height: titleSize * 1.5,
         width: double.infinity,
@@ -413,6 +423,47 @@ class _StageBody extends StatelessWidget {
         core = textBlock;
     }
 
+    final cta = stage.content.cta;
+    Widget column = core;
+    if (cta != null && cta.isNavigate && cta.label.trim().isNotEmpty) {
+      column = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          core,
+          SizedBox(height: homeSize(10)),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.white.withValues(alpha: 0.12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: homeSize(14),
+                  vertical: homeSize(8),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(homeSize(20)),
+                ),
+              ),
+              onPressed: () {
+                final target = cta.target.trim();
+                if (target.isEmpty) return;
+                Navigator.of(context).pushNamed(target);
+              },
+              child: Text(
+                cta.label.trim(),
+                style: TextStyle(
+                  fontSize: bodySize * 0.9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     // Natural height = full text. No maxHeight clip. No center alignment.
     return Container(
       width: double.infinity,
@@ -423,7 +474,7 @@ class _StageBody extends StatelessWidget {
         borderRadius: BorderRadius.circular(homeSize(14)),
       ),
       clipBehavior: Clip.none,
-      child: core,
+      child: column,
     );
   }
 

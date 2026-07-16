@@ -4,11 +4,26 @@ import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
+import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
+
+ActivityFilter _mapHomeActivityFilter(HomeActivityFilter filter) {
+  return switch (filter) {
+    HomeActivityFilter.all => ActivityFilter.all,
+    HomeActivityFilter.incoming => ActivityFilter.incoming,
+    HomeActivityFilter.outgoing => ActivityFilter.outgoing,
+    HomeActivityFilter.internal => ActivityFilter.instant,
+    HomeActivityFilter.onchain => ActivityFilter.onchain,
+    HomeActivityFilter.lightning => ActivityFilter.lightning,
+    HomeActivityFilter.cold => ActivityFilter.cold,
+    HomeActivityFilter.pending => ActivityFilter.inProgress,
+    HomeActivityFilter.failed => ActivityFilter.problems,
+    HomeActivityFilter.cancelled => ActivityFilter.cancelled,
+  };
+}
 
 final filteredHomeTransactionsProvider =
     Provider.autoDispose<List<Transaction>>((ref) {
@@ -27,101 +42,12 @@ final filteredHomeTransactionsProvider =
   final accounts = ref.watch(bitcoinAccountsProvider).asData?.value ??
       const <BitcoinAccount>[];
 
-  final walletScope = ref.watch(homeExtratoWalletScopeProvider);
-  final selected = walletState is WalletLoaded
-      ? walletState.selectedWallet ??
-          (walletState.wallets.isNotEmpty ? walletState.wallets.first : null)
-      : null;
-
-  var scoped = txs;
-  if (walletScope == HomeExtratoWalletScope.selected && selected != null) {
-    final ids = <String>{
-      selected.id.trim(),
-      if (selected.name.trim().isNotEmpty) selected.name.trim(),
-    };
-    // Also match cold wallet id via bitcoin accounts.
-    for (final account in accounts) {
-      if (account.id == selected.id ||
-          account.label == selected.name ||
-          (account.coldWalletId ?? '') == selected.id) {
-        ids.add(account.id);
-        if ((account.coldWalletId ?? '').isNotEmpty) {
-          ids.add(account.coldWalletId!.trim());
-        }
-      }
-    }
-    scoped = txs.where((tx) {
-      final candidates = <String?>[
-        tx.walletId,
-        tx.sourceWalletId,
-        tx.destinationWalletId,
-        tx.fromAddress,
-        tx.toAddress,
-      ];
-      for (final c in candidates) {
-        final v = (c ?? '').trim();
-        if (v.isNotEmpty && ids.contains(v)) return true;
-      }
-      return false;
-    }).toList(growable: false);
-  }
-
-  // Cancelled/expired activity stays off the principal feed and other
-  // operational filters; it only appears under [HomeActivityFilter.cancelled].
-  return switch (filter) {
-    HomeActivityFilter.all =>
-      scoped.where((tx) => !tx.isCancelled).toList(growable: false),
-    HomeActivityFilter.incoming =>
-      scoped.where((tx) => tx.isCredit && !tx.isCancelled).toList(growable: false),
-    HomeActivityFilter.outgoing =>
-      scoped.where((tx) => tx.isDebit && !tx.isCancelled).toList(growable: false),
-    HomeActivityFilter.internal => scoped.where((tx) {
-        if (tx.isCancelled) return false;
-        final network = resolveTransactionNetwork(
-          tx,
-          wallets: wallets,
-          accounts: accounts,
-        );
-        return network == TransactionNetwork.internal ||
-            network == TransactionNetwork.paymentLinkInternal;
-      }).toList(growable: false),
-    HomeActivityFilter.onchain => scoped.where((tx) {
-        if (tx.isCancelled) return false;
-        final network = resolveTransactionNetwork(
-          tx,
-          wallets: wallets,
-          accounts: accounts,
-        );
-        return network == TransactionNetwork.onchain ||
-            network == TransactionNetwork.paymentLinkOnchain;
-      }).toList(growable: false),
-    HomeActivityFilter.cold => scoped.where((tx) {
-        if (tx.isCancelled) return false;
-        return resolveTransactionNetwork(
-              tx,
-              wallets: wallets,
-              accounts: accounts,
-            ) ==
-            TransactionNetwork.cold;
-      }).toList(growable: false),
-    HomeActivityFilter.pending => scoped
-        .where(
-          (tx) =>
-              !tx.isUnconfirmedExpired &&
-              (tx.status == TransactionStatus.pending ||
-                  tx.status == TransactionStatus.confirming),
-        )
-        .toList(growable: false),
-    HomeActivityFilter.failed => scoped
-        .where(
-          (tx) =>
-              tx.status == TransactionStatus.failed ||
-              tx.isUnconfirmedExpired,
-        )
-        .toList(growable: false),
-    HomeActivityFilter.cancelled =>
-      scoped.where((tx) => tx.isCancelled).toList(growable: false),
-  };
+  return TransactionFilterEngine.apply(
+    source: txs,
+    activity: _mapHomeActivityFilter(filter),
+    wallets: wallets,
+    accounts: accounts,
+  );
 });
 
 class HomeTransactionsList extends ConsumerStatefulWidget {
@@ -183,9 +109,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
 
     final filteredTxs = ref.watch(filteredHomeTransactionsProvider);
     final filterIsAll = selectedFilter == HomeActivityFilter.all;
+    final filterIsCancelled =
+        selectedFilter == HomeActivityFilter.cancelled;
 
     Widget body;
     if (filteredTxs.isEmpty) {
+      // Clear-filter only on Cancelled (subtle). Other filters: empty copy only.
+      final showClearOnCancelled = !filterIsAll && filterIsCancelled;
+      final showPrimaryAction = filterIsAll;
       body = Padding(
         padding: EdgeInsets.zero,
         child: HomeEmptyTransactionsPanel(
@@ -197,27 +128,27 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
                       ? KeroseneIcons.institution
                       : KeroseneIcons.history,
           title: !filterIsAll
-              ? 'Nada neste filtro'
+              ? context.tr.homeFilterEmptyTitle
               : !hasWallet
                   ? context.tr.homeEmptyNoWalletTitle
                   : hasBalance
-                      ? 'Histórico ainda vazio'
+                      ? context.tr.homeHistoryEmptyTitle
                       : context.tr.homeEmptyNoBalanceTitle,
           description: !filterIsAll
-              ? 'Não há lançamentos para este filtro. Tente “Tudo” ou puxe para atualizar.'
+              ? context.tr.homeFilterEmptyDesc
               : !hasWallet
                   ? context.tr.homeEmptyNoWalletDescription
                   : hasBalance
-                      ? 'Há saldo, mas nenhum lançamento na projeção local. Puxe para sincronizar com o servidor.'
+                      ? context.tr.homeHistoryEmptyDesc
                       : context.tr.homeEmptyNoBalanceDescription,
-          actionLabel: !filterIsAll
-              ? 'Limpar filtro'
+          actionLabel: showClearOnCancelled
+              ? context.tr.homeClearFilter
               : !hasWallet
                   ? context.tr.homeCreateWalletAction
                   : hasBalance
                       ? context.tr.homeRefreshAction
                       : context.tr.homeDepositAction,
-          actionIcon: !filterIsAll
+          actionIcon: showClearOnCancelled
               ? KeroseneIcons.close
               : !hasWallet
                   ? KeroseneIcons.next
@@ -225,7 +156,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
                       ? KeroseneIcons.refresh
                       : KeroseneIcons.download,
           onAction: () {
-            if (!filterIsAll) {
+            if (showClearOnCancelled) {
               ref.read(homeActivityFilterProvider.notifier).state =
                   HomeActivityFilter.all;
               return;
@@ -245,7 +176,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
             }
             unawaited(refreshFinancialProjectionUi(ref, forceFullHistory: true));
           },
-          showAction: true,
+          showAction: showPrimaryAction || showClearOnCancelled,
+          subtleAction: showClearOnCancelled,
           blackSurface: true,
           plainCenteredIcon: true,
           serifTitle: true,
@@ -278,6 +210,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
 
           if (dateHeader != null) {
             return Column(
+              key: ValueKey('col_${tx.id}'),
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -288,7 +221,10 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
               ],
             );
           }
-          return tile;
+          return KeyedSubtree(
+            key: ValueKey(tx.id),
+            child: tile,
+          );
         },
       );
     }
@@ -335,9 +271,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     Transaction tx, {
     required bool expanded,
   }) {
-    final isIncoming = tx.type == TransactionType.receive;
     final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
-    final semanticLabel = '${isIncoming ? "Recebido de" : "Enviado para"} ${tx.counterpartyLabel ?? "Desconhecido"}. Valor: $amountBtc BTC. Data: ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. Status: ${tx.status.name}';
+    final semanticLabel =
+        '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
 
     return Semantics(
       label: semanticLabel,
@@ -381,12 +317,12 @@ class _HomeHistoryStatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = !isOnline
         ? (lastSync != null
-            ? 'Offline · extrato local · ${AppDateTime.formatRelative(context, lastSync!)}'
-            : 'Offline · extrato local')
+            ? context.tr.homeOfflineExtractDate(AppDateTime.formatRelative(context, lastSync!))
+            : context.tr.homeOfflineExtract)
         : isReloading
-            ? 'Sincronizando extrato…'
+            ? context.tr.homeSyncing
             : lastSync != null
-                ? '$count lançamentos · atualizado ${AppDateTime.formatRelative(context, lastSync!)}'
+                ? context.tr.homeUpdatedDate(count, AppDateTime.formatRelative(context, lastSync!))
                 : null;
     if (label == null) return const SizedBox.shrink();
 
@@ -403,7 +339,10 @@ class _HomeHistoryStatusBar extends StatelessWidget {
                     : KeroseneIcons.history,
             size: homeSize(14),
             color: tone,
-          ),
+          ).animate(
+            target: isReloading ? 1 : 0,
+            onPlay: (c) => isReloading ? c.repeat() : c.stop(),
+          ).rotate(duration: 1200.ms),
           SizedBox(width: homeSize(6)),
           Expanded(
             child: Text(
@@ -566,6 +505,8 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
   final IconData actionIcon;
   final VoidCallback onAction;
   final bool showAction;
+  /// Quiet text control (e.g. clear cancelled filter) instead of filled CTA.
+  final bool subtleAction;
   final bool blackSurface;
   final bool plainCenteredIcon;
   final bool serifTitle;
@@ -578,6 +519,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
     required this.actionIcon,
     required this.onAction,
     this.showAction = true,
+    this.subtleAction = false,
     this.blackSurface = false,
     this.plainCenteredIcon = false,
     this.serifTitle = false,
@@ -628,28 +570,50 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             ),
           ),
           if (showAction) ...[
-            SizedBox(height: homeSize(AppSpacing.lg)),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onAction,
-                style: FilledButton.styleFrom(
-                  minimumSize: Size.fromHeight(homeSize(50)),
-                  backgroundColor: Colors.white,
-                  foregroundColor: homeBackgroundColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(homeSize(14)),
+            SizedBox(height: homeSize(subtleAction ? AppSpacing.md : AppSpacing.lg)),
+            if (subtleAction)
+              Center(
+                child: TextButton(
+                  onPressed: onAction,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white.withValues(alpha: 0.48),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: homeSize(12),
+                      vertical: homeSize(6),
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: homeFontSize(12),
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.2,
+                    ),
                   ),
-                  textStyle: theme.textTheme.labelLarge?.copyWith(
-                    fontSize: homeFontSize(14),
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 0,
-                  ),
+                  child: Text(actionLabel),
                 ),
-                icon: Icon(actionIcon, size: homeSize(16)),
-                label: Text(actionLabel.toUpperCase()),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onAction,
+                  style: FilledButton.styleFrom(
+                    minimumSize: Size.fromHeight(homeSize(50)),
+                    backgroundColor: Colors.white,
+                    foregroundColor: homeBackgroundColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(homeSize(14)),
+                    ),
+                    textStyle: theme.textTheme.labelLarge?.copyWith(
+                      fontSize: homeFontSize(14),
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  icon: Icon(actionIcon, size: homeSize(16)),
+                  label: Text(actionLabel.toUpperCase()),
+                ),
               ),
-            ),
           ],
         ],
       ),

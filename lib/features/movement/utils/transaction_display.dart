@@ -1,13 +1,16 @@
 import 'package:flutter/widgets.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
+import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 
 /// Single presentation projection for cards + detail screens.
 ///
-/// Raw [Transaction] stays in domain/storage; UI should prefer this facade so
-/// titles, parties, network and failure copy stay consistent.
+/// Delegates title/network/route/status to [TransactionPresentation] so Home,
+/// Extrato and legacy list paths stay aligned.
 class TransactionDisplay {
   final Transaction transaction;
   final TransactionNetwork network;
@@ -46,7 +49,23 @@ class TransactionDisplay {
     Transaction tx, {
     List<Wallet> wallets = const [],
     List<BitcoinAccount> accounts = const [],
+    Currency displayCurrency = Currency.btc,
+    double? btcUsd,
+    double? btcEur,
+    double? btcBrl,
+    Locale? appLocale,
   }) {
+    final presentation = TransactionPresentation.fromTransaction(
+      context,
+      tx,
+      wallets: wallets,
+      accounts: accounts,
+      displayCurrency: displayCurrency,
+      btcUsd: btcUsd,
+      btcEur: btcEur,
+      btcBrl: btcBrl,
+      appLocale: appLocale,
+    );
     final network = resolveTransactionNetwork(
       tx,
       wallets: wallets,
@@ -56,44 +75,36 @@ class TransactionDisplay {
     final failure = resolveTransactionFailureLabel(context, tx);
     final conf = _confirmationLabel(tx);
     final txid = (tx.blockchainTxid ?? '').trim();
+    final lang = Localizations.localeOf(context).languageCode;
 
     return TransactionDisplay(
       transaction: tx,
       network: network,
-      actionTitle: resolveTransactionActionTitle(
-        context,
-        tx,
-        wallets: wallets,
-        accounts: accounts,
-      ),
-      networkLabel: resolveTransactionNetworkLabel(
-        tx,
-        wallets: wallets,
-        accounts: accounts,
-      ),
+      actionTitle: presentation.title,
+      networkLabel: TransactionPresentationCopy.of(context)
+          .railShort(presentation.axes.rail),
       ownWalletLabel: resolveOwnWalletLabel(
         tx,
         wallets: wallets,
         accounts: accounts,
+        languageCode: lang,
       ),
       fromLabel: resolveTransactionFromParty(
         tx,
         wallets: wallets,
         accounts: accounts,
+        languageCode: lang,
       ),
       toLabel: resolveTransactionToParty(
         tx,
         wallets: wallets,
         accounts: accounts,
         compactHash: true,
+        languageCode: lang,
       ),
-      routeSummary: resolveTransactionRouteSummary(
-        tx,
-        wallets: wallets,
-        accounts: accounts,
-        compactHash: true,
-      ),
-      statusLabel: resolveTransactionStatusLabel(context, tx),
+      // Prefer short counterparty line over "De A → B · long network".
+      routeSummary: presentation.subtitle,
+      statusLabel: presentation.statusLabel,
       confirmationLabel: conf,
       noteLabel: note,
       failureLabel: failure,
@@ -123,7 +134,7 @@ String? _userNote(Transaction tx) {
 
 String? _confirmationLabel(Transaction tx) {
   if (!tx.showsOnchainConfirmations) return null;
-  if (tx.confirmations <= 0) return 'Na mempool (0/6)';
+  if (tx.confirmations <= 0) return '0/${tx.onchainConfirmationTarget}';
   if (tx.confirmations >= tx.onchainConfirmationTarget) {
     return '${tx.confirmations}+';
   }
@@ -131,46 +142,8 @@ String? _confirmationLabel(Transaction tx) {
 }
 
 String resolveTransactionStatusLabel(BuildContext context, Transaction tx) {
-  final lang = Localizations.localeOf(context).languageCode;
-  if (tx.isUnconfirmedExpired) {
-    return switch (lang) {
-      'en' => 'Unconfirmed',
-      'es' => 'No confirmada',
-      _ => 'Não confirmada',
-    };
-  }
-  return switch (tx.displayStatus) {
-    TransactionStatus.confirmed => switch (lang) {
-        'en' => 'Confirmed',
-        'es' => 'Confirmada',
-        _ => 'Confirmada',
-      },
-    TransactionStatus.confirming => switch (lang) {
-        'en' => 'Confirming',
-        'es' => 'Confirmando',
-        _ => 'Confirmando',
-      },
-    TransactionStatus.pending => switch (lang) {
-        'en' => 'Pending',
-        'es' => 'Pendiente',
-        _ => 'Pendente',
-      },
-    TransactionStatus.cancelled => switch (lang) {
-        'en' => 'Cancelled',
-        'es' => 'Cancelada',
-        _ => 'Cancelada',
-      },
-    TransactionStatus.failed => switch (lang) {
-        'en' => 'Failed',
-        'es' => 'Fallida',
-        _ => 'Falhou',
-      },
-    TransactionStatus.reconciling => switch (lang) {
-        'en' => 'Needs review',
-        'es' => 'En revisión',
-        _ => 'Em revisão',
-      },
-  };
+  final axes = TransactionAxes.classify(tx);
+  return TransactionPresentationCopy.of(context).lifecycleLabel(axes.lifecycle);
 }
 
 /// Maps backend [failureCode] / status to a safe localized message.
@@ -200,8 +173,6 @@ String? resolveTransactionFailureLabel(BuildContext context, Transaction tx) {
     };
   }
 
-  // Allowlist of known codes — never surface raw server text for unknown codes
-  // that might contain internal detail.
   return switch (code) {
     'LEDGER_001' ||
     'INSUFFICIENT_FUNDS' ||

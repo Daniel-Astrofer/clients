@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
+import 'package:kerosene/features/movement/widgets/transaction_visual_tokens.dart';
 
 /// Transaction color system.
 ///
 /// - **Amounts** are always near-black for max readability on light card fills.
-/// - **On-chain** surfaces lean orange (warm peach / amber wash).
+/// - Surfaces use expanded [TxVisualVariant] (16 variants: rail × direction +
+///   product + lifecycle) — not only white/orange/yellow.
 /// - Status accents (rings) stay saturated against light surfaces.
 enum TransactionCardSurface {
   /// Kerosene-to-Kerosene — neutral light paper.
@@ -187,12 +192,22 @@ class TransactionCardColors {
     required this.tone,
   });
 
-  factory TransactionCardColors.resolve(Transaction tx) {
-    final surface = TransactionPalette.surfaceFor(tx);
+  factory TransactionCardColors.resolve(
+    Transaction tx, {
+    List<Wallet> wallets = const [],
+    List<BitcoinAccount> accounts = const [],
+  }) {
+    final axes = TransactionAxes.classify(
+      tx,
+      wallets: wallets,
+      accounts: accounts,
+    );
+    final surface = TransactionVisualTokens.legacySurfaceFor(axes.rail);
     final tone = TransactionPalette.toneFor(tx);
     return TransactionCardColors(
-      background: TransactionPalette.backgroundFor(surface),
-      border: TransactionPalette.borderFor(surface),
+      // Expanded paper fills (16 variants) instead of 3 rail-only colors.
+      background: TransactionVisualTokens.backgroundFor(axes.variant),
+      border: TransactionVisualTokens.borderFor(axes.variant),
       title: TransactionPalette.inkPrimary,
       subtitle: TransactionPalette.inkSecondary,
       meta: TransactionPalette.inkTertiary,

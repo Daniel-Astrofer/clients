@@ -197,12 +197,165 @@ class HomeStageCta {
       };
 }
 
+// ── Rich theater text (H1/H2/body/bullets + spans) ─────────────────────────
+
+enum TheaterBlockRole { h1, h2, body, caption, bullet, spacer, unknown }
+
+enum TheaterTextWeight { regular, medium, bold, unknown }
+
+enum TheaterTextTone { positive, danger, amber, muted, cold, brand, unknown }
+
+TheaterBlockRole parseTheaterBlockRole(String? raw) =>
+    switch ((raw ?? '').toUpperCase()) {
+      'H1' || 'TITLE' => TheaterBlockRole.h1,
+      'H2' || 'SUBTITLE' || 'HEADING' => TheaterBlockRole.h2,
+      'BODY' || 'P' || 'PARAGRAPH' => TheaterBlockRole.body,
+      'CAPTION' || 'FOOTNOTE' || 'HINT' => TheaterBlockRole.caption,
+      'BULLET' || 'LI' || 'ITEM' => TheaterBlockRole.bullet,
+      'SPACER' || 'GAP' => TheaterBlockRole.spacer,
+      _ => TheaterBlockRole.unknown,
+    };
+
+TheaterTextWeight parseTheaterTextWeight(String? raw) =>
+    switch ((raw ?? '').toUpperCase()) {
+      'REGULAR' || 'NORMAL' || 'W400' => TheaterTextWeight.regular,
+      'MEDIUM' || 'W500' || 'W600' => TheaterTextWeight.medium,
+      'BOLD' || 'W700' || 'STRONG' => TheaterTextWeight.bold,
+      _ => TheaterTextWeight.unknown,
+    };
+
+TheaterTextTone parseTheaterTextTone(String? raw) =>
+    switch ((raw ?? '').toLowerCase()) {
+      'positive' || 'green' || 'up' => TheaterTextTone.positive,
+      'danger' || 'red' || 'down' => TheaterTextTone.danger,
+      'amber' || 'bitcoin' || 'orange' => TheaterTextTone.amber,
+      'muted' => TheaterTextTone.muted,
+      'cold' || 'blue' => TheaterTextTone.cold,
+      'brand' || 'warm' => TheaterTextTone.brand,
+      _ => TheaterTextTone.unknown,
+    };
+
+@immutable
+class TheaterTextSpanMark {
+  final int start;
+  final int end;
+  final TheaterTextWeight weight;
+  final TheaterTextTone tone;
+
+  const TheaterTextSpanMark({
+    required this.start,
+    required this.end,
+    this.weight = TheaterTextWeight.bold,
+    this.tone = TheaterTextTone.unknown,
+  });
+
+  factory TheaterTextSpanMark.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const TheaterTextSpanMark(start: 0, end: 0);
+    }
+    final start = json['start'] is num
+        ? (json['start'] as num).toInt()
+        : int.tryParse('${json['start']}') ?? 0;
+    final end = json['end'] is num
+        ? (json['end'] as num).toInt()
+        : int.tryParse('${json['end']}') ?? 0;
+    return TheaterTextSpanMark(
+      start: start.clamp(0, 1 << 20),
+      end: end.clamp(0, 1 << 20),
+      weight: parseTheaterTextWeight(json['weight']?.toString()),
+      tone: parseTheaterTextTone(json['tone']?.toString()),
+    );
+  }
+
+  bool get isValid => end > start && start >= 0;
+
+  Map<String, dynamic> toJson() => {
+        'start': start,
+        'end': end,
+        'weight': switch (weight) {
+          TheaterTextWeight.regular => 'REGULAR',
+          TheaterTextWeight.medium => 'MEDIUM',
+          TheaterTextWeight.bold => 'BOLD',
+          TheaterTextWeight.unknown => 'BOLD',
+        },
+        if (tone != TheaterTextTone.unknown)
+          'tone': switch (tone) {
+            TheaterTextTone.positive => 'positive',
+            TheaterTextTone.danger => 'danger',
+            TheaterTextTone.amber => 'amber',
+            TheaterTextTone.muted => 'muted',
+            TheaterTextTone.cold => 'cold',
+            TheaterTextTone.brand => 'brand',
+            TheaterTextTone.unknown => 'muted',
+          },
+      };
+}
+
+@immutable
+class TheaterTextBlock {
+  final TheaterBlockRole role;
+  final String text;
+  final String? emoji;
+  final List<TheaterTextSpanMark> spans;
+
+  const TheaterTextBlock({
+    this.role = TheaterBlockRole.body,
+    this.text = '',
+    this.emoji,
+    this.spans = const [],
+  });
+
+  factory TheaterTextBlock.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const TheaterTextBlock();
+    final rawSpans = json['spans'];
+    final spans = rawSpans is List
+        ? rawSpans
+            .whereType<Map>()
+            .map((e) => TheaterTextSpanMark.fromJson(Map<String, dynamic>.from(e)))
+            .where((s) => s.isValid)
+            .toList(growable: false)
+        : const <TheaterTextSpanMark>[];
+    return TheaterTextBlock(
+      role: parseTheaterBlockRole(json['role']?.toString()),
+      text: (json['text'] ?? '').toString(),
+      emoji: () {
+        final e = (json['emoji'] ?? '').toString().trim();
+        return e.isEmpty ? null : e;
+      }(),
+      spans: spans,
+    );
+  }
+
+  bool get isSpacer => role == TheaterBlockRole.spacer;
+
+  bool get hasVisibleText =>
+      role != TheaterBlockRole.spacer && text.trim().isNotEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'role': switch (role) {
+          TheaterBlockRole.h1 => 'H1',
+          TheaterBlockRole.h2 => 'H2',
+          TheaterBlockRole.body => 'BODY',
+          TheaterBlockRole.caption => 'CAPTION',
+          TheaterBlockRole.bullet => 'BULLET',
+          TheaterBlockRole.spacer => 'SPACER',
+          TheaterBlockRole.unknown => 'BODY',
+        },
+        'text': text,
+        if (emoji != null) 'emoji': emoji,
+        if (spans.isNotEmpty)
+          'spans': spans.map((s) => s.toJson()).toList(growable: false),
+      };
+}
+
 class HomeStageContent {
   final String title;
   final String? body;
   final HomeStageTextMode textMode;
   final bool includeNamePlaceholder;
   final HomeStageCta? cta;
+  /// Structured hierarchy (H2/body/bullets). When non-empty, wins over plain body.
+  final List<TheaterTextBlock> blocks;
 
   const HomeStageContent({
     this.title = '',
@@ -210,7 +363,10 @@ class HomeStageContent {
     this.textMode = HomeStageTextMode.staticText,
     this.includeNamePlaceholder = false,
     this.cta,
+    this.blocks = const [],
   });
+
+  bool get hasRichBlocks => blocks.any((b) => b.hasVisibleText || b.isSpacer);
 
   factory HomeStageContent.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const HomeStageContent();
@@ -221,6 +377,14 @@ class HomeStageContent {
       includeName = n is bool ? n : n?.toString() == 'true';
     }
     final ctaRaw = json['cta'];
+    final rawBlocks = json['blocks'];
+    final blocks = rawBlocks is List
+        ? rawBlocks
+            .whereType<Map>()
+            .map((e) => TheaterTextBlock.fromJson(Map<String, dynamic>.from(e)))
+            .where((b) => b.role != TheaterBlockRole.unknown || b.hasVisibleText)
+            .toList(growable: false)
+        : const <TheaterTextBlock>[];
     return HomeStageContent(
       title: (json['title'] ?? '').toString(),
       body: json['body']?.toString(),
@@ -229,12 +393,25 @@ class HomeStageContent {
       cta: ctaRaw is Map
           ? HomeStageCta.fromJson(Map<String, dynamic>.from(ctaRaw))
           : null,
+      blocks: blocks,
     );
   }
 
   String resolveTitle(String userName) {
     if (!includeNamePlaceholder) return title;
     return title.replaceAll('{name}', userName);
+  }
+
+  /// Plain fallback used by typewriter / a11y when blocks are present.
+  String plainBodyFallback() {
+    if (!hasRichBlocks) return (body ?? '').trim();
+    final parts = <String>[];
+    for (final b in blocks) {
+      if (!b.hasVisibleText) continue;
+      final lead = (b.emoji ?? '').trim();
+      parts.add(lead.isEmpty ? b.text.trim() : '$lead ${b.text.trim()}');
+    }
+    return parts.join('\n');
   }
 
   Map<String, dynamic> toJson() => {
@@ -249,6 +426,8 @@ class HomeStageContent {
         },
         'placeholders': {'name': includeNamePlaceholder},
         if (cta != null) 'cta': cta!.toJson(),
+        if (blocks.isNotEmpty)
+          'blocks': blocks.map((b) => b.toJson()).toList(growable: false),
       };
 }
 

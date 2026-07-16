@@ -208,15 +208,13 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
           )}';
 
     final title = ReceiveMoneyCopy.amountTitle(context, widget.method);
-    final intoWallet =
-        ReceiveMoneyCopy.amountIntoWallet(context, widget.wallet.name);
 
     return Scaffold(
       backgroundColor: KeroseneBrandTokens.background,
       body: TransactionValueEntrySurface(
         onBack: () => Navigator.of(context).maybePop(),
         title: title,
-        subtitle: intoWallet.isEmpty ? widget.wallet.name : intoWallet,
+        subtitle: widget.wallet.name,
         amountInput: flowState.amountInput,
         unitLabel: MoneyDisplay.tickerSymbolFor(_selectedCurrency),
         currency: _selectedCurrency,
@@ -324,32 +322,8 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
   }
 
   Widget? _configuration(MovementFlowState flowState) {
-    final rail = ReceiveMoneyCopy.railLabel(
-      context,
-      widget.method,
-      onChainWallet: widget.onChainWallet,
-    );
-    final railChip = Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: KeroseneBrandTokens.surfaceHigh,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: KeroseneBrandTokens.border),
-        ),
-        child: Text(
-          rail,
-          style: AppTypography.inter(
-            color: KeroseneBrandTokens.textPrimary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-
     if (widget.method != ReceiveAmountMethod.paymentLink) {
-      return railChip;
+      return null;
     }
 
     final options = [
@@ -361,8 +335,6 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        railChip,
-        const SizedBox(height: 18),
         Text(
           context.tr.receiveExpirationLabel,
           textAlign: TextAlign.center,

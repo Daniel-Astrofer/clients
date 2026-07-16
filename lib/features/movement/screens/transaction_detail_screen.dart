@@ -19,10 +19,10 @@ import 'package:kerosene/features/financial_accounts/presentation/providers/wall
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/core/security/financial_secure_scope.dart';
 import 'package:kerosene/features/movement/utils/blockchain_explorer.dart';
 import 'package:kerosene/features/movement/utils/transaction_display.dart';
-import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 
 /// Full-screen transaction dossier — black canvas, Newsreader title, staggered
@@ -102,29 +102,23 @@ class _TransactionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final actionTitle = resolveTransactionActionTitle(
-      context,
-      tx,
-      wallets: _wallets,
-      accounts: _accounts,
-    );
     final money = ref.watch(moneyFormatConfigProvider);
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final amountLabel = money.formatFrozenAmountFromBtc(
-      btcAmount: tx.signedAmountBTC,
+    final presentation = TransactionPresentation.fromTransaction(
+      context,
+      tx,
+      wallets: _wallets,
+      accounts: _accounts,
+      displayCurrency: money.currency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
-      displayAmountUsd: tx.displayAmountUsd,
-      displayAmountEur: tx.displayAmountEur,
-      displayAmountBrl: tx.displayAmountBrl,
-      displayBtcUsd: tx.displayBtcUsd,
-      displayBtcEur: tx.displayBtcEur,
-      displayBtcBrl: tx.displayBtcBrl,
-      signed: true,
+      appLocale: money.locale,
     );
+    final actionTitle = presentation.title;
+    final amountLabel = presentation.primaryAmountLabel;
     final btcLabel = money.formatAmountFromBtc(
       btcAmount: tx.signedAmountBTC,
       currency: Currency.btc,
@@ -133,133 +127,96 @@ class _TransactionDetailScreenState
       btcBrl: btcBrl,
       signed: true,
     );
-
-    final from = resolveTransactionFromParty(
-      tx,
-      wallets: _wallets,
-      accounts: _accounts,
-    );
-    final to = resolveTransactionToParty(
-      tx,
-      wallets: _wallets,
-      accounts: _accounts,
-      compactHash: false,
-    );
-    final network = resolveTransactionNetworkLabel(
-      tx,
-      wallets: _wallets,
-      accounts: _accounts,
-    );
-    final ownWallet = resolveOwnWalletLabel(
-      tx,
-      wallets: _wallets,
-      accounts: _accounts,
-    );
-    final when = AppDateTime.formatRelativeWithClock(context, tx.timestamp);
-    final whenAbsolute = AppDateTime.formatFull(context, tx.timestamp);
-    final statusLabel = _statusLabel(context, tx);
+    final copy = TransactionPresentationCopy.of(context);
+    final network = copy.railShort(presentation.axes.rail);
+    final statusLabel = presentation.statusLabel;
 
     final primaryRows = <_DetailRowData>[
-      _DetailRowData(SendMoneyCopy.detailYourWallet(context), ownWallet),
-      _DetailRowData(SendMoneyCopy.detailFrom(context), from),
-      _DetailRowData(
-        SendMoneyCopy.detailTo(context),
-        to,
-        copyable: looksLikeOnchainAddress(to),
-      ),
-      _DetailRowData(SendMoneyCopy.networkRowLabel(context), network),
-      _DetailRowData(context.tr.sendReviewStatus, statusLabel),
-      _DetailRowData(SendMoneyCopy.detailWhen(context), when),
+      for (final field in presentation.expandedFields)
+        _DetailRowData(
+          field.label,
+          field.value,
+          copyable: field.copyable,
+        ),
     ];
 
     final technicalRows = <_DetailRowData>[
-      _DetailRowData('Valor (BTC)', btcLabel),
-      if (tx.showsNetworkFee)
+      for (final field in presentation.technicalFields)
         _DetailRowData(
-          context.tr.sendReviewNetworkFee,
-          formatSatsAsBtc(tx.feeSatoshis),
+          field.label,
+          field.value,
+          copyable: field.copyable,
+          mono: field.technical,
         ),
-      if (tx.showsServiceFee)
-        _DetailRowData(
-          context.tr.sendReviewKeroseneFee,
-          formatSatsAsBtc(tx.serviceFeeSatoshis),
-        ),
+      _DetailRowData(copy.amountBtc, btcLabel),
       if (resolveTransactionFailureLabel(context, tx) != null)
         _DetailRowData(
-          'Motivo',
+          copy.reason,
           resolveTransactionFailureLabel(context, tx)!,
         ),
-      _DetailRowData('Tipo', actionTitle),
-      _DetailRowData('Data e hora', whenAbsolute),
-      if (tx.showsOnchainConfirmations)
-        _DetailRowData(
-          'Confirmações',
-          tx.confirmations <= 0
-              ? 'Na mempool (0/6)'
-              : tx.confirmations >= 6
-                  ? '6+'
-                  : '${tx.confirmations}/6',
-        ),
-      if (tx.showsOnchainConfirmations && (tx.blockHeight ?? 0) > 0)
-        _DetailRowData('Bloco', '#${tx.blockHeight}'),
+      _DetailRowData(copy.type, actionTitle),
+      _DetailRowData(
+        copy.dateTime,
+        AppDateTime.formatFull(context, tx.timestamp),
+      ),
       if (tx.showsOnchainConfirmations &&
           (tx.blockHash ?? '').trim().isNotEmpty)
-        _DetailRowData('Hash do bloco', tx.blockHash!.trim(), copyable: true),
+        _DetailRowData(copy.blockHash, tx.blockHash!.trim(), copyable: true),
       if (tx.showsOnchainConfirmations &&
           (tx.blockchainTxid ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'TXID on-chain',
+          copy.onchainTxid,
           tx.blockchainTxid!.trim(),
           copyable: true,
           mono: true,
         ),
       if ((tx.paymentHash ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'Payment hash',
+          copy.paymentHash,
           tx.paymentHash!.trim(),
           copyable: true,
           mono: true,
         ),
       if ((tx.invoiceId ?? '').trim().isNotEmpty)
-        _DetailRowData('Invoice ID', tx.invoiceId!.trim(), copyable: true),
+        _DetailRowData(copy.invoiceId, tx.invoiceId!.trim(), copyable: true),
       if ((tx.lightningInvoice ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'Invoice Lightning',
+          copy.lightningInvoice,
           tx.lightningInvoice!.trim(),
           copyable: true,
           mono: true,
         ),
       if ((tx.externalReference ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'Referência externa',
+          copy.externalRef,
           tx.externalReference!.trim(),
           copyable: true,
         ),
       if ((tx.externalTransferId ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'ID transferência externa',
+          copy.externalTransferId,
           tx.externalTransferId!.trim(),
           copyable: true,
         ),
       if ((tx.externalTransferStatus ?? '').trim().isNotEmpty)
-        _DetailRowData('Status externo', tx.externalTransferStatus!.trim()),
+        _DetailRowData(copy.externalStatus, tx.externalTransferStatus!.trim()),
       if ((tx.externalTransferType ?? '').trim().isNotEmpty)
-        _DetailRowData('Tipo externo', tx.externalTransferType!.trim()),
+        _DetailRowData(copy.externalType, tx.externalTransferType!.trim()),
       if ((tx.walletId ?? '').trim().isNotEmpty)
         _DetailRowData(
-          context.tr.sendReviewWallet,
+          copy.yourWallet,
           tx.walletId!.trim(),
           copyable: true,
         ),
       if ((tx.sourceWalletId ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'Carteira origem',
+          copy.sourceWallet,
           tx.sourceWalletId!.trim(),
           copyable: true,
         ),
       if ((tx.destinationWalletId ?? '').trim().isNotEmpty)
         _DetailRowData(
-          'Carteira destino',
+          copy.destinationWallet,
           tx.destinationWalletId!.trim(),
           copyable: true,
         ),
@@ -275,24 +232,24 @@ class _TransactionDetailScreenState
         ),
       if ((tx.fromAddress).trim().isNotEmpty)
         _DetailRowData(
-          'Endereço origem',
+          copy.fromAddress,
           tx.fromAddress.trim(),
           copyable: true,
           mono: true,
         ),
       if ((tx.toAddress).trim().isNotEmpty)
         _DetailRowData(
-          'Endereço destino',
+          copy.toAddress,
           tx.toAddress.trim(),
           copyable: true,
           mono: true,
         ),
       if ((tx.description ?? '').trim().isNotEmpty)
-        _DetailRowData('Descrição', tx.description!.trim()),
-      _DetailRowData('ID interno', tx.id, copyable: true, mono: true),
+        _DetailRowData(copy.description, tx.description!.trim()),
+      _DetailRowData(copy.internalId, tx.id, copyable: true, mono: true),
       if (tx.displayAmountUsd != null)
         _DetailRowData(
-          'Valor USD (congelado)',
+          copy.frozenUsd,
           money.format(
             amount: tx.displayAmountUsd!,
             currency: Currency.usd,
@@ -300,7 +257,7 @@ class _TransactionDetailScreenState
         ),
       if (tx.displayAmountBrl != null)
         _DetailRowData(
-          'Valor BRL (congelado)',
+          copy.frozenBrl,
           money.format(
             amount: tx.displayAmountBrl!,
             currency: Currency.brl,
@@ -308,7 +265,7 @@ class _TransactionDetailScreenState
         ),
       if (tx.displayAmountEur != null)
         _DetailRowData(
-          'Valor EUR (congelado)',
+          copy.frozenEur,
           money.format(
             amount: tx.displayAmountEur!,
             currency: Currency.eur,
@@ -536,19 +493,6 @@ class _TransactionDetailScreenState
     );
   }
 
-  static String _statusLabel(BuildContext context, Transaction tx) {
-    return switch (tx.status) {
-      TransactionStatus.confirmed => context.tr.confirmed,
-      TransactionStatus.confirming =>
-        SendMoneyCopy.detailStatusConfirming(context),
-      TransactionStatus.pending => context.tr.pending,
-      TransactionStatus.cancelled =>
-        SendMoneyCopy.detailStatusCancelled(context),
-      TransactionStatus.failed => SendMoneyCopy.detailStatusFailed(context),
-      TransactionStatus.reconciling =>
-        SendMoneyCopy.detailStatusReconciling(context),
-    };
-  }
 }
 
 class _DetailRowData {

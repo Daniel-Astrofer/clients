@@ -4,22 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
+import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
-import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
@@ -97,44 +95,38 @@ class StatementTransactionCard extends ConsumerWidget {
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final colors = TransactionCardColors.resolve(transaction);
-    final amountLabel = _amountLabel(
-      transaction: transaction,
-      currency: selectedCurrency,
+    final wallets = _walletsFromRef(ref);
+    final accounts = _accountsFromRef(ref);
+    final colors = TransactionCardColors.resolve(
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+    );
+    final presentation = TransactionPresentation.fromTransaction(
+      context,
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+      displayCurrency: selectedCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
       appLocale: money.locale,
     );
-    final wallets = _walletsFromRef(ref);
-    final accounts = _accountsFromRef(ref);
-    final title = resolveTransactionActionTitle(
-      context,
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    final counterparty = _counterparty(
-      context,
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    final timestampLabel = AppDateTime.formatRelative(
-      context,
-      transaction.timestamp,
-    );
+    final amountLabel = presentation.primaryAmountLabel;
+    final title = presentation.title;
+    final counterparty = presentation.subtitle;
+    final timestampLabel = presentation.tertiary;
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
     final cardPadding = compact ? 16.0 : 20.0;
     final iconSize = compact ? 42.0 : 48.0;
     final titleFontSize = compact ? 15.0 : 17.0;
     final counterpartyFontSize = compact ? 12.0 : 13.0;
-    final amountFontSize = compact ? 24.0 : 30.0;
-    final headerAmountGap = compact ? 12.0 : 22.0;
 
     if (mode == StatementTransactionCardMode.separated) {
       return _BankStatementTransactionRow(
         transaction: transaction,
+        presentation: presentation,
         amountLabel: amountLabel,
         btcAmount: MoneyDisplay.formatAmountFromBtc(
           btcAmount: transaction.signedAmountBTC,
@@ -202,6 +194,8 @@ class StatementTransactionCard extends ConsumerWidget {
                       expanded: expanded,
                       wallets: wallets,
                       accounts: accounts,
+                      // Taxonomy icon (direction + rail), not network-only.
+                      iconOverride: presentation.icon,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -283,9 +277,8 @@ class StatementTransactionCard extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 22),
                     child: _TransactionDetailsTable(
                       transaction: transaction,
+                      presentation: presentation,
                       colors: colors,
-                      wallets: wallets,
-                      accounts: accounts,
                     ),
                   ),
                 ),
@@ -297,91 +290,6 @@ class StatementTransactionCard extends ConsumerWidget {
     );
   }
 
-  static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
-  static final DateFormat _timeFormat = DateFormat('HH:mm');
-
-  static String _amountLabel({
-    required Transaction transaction,
-    required Currency currency,
-    required double? btcUsd,
-    required double? btcEur,
-    required double? btcBrl,
-    Locale? appLocale,
-  }) {
-    // Debits show total leaving the wallet (amount + network + service fees).
-    final signedAmount = transaction.signedDisplayAmountBTC;
-    final includeFeesInDebit = transaction.isDebit &&
-        (transaction.showsNetworkFee || transaction.showsServiceFee);
-    return MoneyDisplay.formatFrozenAmountFromBtc(
-      btcAmount: signedAmount,
-      currency: currency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      // Frozen fiat is principal-only; when fees apply, recompute from sats.
-      displayAmountUsd:
-          includeFeesInDebit ? null : transaction.displayAmountUsd,
-      displayAmountEur:
-          includeFeesInDebit ? null : transaction.displayAmountEur,
-      displayAmountBrl:
-          includeFeesInDebit ? null : transaction.displayAmountBrl,
-      displayBtcUsd: transaction.displayBtcUsd,
-      displayBtcEur: transaction.displayBtcEur,
-      displayBtcBrl: transaction.displayBtcBrl,
-      signed: true,
-      appLocale: appLocale,
-    );
-  }
-
-  static String _counterparty(
-    BuildContext context,
-    Transaction tx, {
-    List<Wallet> wallets = const [],
-    List<BitcoinAccount> accounts = const [],
-  }) {
-    // Full route so the user always sees origin, destination and network.
-    return resolveTransactionRouteSummary(
-      tx,
-      wallets: wallets,
-      accounts: accounts,
-      compactHash: true,
-    );
-  }
-
-  /// Network-reactive icon (not direction/type).
-  /// cold → snowflake, onchain → chain link, internal → two people, LN → bolt.
-  static IconData _iconFor(
-    Transaction tx,
-    TransactionVisualSpec visual, {
-    List<Wallet> wallets = const [],
-    List<BitcoinAccount> accounts = const [],
-  }) {
-    final network = resolveTransactionNetwork(
-      tx,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    if (tx.displayStatus == TransactionStatus.failed ||
-        tx.displayStatus == TransactionStatus.cancelled) {
-      return KeroseneIcons.warning;
-    }
-    return switch (network) {
-      TransactionNetwork.internal ||
-      TransactionNetwork.paymentLinkInternal =>
-        KeroseneIcons.group,
-      TransactionNetwork.lightning => KeroseneIcons.lightning,
-      TransactionNetwork.cold => KeroseneIcons.coldWallet,
-      TransactionNetwork.paymentLinkOnchain => KeroseneIcons.onchain,
-      TransactionNetwork.onchain || TransactionNetwork.unknown =>
-        KeroseneIcons.onchain,
-    };
-  }
-
-  static String _shorten(String value, {int head = 12, int tail = 6}) {
-    final normalized = value.trim();
-    if (normalized.length <= head + tail + 3) return normalized;
-    return '${normalized.substring(0, head)}...${normalized.substring(normalized.length - tail)}';
-  }
 }
 
 List<Wallet> _walletsFromRef(WidgetRef ref) {
@@ -395,76 +303,9 @@ List<BitcoinAccount> _accountsFromRef(WidgetRef ref) {
       const <BitcoinAccount>[];
 }
 
-String _bankRailLabel(
-  Transaction tx, {
-  List<Wallet> wallets = const [],
-  List<BitcoinAccount> accounts = const [],
-}) {
-  return resolveTransactionNetworkLabel(
-    tx,
-    wallets: wallets,
-    accounts: accounts,
-  );
-}
-
-String _bankStatusLabel(Transaction tx) {
-  if (tx.isUnconfirmedExpired) return 'Não confirmada';
-  if (tx.isOnChain &&
-      tx.confirmations <= 0 &&
-      tx.displayStatus != TransactionStatus.failed &&
-      tx.displayStatus != TransactionStatus.cancelled) {
-    return 'Na mempool';
-  }
-  if (tx.isOnChain && tx.confirmations > 0) {
-    if (tx.confirmations >= tx.onchainConfirmationTarget ||
-        tx.displayStatus == TransactionStatus.confirmed) {
-      return tx.confirmations >= 6
-          ? 'Confirmado (${tx.confirmations}+)'
-          : 'Confirmado (${tx.confirmations}/6)';
-    }
-    return '${tx.confirmations}/6 confirmações';
-  }
-  return switch (tx.displayStatus) {
-    TransactionStatus.confirmed => 'Confirmado',
-    TransactionStatus.confirming => 'Em andamento',
-    TransactionStatus.pending => 'Pendente',
-    TransactionStatus.cancelled => 'Cancelada',
-    TransactionStatus.failed => 'Falhou',
-    TransactionStatus.reconciling => 'Em análise',
-  };
-}
-
-String _bankSubtitle(
-  BuildContext context,
-  Transaction tx, {
-  List<Wallet> wallets = const [],
-  List<BitcoinAccount> accounts = const [],
-}) {
-  final when = AppDateTime.formatRelative(context, tx.timestamp);
-  return '$when · ${_bankRailLabel(tx, wallets: wallets, accounts: accounts)} · ${_bankStatusLabel(tx)}';
-}
-
-String _bankCounterparty(
-  Transaction tx, {
-  List<Wallet> wallets = const [],
-  List<BitcoinAccount> accounts = const [],
-}) {
-  return resolveTransactionRouteSummary(
-    tx,
-    wallets: wallets,
-    accounts: accounts,
-    compactHash: true,
-  );
-}
-
-String _darkDetailValue(String value) {
-  final trimmed = value.trim();
-  if (trimmed.isEmpty) return '—';
-  return StatementTransactionCard._shorten(trimmed, head: 18, tail: 8);
-}
-
 class _BankStatementTransactionRow extends StatelessWidget {
   final Transaction transaction;
+  final TransactionPresentation presentation;
   final String amountLabel;
   final String btcAmount;
   final bool expanded;
@@ -474,6 +315,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
 
   const _BankStatementTransactionRow({
     required this.transaction,
+    required this.presentation,
     required this.amountLabel,
     required this.btcAmount,
     required this.expanded,
@@ -484,23 +326,9 @@ class _BankStatementTransactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = resolveTransactionActionTitle(
-      context,
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    final counterparty = _bankCounterparty(
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    final subtitle = _bankSubtitle(
-      context,
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-    );
+    final title = presentation.title;
+    final counterparty = presentation.subtitle;
+    final statusLine = presentation.statusLabel;
     final tone = TransactionPalette.toneFor(transaction);
     final amountColor =
         tone == TransactionStatusTone.failed ||
@@ -530,7 +358,10 @@ class _BankStatementTransactionRow extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _BankDirectionIcon(transaction: transaction),
+                  _BankDirectionIcon(
+                    transaction: transaction,
+                    icon: presentation.icon,
+                  ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -561,7 +392,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          subtitle,
+                          statusLine,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.caption.copyWith(
@@ -611,10 +442,15 @@ class _BankStatementTransactionRow extends StatelessWidget {
                 child: expanded
                     ? Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.base),
-                        child: _BankTransactionDetailsTable(
+                        child: _TransactionDetailsTable(
                           transaction: transaction,
-                          wallets: wallets,
-                          accounts: accounts,
+                          presentation: presentation,
+                          colors: TransactionCardColors.resolve(
+                            transaction,
+                            wallets: wallets,
+                            accounts: accounts,
+                          ),
+                          dark: true,
                         ),
                       )
                     : const SizedBox.shrink(),
@@ -629,25 +465,17 @@ class _BankStatementTransactionRow extends StatelessWidget {
 
 class _BankDirectionIcon extends StatelessWidget {
   final Transaction transaction;
+  final IconData? icon;
 
-  const _BankDirectionIcon({required this.transaction});
+  const _BankDirectionIcon({
+    required this.transaction,
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
     final tone = TransactionPalette.toneFor(transaction);
-    final color = switch (tone) {
-      TransactionStatusTone.failed ||
-      TransactionStatusTone.cancelled =>
-        TransactionPalette.statusStrong(tone),
-      TransactionStatusTone.confirming ||
-      TransactionStatusTone.pending =>
-        TransactionPalette.statusStrong(tone),
-      TransactionStatusTone.confirmed => transaction.isCredit
-          ? TransactionPalette.amountCredit
-          : transaction.isDebit
-              ? TransactionPalette.amountDebit
-              : TransactionPalette.inkTertiary,
-    };
+    final color = TransactionPalette.statusStrong(tone);
 
     return Container(
       width: 40,
@@ -657,27 +485,15 @@ class _BankDirectionIcon extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.hexFF2A2A2A),
       ),
-      child: Icon(_icon(), color: color, size: 18),
+      child: Icon(
+        icon ??
+            (transaction.isCredit
+                ? KeroseneIcons.down
+                : KeroseneIcons.up),
+        color: color,
+        size: 18,
+      ),
     );
-  }
-
-  IconData _icon() {
-    if (transaction.status == TransactionStatus.failed ||
-        transaction.isCancelled) {
-      return KeroseneIcons.warning;
-    }
-    final network = resolveTransactionNetwork(transaction);
-    return switch (network) {
-      TransactionNetwork.lightning => KeroseneIcons.lightning,
-      TransactionNetwork.internal ||
-      TransactionNetwork.paymentLinkInternal =>
-        KeroseneIcons.moveHorizontal,
-      TransactionNetwork.cold => KeroseneIcons.coldWallet,
-      TransactionNetwork.paymentLinkOnchain ||
-      TransactionNetwork.onchain ||
-      TransactionNetwork.unknown =>
-        transaction.isCredit ? KeroseneIcons.receive : KeroseneIcons.send,
-    };
   }
 }
 
@@ -690,14 +506,9 @@ class _DarkStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final tone = TransactionPalette.toneFor(transaction);
     final fg = TransactionPalette.statusStrong(tone);
-    final label = switch (tone) {
-      TransactionStatusTone.confirmed => 'Confirmado',
-      TransactionStatusTone.confirming => 'Confirmando',
-      TransactionStatusTone.pending => 'Pendente',
-      TransactionStatusTone.cancelled => 'Cancelada',
-      TransactionStatusTone.failed =>
-        transaction.isUnconfirmedExpired ? 'Não confirmada' : 'Falhou',
-    };
+    final axes = TransactionAxes.classify(transaction);
+    final label =
+        TransactionPresentationCopy.of(context).lifecycleLabel(axes.lifecycle);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -724,43 +535,47 @@ class _DarkStatusPill extends StatelessWidget {
   }
 }
 
-class _BankTransactionDetailsTable extends StatelessWidget {
+class _TransactionDetailsTable extends StatelessWidget {
   final Transaction transaction;
-  final List<Wallet> wallets;
-  final List<BitcoinAccount> accounts;
+  final TransactionPresentation presentation;
+  final TransactionCardColors colors;
+  final bool dark;
 
-  const _BankTransactionDetailsTable({
+  const _TransactionDetailsTable({
     required this.transaction,
-    this.wallets = const [],
-    this.accounts = const [],
+    required this.presentation,
+    required this.colors,
+    this.dark = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final rows = _compactDetailRows(
-      context,
-      transaction,
-      wallets,
-      accounts: accounts,
-    );
+    final rows = presentation.expandedFields;
+    final labelColor = dark ? TransactionPalette.inkTertiary : Colors.black;
+    final valueColor = dark ? TransactionPalette.inkOnDark : Colors.black;
+    final divider = dark ? AppColors.hexFF222222 : colors.divider;
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.hexFF222222)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: divider)),
       ),
       child: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: 14),
         child: Column(
           children: [
             for (var index = 0; index < rows.length; index++) ...[
               if (index > 0)
-                const Padding(
-                  padding: EdgeInsets.only(top: 10),
-                  child: Divider(height: 1, color: AppColors.hexFF222222),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Divider(height: 1, color: divider),
                 ),
               Padding(
-                padding: EdgeInsets.only(top: index == 0 ? 0 : 10),
-                child: _BankTransactionDetailsRow(row: rows[index]),
+                padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
+                child: _PresentationFieldRow(
+                  field: rows[index],
+                  labelColor: labelColor,
+                  valueColor: valueColor,
+                ),
               ),
             ],
             const SizedBox(height: 16),
@@ -772,239 +587,72 @@ class _BankTransactionDetailsTable extends StatelessWidget {
   }
 }
 
-class _BankTransactionDetailsRow extends StatelessWidget {
-  final _TransactionDetailRow row;
+class _PresentationFieldRow extends StatelessWidget {
+  final PresentationField field;
+  final Color labelColor;
+  final Color valueColor;
 
-  const _BankTransactionDetailsRow({required this.row});
+  const _PresentationFieldRow({
+    required this.field,
+    required this.labelColor,
+    required this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Solid black data on expanded rows (light paper cards / bank expanded).
-    const ink = Colors.black;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          row.label,
-          style: AppTypography.caption.copyWith(
-            color: ink,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
+        Expanded(
+          flex: 2,
+          child: Text(
+            field.label,
+            style: TextStyle(
+              color: labelColor,
+              fontFamily: AppTypography.bodyFontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
-        if (row.copyValue != null) ...[
-          const SizedBox(width: 6),
-          _DarkTransactionDetailCopyButton(row: row),
-        ],
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            row.displayValue,
-            textAlign: TextAlign.right,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodySmall.copyWith(
-              color: ink,
-              fontFamily: row.displayValue.length > 20
-                  ? AppTypography.financialFontFamily
-                  : AppTypography.bodyFontFamily,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
-            ),
+          flex: 3,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  field.value,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: valueColor,
+                    fontFamily: AppTypography.bodyFontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (field.copyable) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () async {
+                    HapticFeedback.selectionClick();
+                    await Clipboard.setData(ClipboardData(text: field.value));
+                  },
+                  child: Icon(
+                    KeroseneIcons.copy,
+                    size: 14,
+                    color: labelColor,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
     );
   }
-}
-
-class _DarkTransactionDetailCopyButton extends StatelessWidget {
-  final _TransactionDetailRow row;
-
-  const _DarkTransactionDetailCopyButton({required this.row});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: context.tr.copy,
-      child: IconButton(
-        key: ValueKey('statement-detail-copy-${row.key}'),
-        onPressed: () => _copyDetail(context, row),
-        visualDensity: VisualDensity.compact,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-        style: IconButton.styleFrom(
-          minimumSize: const Size.square(24),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        icon: const Icon(
-          KeroseneIcons.copy,
-          size: 15,
-          color: Colors.black,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _copyDetail(
-    BuildContext context,
-    _TransactionDetailRow row,
-  ) async {
-    final value = row.copyValue;
-    if (value == null) return;
-
-    HapticFeedback.selectionClick();
-    await Clipboard.setData(ClipboardData(text: value));
-    if (!context.mounted) return;
-
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            _localizedCopy(
-              context,
-              pt: 'Detalhe copiado.',
-              en: 'Transaction detail copied.',
-              es: 'Detalle copiado.',
-            ),
-          ),
-          behavior: SnackBarBehavior.floating,
-          duration: KeroseneMotion.loop,
-        ),
-      );
-  }
-}
-
-List<_TransactionDetailRow> _compactDetailRows(
-  BuildContext context,
-  Transaction transaction,
-  List<Wallet> wallets, {
-  List<BitcoinAccount> accounts = const [],
-}) {
-  final from = resolveTransactionFromParty(
-    transaction,
-    wallets: wallets,
-    accounts: accounts,
-  );
-  final to = resolveTransactionToParty(
-    transaction,
-    wallets: wallets,
-    accounts: accounts,
-    compactHash: true,
-  );
-  final ownWallet = resolveOwnWalletLabel(
-    transaction,
-    wallets: wallets,
-    accounts: accounts,
-  );
-  final network = resolveTransactionNetworkLabel(
-    transaction,
-    wallets: wallets,
-    accounts: accounts,
-  );
-  final rows = <_TransactionDetailRow>[
-    _TransactionDetailRow(
-      key: 'when',
-      label: _localizedCopy(context, pt: 'Quando', en: 'When', es: 'Cuándo'),
-      displayValue: AppDateTime.formatRelativeWithClock(
-        context,
-        transaction.timestamp,
-      ),
-    ),
-    _TransactionDetailRow(
-      key: 'wallet',
-      label: _localizedCopy(
-        context,
-        pt: 'Sua carteira',
-        en: 'Your wallet',
-        es: 'Tu billetera',
-      ),
-      displayValue: ownWallet,
-    ),
-    _TransactionDetailRow(
-      key: 'from',
-      label: _localizedCopy(context, pt: 'De', en: 'From', es: 'De'),
-      displayValue: from,
-    ),
-    _TransactionDetailRow(
-      key: 'to',
-      label: _localizedCopy(context, pt: 'Para', en: 'To', es: 'Para'),
-      displayValue: to,
-      copyValue: looksLikeOnchainAddress(to) ? to : null,
-    ),
-  ];
-
-  // Network / miner fee only for external rails with a real fee.
-  if (transaction.showsNetworkFee) {
-    rows.add(
-      _TransactionDetailRow(
-        key: 'network-fee',
-        label: _localizedCopy(
-          context,
-          pt: context.tr.sendReviewNetworkFee,
-          en: 'Network fee',
-          es: 'Tarifa de red',
-        ),
-        displayValue: formatSatsAsBtc(transaction.feeSatoshis),
-      ),
-    );
-  } else if (transaction.isLedgerInternal) {
-    // Explicit: internal ledger has no miner fee (don't show "—").
-  }
-
-  if (transaction.showsServiceFee) {
-    rows.add(
-      _TransactionDetailRow(
-        key: 'service-fee',
-        label: _localizedCopy(
-          context,
-          pt: 'Taxa de serviço',
-          en: 'Service fee',
-          es: 'Tarifa de servicio',
-        ),
-        displayValue: formatSatsAsBtc(transaction.serviceFeeSatoshis),
-      ),
-    );
-  }
-
-  rows.add(
-    _TransactionDetailRow(
-      key: 'network',
-      label: _localizedCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
-      displayValue: network,
-    ),
-  );
-
-  if (transaction.showsOnchainConfirmations) {
-    final confLabel = transaction.status == TransactionStatus.confirmed &&
-            transaction.confirmations <= 0
-        ? _localizedCopy(
-            context,
-            pt: 'Confirmada na rede',
-            en: 'Confirmed on-chain',
-            es: 'Confirmada en red',
-          )
-        : transaction.confirmations >= transaction.onchainConfirmationTarget
-            ? '${transaction.confirmations}+'
-            : '${transaction.confirmations}/${transaction.onchainConfirmationTarget}';
-    rows.add(
-      _TransactionDetailRow(
-        key: 'confirmations',
-        label: _localizedCopy(
-          context,
-          pt: 'Confirmações',
-          en: 'Confirmations',
-          es: 'Confirmaciones',
-        ),
-        displayValue: confLabel,
-      ),
-    );
-  }
-
-  return rows;
 }
 
 class _SeeDetailsLink extends StatelessWidget {
@@ -1014,12 +662,7 @@ class _SeeDetailsLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = _localizedCopy(
-      context,
-      pt: 'ver detalhes',
-      en: 'see details',
-      es: 'ver detalles',
-    );
+    final label = TransactionPresentationCopy.of(context).viewDetails;
     return Center(
       child: TextButton(
         onPressed: () {
@@ -1046,208 +689,6 @@ class _SeeDetailsLink extends StatelessWidget {
   }
 }
 
-class _TransactionDetailsTable extends StatelessWidget {
-  final Transaction transaction;
-  final TransactionCardColors colors;
-  final List<Wallet> wallets;
-  final List<BitcoinAccount> accounts;
-
-  const _TransactionDetailsTable({
-    required this.transaction,
-    required this.colors,
-    this.wallets = const [],
-    this.accounts = const [],
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = _compactDetailRows(
-      context,
-      transaction,
-      wallets,
-      accounts: accounts,
-    );
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: colors.divider)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 14),
-        child: Column(
-          children: [
-            for (var index = 0; index < rows.length; index++) ...[
-              if (index > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Divider(height: 1, color: colors.divider),
-                ),
-              Padding(
-                padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
-                child: _TransactionDetailsRow(row: rows[index], colors: colors),
-              ),
-            ],
-            const SizedBox(height: 16),
-            _SeeDetailsLink(transaction: transaction),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TransactionDetailsRow extends StatelessWidget {
-  final _TransactionDetailRow row;
-  final TransactionCardColors colors;
-
-  const _TransactionDetailsRow({required this.row, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    const ink = Colors.black;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          row.label,
-          style: TextStyle(
-            color: ink,
-            fontFamily: AppTypography.bodyFontFamily,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-        ),
-        if (row.copyValue != null) ...[
-          const SizedBox(width: 6),
-          _TransactionDetailCopyButton(row: row, colors: colors),
-        ],
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            row.displayValue,
-            textAlign: TextAlign.right,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: ink,
-              fontFamily: row.displayValue.length > 20
-                  ? AppTypography.financialFontFamily
-                  : AppTypography.bodyFontFamily,
-              fontSize: row.displayValue.length > 20 ? 12 : 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TransactionDetailCopyButton extends StatelessWidget {
-  final _TransactionDetailRow row;
-  final TransactionCardColors colors;
-
-  const _TransactionDetailCopyButton({required this.row, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: context.tr.copy,
-      child: IconButton(
-        key: ValueKey('statement-detail-copy-${row.key}'),
-        onPressed: () => _copyDetail(context, row),
-        visualDensity: VisualDensity.compact,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-        style: IconButton.styleFrom(
-          minimumSize: const Size.square(24),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        icon: const Icon(KeroseneIcons.copy, size: 15, color: Colors.black),
-      ),
-    );
-  }
-
-  Future<void> _copyDetail(
-    BuildContext context,
-    _TransactionDetailRow row,
-  ) async {
-    final value = row.copyValue;
-    if (value == null) return;
-
-    HapticFeedback.selectionClick();
-    await Clipboard.setData(ClipboardData(text: value));
-    if (!context.mounted) return;
-
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            _localizedCopy(
-              context,
-              pt: 'Detalhe copiado.',
-              en: 'Transaction detail copied.',
-              es: 'Detalle copiado.',
-            ),
-          ),
-          behavior: SnackBarBehavior.floating,
-          duration: KeroseneMotion.loop,
-        ),
-      );
-  }
-}
-
-class _TransactionDetailRow {
-  final String key;
-  final String label;
-  final String displayValue;
-  final String? copyValue;
-
-  const _TransactionDetailRow({
-    required this.key,
-    required this.label,
-    required this.displayValue,
-    this.copyValue,
-  });
-}
-
-String? _firstNonEmpty(Iterable<String?> values) {
-  for (final value in values) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isNotEmpty) return trimmed;
-  }
-  return null;
-}
-
-String? _copyValue(String value) {
-  final trimmed = value.trim();
-  return trimmed.isEmpty ? null : trimmed;
-}
-
-String _titleCase(String value) {
-  final trimmed = value.trim();
-  if (trimmed.isEmpty) return value;
-  return trimmed[0].toUpperCase() + trimmed.substring(1);
-}
-
-String _localizedCopy(
-  BuildContext context, {
-  required String pt,
-  required String en,
-  required String es,
-}) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => en,
-    'es' => es,
-    _ => pt,
-  };
-}
-
 class _AnimatedRingIconWrapper extends StatefulWidget {
   final Transaction transaction;
   final TransactionVisualSpec visual;
@@ -1256,6 +697,7 @@ class _AnimatedRingIconWrapper extends StatefulWidget {
   final bool expanded;
   final List<Wallet> wallets;
   final List<BitcoinAccount> accounts;
+  final IconData? iconOverride;
 
   const _AnimatedRingIconWrapper({
     required this.transaction,
@@ -1265,6 +707,7 @@ class _AnimatedRingIconWrapper extends StatefulWidget {
     required this.expanded,
     this.wallets = const [],
     this.accounts = const [],
+    this.iconOverride,
   });
 
   @override
@@ -1438,12 +881,7 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
               firstChild: Icon(
-                StatementTransactionCard._iconFor(
-                  widget.transaction,
-                  widget.visual,
-                  wallets: widget.wallets,
-                  accounts: widget.accounts,
-                ),
+                widget.iconOverride ?? KeroseneIcons.onchain,
                 color: widget.colors.icon,
                 size: widget.iconSize * 0.45,
               ),

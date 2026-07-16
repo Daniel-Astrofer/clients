@@ -122,7 +122,7 @@ final theaterScaffoldSolidColorProvider = Provider<Color>((ref) {
 
 /// Wash around the communication stage (greeting / theater).
 ///
-/// Revolut-style soft radial bloom. Layout height includes a **fade tail** so
+/// Kerosene-style soft radial bloom. Layout height includes a **fade tail** so
 /// the soft edge is inside the sliver paint bounds (CustomScrollView clips
 /// children to their layout size — without the tail, blur is hard-cut).
 class HomeTheaterHeaderWash extends ConsumerWidget {
@@ -155,24 +155,23 @@ class HomeTheaterHeaderWash extends ConsumerWidget {
       children: [
         Positioned.fill(
           child: IgnorePointer(
-            child: _SoftEdgeBloom(
+            child: _KeroseneAmbientBloom(
+              accent: style.accent,
+              peakAlpha: style.peakAlpha,
               theaterActive: style.theaterActive,
-              child: _RevolutAmbientBloom(
-                accent: style.accent,
-                peakAlpha: style.peakAlpha,
-                theaterActive: style.theaterActive,
-              ),
             ),
           ),
         ),
         if (backendGlows.isNotEmpty)
           Positioned.fill(
             child: IgnorePointer(
-              child: _SoftEdgeBloom(
-                theaterActive: true,
-                child: _TheaterSoftGlows(
-                  glows: backendGlows,
-                  intensityScale: 0.85,
+              child: RepaintBoundary(
+                child: _SoftEdgeBloom(
+                  theaterActive: true,
+                  child: _TheaterSoftGlows(
+                    glows: backendGlows,
+                    intensityScale: 0.85,
+                  ),
                 ),
               ),
             ),
@@ -180,22 +179,24 @@ class HomeTheaterHeaderWash extends ConsumerWidget {
         else if (style.theaterActive)
           Positioned.fill(
             child: IgnorePointer(
-              child: _SoftEdgeBloom(
-                theaterActive: true,
-                child: _TheaterSoftGlows(
-                  glows: [
-                    HomeStageGlow(
-                      id: 'fallback',
-                      colorToken: restingWashTokenFor(view),
-                      x: 0.5,
-                      y: 0.05,
-                      width: 1.5,
-                      height: 0.7,
-                      intensity: 0.30,
-                      radius: 0.7,
-                    ),
-                  ],
-                  intensityScale: 1.0,
+              child: RepaintBoundary(
+                child: _SoftEdgeBloom(
+                  theaterActive: true,
+                  child: _TheaterSoftGlows(
+                    glows: [
+                      HomeStageGlow(
+                        id: 'fallback',
+                        colorToken: restingWashTokenFor(view),
+                        x: 0.5,
+                        y: 0.05,
+                        width: 1.5,
+                        height: 0.7,
+                        intensity: 0.30,
+                        radius: 0.7,
+                      ),
+                    ],
+                    intensityScale: 1.0,
+                  ),
                 ),
               ),
             ),
@@ -256,25 +257,25 @@ class _SoftEdgeBloom extends StatelessWidget {
   }
 }
 
-/// Revolut-like ambient: soft radial cloud + slow breath/drift.
+/// Kerosene ambient: soft radial cloud + slow breath/drift.
 ///
 /// Animation only transforms a [RepaintBoundary] of static blurred layers.
-class _RevolutAmbientBloom extends StatefulWidget {
+class _KeroseneAmbientBloom extends StatefulWidget {
   final Color accent;
   final double peakAlpha;
   final bool theaterActive;
 
-  const _RevolutAmbientBloom({
+  const _KeroseneAmbientBloom({
     required this.accent,
     required this.peakAlpha,
     required this.theaterActive,
   });
 
   @override
-  State<_RevolutAmbientBloom> createState() => _RevolutAmbientBloomState();
+  State<_KeroseneAmbientBloom> createState() => _KeroseneAmbientBloomState();
 }
 
-class _RevolutAmbientBloomState extends State<_RevolutAmbientBloom>
+class _KeroseneAmbientBloomState extends State<_KeroseneAmbientBloom>
     with SingleTickerProviderStateMixin {
   static const _cycle = Duration(milliseconds: 10000);
 
@@ -307,16 +308,19 @@ class _RevolutAmbientBloomState extends State<_RevolutAmbientBloom>
         final pulseAmp = theaterActive ? 0.08 : 0.06;
 
         final layers = RepaintBoundary(
-          child: _StaticRevolutLayers(
-            key: ValueKey(
-              '${widget.accent.toARGB32()}|${widget.theaterActive}|'
-              '${widget.peakAlpha.toStringAsFixed(2)}|${w.round()}x${h.round()}',
-            ),
-            width: w,
-            height: h,
-            accent: widget.accent,
-            peakAlpha: widget.peakAlpha,
+          child: _SoftEdgeBloom(
             theaterActive: theaterActive,
+            child: _StaticBloomLayers(
+              key: ValueKey(
+                '${widget.accent.toARGB32()}|${widget.theaterActive}|'
+                '${widget.peakAlpha.toStringAsFixed(2)}|${w.round()}x${h.round()}',
+              ),
+              width: w,
+              height: h,
+              accent: widget.accent,
+              peakAlpha: widget.peakAlpha,
+              theaterActive: theaterActive,
+            ),
           ),
         );
 
@@ -351,14 +355,14 @@ class _RevolutAmbientBloomState extends State<_RevolutAmbientBloom>
 }
 
 /// Frozen blurred cloud layers (ImageFilter stays off the animation tick).
-class _StaticRevolutLayers extends StatelessWidget {
+class _StaticBloomLayers extends StatelessWidget {
   final double width;
   final double height;
   final Color accent;
   final double peakAlpha;
   final bool theaterActive;
 
-  const _StaticRevolutLayers({
+  const _StaticBloomLayers({
     super.key,
     required this.width,
     required this.height,

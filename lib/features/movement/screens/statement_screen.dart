@@ -5,13 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
-import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
-import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -21,6 +20,8 @@ import 'package:kerosene/features/financial_accounts/presentation/providers/bala
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
+import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
@@ -34,17 +35,33 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 
 enum _StatementTab { statement, insights }
 
+/// Same activity set as Home — maps 1:1 to [ActivityFilter].
 enum _StatementFilter {
   all,
   incoming,
   outgoing,
   internal,
   onchain,
-  cold,
   lightning,
+  cold,
   pending,
   failed,
   cancelled,
+}
+
+ActivityFilter _mapStatementFilter(_StatementFilter filter) {
+  return switch (filter) {
+    _StatementFilter.all => ActivityFilter.all,
+    _StatementFilter.incoming => ActivityFilter.incoming,
+    _StatementFilter.outgoing => ActivityFilter.outgoing,
+    _StatementFilter.internal => ActivityFilter.instant,
+    _StatementFilter.onchain => ActivityFilter.onchain,
+    _StatementFilter.lightning => ActivityFilter.lightning,
+    _StatementFilter.cold => ActivityFilter.cold,
+    _StatementFilter.pending => ActivityFilter.inProgress,
+    _StatementFilter.failed => ActivityFilter.problems,
+    _StatementFilter.cancelled => ActivityFilter.cancelled,
+  };
 }
 
 class TransactionStatementScreen extends ConsumerStatefulWidget {
@@ -265,7 +282,7 @@ class _TransactionStatementScreenState
       if (!mounted) return;
       AppNotice.showInfo(
         context,
-        title: 'Nada para exportar',
+        title: context.tr.statementExportNothingTitle,
         message: context.tr.statementEmptyOnDevice,
       );
       return;
@@ -278,6 +295,7 @@ class _TransactionStatementScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
+        final tr = ctx.tr;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -286,7 +304,7 @@ class _TransactionStatementScreenState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Exportar extrato',
+                  tr.statementExportTitle,
                   style: AppTypography.newsreader(
                     color: _StatementColors.textPrimary,
                     fontSize: 22,
@@ -295,7 +313,7 @@ class _TransactionStatementScreenState
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Endereços longos são encurtados. CSV é melhor para reconciliação.',
+                  tr.statementExportLongAddressesNote,
                   style: AppTypography.inter(
                     color: _StatementColors.textMuted,
                     fontSize: 13,
@@ -311,7 +329,7 @@ class _TransactionStatementScreenState
                     style: TextStyle(color: _StatementColors.textPrimary),
                   ),
                   subtitle: Text(
-                    'Copia e compartilha · valores em sats',
+                    tr.statementExportCsvSubtitle,
                     style: TextStyle(color: _StatementColors.textMuted),
                   ),
                   onTap: () => Navigator.of(ctx).pop('csv'),
@@ -324,7 +342,7 @@ class _TransactionStatementScreenState
                     style: TextStyle(color: _StatementColors.textPrimary),
                   ),
                   subtitle: Text(
-                    context.tr.statementExportShareLimit,
+                    tr.statementExportShareLimit,
                     style: TextStyle(color: _StatementColors.textMuted),
                   ),
                   onTap: () => Navigator.of(ctx).pop('pdf'),
@@ -341,16 +359,22 @@ class _TransactionStatementScreenState
         ? await exportStatementPdf(transactions)
         : await exportStatementCsv(transactions);
     if (!mounted) return;
+    final tr = context.tr;
     AppNotice.showInfo(
       context,
       title: result.shared
-          ? 'Extrato compartilhado'
-          : (format == 'csv' ? 'CSV copiado' : 'Exportação'),
+          ? tr.statementExportSharedTitle
+          : (format == 'csv'
+              ? tr.statementExportCsvCopiedTitle
+              : tr.statementExportGenericTitle),
       message: result.shared
-          ? '${result.rowCount} lançamentos (${format.toUpperCase()}).'
+          ? tr.statementExportSharedMessage(
+              result.rowCount,
+              format.toUpperCase(),
+            )
           : format == 'csv'
-              ? '${result.rowCount} lançamentos copiados para a área de transferência.'
-              : 'Não foi possível compartilhar o PDF.',
+              ? tr.statementExportCsvCopiedMessage(result.rowCount)
+              : tr.statementExportPdfFailed,
     );
   }
 
@@ -364,56 +388,49 @@ class _TransactionStatementScreenState
   }
 
   List<Transaction> _filteredTransactions(List<Transaction> transactions) {
-    final normalizedQuery = _query.toLowerCase();
-    final filtered = transactions.where((transaction) {
-      if (!_matchesFilter(transaction, _selectedFilter)) return false;
-      if (normalizedQuery.isEmpty) return true;
-      return _searchText(transaction).contains(normalizedQuery);
-    }).toList();
-    filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    return filtered;
-  }
-
-  bool _matchesFilter(Transaction transaction, _StatementFilter filter) {
     final wallets = ref.read(walletProvider);
-    final walletList = wallets is WalletLoaded ? wallets.wallets : const <Wallet>[];
+    final walletList =
+        wallets is WalletLoaded ? wallets.wallets : const <Wallet>[];
     final accounts =
-        ref.read(bitcoinAccountsProvider).asData?.value ?? const <BitcoinAccount>[];
-    final network = resolveTransactionNetwork(
-      transaction,
+        ref.read(bitcoinAccountsProvider).asData?.value ??
+            const <BitcoinAccount>[];
+    final byActivity = TransactionFilterEngine.apply(
+      source: transactions,
+      activity: _mapStatementFilter(_selectedFilter),
       wallets: walletList,
       accounts: accounts,
     );
-    return switch (filter) {
-      _StatementFilter.all => !transaction.isCancelled,
-      _StatementFilter.incoming =>
-        transaction.isCredit && !transaction.isCancelled,
-      _StatementFilter.outgoing =>
-        transaction.isDebit && !transaction.isCancelled,
-      _StatementFilter.internal =>
-        !transaction.isCancelled &&
-            (network == TransactionNetwork.internal ||
-                network == TransactionNetwork.paymentLinkInternal),
-      _StatementFilter.onchain =>
-        !transaction.isCancelled &&
-            (network == TransactionNetwork.onchain ||
-                network == TransactionNetwork.paymentLinkOnchain),
-      _StatementFilter.cold =>
-        !transaction.isCancelled && network == TransactionNetwork.cold,
-      _StatementFilter.lightning =>
-        !transaction.isCancelled && network == TransactionNetwork.lightning,
-      _StatementFilter.pending =>
-        !transaction.isUnconfirmedExpired &&
-            (transaction.status == TransactionStatus.pending ||
-                transaction.status == TransactionStatus.confirming),
-      _StatementFilter.failed =>
-        transaction.status == TransactionStatus.failed ||
-            transaction.isUnconfirmedExpired,
-      _StatementFilter.cancelled => transaction.isCancelled,
-    };
+    final normalizedQuery = _query.toLowerCase();
+    final filtered = normalizedQuery.isEmpty
+        ? byActivity
+        : byActivity
+            .where((tx) => _searchText(tx).contains(normalizedQuery))
+            .toList(growable: false);
+    final sorted = [...filtered]
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return sorted;
   }
 
   String _searchText(Transaction transaction) {
+    final axes = TransactionAxes.classify(transaction);
+    final rail = switch (axes.rail) {
+      TxRail.internal => 'instant interno internal',
+      TxRail.onchain => 'onchain on-chain bitcoin',
+      TxRail.lightning => 'lightning ln',
+      TxRail.cold => 'cold fria watch',
+    };
+    final direction = switch (axes.direction) {
+      TxDirection.incoming => 'in received recebida entrada',
+      TxDirection.outgoing => 'out sent enviada saida',
+      TxDirection.neutral => 'neutral',
+    };
+    final product = axes.product.name;
+    final lifecycle = axes.lifecycle.name;
+    final partyFrom = resolveTransactionFromParty(transaction);
+    final partyTo = resolveTransactionToParty(
+      transaction,
+      compactHash: false,
+    );
     return [
       transaction.id,
       transaction.fromAddress,
@@ -433,10 +450,16 @@ class _TransactionStatementScreenState
       transaction.externalReference,
       transaction.provider,
       transaction.failureCode,
-      _transactionTitle(transaction),
-      _transactionRailLabel(transaction),
-      _transactionStatusLabel(transaction),
+      transaction.type.name,
+      transaction.rail,
+      transaction.status.name,
       resolvePrimaryTransactionAddress(transaction),
+      rail,
+      direction,
+      product,
+      lifecycle,
+      partyFrom,
+      partyTo,
     ].whereType<String>().join(' ').toLowerCase();
   }
 }
@@ -456,7 +479,7 @@ class _StatementHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _copy(context, pt: 'Extrato', en: 'Statement', es: 'Extracto'),
+          context.tr.statementScreenTitle,
           style: AppTypography.newsreader(
             color: _StatementColors.textPrimary,
             fontSize: MediaQuery.sizeOf(context).width >= 720 ? 36 : 32,
@@ -498,16 +521,14 @@ class _StatementTabSwitcher extends StatelessWidget {
         children: [
           Expanded(
             child: _StatementTabButton(
-              label: _copy(context,
-                  pt: 'Extrato', en: 'Statement', es: 'Extracto'),
+              label: context.tr.statementScreenTitle,
               selected: selected == _StatementTab.statement,
               onTap: () => onSelected(_StatementTab.statement),
             ),
           ),
           Expanded(
             child: _StatementTabButton(
-              label: _copy(context,
-                  pt: 'Insights', en: 'Insights', es: 'Insights'),
+              label: context.tr.statementTabInsights,
               selected: selected == _StatementTab.insights,
               onTap: () => onSelected(_StatementTab.insights),
             ),
@@ -754,7 +775,9 @@ class _GroupedTransactionList extends StatelessWidget {
         if (children.isNotEmpty) {
           children.add(const SizedBox(height: AppSpacing.xl2));
         }
-        children.add(_StatementDateHeader(label: _dateGroupLabel(day)));
+        children.add(
+          _StatementDateHeader(label: _dateGroupLabel(context, day)),
+        );
         children.add(const SizedBox(height: AppSpacing.sm));
       } else {
         children.add(const SizedBox(height: AppSpacing.xs));
@@ -928,135 +951,22 @@ class _StatementColors {
 
 String _filterLabel(BuildContext context, _StatementFilter filter) {
   return switch (filter) {
-    _StatementFilter.all => _copy(context, pt: 'Todos', en: 'All', es: 'Todos'),
-    _StatementFilter.incoming =>
-      _copy(context, pt: 'Recebidos', en: 'Received', es: 'Recibidos'),
-    _StatementFilter.outgoing =>
-      _copy(context, pt: 'Enviados', en: 'Sent', es: 'Enviados'),
-    _StatementFilter.internal =>
-      _copy(context, pt: 'Internas', en: 'Internal', es: 'Internas'),
-    _StatementFilter.onchain => 'On-chain',
-    _StatementFilter.cold => 'Cold',
-    _StatementFilter.lightning => 'Lightning',
-    _StatementFilter.pending =>
-      _copy(context, pt: 'Pendentes', en: 'Pending', es: 'Pendientes'),
-    _StatementFilter.failed =>
-      _copy(context, pt: 'Falhas', en: 'Failed', es: 'Fallidas'),
-    _StatementFilter.cancelled =>
-      _copy(context, pt: 'Canceladas', en: 'Cancelled', es: 'Canceladas'),
+    _StatementFilter.all => context.tr.financialStatementFilterAll,
+    _StatementFilter.incoming => context.tr.financialStatementFilterIncoming,
+    _StatementFilter.outgoing => context.tr.financialStatementFilterOutgoing,
+    _StatementFilter.internal => context.tr.activityFilterInstant,
+    _StatementFilter.onchain => context.tr.activityFilterOnchain,
+    _StatementFilter.lightning => context.tr.activityFilterLightning,
+    _StatementFilter.cold => context.tr.activityFilterCold,
+    _StatementFilter.pending => context.tr.activityFilterInProgress,
+    _StatementFilter.failed => context.tr.activityFilterProblems,
+    _StatementFilter.cancelled => context.tr.financialStatementFilterCancelled,
   };
 }
 
-String _transactionTitle(Transaction transaction) {
-  if (transaction.isInternal) return 'Transferência interna';
-  if (transaction.isLightning) return 'Pagamento Lightning';
-  if (transaction.type == TransactionType.deposit) return 'Recebido';
-  if (transaction.type == TransactionType.receive) return 'Recebido';
-  if (transaction.type == TransactionType.withdrawal) return 'Saque on-chain';
-  if (transaction.type == TransactionType.send) return 'Enviado';
-  if (transaction.type == TransactionType.fee) return 'Taxa de rede';
-  return 'Transação';
+String _dateGroupLabel(BuildContext context, DateTime day) {
+  // Locale-aware date header (replaces hardcoded PT months).
+  return AppDateTime.formatDate(context, day);
 }
 
-String _transactionRailLabel(Transaction transaction) {
-  if (transaction.isInternal) return 'Transferência interna';
-  if (transaction.isLightning) return 'Lightning';
-  if (transaction.type == TransactionType.deposit) return 'Depósito on-chain';
-  if (transaction.type == TransactionType.withdrawal) return 'Saque on-chain';
-  return 'On-chain';
-}
 
-String _transactionStatusLabel(Transaction transaction) {
-  return switch (transaction.status) {
-    TransactionStatus.confirmed => 'Confirmado',
-    TransactionStatus.confirming => '${transaction.confirmations} confirmações',
-    TransactionStatus.pending => 'Pendente',
-    TransactionStatus.cancelled => 'Cancelada',
-    TransactionStatus.failed => 'Falhou',
-    TransactionStatus.reconciling => 'Em revisão',
-  };
-}
-
-String _dateGroupLabel(DateTime day) {
-  final months = const [
-    'jan.',
-    'fev.',
-    'mar.',
-    'abr.',
-    'mai.',
-    'jun.',
-    'jul.',
-    'ago.',
-    'set.',
-    'out.',
-    'nov.',
-    'dez.',
-  ];
-  return '${day.day} de ${months[day.month - 1]} de ${day.year}';
-}
-
-String _copy(
-  BuildContext context, {
-  required String pt,
-  required String en,
-  required String es,
-}) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => en,
-    'es' => es,
-    _ => pt,
-  };
-}
-
-String statementTransactionTitle(Transaction transaction) {
-  return _transactionTitle(transaction);
-}
-
-String statementTransactionRailLabel(Transaction transaction) {
-  return _transactionRailLabel(transaction);
-}
-
-String statementTransactionStatusLabel(Transaction transaction) {
-  return _transactionStatusLabel(transaction);
-}
-
-String statementTransactionSubtitle(Transaction transaction) {
-  final local = transaction.timestamp.toLocal();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '$hour:$minute · ${_transactionRailLabel(transaction)} · '
-      '${_transactionStatusLabel(transaction)}';
-}
-
-String statementTransactionCounterparty(Transaction transaction) {
-  final displayName = transaction.isDebit
-      ? transaction.receiverDisplayName
-      : transaction.senderDisplayName;
-  final address = resolvePrimaryTransactionAddress(transaction);
-  final fallback = transaction.description?.trim() ?? '';
-  final value = [
-    displayName,
-    address,
-    fallback,
-    'Carteira Kerosene',
-  ].firstWhere((value) => (value ?? '').trim().isNotEmpty)!;
-  return _shorten(value, head: transaction.isInternal ? 22 : 16, tail: 8);
-}
-
-String statementTransactionSignedBtc(Transaction transaction) {
-  return MoneyDisplay.formatAmountFromBtc(
-    btcAmount: transaction.signedAmountBTC,
-    currency: Currency.btc,
-    btcUsd: null,
-    btcEur: null,
-    btcBrl: null,
-    signed: true,
-  );
-}
-
-String _shorten(String value, {int head = 12, int tail = 6}) {
-  final normalized = value.trim();
-  if (normalized.length <= head + tail + 3) return normalized;
-  return '${normalized.substring(0, head)}...'
-      '${normalized.substring(normalized.length - tail)}';
-}

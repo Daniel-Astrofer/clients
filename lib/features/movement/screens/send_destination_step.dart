@@ -5,7 +5,6 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/movement/domain/payment_intent.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
@@ -102,16 +101,26 @@ class SendDestinationStep extends StatelessWidget {
                       onScan: onScan,
                     ),
                     if (destination.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      _DestinationFeedback(
-                        analysis: analysis,
-                        message: _resolveHelperText(
-                          context,
-                          analysis: analysis,
-                          resolved: resolvedIntent,
-                          liveError: liveResolveError,
-                          liveResolving: isLiveResolving,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          // Only real resolve status/errors — no type-detection labels.
+                          final message = _resolveStatusMessage(
+                            context,
+                            resolved: resolvedIntent,
+                            liveError: liveResolveError,
+                            liveResolving: isLiveResolving,
+                          );
+                          if (message == null || message.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: _DestinationFeedback(
+                              analysis: analysis,
+                              message: message,
+                            ),
+                          );
+                        },
                       ),
                     ],
                     if (resolvedIntent != null &&
@@ -137,8 +146,8 @@ class SendDestinationStep extends StatelessWidget {
                         onSelected: onRecentDestinationSelected,
                       ),
                     ] else if (showEmptyContacts) ...[
-                      const SizedBox(height: 32),
-                      _EmptyContactsState(onScan: onScan),
+                      const SizedBox(height: 42),
+                      const _EmptyContactsState(),
                     ],
                   ],
                 ),
@@ -157,14 +166,6 @@ class SendDestinationStep extends StatelessWidget {
   }
 
   /// Local prefix search (≥3 chars) over recent destinations (username/label/address).
-  /// Soften ALL-CAPS l10n labels for bank-like CTAs.
-  static String softContinueLabel(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return trimmed;
-    final lower = trimmed.toLowerCase();
-    return '${lower[0].toUpperCase()}${lower.substring(1)}';
-  }
-
   static List<RecentTransactionDestination> _filterRecentDestinations(
     List<RecentTransactionDestination> all,
     String query,
@@ -186,9 +187,9 @@ class SendDestinationStep extends StatelessWidget {
     }).toList(growable: false);
   }
 
-  String _resolveHelperText(
+  /// Live resolve only — no "detected internal/on-chain/…" helper labels.
+  String? _resolveStatusMessage(
     BuildContext context, {
-    required SendDestinationAnalysis analysis,
     required ResolvedPaymentIntent? resolved,
     required String? liveError,
     required bool liveResolving,
@@ -199,40 +200,13 @@ class SendDestinationStep extends StatelessWidget {
     if (liveResolving) {
       return SendMoneyCopy.progressResolving(context);
     }
-    if (resolved != null && resolved.explainWhy.trim().isNotEmpty) {
+    if (resolved != null) {
       if (resolved.blockers.isNotEmpty) {
         return resolved.blockers.first.message;
       }
-      return resolved.explainWhy;
+      // Prefer blockers only; skip generic explainWhy noise as a label.
     }
-    return _destinationHelperText(context, analysis);
-  }
-
-  String _destinationHelperText(
-    BuildContext context,
-    SendDestinationAnalysis analysis,
-  ) {
-    if (analysis.isEmpty) {
-      return SendMoneyCopy.destinationEmptyHint(context);
-    }
-    if (analysis.isInvalid) {
-      return SendMoneyCopy.destinationInvalidHint(context);
-    }
-    if (analysis.isPaymentLink) {
-      return SendMoneyCopy.destinationPaymentLinkHint(context);
-    }
-    if (analysis.isInternal) {
-      return SendMoneyCopy.destinationInternalHint(context);
-    }
-    if (analysis.isOnChain) {
-      final network =
-          bitcoinNetworkDisplayName(analysis.detectedOnchainNetwork);
-      return SendMoneyCopy.destinationOnchainHint(context, network);
-    }
-    if (analysis.isLightning) {
-      return SendMoneyCopy.destinationLightningHint(context);
-    }
-    return '';
+    return null;
   }
 }
 
@@ -249,47 +223,51 @@ class _RailPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    // Compact rail choice only — no section title / subtitles / stars.
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Text(
-          switch (Localizations.localeOf(context).languageCode) {
-            'en' => 'How to send',
-            'es' => 'Cómo enviar',
-            _ => 'Como enviar',
-          },
-          style: AppTypography.inter(
-            color: SendDestinationStep.internalMutedText,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
+        for (final option in options)
+          _RailChip(
+            label: _railLabel(context, option.rail),
+            selected: option.rail == selected,
+            onTap: () => onSelected(option.rail),
           ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final option in options)
-              _RailChip(
-                option: option,
-                selected: option.rail == selected,
-                onTap: () => onSelected(option.rail),
-              ),
-          ],
-        ),
       ],
     );
+  }
+
+  static String _railLabel(BuildContext context, PaymentRail rail) {
+    final lang = Localizations.localeOf(context).languageCode;
+    return switch (rail) {
+      PaymentRail.internal => switch (lang) {
+          'en' => 'Instant',
+          'es' => 'Instantáneo',
+          _ => 'Instantâneo',
+        },
+      PaymentRail.onchain || PaymentRail.coldOnchain => switch (lang) {
+          'en' => 'On-chain',
+          'es' => 'On-chain',
+          _ => 'On-chain',
+        },
+      PaymentRail.lightning => 'Lightning',
+      PaymentRail.paymentLink => switch (lang) {
+          'en' => 'Link',
+          'es' => 'Link',
+          _ => 'Link',
+        },
+    };
   }
 }
 
 class _RailChip extends StatelessWidget {
-  final RailOption option;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   const _RailChip({
-    required this.option,
+    required this.label,
     required this.selected,
     required this.onTap,
   });
@@ -309,46 +287,14 @@ class _RailChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    option.title,
-                    style: AppTypography.inter(
-                      color: fg,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (option.recommended) ...[
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.star_rounded,
-                      size: 14,
-                      color: selected
-                          ? KeroseneBrandTokens.background.withValues(alpha: 0.85)
-                          : KeroseneBrandTokens.info,
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                option.subtitle,
-                style: AppTypography.inter(
-                  color: selected
-                      ? KeroseneBrandTokens.background.withValues(alpha: 0.72)
-                      : SendDestinationStep.internalMutedText,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Text(
+            label,
+            style: AppTypography.inter(
+              color: fg,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -461,12 +407,7 @@ class _DestinationBottomAction extends StatelessWidget {
             ),
             child: isLoading
                 ? const CupertinoActivityIndicator(radius: 9)
-                : Text(
-                    // Title-case continue — softer than ALL-CAPS bank microcopy.
-                    SendDestinationStep.softContinueLabel(
-                      context.tr.continueButton,
-                    ),
-                  ),
+                : Text(context.tr.continueButton),
           ),
         ),
       ),
@@ -529,105 +470,51 @@ class _DestinationFeedback extends StatelessWidget {
 }
 
 class _EmptyContactsState extends StatelessWidget {
-  final VoidCallback onScan;
-
-  const _EmptyContactsState({required this.onScan});
+  const _EmptyContactsState();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          SendMoneyCopy.noRecentDestinations(context),
-          textAlign: TextAlign.left,
-          style: AppTypography.inter(
-            color: SendDestinationStep.internalMutedText,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          SendMoneyCopy.noRecentDestinationsBody(context),
-          textAlign: TextAlign.left,
-          style: AppTypography.inter(
-            color: SendDestinationStep.internalMutedText,
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 20),
-        _DestinationTipRow(
-          icon: KeroseneIcons.internalTransfer,
-          label: SendMoneyCopy.destinationTipInternal(context),
-        ),
-        const SizedBox(height: 10),
-        _DestinationTipRow(
-          icon: KeroseneIcons.lightning,
-          label: SendMoneyCopy.destinationTipLightning(context),
-        ),
-        const SizedBox(height: 10),
-        _DestinationTipRow(
-          icon: KeroseneIcons.onchain,
-          label: SendMoneyCopy.destinationTipOnchain(context),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 48,
-          child: OutlinedButton.icon(
-            onPressed: onScan,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: SendDestinationStep.internalText,
-              side: const BorderSide(color: SendDestinationStep.internalBorder),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              textStyle: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: SendDestinationStep.internalSurfaceHigh,
+            ),
+            child: const Center(
+              child: Icon(
+                KeroseneIcons.userAdd,
+                color: SendDestinationStep.internalMutedText,
+                size: 32,
               ),
             ),
-            icon: const Icon(KeroseneIcons.qr, size: 18),
-            label: Text(SendMoneyCopy.destinationScanAction(context)),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DestinationTipRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _DestinationTipRow({
-    required this.icon,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: SendDestinationStep.internalSurfaceHigh,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SendDestinationStep.internalBorder),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: SendDestinationStep.internalMutedText),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: AppTypography.inter(
-                color: SendDestinationStep.internalText,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+          const SizedBox(height: 16),
+          Text(
+            SendMoneyCopy.noRecentDestinations(context),
+            textAlign: TextAlign.center,
+            style: AppTypography.newsreader(
+              color: SendDestinationStep.internalText,
+              fontSize: 28,
+              fontWeight: FontWeight.w500,
+              height: 1.2,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            SendMoneyCopy.noRecentDestinationsBody(context),
+            textAlign: TextAlign.center,
+            style: AppTypography.inter(
+              color: SendDestinationStep.internalMutedText,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              height: 1.5,
+              letterSpacing: 0,
             ),
           ),
         ],

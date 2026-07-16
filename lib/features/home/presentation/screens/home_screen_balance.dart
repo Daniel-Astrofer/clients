@@ -780,44 +780,23 @@ Color homeBalanceAccentFor(HomeLedgerBalanceView view) {
 }
 
 String homeInternalBalanceTitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Internal balance',
-    'es' => 'Saldo interno',
-    _ => 'Saldo Interno',
-  };
+  return context.tr.homeBalanceInternal;
 }
 
 String homeOnchainBalanceTitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'On-chain balance',
-    'es' => 'Saldo on-chain',
-    _ => 'Saldo Onchain',
-  };
+  return context.tr.homeBalanceOnchain;
 }
 
 String homeColdBalanceTitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Cold wallet (on-chain)',
-    'es' => 'Cold wallet (en cadena)',
-    _ => 'Cold wallet (na rede)',
-  };
+  return context.tr.homeBalanceCold;
 }
 
 String homeTotalBalanceTitle(BuildContext context) {
-  // Spendable total (internal + custodial available). No "to send" marketing copy.
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Balance',
-    'es' => 'Saldo',
-    _ => 'Saldo',
-  };
+  return context.tr.homeBalanceTotal;
 }
 
 String homeTotalTabLabel(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Balance',
-    'es' => 'Saldo',
-    _ => 'Saldo',
-  };
+  return context.tr.homeBalanceTotal;
 }
 
 String homeBtcMarketChangeLabel(
@@ -825,78 +804,42 @@ String homeBtcMarketChangeLabel(
   required String sign,
   required String percent,
 }) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'BTC market $sign$percent% (24h)',
-    'es' => 'BTC mercado $sign$percent% (24h)',
-    _ => 'BTC mercado $sign$percent% (24h)',
-  };
+  return context.tr.homeBtcMarketChange(sign, percent);
 }
 
 String homeQuoteUnavailableLabel(BuildContext context, Currency currency) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => '${currency.code} unavailable',
-    'es' => '${currency.code} no disponible',
-    _ => '${currency.code} indisponível',
-  };
+  return context.tr.homeQuoteUnavailable(currency.code);
 }
 
 /// Kept for callers; product no longer shows this dual-ledger subtitle on home.
 String homeAvailableSubtitle(BuildContext context) => '';
 
 String homePlatformTabLabel(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Internal',
-    'es' => 'Interno',
-    _ => 'Interno',
-  };
+  return context.tr.homeWalletPlatform;
 }
 
 String homeOnchainTabLabel(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'On-chain',
-    'es' => 'On-chain',
-    _ => 'Onchain',
-  };
+  return context.tr.homeOnchainTab;
 }
 
 String homeColdTabLabel(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Cold',
-    'es' => 'Cold',
-    _ => 'Cold',
-  };
+  return context.tr.homeColdTab;
 }
 
 String homeCofreTabLabel(BuildContext context) => homeColdTabLabel(context);
 
 String homeGlobalWalletTitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Global wallet',
-    'es' => 'Cartera global',
-    _ => 'Carteira Global',
-  };
+  return context.tr.homeWalletTotalLabel;
 }
 
 String homeConsolidatedWalletTitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Total Balance',
-    'es' => 'Saldo Total',
-    _ => 'Saldo Total',
-  };
+  return context.tr.homeBalanceTotal;
 }
 
 String homeOnchainWalletCardTitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'On-chain wallet',
-    'es' => 'Cartera on-chain',
-    _ => 'Carteira Onchain',
-  };
+  return context.tr.homeOnchainWalletCardTitle;
 }
 
 String homeStatementActionLabel(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Go to statement',
-    'es' => 'Ir al extracto',
-    _ => 'Ir para extrato',
-  };
+  return context.tr.homeStatementAction;
 }

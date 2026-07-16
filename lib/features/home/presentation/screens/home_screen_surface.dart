@@ -307,23 +307,26 @@ class HomePaginationDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var index = 0; index < count; index++) ...[
-          if (index > 0) SizedBox(width: homeSize(6)),
-          Container(
-            width: homeSize(6),
-            height: homeSize(6),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: index == activeIndex
-                  ? Colors.white
-                  : homeMutedTextColor.withValues(alpha: 0.5),
+    return Semantics(
+      label: 'Página ${activeIndex + 1} de $count',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var index = 0; index < count; index++) ...[
+            if (index > 0) SizedBox(width: homeSize(6)),
+            Container(
+              width: homeSize(6),
+              height: homeSize(6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: index == activeIndex
+                    ? Colors.white
+                    : homeMutedTextColor.withValues(alpha: 0.5),
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
