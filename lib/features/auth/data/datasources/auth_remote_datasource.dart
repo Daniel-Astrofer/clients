@@ -281,6 +281,20 @@ abstract class AuthRemoteDataSource {
   /// Finaliza registro de passkey para usuário logado
   Future<void> passkeyRegisterFinish(Map<String, dynamic> credential);
 
+  Future<Map<String, dynamic>> deviceKeyRegisterStart();
+
+  Future<void> deviceKeyRegisterFinish(Map<String, dynamic> credential);
+
+  Future<Map<String, dynamic>> deviceKeyRegisterOnboardingStart({
+    required String sessionId,
+    String? username,
+  });
+
+  Future<LoginResult> deviceKeyRegisterOnboardingFinish(
+    String sessionId,
+    Map<String, dynamic> credential,
+  );
+
   Future<ActivationStatusResult> getActivationStatus();
 
   Future<ActivationStatusResult> createActivationDepositLink();
@@ -738,6 +752,89 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (e is AppException) rethrow;
       throw ServerException(
           message: 'Não conseguimos concluir a confirmação por passkey.');
+    }
+  }
+
+  // ─── Device Key (canonical KEROSENE_JSON_V1) ─────────────────────────────────
+
+  Map<String, dynamic> _asStringKeyedMap(Object? data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw const ServerException(
+      message: 'Resposta da chave do dispositivo inválida.',
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> deviceKeyRegisterStart() async {
+    try {
+      final response = await apiClient.post(AppConfig.authDeviceKeyRegisterStart);
+      return _asStringKeyedMap(response.data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message: 'Não conseguimos iniciar o registro da chave do dispositivo.',
+      );
+    }
+  }
+
+  @override
+  Future<void> deviceKeyRegisterFinish(Map<String, dynamic> credential) async {
+    try {
+      await apiClient.post(
+        AppConfig.authDeviceKeyRegisterFinish,
+        data: credential,
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message: 'Não conseguimos concluir o registro da chave do dispositivo.',
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> deviceKeyRegisterOnboardingStart({
+    required String sessionId,
+    String? username,
+  }) async {
+    try {
+      final response = await apiClient.post(
+        AppConfig.authDeviceKeyOnboardingStart,
+        queryParameters: {
+          'sessionId': sessionId,
+          if (username != null && username.trim().isNotEmpty)
+            'username': username.trim(),
+        },
+      );
+      return _asStringKeyedMap(response.data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message:
+            'Não conseguimos iniciar a chave do dispositivo no onboarding.',
+      );
+    }
+  }
+
+  @override
+  Future<LoginResult> deviceKeyRegisterOnboardingFinish(
+    String sessionId,
+    Map<String, dynamic> credential,
+  ) async {
+    try {
+      final response = await apiClient.post(
+        AppConfig.authDeviceKeyOnboardingFinish,
+        queryParameters: {'sessionId': sessionId},
+        data: credential,
+      );
+      return LoginResult.fromResponseData(response.data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message:
+            'Não conseguimos concluir a chave do dispositivo no onboarding.',
+      );
     }
   }
 

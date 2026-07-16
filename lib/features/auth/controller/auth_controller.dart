@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/signup_usecase.dart';
 import '../domain/repositories/auth_repository.dart';
+import '../domain/entities/user.dart';
 import 'package:kerosene/features/auth/domain/entities/login_result.dart';
 import '../../../core/services/background_service.dart';
+import '../../../core/services/device_key_service.dart';
 import '../../../core/services/passkey_service.dart';
+import '../../../core/security/device_credential_enroll_policy.dart';
 import '../../../core/errors/failures.dart';
 import '../../../core/providers/alert_preferences_provider.dart';
 import '../presentation/state/auth_state.dart';
@@ -600,6 +603,15 @@ class AuthController extends Notifier<AuthState> {
     final sessionUser = currentState.user;
     final username = sessionUser.name;
 
+    // N+1: prefer canonical Device Key enroll on mobile/desktop first-class.
+    if (await DeviceCredentialEnrollPolicy.preferCanonicalDeviceKeyEnroll()) {
+      return _registerDeviceKeyAuthenticated(
+        username: username,
+        sessionUser: sessionUser,
+        confirmUnlinkDevice: confirmUnlinkDevice,
+      );
+    }
+
     final startResult = await authRepository.passkeyRegisterStart(username);
     final challengeHex = startResult.fold<String?>(
       (failure) => null,
@@ -684,6 +696,80 @@ class AuthController extends Notifier<AuthState> {
     return false;
   }
 
+  Future<PasskeyRegisterResult> _registerDeviceKeyAuthenticated({
+    required String username,
+    required User sessionUser,
+    bool confirmUnlinkDevice = false,
+  }) async {
+    final startResult = await authRepository.deviceKeyRegisterStart();
+    final challengeJson = startResult.fold<Map<String, dynamic>?>(
+      (failure) => null,
+      (value) => value,
+    );
+    if (challengeJson == null) {
+      final failure = startResult.fold((f) => f, (_) => null)!;
+      return PasskeyRegisterResult.failure(
+        message: failure.message,
+        errorCode: failure.errorCode,
+        data: failure.data,
+      );
+    }
+
+    try {
+      final challenge = DeviceKeyChallenge.fromJson(challengeJson);
+      final credential = await DeviceKeyService.instance.register(
+        challenge: challenge,
+        username: username,
+        sessionId: '',
+      );
+      if (confirmUnlinkDevice) {
+        credential['confirmUnlinkDevice'] = true;
+        credential['confirm_unlink_device'] = true;
+      }
+
+      final finishResult =
+          await authRepository.deviceKeyRegisterFinish(credential);
+      final finishFailure = finishResult.fold((f) => f, (_) => null);
+      if (finishFailure != null) {
+        if (_isDeviceBindingConflict(finishFailure)) {
+          return PasskeyRegisterResult.deviceConflict(
+            message: finishFailure.message,
+            errorCode: finishFailure.errorCode,
+            data: finishFailure.data,
+          );
+        }
+        return PasskeyRegisterResult.failure(
+          message: finishFailure.message,
+          errorCode: finishFailure.errorCode,
+          data: finishFailure.data,
+        );
+      }
+
+      await passkeyService.markDeviceBound(username: username);
+      final refreshedUser = await authRepository.getCurrentUser();
+      refreshedUser.fold(
+        (_) {
+          if (state is! AuthAuthenticated) {
+            state = AuthAuthenticated(sessionUser);
+          }
+        },
+        (user) => state = AuthAuthenticated(user),
+      );
+      debugPrint('Device Key registered successfully.');
+      return const PasskeyRegisterResult.success();
+    } catch (e) {
+      final mapped = _mapPasskeyExceptionToAuthError(
+        e,
+        fallbackMessage: 'Erro no registro da chave do dispositivo',
+      );
+      return PasskeyRegisterResult.failure(
+        message: mapped.message,
+        errorCode: mapped.errorCode,
+        data: mapped.data,
+      );
+    }
+  }
+
   Future<void> registerPasskeyOnboarding(
     String sessionId, {
     bool confirmUnlinkDevice = false,
@@ -696,7 +782,16 @@ class AuthController extends Notifier<AuthState> {
 
     state = const AuthLoading();
 
-    // 1. Get challenge from backend
+    if (await DeviceCredentialEnrollPolicy.preferCanonicalDeviceKeyEnroll()) {
+      await _registerDeviceKeyOnboarding(
+        sessionId: sessionId,
+        username: username,
+        confirmUnlinkDevice: confirmUnlinkDevice,
+      );
+      return;
+    }
+
+    // Legacy WebAuthn-shaped path (allowed only when policy permits).
     final result = await authRepository.passkeyRegisterOnboardingStart(
       sessionId: sessionId,
       username: username,
@@ -717,14 +812,12 @@ class AuthController extends Notifier<AuthState> {
             );
           }
 
-          // 2. Register passkey (generates key pair + signs challenge with biometric)
           final credential = await passkeyService.register(
             challengeHex: challengeHex,
             username: effectiveUsername,
             confirmUnlinkDevice: confirmUnlinkDevice,
           );
 
-          // 3. Finish registration with backend
           final finishResult =
               await authRepository.passkeyRegisterOnboardingFinish(
             sessionId,
@@ -744,6 +837,60 @@ class AuthController extends Notifier<AuthState> {
           state = _mapPasskeyExceptionToAuthError(
             e,
             fallbackMessage: 'Erro no registro de passkey',
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _registerDeviceKeyOnboarding({
+    required String sessionId,
+    String? username,
+    bool confirmUnlinkDevice = false,
+  }) async {
+    final startResult = await authRepository.deviceKeyRegisterOnboardingStart(
+      sessionId: sessionId,
+      username: username,
+    );
+
+    await startResult.fold(
+      (failure) async {
+        state = _mapFailureToAuthError(failure);
+      },
+      (challengeJson) async {
+        try {
+          final effectiveUsername =
+              username ?? 'User_${sessionId.substring(0, 4)}';
+          final challenge = DeviceKeyChallenge.fromJson(challengeJson);
+          final credential = await DeviceKeyService.instance.register(
+            challenge: challenge,
+            username: effectiveUsername,
+            sessionId: sessionId,
+          );
+          if (confirmUnlinkDevice) {
+            credential['confirmUnlinkDevice'] = true;
+            credential['confirm_unlink_device'] = true;
+          }
+
+          final finishResult =
+              await authRepository.deviceKeyRegisterOnboardingFinish(
+            sessionId,
+            credential,
+          );
+
+          await finishResult.fold(
+            (failure) async {
+              state = _mapFailureToAuthError(failure);
+            },
+            (_) async {
+              await passkeyService.markDeviceBound(username: effectiveUsername);
+              await _checkAuthStatus();
+            },
+          );
+        } catch (e) {
+          state = _mapPasskeyExceptionToAuthError(
+            e,
+            fallbackMessage: 'Erro no registro da chave do dispositivo',
           );
         }
       },

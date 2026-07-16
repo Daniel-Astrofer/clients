@@ -395,6 +395,93 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> deviceKeyRegisterStart() async {
+    try {
+      final challenge = await remoteDataSource.deviceKeyRegisterStart();
+      return Right(challenge);
+    } on AppException catch (e) {
+      return Left(ServerFailure(
+        message: e.message,
+        statusCode: e.statusCode,
+        errorCode: e.errorCode,
+        data: e.data,
+      ));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deviceKeyRegisterFinish(
+    Map<String, dynamic> credential,
+  ) async {
+    try {
+      await remoteDataSource.deviceKeyRegisterFinish(credential);
+      return const Right(null);
+    } on AppException catch (e) {
+      return Left(ServerFailure(
+        message: e.message,
+        statusCode: e.statusCode,
+        errorCode: e.errorCode,
+        data: e.data,
+      ));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> deviceKeyRegisterOnboardingStart({
+    required String sessionId,
+    String? username,
+  }) async {
+    try {
+      final challenge = await remoteDataSource.deviceKeyRegisterOnboardingStart(
+        sessionId: sessionId,
+        username: username,
+      );
+      return Right(challenge);
+    } on AppException catch (e) {
+      return Left(ServerFailure(
+        message: e.message,
+        statusCode: e.statusCode,
+        errorCode: e.errorCode,
+        data: e.data,
+      ));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, LoginResult>> deviceKeyRegisterOnboardingFinish(
+    String sessionId,
+    Map<String, dynamic> credential,
+  ) async {
+    try {
+      final result = await remoteDataSource.deviceKeyRegisterOnboardingFinish(
+        sessionId,
+        credential,
+      );
+      if (!result.requiresTotp &&
+          result.jwt.isNotEmpty &&
+          result.jwt.contains('.')) {
+        await localDataSource.saveToken(result.jwt);
+      }
+      return Right(result);
+    } on AppException catch (e) {
+      return Left(ServerFailure(
+        message: e.message,
+        statusCode: e.statusCode,
+        errorCode: e.errorCode,
+        data: e.data,
+      ));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
   // ─── Account activation deposit flow ─────────────────────────────────────────
   @override
   Future<Either<Failure, ActivationStatusResult>> getActivationStatus() async {

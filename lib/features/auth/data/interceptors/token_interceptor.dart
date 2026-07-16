@@ -199,6 +199,9 @@ class TokenInterceptor extends QueuedInterceptor {
           path.contains('/auth/passkey/onboarding/') ||
           path.contains('/auth/passkey/login/') ||
           path.contains('/auth/passkey/register/onboarding') ||
+          path.contains('/auth/device-key/challenge') ||
+          path.contains('/auth/device-key/verify') ||
+          path.contains('/auth/device-key/onboarding/') ||
           path.contains('/auth/hardware/challenge') ||
           path.contains('/auth/hardware/verify') ||
           path.contains('/auth/hardware/register/onboarding');

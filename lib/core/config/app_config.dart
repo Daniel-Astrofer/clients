@@ -97,6 +97,10 @@ class AppConfig {
   static const String authDeviceKeyRegisterFinish =
       '/auth/device-key/register/finish';
   static const String authDeviceKeyVerify = '/auth/device-key/verify';
+  static const String authDeviceKeyOnboardingStart =
+      '/auth/device-key/onboarding/start';
+  static const String authDeviceKeyOnboardingFinish =
+      '/auth/device-key/onboarding/finish';
   static const String authPasskeyOnboardingStart =
       '/auth/passkey/onboarding/start';
   static const String authPasskeyOnboardingFinish =
@@ -133,6 +137,19 @@ class AppConfig {
   static const bool deviceKeyLoginEnabled = bool.fromEnvironment(
     'DEVICE_KEY_LOGIN_ENABLED',
     defaultValue: true,
+  );
+
+  /// Release N+1: new enrolls prefer KEROSENE_JSON_V1 Device Key on mobile.
+  static const bool preferCanonicalDeviceKeyEnroll = bool.fromEnvironment(
+    'PREFER_CANONICAL_DEVICE_KEY_ENROLL',
+    defaultValue: true,
+  );
+
+  /// Release N+1: WebAuthn-shaped enroll disabled on tier-A by default.
+  /// Set true only for emergency rollback.
+  static const bool allowWebAuthnShapedEnroll = bool.fromEnvironment(
+    'ALLOW_WEBAUTHN_SHAPED_ENROLL',
+    defaultValue: false,
   );
 
   // 1.3 Profile

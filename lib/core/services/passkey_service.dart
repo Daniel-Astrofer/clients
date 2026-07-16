@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 
 import '../config/app_config.dart';
 import '../security/device_credential_capabilities.dart';
+import '../security/device_credential_enroll_policy.dart';
 import '../telemetry/device_credential_telemetry.dart';
 import '../utils/device_helper.dart';
 import 'sovereign_auth_service.dart';
@@ -56,6 +57,25 @@ class PasskeyService {
         capabilities: caps,
       );
       throw Exception('${error.code}: ${error.message}');
+    }
+
+    // Release N+1: block new WebAuthn-shaped enroll on first-class mobile.
+    // Existing keys may still authenticate via [authenticate].
+    final allowShaped =
+        await DeviceCredentialEnrollPolicy.allowWebAuthnShapedEnroll(
+      appPinConfigured: appPinConfigured,
+    );
+    if (!allowShaped) {
+      await DeviceCredentialTelemetry.recordAssertion(
+        kind: 'WEBAUTHN_SHAPED',
+        outcome: 'enroll_deprecated',
+        capabilities: capabilities,
+      );
+      throw Exception(
+        'ERR_AUTH_WEBAUTHN_SHAPED_ENROLL_DEPRECATED: '
+        'Neste dispositivo use a Chave do dispositivo (Device Key). '
+        'O registro WebAuthn-shaped está descontinuado no mobile.',
+      );
     }
 
     final subject = _subject(username);
@@ -150,9 +170,10 @@ class PasskeyService {
     final authDataBase64Url = _toBase64Url(assertion.authDataBytes);
     final deviceMetadata = await DeviceHelper.getDeviceMetadata();
 
+    // N+1: still valid for already-enrolled keys; counted as legacy path.
     await DeviceCredentialTelemetry.recordAssertion(
       kind: 'WEBAUTHN_SHAPED',
-      outcome: 'signed',
+      outcome: 'signed_legacy',
     );
 
     return {

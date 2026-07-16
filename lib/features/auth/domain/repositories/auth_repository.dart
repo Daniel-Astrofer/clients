@@ -106,6 +106,26 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> passkeyRegisterFinish(
       Map<String, dynamic> credential);
 
+  /// Device Key (KEROSENE_JSON_V1) — authenticated register start.
+  Future<Either<Failure, Map<String, dynamic>>> deviceKeyRegisterStart();
+
+  /// Device Key — authenticated register finish.
+  Future<Either<Failure, void>> deviceKeyRegisterFinish(
+    Map<String, dynamic> credential,
+  );
+
+  /// Device Key — onboarding start (returns challenge map).
+  Future<Either<Failure, Map<String, dynamic>>> deviceKeyRegisterOnboardingStart({
+    required String sessionId,
+    String? username,
+  });
+
+  /// Device Key — onboarding finish.
+  Future<Either<Failure, LoginResult>> deviceKeyRegisterOnboardingFinish(
+    String sessionId,
+    Map<String, dynamic> credential,
+  );
+
   Future<Either<Failure, ActivationStatusResult>> getActivationStatus();
 
   Future<Either<Failure, ActivationStatusResult>> createActivationDepositLink();

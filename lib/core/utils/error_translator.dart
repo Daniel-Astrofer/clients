@@ -109,7 +109,9 @@ class ErrorTranslator {
       case 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED':
       case 'ERR_AUTH_DEVICE_KEY_ENROLL_BLOCKED':
       case 'ERR_AUTH_DEVICE_KEY_STORAGE_UNAVAILABLE':
-        return safeExtractedMessage ?? l10n.passkeyNoBiometrics;
+      case 'ERR_AUTH_WEBAUTHN_SHAPED_ENROLL_DEPRECATED':
+        return safeExtractedMessage ??
+            'Atualize a chave deste dispositivo. O registro antigo foi descontinuado.';
       case 'AUTH_011':
       case 'ERR_AUTH_TOTP_TIMEOUT':
         return l10n.errAuthTotpTimeout;
