@@ -11,10 +11,17 @@ import '../../../../core/providers/tor_providers.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
-import 'package:kerosene/features/movement/providers/transaction_provider.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
+import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 import '../../../../core/utils/device_helper.dart';
+import 'financial_dirty_provider.dart';
+import 'financial_refresh.dart';
 import 'wallet_provider.dart';
+
+export 'financial_refresh.dart';
+export 'financial_dirty_provider.dart';
 
 const double _balanceChangeEpsilon = 0.000000001;
 const financialRealtimeFallbackInterval = Duration(seconds: 30);
@@ -72,9 +79,11 @@ class FinancialRealtimeRefreshLoop {
     try {
       await _refresh();
     } catch (_) {
-      debugPrint(
-        'BalanceWebSocket: periodic financial refresh failed; retrying later.',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'BalanceWebSocket: periodic financial refresh failed; retrying later.',
+        );
+      }
     } finally {
       _refreshInFlight = false;
       _scheduleNext();
@@ -111,7 +120,9 @@ final balanceWebSocketServiceProvider =
   final authState = ref.watch(authControllerProvider);
 
   if (authState is! AuthAuthenticated) {
-    debugPrint('BalanceWebSocket: authenticated session required.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocket: authenticated session required.');
+    }
     return null;
   }
 
@@ -119,19 +130,27 @@ final balanceWebSocketServiceProvider =
   final baseUrl = ref.watch(torApiUrlProvider);
 
   final userId = authState.user.id;
-  debugPrint('BalanceWebSocket: preparing balance stream.');
+  if (kDebugMode) {
+    debugPrint('BalanceWebSocket: preparing balance stream.');
+  }
 
   // Obter token JWT do armazenamento seguro
   String? token;
   try {
     token = await ref.read(authLocalDataSourceProvider).getToken();
-    debugPrint('BalanceWebSocket: session credential lookup completed.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocket: session credential lookup completed.');
+    }
     token = _normalizeSessionToken(token);
     if (token != null && token.length < 10) {
-      debugPrint('BalanceWebSocket: session credential was rejected locally.');
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocket: session credential was rejected locally.');
+      }
     }
   } catch (_) {
-    debugPrint('BalanceWebSocket: session credential unavailable.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocket: session credential unavailable.');
+    }
   }
 
   final deviceHash = await DeviceHelper.getDeviceHash();
@@ -145,41 +164,68 @@ final balanceWebSocketServiceProvider =
     authToken: token,
     deviceHash: deviceHash,
     onSessionInvalidated: () {
-      debugPrint('BalanceWebSocket: session invalidated by realtime channel.');
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocket: session invalidated by realtime channel.');
+      }
       ref.read(sessionInvalidationProvider.notifier).emit();
     },
     onBalanceUpdate: (update) {
-      debugPrint('BalanceWebSocket: balance update received.');
-
-      // ── Detect balance increase and record synthetic transaction ──
-      final currentWalletState = ref.read(walletProvider);
-      if (currentWalletState is WalletLoaded) {
-        final wallet = currentWalletState.wallets.firstWhere(
-          (w) => w.name == update.walletName,
-          orElse: () => currentWalletState.wallets.first,
-        );
-
-        final oldBalance = wallet.balance;
-        final newBalance = update.newBalance;
-        final delta = newBalance - oldBalance;
-        final hasMeaningfulChange = delta.abs() > _balanceChangeEpsilon;
-
-        if (hasMeaningfulChange) {
-          ref.invalidate(transactionHistoryProvider);
-          ref.invalidate(pagedTransactionHistoryProvider);
-          ref.invalidate(depositsProvider);
-          ref.invalidate(depositBalanceProvider);
-          ref.invalidate(externalTransfersProvider);
-        }
-
-        // Notification title/body are backend-authored through onNotification.
-        // Balance updates only refresh local state and cached financial data.
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocket: balance update received.');
       }
 
-      // Update wallet balance in state
-      ref
-          .read(walletProvider.notifier)
-          .updateBalanceFromWebSocket(update.walletName, update.newBalance);
+      // Match by KFE wallet UUID only (never name/label — collision risk).
+      final currentWalletState = ref.read(walletProvider);
+      if (currentWalletState is WalletLoaded) {
+        final wallets = currentWalletState.wallets;
+        final walletId = update.walletId.trim();
+        final matched = walletId.isEmpty
+            ? null
+            : wallets.cast<Wallet?>().firstWhere(
+                  (w) => w != null && w.id == walletId,
+                  orElse: () => null,
+                );
+
+        final oldBalance = matched?.balance;
+        final newBalance = update.newBalance;
+        final hasMeaningfulChange = oldBalance == null
+            ? update.amount.abs() > _balanceChangeEpsilon
+            : (newBalance - oldBalance).abs() > _balanceChangeEpsilon;
+
+        // Balance and extrato always move together (reactive parity).
+        // Cold observe context may not change available balance but must refresh
+        // confirmations / new observed spends.
+        final isObservedContext =
+            update.context.toLowerCase().contains('observ');
+        if (hasMeaningfulChange || isObservedContext) {
+          ref.read(financialDirtyProvider.notifier).markDirty();
+          unawaited(refreshFinancialProjection(ref).then((_) {
+            ref.read(financialDirtyProvider.notifier).clear();
+          }));
+        }
+      } else {
+        ref.read(financialDirtyProvider.notifier).markDirty();
+        unawaited(refreshFinancialProjection(ref).then((_) {
+          ref.read(financialDirtyProvider.notifier).clear();
+        }));
+      }
+
+      // Apply only with a stable wallet UUID; name-only events force full refresh.
+      final key = update.walletId.trim();
+      if (key.isEmpty) {
+        unawaited(ref.read(walletProvider.notifier).refresh());
+      } else {
+        ref.read(walletProvider.notifier).updateBalanceFromWebSocketUpdate(
+              walletKey: key,
+              newBalance: update.newBalance,
+              kind: update.kind,
+              availableSats: update.availableSats,
+              observedSats: update.observedSats,
+              primarySats: update.primarySats,
+              bucket: update.bucket,
+              context: update.context,
+            );
+      }
     },
     onNotification: (event) {
       final notification = SessionNotificationItem(
@@ -201,40 +247,49 @@ final balanceWebSocketServiceProvider =
       }
 
       ref.read(sessionNotificationFeedProvider.notifier).add(notification);
-      ref.invalidate(paymentLinksProvider);
-      ref.invalidate(transactionHistoryProvider);
-      ref.invalidate(pagedTransactionHistoryProvider);
-      ref.invalidate(depositsProvider);
-      ref.invalidate(depositBalanceProvider);
-      unawaited(ref.read(walletProvider.notifier).refresh());
+      // Single coordinator: balance + extrato + links.
+      ref.read(financialDirtyProvider.notifier).markDirty();
+      unawaited(refreshFinancialProjection(ref).then((_) {
+        ref.read(financialDirtyProvider.notifier).clear();
+      }));
 
       if (_isTransactionNotification(notification)) {
         String finalTitle = notification.title;
         String finalBody = notification.body;
 
         final isIncoming = _isIncomingTransactionNotification(notification);
+        final isOutgoing = notification.kind ==
+                SessionNotificationItem.kindPaymentSent ||
+            notification.kind == SessionNotificationItem.kindTransferSent;
         if (isIncoming) {
           String rede = 'Interna';
-          if (notification.kind == SessionNotificationItem.kindDepositDetected || 
+          if (notification.kind == SessionNotificationItem.kindDepositDetected ||
               notification.kind == SessionNotificationItem.kindDepositConfirmed) {
             rede = 'Onchain';
-          } else if (notification.kind == SessionNotificationItem.kindPaymentRequestPaid) {
+          } else if (notification.kind ==
+              SessionNotificationItem.kindPaymentRequestPaid) {
             rede = 'Lightning';
           }
 
           finalTitle = 'Transferência $rede recebida';
 
-          String amount = notification.metadata['amount'] ?? '';
-          String walletName = notification.metadata['walletName'] ?? notification.metadata['wallet_name'] ?? '';
+          String amount = notification.metadata['amount'] ??
+              notification.metadata['amountSats'] ??
+              '';
+          String walletName = notification.metadata['walletName'] ??
+              notification.metadata['wallet_name'] ??
+              '';
 
           if (amount.isEmpty || walletName.isEmpty) {
-             final btcMatch = RegExp(r'([\d\.]+)\s*BTC', caseSensitive: false).firstMatch(notification.body);
-             if (btcMatch != null) amount = btcMatch.group(1)!;
+            final btcMatch = RegExp(r'([\d\.]+)\s*BTC', caseSensitive: false)
+                .firstMatch(notification.body);
+            if (btcMatch != null) amount = btcMatch.group(1)!;
 
-             final emMatch = RegExp(r'em\s+([\w\s]+)', caseSensitive: false).firstMatch(notification.body);
-             if (emMatch != null) walletName = emMatch.group(1)!.trim();
+            final emMatch = RegExp(r'em\s+([\w\s]+)', caseSensitive: false)
+                .firstMatch(notification.body);
+            if (emMatch != null) walletName = emMatch.group(1)!.trim();
           }
-          
+
           if (walletName.isEmpty) {
             walletName = 'Principal';
           }
@@ -242,17 +297,35 @@ final balanceWebSocketServiceProvider =
           if (amount.isNotEmpty) {
             if (amount.contains('.')) {
               amount = amount.replaceAll(RegExp(r'0+$'), '');
-              if (amount.endsWith('.')) amount = amount.substring(0, amount.length - 1);
+              if (amount.endsWith('.')) {
+                amount = amount.substring(0, amount.length - 1);
+              }
             }
             finalBody = 'Sua carteira $walletName recebeu $amount BTC.';
           } else {
-            finalBody = notification.body.replaceAllMapped(RegExp(r'\d+\.\d+'), (match) {
-               String num = match.group(0)!;
-               num = num.replaceAll(RegExp(r'0+$'), '');
-               if (num.endsWith('.')) num = num.substring(0, num.length - 1);
-               return num;
-             });
+            finalBody = notification.body;
           }
+
+          // In-app education dialog + balance pulse on the home surface.
+          final amountLabel =
+              amount.isNotEmpty ? '$amount BTC' : 'fundos';
+          enqueueIncomingTransfer(
+            ref.read(homeEducationQueueProvider.notifier),
+            ref.read(homeBalanceReceivePulseProvider.notifier),
+            id: notification.dedupeKey.isNotEmpty
+                ? notification.dedupeKey
+                : notification.id,
+            amountLabel: amountLabel,
+            walletName: walletName,
+            networkLabel: rede,
+            subtitle: notification.body,
+          );
+        } else if (isOutgoing) {
+          // Prefer server copy (cold outbound uses specific pt-BR titles).
+          finalTitle = notification.title.isNotEmpty
+              ? notification.title
+              : 'Envio on-chain detectado';
+          finalBody = notification.body;
         }
 
         unawaited(
@@ -267,11 +340,12 @@ final balanceWebSocketServiceProvider =
           ),
         );
       }
-      
-      // Banners in-app desativados.
-      // if (alertPreferences.inAppBannersEnabled) {
-      //   ref.read(notificationBannerProvider.notifier).show(notification);
-      // }
+    },
+    onHomeUiEvent: (event) {
+      if (!ref.mounted) {
+        return;
+      }
+      ref.read(homeSurfaceProvider.notifier).applyEventJson(event);
     },
   );
 
@@ -285,44 +359,21 @@ final balanceWebSocketServiceProvider =
   // Core can keep this socket connected while KFE events travel through a
   // separate runtime. Polling remains active as a bounded consistency fallback.
   final refreshLoop = FinancialRealtimeRefreshLoop(
-    refresh: () => _refreshFinancialState(ref, userId.toString()),
+    refresh: () => refreshFinancialProjection(ref),
     scheduler: ref.read(financialRefreshSchedulerProvider),
   )..start();
 
   // Desconectar quando o provider for descartado
   ref.onDispose(() {
-    debugPrint('BalanceWebSocket: disconnecting.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocket: disconnecting.');
+    }
     refreshLoop.dispose();
     service.disconnect();
   });
 
   return service;
 });
-
-Future<void> _refreshFinancialState(Ref ref, String sessionUserId) async {
-  final authState = ref.read(authControllerProvider);
-  if (authState is! AuthAuthenticated ||
-      authState.user.id.toString() != sessionUserId) {
-    return;
-  }
-
-  final walletNotifier = ref.read(walletProvider.notifier);
-
-  // Invalidating the ledger repository also expires the session-scoped history
-  // providers that sit behind the public history facades.
-  ref.invalidate(ledgerRepositoryProvider);
-  ref.invalidate(transactionHistoryProvider);
-  ref.invalidate(pagedTransactionHistoryProvider);
-  ref.invalidate(depositsProvider);
-  ref.invalidate(depositBalanceProvider);
-  ref.invalidate(depositDetailProvider);
-  ref.invalidate(externalTransfersProvider);
-  ref.invalidate(externalTransferDetailProvider);
-  ref.invalidate(paymentLinksProvider);
-  ref.invalidate(txStatusProvider);
-
-  await walletNotifier.refresh();
-}
 
 String? _normalizeSessionToken(String? token) {
   if (token == null) {

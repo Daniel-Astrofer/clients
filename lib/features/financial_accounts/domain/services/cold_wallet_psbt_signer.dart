@@ -13,9 +13,14 @@ import 'package:kerosene/features/financial_accounts/domain/services/electrum_se
 ///
 /// Supports BIP39+BIP84 and Electrum native seeds (segwit `m/0'/{0,1}/*`).
 class ColdWalletPsbtSigner {
+  /// Receive + change gap used when matching PSBT input addresses to local keys.
+  /// Kept in the same ballpark as backend `kfe.descriptor-scan-range` so deep
+  /// Electrum wallets can still sign without re-import.
+  static const int defaultAddressLookahead = 100;
+
   ColdWalletPsbtSigner({
     ColdWalletKeyVault? vault,
-    int addressLookahead = 40,
+    int addressLookahead = defaultAddressLookahead,
   })  : _vault = vault ?? ColdWalletKeyVault.instance,
         _addressLookahead = addressLookahead < 5 ? 5 : addressLookahead;
 
@@ -93,6 +98,41 @@ class ColdWalletPsbtSigner {
       seedKind: kind,
     );
 
+    // First pass with configured lookahead; if nothing matches, expand once for deep wallets.
+    var signed = _trySignWithKeyring(
+      psbtRaw: psbtRaw,
+      network: network,
+      keyring: keyring,
+    );
+    if (signed == null && _addressLookahead < 200) {
+      final expanded = _deriveKeyring(
+        mnemonic: normalized,
+        passphrase: passphrase,
+        network: network,
+        seedKind: kind,
+        lookahead: 200,
+      );
+      signed = _trySignWithKeyring(
+        psbtRaw: psbtRaw,
+        network: network,
+        keyring: expanded,
+      );
+    }
+    if (signed == null) {
+      throw const ColdWalletPsbtSignerException(
+        'ERR_COLD_SIGN_NO_MATCHING_KEYS',
+        'Nenhuma chave local corresponde aos inputs desta PSBT. '
+            'Confira se a seed é a mesma da carteira fria importada.',
+      );
+    }
+    return signed;
+  }
+
+  String? _trySignWithKeyring({
+    required String psbtRaw,
+    required BasedUtxoNetwork network,
+    required Map<String, ECPrivate> keyring,
+  }) {
     final builder = PsbtBuilder.fromBase64(psbtRaw);
     var signedAny = false;
     builder.signAllInput((params) {
@@ -111,15 +151,7 @@ class ColdWalletPsbtSigner {
       signedAny = true;
       return PsbtSignerResponse(signers: [PsbtDefaultSigner(key)]);
     });
-
-    if (!signedAny) {
-      throw const ColdWalletPsbtSignerException(
-        'ERR_COLD_SIGN_NO_MATCHING_KEYS',
-        'Nenhuma chave local corresponde aos inputs desta PSBT. '
-            'Confira se a seed é a mesma da carteira fria importada.',
-      );
-    }
-    return builder.toBase64();
+    return signedAny ? builder.toBase64() : null;
   }
 
   /// Public verification that [mnemonic] matches the expected watch-only xpub.
@@ -144,6 +176,7 @@ class ColdWalletPsbtSigner {
     required String passphrase,
     required BasedUtxoNetwork network,
     required ColdWalletSeedKind seedKind,
+    int? lookahead,
   }) {
     late final Uint8List seed;
     late final String accountPath;
@@ -158,6 +191,7 @@ class ColdWalletPsbtSigner {
       seed = bip39.mnemonicToSeed(mnemonic, passphrase: passphrase);
       accountPath = appColdWalletDerivationPath;
     }
+    final gap = lookahead ?? _addressLookahead;
     try {
       final root = Bip32Slip10Secp256k1.fromSeed(seed);
       final account = (accountPath == 'm' || accountPath == "m/")
@@ -166,7 +200,7 @@ class ColdWalletPsbtSigner {
       final keys = <String, ECPrivate>{};
 
       void indexChain(String chain) {
-        for (var i = 0; i < _addressLookahead; i++) {
+        for (var i = 0; i < gap; i++) {
           final child = account.derivePath('$chain/$i');
           final privBytes = child.privateKey.raw;
           final priv = ECPrivate.fromBytes(privBytes);

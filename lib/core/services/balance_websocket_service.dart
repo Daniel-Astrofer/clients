@@ -49,6 +49,7 @@ class BalanceWebSocketService {
   final String? deviceHash;
   final Function(BalanceUpdate) onBalanceUpdate;
   final Function(RealtimeNotificationEvent)? onNotification;
+  final Function(Map<String, dynamic> event)? onHomeUiEvent;
   final VoidCallback? onSessionInvalidated;
   final BalanceWebSocketReconnectPolicy _reconnectPolicy;
   final BalanceStompClientFactory _stompClientFactory;
@@ -65,6 +66,7 @@ class BalanceWebSocketService {
     this.deviceHash,
     required this.onBalanceUpdate,
     this.onNotification,
+    this.onHomeUiEvent,
     this.onSessionInvalidated,
     BalanceWebSocketReconnectPolicy? reconnectPolicy,
     BalanceStompClientFactory? stompClientFactory,
@@ -78,12 +80,16 @@ class BalanceWebSocketService {
   /// Conecta ao WebSocket do backend via ponte local SOCKS5 (Tor)
   Future<void> connect() async {
     if (_sessionInvalidated) {
-      debugPrint('BalanceWebSocketService: session already invalidated.');
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocketService: session already invalidated.');
+      }
       return;
     }
 
     if (_stompClient != null && (_isConnected || _stompClient!.isActive)) {
-      debugPrint('BalanceWebSocketService: already connected.');
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocketService: already connected.');
+      }
       return;
     }
 
@@ -106,7 +112,9 @@ class BalanceWebSocketService {
 
     final fullUrl = '$baseUrl/ws/balance';
 
-    debugPrint('BalanceWebSocketService: connecting.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocketService: connecting.');
+    }
 
     _stompClient = _stompClientFactory(
       StompConfig.sockJS(
@@ -115,17 +123,25 @@ class BalanceWebSocketService {
           onWebSocketError: _handleWebSocketError,
           onStompError: _handleStompError,
           onDisconnect: (_) {
-            debugPrint('BalanceWebSocketService: disconnected.');
+            if (kDebugMode) {
+              debugPrint('BalanceWebSocketService: disconnected.');
+            }
             _handleConnectionClosed('stomp disconnect');
           },
           beforeConnect: () async {
-            debugPrint('BalanceWebSocketService: starting handshake.');
-            debugPrint(
-              'BalanceWebSocketService: session credential available.',
-            );
+            if (kDebugMode) {
+              debugPrint('BalanceWebSocketService: starting handshake.');
+            }
+            if (kDebugMode) {
+              debugPrint(
+                'BalanceWebSocketService: session credential available.',
+              );
+            }
           },
           onWebSocketDone: () {
-            debugPrint('BalanceWebSocketService: socket closed.');
+            if (kDebugMode) {
+              debugPrint('BalanceWebSocketService: socket closed.');
+            }
             _handleConnectionClosed('socket closed');
           },
           webSocketConnectHeaders: {
@@ -149,8 +165,14 @@ class BalanceWebSocketService {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _reconnectPolicy.reset();
-    debugPrint('BalanceWebSocketService: connected.');
-    debugPrint('BalanceWebSocketService: subscribing to balance feed.');
+    if (kDebugMode) {
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocketService: connected.');
+      }
+      if (kDebugMode) {
+        debugPrint('BalanceWebSocketService: subscribing to balance feed.');
+      }
+    }
 
     _stompClient?.subscribe(
       destination: '/user/queue/balance',
@@ -160,10 +182,18 @@ class BalanceWebSocketService {
             final json = jsonDecode(frame.body!);
             final update = BalanceUpdate.fromJson(json);
 
-            debugPrint('BalanceWebSocketService: balance event decoded.');
+            if (kDebugMode) {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: balance event decoded.');
+              }
+            }
             onBalanceUpdate(update);
           } catch (_) {
-            debugPrint('BalanceWebSocketService: balance event rejected.');
+            if (kDebugMode) {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: balance event rejected.');
+              }
+            }
           }
         }
       },
@@ -188,12 +218,37 @@ class BalanceWebSocketService {
             );
           }
         } catch (_) {
-          debugPrint('BalanceWebSocketService: notification event rejected.');
+          if (kDebugMode) {
+            debugPrint('BalanceWebSocketService: notification event rejected.');
+          }
         }
       },
     );
 
-    debugPrint('BalanceWebSocketService: subscriptions ready.');
+    _stompClient?.subscribe(
+      destination: '/user/queue/home-ui',
+      callback: (StompFrame frame) {
+        if (frame.body == null || onHomeUiEvent == null) {
+          return;
+        }
+        try {
+          final json = jsonDecode(frame.body!);
+          if (json is Map<String, dynamic>) {
+            onHomeUiEvent!(json);
+          } else if (json is Map) {
+            onHomeUiEvent!(Map<String, dynamic>.from(json));
+          }
+        } catch (_) {
+          if (kDebugMode) {
+            debugPrint('BalanceWebSocketService: home-ui event rejected.');
+          }
+        }
+      },
+    );
+
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocketService: subscriptions ready.');
+    }
   }
 
   /// Desconecta do WebSocket
@@ -208,14 +263,18 @@ class BalanceWebSocketService {
       return;
     }
 
-    debugPrint('BalanceWebSocketService: disconnecting.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocketService: disconnecting.');
+    }
     _stompClient?.deactivate();
     _stompClient = null;
     _isConnected = false;
   }
 
   void _handleWebSocketError(dynamic error) {
-    debugPrint('BalanceWebSocketService: socket error.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocketService: socket error.');
+    }
     _isConnected = false;
 
     if (isSessionFailureSignal(error)) {
@@ -227,7 +286,9 @@ class BalanceWebSocketService {
   }
 
   void _handleStompError(StompFrame frame) {
-    debugPrint('BalanceWebSocketService: protocol error.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocketService: protocol error.');
+    }
     _isConnected = false;
 
     if (isSessionFailureSignal(frame.body) ||
@@ -263,18 +324,22 @@ class BalanceWebSocketService {
     if (delay == null) {
       _reconnectExhausted = true;
       _closeCurrentClient();
-      debugPrint(
-        'BalanceWebSocketService: max reconnect attempts reached after '
-        '$reason. Stopping.',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'BalanceWebSocketService: max reconnect attempts reached after '
+          '$reason. Stopping.',
+        );
+      }
       return;
     }
 
-    debugPrint(
-      'BalanceWebSocketService: reconnecting in ${delay.inSeconds}s '
-      'after $reason (attempt ${_reconnectPolicy.attemptCount}/'
-      '${_reconnectPolicy.maxAttempts}).',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        'BalanceWebSocketService: reconnecting in ${delay.inSeconds}s '
+        'after $reason (attempt ${_reconnectPolicy.attemptCount}/'
+        '${_reconnectPolicy.maxAttempts}).',
+      );
+    }
 
     _reconnectTimer = Timer(delay, () {
       _reconnectTimer = null;
@@ -296,7 +361,9 @@ class BalanceWebSocketService {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _closeCurrentClient();
-    debugPrint('BalanceWebSocketService: $reason. Stopping reconnects.');
+    if (kDebugMode) {
+      debugPrint('BalanceWebSocketService: $reason. Stopping reconnects.');
+    }
     onSessionInvalidated?.call();
   }
 
@@ -554,6 +621,15 @@ class BalanceUpdate {
   final String? sender;
   final String? receiver;
 
+  /// Optional dual-ledger snapshot (backend PR2+).
+  final String? kind;
+  final int? availableSats;
+  final int? lockedSats;
+  final int? pendingSats;
+  final int? observedSats;
+  final int? primarySats;
+  final String? bucket;
+
   BalanceUpdate({
     required this.walletId,
     required this.walletName,
@@ -564,7 +640,24 @@ class BalanceUpdate {
     required this.timestamp,
     this.sender,
     this.receiver,
+    this.kind,
+    this.availableSats,
+    this.lockedSats,
+    this.pendingSats,
+    this.observedSats,
+    this.primarySats,
+    this.bucket,
   });
+
+  bool get hasBucketSnapshot =>
+      availableSats != null || observedSats != null || primarySats != null;
+
+  bool get isObservedBucket {
+    final b = (bucket ?? '').toUpperCase();
+    if (b == 'OBSERVED') return true;
+    final c = context.toLowerCase();
+    return c.contains('observ');
+  }
 
   factory BalanceUpdate.fromJson(Map<String, dynamic> json) {
     final senderField = [json['sender'], json['from'], json['fromAddress']]
@@ -574,6 +667,12 @@ class BalanceUpdate {
     final receiverField = [json['receiver'], json['to'], json['toAddress']]
         .map((e) => e?.toString())
         .firstWhere((e) => e != null && e.isNotEmpty, orElse: () => null);
+
+    int? asSats(Object? value) {
+      if (value is int) return value;
+      if (value is num) return value.round();
+      return int.tryParse('$value');
+    }
 
     return BalanceUpdate(
       walletId: (json['walletId'] ?? '').toString(),
@@ -587,6 +686,13 @@ class BalanceUpdate {
           json['timestamp']?.toString() ?? DateTime.now().toIso8601String(),
       sender: senderField,
       receiver: receiverField,
+      kind: json['kind']?.toString(),
+      availableSats: asSats(json['availableSats']),
+      lockedSats: asSats(json['lockedSats']),
+      pendingSats: asSats(json['pendingSats']),
+      observedSats: asSats(json['observedSats']),
+      primarySats: asSats(json['primarySats']),
+      bucket: json['bucket']?.toString(),
     );
   }
 
@@ -599,11 +705,18 @@ class BalanceUpdate {
       'amount': amount,
       'context': context,
       'timestamp': timestamp,
+      if (kind != null) 'kind': kind,
+      if (availableSats != null) 'availableSats': availableSats,
+      if (lockedSats != null) 'lockedSats': lockedSats,
+      if (pendingSats != null) 'pendingSats': pendingSats,
+      if (observedSats != null) 'observedSats': observedSats,
+      if (primarySats != null) 'primarySats': primarySats,
+      if (bucket != null) 'bucket': bucket,
     };
   }
 
   @override
   String toString() {
-    return 'BalanceUpdate(wallet: $walletName, newBalance: $newBalance BTC, amount: $amount, context: $context)';
+    return 'BalanceUpdate(wallet: $walletName, newBalance: $newBalance BTC, amount: $amount, context: $context, bucket: $bucket)';
   }
 }
