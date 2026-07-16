@@ -105,7 +105,11 @@ class ErrorTranslator {
       case 'ERR_AUTH_PASSKEY_NOT_REGISTERED':
         return l10n.errPasskeyDeviceNotLinked;
       case 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS':
-        return l10n.passkeyNoBiometrics;
+      case 'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS':
+      case 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED':
+      case 'ERR_AUTH_DEVICE_KEY_ENROLL_BLOCKED':
+      case 'ERR_AUTH_DEVICE_KEY_STORAGE_UNAVAILABLE':
+        return safeExtractedMessage ?? l10n.passkeyNoBiometrics;
       case 'AUTH_011':
       case 'ERR_AUTH_TOTP_TIMEOUT':
         return l10n.errAuthTotpTimeout;

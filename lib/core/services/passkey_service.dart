@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
 import '../config/app_config.dart';
+import '../security/device_credential_capabilities.dart';
 import '../utils/device_helper.dart';
 import 'sovereign_auth_service.dart';
 
@@ -37,7 +38,16 @@ class PasskeyService {
     required String challengeHex,
     required String username,
     bool confirmUnlinkDevice = false,
+    bool appPinConfigured = false,
   }) async {
+    try {
+      await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
+        appPinConfigured: appPinConfigured,
+      );
+    } on DeviceCredentialCapabilityException catch (error) {
+      throw Exception('${error.code}: ${error.message}');
+    }
+
     final subject = _subject(username);
     final credentialId = SovereignAuthService.generateCredentialId();
     final publicKey = await _cryptographyService.generateKeyPair(

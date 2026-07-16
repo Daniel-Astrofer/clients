@@ -123,6 +123,18 @@ class AppConfig {
     return defaultPasskeyRpId;
   }
 
+  /// Release N: prefer Device Key on mobile/desktop first-class platforms.
+  static const bool preferDeviceKeyOnMobile = bool.fromEnvironment(
+    'PREFER_DEVICE_KEY_ON_MOBILE',
+    defaultValue: true,
+  );
+
+  /// Kill-switch for Device Key / local credential login preference after password.
+  static const bool deviceKeyLoginEnabled = bool.fromEnvironment(
+    'DEVICE_KEY_LOGIN_ENABLED',
+    defaultValue: true,
+  );
+
   // 1.3 Profile
   static const String authMe = '/auth/me';
   static const String authSecurityProfile = '/auth/security/profile';

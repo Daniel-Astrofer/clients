@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../constants/app_copy.dart';
+import '../security/device_credential_capabilities.dart';
 import '../utils/device_helper.dart';
 
 class DeviceKeyChallenge {
@@ -78,6 +79,7 @@ class DeviceKeyService {
     required DeviceKeyChallenge challenge,
     required String username,
     required String sessionId,
+    bool appPinConfigured = false,
   }) async {
     _validateChallenge(challenge);
     final normalizedUsername = _normalizeUsername(username);
@@ -88,7 +90,7 @@ class DeviceKeyService {
       );
     }
 
-    await _ensureLocalCredentialsAvailable();
+    await _assertEnrollAllowed(appPinConfigured: appPinConfigured);
     final keyPair = await _algorithm.newKeyPair();
     final privateKeySeed =
         Uint8List.fromList(await keyPair.extractPrivateKeyBytes());
@@ -228,14 +230,13 @@ class DeviceKeyService {
     return _base64Url(signature.bytes);
   }
 
-  Future<void> _ensureLocalCredentialsAvailable() async {
-    final canCheckBiometrics = await _localAuthentication.canCheckBiometrics;
-    final isSupported = await _localAuthentication.isDeviceSupported();
-    if (!canCheckBiometrics && !isSupported) {
-      throw const DeviceKeyException(
-        'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS',
-        'Configure biometria ou bloqueio de tela para usar a chave deste dispositivo.',
+  Future<void> _assertEnrollAllowed({bool appPinConfigured = false}) async {
+    try {
+      await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
+        appPinConfigured: appPinConfigured,
       );
+    } on DeviceCredentialCapabilityException catch (error) {
+      throw DeviceKeyException(error.code, error.message);
     }
   }
 
