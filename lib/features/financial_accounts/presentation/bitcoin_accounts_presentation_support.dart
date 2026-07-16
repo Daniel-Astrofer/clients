@@ -6,7 +6,6 @@ import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
-import 'package:kerosene/features/ledger/domain/balance_display.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 const kKeroseneBrandLabel = 'Kerosene';
@@ -81,21 +80,10 @@ int bitcoinAccountVisibleBalance(BitcoinAccount account) {
   );
 }
 
-/// Optional secondary line for custodial on-chain (ledger vs chain).
+/// Secondary chain line for custodial. Product decision: do not surface dual
+/// ledger on account cards — show available only; pending stays in extrato.
 String? bitcoinAccountChainObservedLabel(BitcoinAccount account) {
-  if (!account.isCustodialOnchain) return null;
-  if (!BalanceDisplayRules.showObservedAsSubtitle(
-    kind: 'CUSTODIAL_ONCHAIN',
-    availableSats: account.balanceAvailableSats,
-    observedSats: account.observedBalanceSats,
-  )) {
-    return null;
-  }
-  final btc = (account.observedBalanceSats / 100000000.0).toStringAsFixed(8);
-  final trimmed = btc
-      .replaceFirst(RegExp(r'0+$'), '')
-      .replaceFirst(RegExp(r'\.$'), '');
-  return 'Na rede: $trimmed BTC';
+  return null;
 }
 
 ReceivingRequestView? firstBitcoinReceiveRequest(

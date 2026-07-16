@@ -585,21 +585,7 @@ class HomeBalanceHero extends ConsumerWidget {
                 ),
               ),
             ),
-            if (isTotal) ...[
-              SizedBox(height: homeSize(6)),
-              Text(
-                homeAvailableSubtitle(context),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.label.copyWith(
-                  color: HomeColors.textMuted,
-                  fontSize: homeFontSize(11),
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+            // Wallet name only — no dual-ledger / "available vs chain" subtitle.
             if (!isTotal && data.wallet != null) ...[
               SizedBox(height: homeSize(6)),
               AnimatedSwitcher(
@@ -618,21 +604,6 @@ class HomeBalanceHero extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (data.wallet!.chainObservedSubtitle != null) ...[
-                SizedBox(height: homeSize(4)),
-                Text(
-                  data.wallet!.chainObservedSubtitle!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.label.copyWith(
-                    color: HomeColors.textMuted,
-                    fontSize: homeFontSize(11),
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
             ],
             SizedBox(height: homeSize(14)),
             // No background glow on the amount — swipe between wallets must stay
@@ -833,19 +804,19 @@ String homeColdBalanceTitle(BuildContext context) {
 }
 
 String homeTotalBalanceTitle(BuildContext context) {
-  // Spendable now (not cold observed) — see _sumSpendableWallets.
+  // Spendable total (internal + custodial available). No "to send" marketing copy.
   return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Available to send',
-    'es' => 'Disponible para enviar',
-    _ => 'Disponível para enviar',
+    'en' => 'Balance',
+    'es' => 'Saldo',
+    _ => 'Saldo',
   };
 }
 
 String homeTotalTabLabel(BuildContext context) {
   return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Available',
-    'es' => 'Disponible',
-    _ => 'Disponível',
+    'en' => 'Balance',
+    'es' => 'Saldo',
+    _ => 'Saldo',
   };
 }
 
@@ -869,13 +840,8 @@ String homeQuoteUnavailableLabel(BuildContext context, Currency currency) {
   };
 }
 
-String homeAvailableSubtitle(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Internal + custodial · cold not included',
-    'es' => 'Interno + custodial · cold no incluido',
-    _ => 'Interno + custodial · cold não incluso',
-  };
-}
+/// Kept for callers; product no longer shows this dual-ledger subtitle on home.
+String homeAvailableSubtitle(BuildContext context) => '';
 
 String homePlatformTabLabel(BuildContext context) {
   return switch (Localizations.localeOf(context).languageCode) {

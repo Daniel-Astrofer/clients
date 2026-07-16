@@ -41,12 +41,11 @@ class WalletBalanceCard extends ConsumerWidget {
           );
     final responsive = context.responsive;
     final balanceLabel = wallet.primaryBalanceLabel;
+    // No dual-ledger / "available to send" copy — figure is the spendable (or
+    // cold observed) amount; unconfirmed inbound is pending in history only.
     final portfolioLabel = wallet.isColdWallet || wallet.isObservedOnlyBalance
-        ? 'Saldo na rede (só observação / assinar no aparelho)'
-        : wallet.isCustodialOnchain
-            ? 'Disponível para envio'
-            : context.tr.btcAccountsAvailableBalance;
-    final chainSubtitle = wallet.chainObservedSubtitle;
+        ? 'On-chain'
+        : context.tr.btcAccountsAvailableBalance;
     // Real chart: for custodial, fraction available vs chain observed when diverged.
     final chartPct = _chartPercentage(wallet);
     final chartSize = responsive.isTinyPhone ? 132.0 : 160.0;
@@ -143,7 +142,6 @@ class WalletBalanceCard extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
 
-          // Label "Total Portfolio"
           Text(
             portfolioLabel,
             style: TextStyle(
@@ -153,21 +151,7 @@ class WalletBalanceCard extends ConsumerWidget {
               fontSize: 14,
             ),
           ),
-          if (chainSubtitle != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              chainSubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimary
-                    .withValues(alpha: 0.48),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+          // Cold-only short hint (not dual-ledger). Custodial/internal: no extra dialog.
           if (wallet.isObservedOnlyBalance &&
               wallet.custodyExplanation.trim().isNotEmpty) ...[
             const SizedBox(height: 8),

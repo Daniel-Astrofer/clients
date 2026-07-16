@@ -395,28 +395,15 @@ final class Wallet extends Equatable {
   }
 
   /// Primary UI label for the big balance number.
-  String get primaryBalanceLabel {
-    if (isColdWallet || isObservedOnlyBalance) return 'Saldo na rede';
-    if (isCustodialOnchain) return 'Disponível para enviar';
-    return 'Saldo disponível';
-  }
+  ///
+  /// Spendable wallets (internal / custodial): just "Saldo" — the figure is
+  /// already available to send. Unconfirmed inbound stays pending in history.
+  /// Cold / observed-only: "Saldo" as well (chain truth, not spendable ledger).
+  String get primaryBalanceLabel => 'Saldo';
 
-  /// Secondary line: chain observed for custodial when it diverges from available.
-  String? get chainObservedSubtitle {
-    if (!isCustodialOnchain) return null;
-    if (!BalanceDisplayRules.showObservedAsSubtitle(
-      kind: 'CUSTODIAL_ONCHAIN',
-      availableSats: availableSats,
-      observedSats: observedSats,
-    )) {
-      return null;
-    }
-    final btc = (observedSats / 100000000.0).toStringAsFixed(8);
-    final trimmed = btc
-        .replaceFirst(RegExp(r'0+$'), '')
-        .replaceFirst(RegExp(r'\.$'), '');
-    return 'Na rede (cadeia): $trimmed BTC';
-  }
+  /// Formerly dual-ledger "Na rede: …" for custodial. Removed from product UI —
+  /// available is the only number shown; chain drift is ops, not a home dialog.
+  String? get chainObservedSubtitle => null;
 
   static double _primaryBtcFromSats({
     required String walletMode,

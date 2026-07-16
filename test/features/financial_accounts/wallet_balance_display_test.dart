@@ -17,11 +17,11 @@ void main() {
       expect(wallet.isColdWallet, isTrue);
       expect(wallet.balance, closeTo(1.5, 1e-9));
       expect(wallet.observedSats, 150000000);
-      expect(wallet.primaryBalanceLabel, 'Saldo na rede');
+      expect(wallet.primaryBalanceLabel, 'Saldo');
       expect(wallet.chainObservedSubtitle, isNull);
     });
 
-    test('custodial shows available and chain subtitle when diverged', () {
+    test('custodial shows available only without chain dual-ledger line', () {
       final wallet = Wallet.fromJson({
         'id': 'cust-1',
         'label': 'Money',
@@ -31,12 +31,13 @@ void main() {
         'observedSats': 200000000,
       });
       expect(wallet.isCustodialOnchain, isTrue);
+      // Primary figure is available (1 BTC), not observed (2 BTC).
       expect(wallet.balance, closeTo(1.0, 1e-9));
-      expect(wallet.primaryBalanceLabel, 'Disponível para enviar');
-      expect(wallet.chainObservedSubtitle, 'Na rede (cadeia): 2 BTC');
+      expect(wallet.primaryBalanceLabel, 'Saldo');
+      expect(wallet.chainObservedSubtitle, isNull);
     });
 
-    test('bitcoin account visible balance + chain label', () {
+    test('bitcoin account visible balance without chain dual label', () {
       final cold = BitcoinAccount(
         id: 'c',
         type: 'WATCH_ONLY_COLD_WALLET',
@@ -59,7 +60,7 @@ void main() {
       );
       expect(bitcoinAccountVisibleBalance(cold), 5000);
       expect(bitcoinAccountVisibleBalance(custodial), 1000);
-      expect(bitcoinAccountChainObservedLabel(custodial), 'Na rede: 0.00005 BTC');
+      expect(bitcoinAccountChainObservedLabel(custodial), isNull);
       expect(bitcoinAccountChainObservedLabel(cold), isNull);
     });
   });
