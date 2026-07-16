@@ -23,6 +23,10 @@ class SendDestinationStep extends StatelessWidget {
   final VoidCallback onContinue;
   final ValueChanged<RecentTransactionDestination> onRecentDestinationSelected;
 
+  /// Leading control: wizard back when [canWizardBack], else close flow.
+  final VoidCallback onLeading;
+  final bool canWizardBack;
+
   /// Live capabilities resolve (username / internal).
   final ResolvedPaymentIntent? resolvedIntent;
   final bool isLiveResolving;
@@ -39,6 +43,8 @@ class SendDestinationStep extends StatelessWidget {
     required this.onScan,
     required this.onContinue,
     required this.onRecentDestinationSelected,
+    required this.onLeading,
+    this.canWizardBack = false,
     this.resolvedIntent,
     this.isLiveResolving = false,
     this.liveResolveError,
@@ -83,6 +89,8 @@ class SendDestinationStep extends StatelessWidget {
                   children: [
                     _DestinationHeader(
                       hasContacts: hasContacts || showEmptyContacts,
+                      canWizardBack: canWizardBack,
+                      onLeading: onLeading,
                     ),
                     SizedBox(height: hasContacts || showEmptyContacts ? 32 : 26),
                     _DestinationInputSection(
@@ -129,8 +137,8 @@ class SendDestinationStep extends StatelessWidget {
                         onSelected: onRecentDestinationSelected,
                       ),
                     ] else if (showEmptyContacts) ...[
-                      const SizedBox(height: 42),
-                      const _EmptyContactsState(),
+                      const SizedBox(height: 32),
+                      _EmptyContactsState(onScan: onScan),
                     ],
                   ],
                 ),
@@ -149,6 +157,14 @@ class SendDestinationStep extends StatelessWidget {
   }
 
   /// Local prefix search (≥3 chars) over recent destinations (username/label/address).
+  /// Soften ALL-CAPS l10n labels for bank-like CTAs.
+  static String softContinueLabel(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return trimmed;
+    final lower = trimmed.toLowerCase();
+    return '${lower[0].toUpperCase()}${lower.substring(1)}';
+  }
+
   static List<RecentTransactionDestination> _filterRecentDestinations(
     List<RecentTransactionDestination> all,
     String query,
@@ -189,29 +205,32 @@ class SendDestinationStep extends StatelessWidget {
       }
       return resolved.explainWhy;
     }
-    return _destinationHelperText(analysis);
+    return _destinationHelperText(context, analysis);
   }
 
-  String _destinationHelperText(SendDestinationAnalysis analysis) {
+  String _destinationHelperText(
+    BuildContext context,
+    SendDestinationAnalysis analysis,
+  ) {
     if (analysis.isEmpty) {
-      return 'Informe o destino para continuar.';
+      return SendMoneyCopy.destinationEmptyHint(context);
     }
     if (analysis.isInvalid) {
-      return 'Corrija o destino: usuário Kerosene, endereço Bitcoin, invoice Lightning, link — ou use o botão para QR / NFC / colar.';
+      return SendMoneyCopy.destinationInvalidHint(context);
     }
     if (analysis.isPaymentLink) {
-      return 'Link de pagamento Kerosene detectado.';
+      return SendMoneyCopy.destinationPaymentLinkHint(context);
     }
     if (analysis.isInternal) {
-      return 'Transferência interna Kerosene detectada.';
+      return SendMoneyCopy.destinationInternalHint(context);
     }
     if (analysis.isOnChain) {
       final network =
           bitcoinNetworkDisplayName(analysis.detectedOnchainNetwork);
-      return 'Endereço Bitcoin on-chain detectado • $network.';
+      return SendMoneyCopy.destinationOnchainHint(context, network);
     }
     if (analysis.isLightning) {
-      return 'Pagamento Lightning detectado.';
+      return SendMoneyCopy.destinationLightningHint(context);
     }
     return '';
   }
@@ -339,8 +358,14 @@ class _RailChip extends StatelessWidget {
 
 class _DestinationHeader extends StatelessWidget {
   final bool hasContacts;
+  final bool canWizardBack;
+  final VoidCallback onLeading;
 
-  const _DestinationHeader({required this.hasContacts});
+  const _DestinationHeader({
+    required this.hasContacts,
+    required this.canWizardBack,
+    required this.onLeading,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -351,9 +376,14 @@ class _DestinationHeader extends StatelessWidget {
           width: 48,
           height: 48,
           child: IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            tooltip: context.tr.close,
-            icon: const Icon(KeroseneIcons.close, size: 24),
+            onPressed: onLeading,
+            tooltip: canWizardBack
+                ? MaterialLocalizations.of(context).backButtonTooltip
+                : context.tr.close,
+            icon: Icon(
+              canWizardBack ? KeroseneIcons.back : KeroseneIcons.close,
+              size: 24,
+            ),
             color: SendDestinationStep.internalText,
             padding: EdgeInsets.zero,
             style: IconButton.styleFrom(
@@ -423,15 +453,20 @@ class _DestinationBottomAction extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               textStyle: AppTypography.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
                 height: 1.2,
-                letterSpacing: 1.2,
+                letterSpacing: -0.2,
               ),
             ),
             child: isLoading
                 ? const CupertinoActivityIndicator(radius: 9)
-                : Text(context.tr.continueButton),
+                : Text(
+                    // Title-case continue — softer than ALL-CAPS bank microcopy.
+                    SendDestinationStep.softContinueLabel(
+                      context.tr.continueButton,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -494,51 +529,105 @@ class _DestinationFeedback extends StatelessWidget {
 }
 
 class _EmptyContactsState extends StatelessWidget {
-  const _EmptyContactsState();
+  final VoidCallback onScan;
+
+  const _EmptyContactsState({required this.onScan});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: SendDestinationStep.internalSurfaceHigh,
-            ),
-            child: const Center(
-              child: Icon(
-                KeroseneIcons.userAdd,
-                color: SendDestinationStep.internalMutedText,
-                size: 32,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          SendMoneyCopy.noRecentDestinations(context),
+          textAlign: TextAlign.left,
+          style: AppTypography.inter(
+            color: SendDestinationStep.internalMutedText,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          SendMoneyCopy.noRecentDestinationsBody(context),
+          textAlign: TextAlign.left,
+          style: AppTypography.inter(
+            color: SendDestinationStep.internalMutedText,
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 20),
+        _DestinationTipRow(
+          icon: KeroseneIcons.internalTransfer,
+          label: SendMoneyCopy.destinationTipInternal(context),
+        ),
+        const SizedBox(height: 10),
+        _DestinationTipRow(
+          icon: KeroseneIcons.lightning,
+          label: SendMoneyCopy.destinationTipLightning(context),
+        ),
+        const SizedBox(height: 10),
+        _DestinationTipRow(
+          icon: KeroseneIcons.onchain,
+          label: SendMoneyCopy.destinationTipOnchain(context),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: onScan,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: SendDestinationStep.internalText,
+              side: const BorderSide(color: SendDestinationStep.internalBorder),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: AppTypography.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
             ),
+            icon: const Icon(KeroseneIcons.qr, size: 18),
+            label: Text(SendMoneyCopy.destinationScanAction(context)),
           ),
-          const SizedBox(height: 16),
-          Text(
-            SendMoneyCopy.noRecentDestinations(context),
-            textAlign: TextAlign.center,
-            style: AppTypography.newsreader(
-              color: SendDestinationStep.internalText,
-              fontSize: 28,
-              fontWeight: FontWeight.w500,
-              height: 1.2,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            SendMoneyCopy.noRecentDestinationsBody(context),
-            textAlign: TextAlign.center,
-            style: AppTypography.inter(
-              color: SendDestinationStep.internalMutedText,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              height: 1.5,
-              letterSpacing: 0,
+        ),
+      ],
+    );
+  }
+}
+
+class _DestinationTipRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _DestinationTipRow({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: SendDestinationStep.internalSurfaceHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SendDestinationStep.internalBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: SendDestinationStep.internalMutedText),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.inter(
+                color: SendDestinationStep.internalText,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

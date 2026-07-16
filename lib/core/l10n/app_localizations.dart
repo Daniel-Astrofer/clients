@@ -1057,7 +1057,7 @@ abstract class AppLocalizations {
   /// No description provided for @cancelOperation.
   ///
   /// In en, this message translates to:
-  /// **'CANCEL OPERATION'**
+  /// **'Cancel operation'**
   String get cancelOperation;
 
   /// No description provided for @confirming.
@@ -13613,6 +13613,2652 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Available balance'**
   String get walletSelectorAvailableBalance;
+
+  /// No description provided for @settingsNavTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tune your account'**
+  String get settingsNavTitle;
+
+  /// No description provided for @settingsNavDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage security, privacy, and preferences for your banking experience.'**
+  String get settingsNavDescription;
+
+  /// No description provided for @settingsNavPreferencesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get settingsNavPreferencesSection;
+
+  /// No description provided for @settingsNavBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get settingsNavBack;
+
+  /// No description provided for @settingsNavProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get settingsNavProfileTitle;
+
+  /// No description provided for @settingsNavProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal data and account information'**
+  String get settingsNavProfileSubtitle;
+
+  /// No description provided for @settingsNavSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get settingsNavSecurityTitle;
+
+  /// No description provided for @settingsNavSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Password, biometrics, and two-factor authentication'**
+  String get settingsNavSecuritySubtitle;
+
+  /// No description provided for @settingsNavNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNavNotificationsTitle;
+
+  /// No description provided for @settingsNavNotificationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction alerts and communications'**
+  String get settingsNavNotificationsSubtitle;
+
+  /// No description provided for @settingsNavAppearanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsNavAppearanceTitle;
+
+  /// No description provided for @settingsNavAppearanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme and local display scale'**
+  String get settingsNavAppearanceSubtitle;
+
+  /// No description provided for @settingsNavDisplayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language and currency'**
+  String get settingsNavDisplayTitle;
+
+  /// No description provided for @settingsNavDisplaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Global language, currency, and time zone'**
+  String get settingsNavDisplaySubtitle;
+
+  /// No description provided for @settingsNavWalletsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallets'**
+  String get settingsNavWalletsTitle;
+
+  /// No description provided for @settingsNavWalletsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custody and KFE cycle'**
+  String get settingsNavWalletsSubtitle;
+
+  /// No description provided for @settingsDisplayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language, currency & time'**
+  String get settingsDisplayTitle;
+
+  /// No description provided for @settingsDisplaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Global app preferences. Language and time zone are sent to the backend for news and education. Local statement is encrypted — the server only keeps ~24h of history.'**
+  String get settingsDisplaySubtitle;
+
+  /// No description provided for @settingsDisplayLanguageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsDisplayLanguageSection;
+
+  /// No description provided for @settingsDisplayCurrencySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary currency'**
+  String get settingsDisplayCurrencySection;
+
+  /// No description provided for @settingsDisplayTimezoneSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Time zone'**
+  String get settingsDisplayTimezoneSection;
+
+  /// No description provided for @settingsDisplayFollowDeviceTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow device time zone'**
+  String get settingsDisplayFollowDeviceTimezone;
+
+  /// No description provided for @settingsDisplayPinnedTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Time zone used in app'**
+  String get settingsDisplayPinnedTimezone;
+
+  /// No description provided for @settingsDisplayPickTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a time zone'**
+  String get settingsDisplayPickTimezone;
+
+  /// No description provided for @settingsDisplayLanguageEn.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get settingsDisplayLanguageEn;
+
+  /// No description provided for @settingsDisplayLanguagePt.
+  ///
+  /// In en, this message translates to:
+  /// **'Português'**
+  String get settingsDisplayLanguagePt;
+
+  /// No description provided for @settingsDisplayLanguageEs.
+  ///
+  /// In en, this message translates to:
+  /// **'Español'**
+  String get settingsDisplayLanguageEs;
+
+  /// No description provided for @settingsDisplayLanguageEnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interface and feed in English'**
+  String get settingsDisplayLanguageEnSubtitle;
+
+  /// No description provided for @settingsDisplayLanguagePtSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interface and feed in Portuguese'**
+  String get settingsDisplayLanguagePtSubtitle;
+
+  /// No description provided for @settingsDisplayLanguageEsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interface and feed in Spanish'**
+  String get settingsDisplayLanguageEsSubtitle;
+
+  /// No description provided for @settingsDisplayCurrencyBtcSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show amounts directly in Bitcoin'**
+  String get settingsDisplayCurrencyBtcSubtitle;
+
+  /// No description provided for @settingsDisplayCurrencyUsdSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'US dollar as display currency'**
+  String get settingsDisplayCurrencyUsdSubtitle;
+
+  /// No description provided for @settingsDisplayCurrencyEurSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Euro as display currency'**
+  String get settingsDisplayCurrencyEurSubtitle;
+
+  /// No description provided for @settingsDisplayCurrencyBrlSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Brazilian real as display currency'**
+  String get settingsDisplayCurrencyBrlSubtitle;
+
+  /// No description provided for @settingsAppearanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearanceTitle;
+
+  /// No description provided for @settingsAppearanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local control of the app visual theme. This preference does not change financial data and does not depend on the backend.'**
+  String get settingsAppearanceSubtitle;
+
+  /// No description provided for @settingsAppearanceThemeSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsAppearanceThemeSection;
+
+  /// No description provided for @settingsAppearanceDarkModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark mode'**
+  String get settingsAppearanceDarkModeTitle;
+
+  /// No description provided for @settingsAppearanceDarkModeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled for this session.'**
+  String get settingsAppearanceDarkModeOn;
+
+  /// No description provided for @settingsAppearanceDarkModeOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled for this session.'**
+  String get settingsAppearanceDarkModeOff;
+
+  /// No description provided for @cancelAuthentication.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel authentication'**
+  String get cancelAuthentication;
+
+  /// No description provided for @secureConnectionLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Establishing secure connection...'**
+  String get secureConnectionLoading;
+
+  /// No description provided for @deferredLoadFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open this screen right now.'**
+  String get deferredLoadFailure;
+
+  /// No description provided for @deferredLoadDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again in a moment or go back to the previous area.'**
+  String get deferredLoadDetails;
+
+  /// No description provided for @nfcScannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'NFC scan'**
+  String get nfcScannerTitle;
+
+  /// No description provided for @nfcReadyToScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to scan'**
+  String get nfcReadyToScan;
+
+  /// No description provided for @nfcUnavailableDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'NFC is not available on this device.'**
+  String get nfcUnavailableDevice;
+
+  /// No description provided for @nfcHoldNearTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold your device near the NFC tag.'**
+  String get nfcHoldNearTag;
+
+  /// No description provided for @nfcPaymentRequestRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment request read.'**
+  String get nfcPaymentRequestRead;
+
+  /// No description provided for @nfcTagDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag detected.'**
+  String get nfcTagDetected;
+
+  /// No description provided for @offlineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get offlineTitle;
+
+  /// No description provided for @offlineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm the connection right now.'**
+  String get offlineSubtitle;
+
+  /// No description provided for @offlineTryNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Try now'**
+  String get offlineTryNow;
+
+  /// No description provided for @pinIncorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm that PIN. Try again.'**
+  String get pinIncorrect;
+
+  /// No description provided for @pinSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your security PIN'**
+  String get pinSetupTitle;
+
+  /// No description provided for @pinEnterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your security PIN'**
+  String get pinEnterTitle;
+
+  /// No description provided for @pinSetupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose six digits to protect this access.'**
+  String get pinSetupSubtitle;
+
+  /// No description provided for @pinEnterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This local PIN protects trust on this device.'**
+  String get pinEnterSubtitle;
+
+  /// No description provided for @settingsAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get settingsAccountTitle;
+
+  /// No description provided for @settingsAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticated account data, session identity, and secure local sign-out.'**
+  String get settingsAccountSubtitle;
+
+  /// No description provided for @settingsAccountIdentitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity'**
+  String get settingsAccountIdentitySection;
+
+  /// No description provided for @settingsAccountUsernameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get settingsAccountUsernameTitle;
+
+  /// No description provided for @settingsAccountSessionSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Session'**
+  String get settingsAccountSessionSection;
+
+  /// No description provided for @settingsAccountCreatedAtTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Created at'**
+  String get settingsAccountCreatedAtTitle;
+
+  /// No description provided for @settingsAccountLastAccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Last access'**
+  String get settingsAccountLastAccessTitle;
+
+  /// No description provided for @settingsAccountLogoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of this account'**
+  String get settingsAccountLogoutTitle;
+
+  /// No description provided for @settingsAccountLogoutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends the current session and returns to the app entry.'**
+  String get settingsAccountLogoutSubtitle;
+
+  /// No description provided for @settingsNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifTitle;
+
+  /// No description provided for @settingsNotifSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local control of financial alerts, security events, and devices authorized for push notifications.'**
+  String get settingsNotifSubtitle;
+
+  /// No description provided for @settingsNotifAlertsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts'**
+  String get settingsNotifAlertsSection;
+
+  /// No description provided for @settingsNotifBackgroundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background mode'**
+  String get settingsNotifBackgroundTitle;
+
+  /// No description provided for @settingsNotifBackgroundOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitors sends and receives while the app is closed.'**
+  String get settingsNotifBackgroundOn;
+
+  /// No description provided for @settingsNotifBackgroundOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — open the app to see financial alerts.'**
+  String get settingsNotifBackgroundOff;
+
+  /// No description provided for @settingsNotifFinancialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial events'**
+  String get settingsNotifFinancialTitle;
+
+  /// No description provided for @settingsNotifFinancialSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions, receives, and payment requests.'**
+  String get settingsNotifFinancialSubtitle;
+
+  /// No description provided for @settingsNotifSecurityEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security events'**
+  String get settingsNotifSecurityEventsTitle;
+
+  /// No description provided for @settingsNotifSecurityEventsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Login, recovery, and sensitive access attempts.'**
+  String get settingsNotifSecurityEventsSubtitle;
+
+  /// No description provided for @settingsNotifMarketTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin market'**
+  String get settingsNotifMarketTitle;
+
+  /// No description provided for @settingsNotifMarketOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Real 24h move alerts enabled.'**
+  String get settingsNotifMarketOn;
+
+  /// No description provided for @settingsNotifMarketOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off by default. No mock and no fallback.'**
+  String get settingsNotifMarketOff;
+
+  /// No description provided for @settingsNotifDevicesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get settingsNotifDevicesSection;
+
+  /// No description provided for @settingsNotifDevicesLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading authorized devices.'**
+  String get settingsNotifDevicesLoading;
+
+  /// No description provided for @settingsNotifDevicesUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices unavailable'**
+  String get settingsNotifDevicesUnavailableTitle;
+
+  /// No description provided for @settingsNotifDevicesUnavailableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not query registered tokens right now.'**
+  String get settingsNotifDevicesUnavailableSubtitle;
+
+  /// No description provided for @settingsNotifNoDevicesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No registered devices'**
+  String get settingsNotifNoDevicesTitle;
+
+  /// No description provided for @settingsNotifNoDevicesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When you allow push notifications, the backend will show the device here.'**
+  String get settingsNotifNoDevicesSubtitle;
+
+  /// No description provided for @settingsNotifDeviceFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Device'**
+  String get settingsNotifDeviceFallback;
+
+  /// No description provided for @settingsNotifRevoke.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke'**
+  String get settingsNotifRevoke;
+
+  /// No description provided for @settingsNotifPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission required'**
+  String get settingsNotifPermissionTitle;
+
+  /// No description provided for @settingsNotifPermissionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications on Android to receive alerts.'**
+  String get settingsNotifPermissionMessage;
+
+  /// No description provided for @settingsNotifRevokeFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not revoke'**
+  String get settingsNotifRevokeFailedTitle;
+
+  /// No description provided for @settingsNotifRevokedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device revoked'**
+  String get settingsNotifRevokedTitle;
+
+  /// No description provided for @settingsNotifRevokedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This token will not receive new notifications.'**
+  String get settingsNotifRevokedMessage;
+
+  /// No description provided for @settingsNotifBackgroundDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable background alerts?'**
+  String get settingsNotifBackgroundDialogTitle;
+
+  /// No description provided for @settingsNotifBackgroundDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene can keep a discreet Android service to notify you about transactions, deposits, and critical events as soon as they arrive.'**
+  String get settingsNotifBackgroundDialogBody;
+
+  /// No description provided for @settingsNotifBackgroundDialogConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable now'**
+  String get settingsNotifBackgroundDialogConfirm;
+
+  /// No description provided for @settingsSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get settingsSecurityTitle;
+
+  /// No description provided for @settingsSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect your account with authentication, local access, and recovery controls.'**
+  String get settingsSecuritySubtitle;
+
+  /// No description provided for @settingsSecurityLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading security profile'**
+  String get settingsSecurityLoading;
+
+  /// No description provided for @settingsSecurityLoadErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load security'**
+  String get settingsSecurityLoadErrorTitle;
+
+  /// No description provided for @settingsSecurityLoadErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get settingsSecurityLoadErrorBody;
+
+  /// No description provided for @settingsSecurityAccessSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Access protection'**
+  String get settingsSecurityAccessSection;
+
+  /// No description provided for @settingsSecurityChangePinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get settingsSecurityChangePinTitle;
+
+  /// No description provided for @settingsSecurityChangePinEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your 4-digit code'**
+  String get settingsSecurityChangePinEnabled;
+
+  /// No description provided for @settingsSecurityChangePinDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a 4-digit code'**
+  String get settingsSecurityChangePinDisabled;
+
+  /// No description provided for @settingsSecurityBiometricsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometrics'**
+  String get settingsSecurityBiometricsTitle;
+
+  /// No description provided for @settingsSecurityBiometricsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Use fingerprint to open the app'**
+  String get settingsSecurityBiometricsOn;
+
+  /// No description provided for @settingsSecurityBiometricsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Register a passkey on this device'**
+  String get settingsSecurityBiometricsOff;
+
+  /// No description provided for @settingsSecurityTotpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-factor authentication'**
+  String get settingsSecurityTotpTitle;
+
+  /// No description provided for @settingsSecurityTotpOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On in {mode} mode'**
+  String settingsSecurityTotpOn(String mode);
+
+  /// No description provided for @settingsSecurityTotpOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Validate TOTP and enable extra protection'**
+  String get settingsSecurityTotpOff;
+
+  /// No description provided for @settingsSecurityDevicesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices and access'**
+  String get settingsSecurityDevicesSection;
+
+  /// No description provided for @settingsSecurityAuthorizedDevicesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorized devices'**
+  String get settingsSecurityAuthorizedDevicesTitle;
+
+  /// No description provided for @settingsSecurityNoPasskeyDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'No device with passkey'**
+  String get settingsSecurityNoPasskeyDevice;
+
+  /// No description provided for @settingsSecurityOneDeviceManage.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · manage'**
+  String settingsSecurityOneDeviceManage(String name);
+
+  /// No description provided for @settingsSecurityNDevicesManage.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} devices · manage'**
+  String settingsSecurityNDevicesManage(int count);
+
+  /// No description provided for @settingsSecuritySessionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions and devices'**
+  String get settingsSecuritySessionsTitle;
+
+  /// No description provided for @settingsSecuritySessionsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Access tied to passkeys on this device'**
+  String get settingsSecuritySessionsNone;
+
+  /// No description provided for @settingsSecuritySessionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} access(es) with registered key'**
+  String settingsSecuritySessionsCount(int count);
+
+  /// No description provided for @settingsSecurityRecoverySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery'**
+  String get settingsSecurityRecoverySection;
+
+  /// No description provided for @settingsSecurityAccountRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account recovery'**
+  String get settingsSecurityAccountRecoveryTitle;
+
+  /// No description provided for @settingsSecurityAccountRecoveryPassphrase.
+  ///
+  /// In en, this message translates to:
+  /// **'Phrase, shares, and emergency'**
+  String get settingsSecurityAccountRecoveryPassphrase;
+
+  /// No description provided for @settingsSecurityAccountRecoveryCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup codes and emergency recovery'**
+  String get settingsSecurityAccountRecoveryCodes;
+
+  /// No description provided for @settingsSecurityBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security backup'**
+  String get settingsSecurityBackupTitle;
+
+  /// No description provided for @settingsSecurityBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery codes (2FA)'**
+  String get settingsSecurityBackupSubtitle;
+
+  /// No description provided for @settingsSecurityAppPinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'App PIN: {detail}'**
+  String settingsSecurityAppPinLabel(String detail);
+
+  /// No description provided for @settingsSecurityPasskeyOkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey registered'**
+  String get settingsSecurityPasskeyOkTitle;
+
+  /// No description provided for @settingsSecurityPasskeyOkMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This device was linked to your account. Biometrics unlocked for login and confirmations.'**
+  String get settingsSecurityPasskeyOkMessage;
+
+  /// No description provided for @settingsSecurityPasskeyFailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not register the passkey'**
+  String get settingsSecurityPasskeyFailTitle;
+
+  /// No description provided for @settingsSecurityLocalDataSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Data on this device'**
+  String get settingsSecurityLocalDataSection;
+
+  /// No description provided for @settingsSecurityWipeLedgerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase local statement'**
+  String get settingsSecurityWipeLedgerTitle;
+
+  /// No description provided for @settingsSecurityWipeLedgerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes history stored on this device. Logout does not erase the statement — only this action. On next login, the app pulls remote data.'**
+  String get settingsSecurityWipeLedgerSubtitle;
+
+  /// No description provided for @settingsSecurityWipeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase local statement?'**
+  String get settingsSecurityWipeConfirmTitle;
+
+  /// No description provided for @settingsSecurityWipeConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes up to 500 entries saved on this device. It does not cancel network transactions. Continue?'**
+  String get settingsSecurityWipeConfirmBody;
+
+  /// No description provided for @settingsSecurityWipeConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase'**
+  String get settingsSecurityWipeConfirmAction;
+
+  /// No description provided for @settingsSecurityWipeSessionMissingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session unavailable'**
+  String get settingsSecurityWipeSessionMissingTitle;
+
+  /// No description provided for @settingsSecurityWipeSessionMissingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again to erase the statement on this device.'**
+  String get settingsSecurityWipeSessionMissingMessage;
+
+  /// No description provided for @settingsSecurityWipeOkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local statement erased'**
+  String get settingsSecurityWipeOkTitle;
+
+  /// No description provided for @settingsSecurityWipeOkMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'History on this device was removed. Pull to sync again.'**
+  String get settingsSecurityWipeOkMessage;
+
+  /// No description provided for @settingsSecurityWipeFailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not erase'**
+  String get settingsSecurityWipeFailTitle;
+
+  /// No description provided for @settingsWalletsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallets'**
+  String get settingsWalletsTitle;
+
+  /// No description provided for @settingsWalletsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename or archive wallets in this session. Actions use the same API as the Bitcoin accounts screen.'**
+  String get settingsWalletsSubtitle;
+
+  /// No description provided for @settingsWalletsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallets'**
+  String get settingsWalletsSection;
+
+  /// No description provided for @settingsWalletsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No active wallets'**
+  String get settingsWalletsEmptyTitle;
+
+  /// No description provided for @settingsWalletsEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Bitcoin Accounts to create or import.'**
+  String get settingsWalletsEmptySubtitle;
+
+  /// No description provided for @settingsWalletsYoursSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Your wallets'**
+  String get settingsWalletsYoursSection;
+
+  /// No description provided for @settingsWalletsOpenFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Open full account management'**
+  String get settingsWalletsOpenFull;
+
+  /// No description provided for @settingsWalletsLoadErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load'**
+  String get settingsWalletsLoadErrorTitle;
+
+  /// No description provided for @settingsWalletsLoadErrorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to open full management.'**
+  String get settingsWalletsLoadErrorSubtitle;
+
+  /// No description provided for @settingsWalletsWatchOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch-only / cold'**
+  String get settingsWalletsWatchOnly;
+
+  /// No description provided for @settingsWalletsCustodialOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'Custodial on-chain'**
+  String get settingsWalletsCustodialOnchain;
+
+  /// No description provided for @settingsWalletsInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Secured account (internal)'**
+  String get settingsWalletsInternal;
+
+  /// No description provided for @settingsWalletsProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing…'**
+  String get settingsWalletsProcessing;
+
+  /// No description provided for @settingsWalletsRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get settingsWalletsRename;
+
+  /// No description provided for @settingsWalletsArchiveWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive watch'**
+  String get settingsWalletsArchiveWatch;
+
+  /// No description provided for @settingsWalletsArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive / lock wallet'**
+  String get settingsWalletsArchive;
+
+  /// No description provided for @settingsWalletsRenameOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Name updated'**
+  String get settingsWalletsRenameOk;
+
+  /// No description provided for @settingsWalletsRenameFailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name not updated'**
+  String get settingsWalletsRenameFailTitle;
+
+  /// No description provided for @settingsWalletsRenameFailMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the name and try again.'**
+  String get settingsWalletsRenameFailMessage;
+
+  /// No description provided for @settingsWalletsArchiveOkWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch archived'**
+  String get settingsWalletsArchiveOkWatch;
+
+  /// No description provided for @settingsWalletsArchiveOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet archived'**
+  String get settingsWalletsArchiveOk;
+
+  /// No description provided for @settingsWalletsArchiveFailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not archive'**
+  String get settingsWalletsArchiveFailTitle;
+
+  /// No description provided for @settingsWalletsArchiveFailMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again in a moment.'**
+  String get settingsWalletsArchiveFailMessage;
+
+  /// No description provided for @settingsNotifBackgroundDialogDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get settingsNotifBackgroundDialogDismiss;
+
+  /// No description provided for @flowSignupCreateAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get flowSignupCreateAccountTitle;
+
+  /// No description provided for @flowSignupUsernameSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a username.\nIt will be your unique identity\nin Kerosene.'**
+  String get flowSignupUsernameSubtitle;
+
+  /// No description provided for @flowSignupUsernameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your username'**
+  String get flowSignupUsernameHint;
+
+  /// No description provided for @flowSignupUsernameCharsetRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Only lowercase letters, numbers, or underscore'**
+  String get flowSignupUsernameCharsetRule;
+
+  /// No description provided for @flowSignupPassphraseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a strong password'**
+  String get flowSignupPassphraseTitle;
+
+  /// No description provided for @flowSignupPassphraseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'It protects your account and assets with maximum security. Nobody at Kerosene has access to your key.'**
+  String get flowSignupPassphraseSubtitle;
+
+  /// No description provided for @flowSignupPassphraseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your passphrase'**
+  String get flowSignupPassphraseLabel;
+
+  /// No description provided for @flowSignupPassphraseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your chosen password'**
+  String get flowSignupPassphraseHint;
+
+  /// No description provided for @flowSignupProceedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Proceed'**
+  String get flowSignupProceedAction;
+
+  /// No description provided for @flowSignupConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your password'**
+  String get flowSignupConfirmTitle;
+
+  /// No description provided for @flowSignupConfirmSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your passphrase again to continue.'**
+  String get flowSignupConfirmSubtitle;
+
+  /// No description provided for @flowSignupConfirmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your passphrase'**
+  String get flowSignupConfirmHint;
+
+  /// No description provided for @flowSignupFinishCreateAccountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish account creation'**
+  String get flowSignupFinishCreateAccountAction;
+
+  /// No description provided for @flowSignupCreatingAlmostReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost ready'**
+  String get flowSignupCreatingAlmostReadyTitle;
+
+  /// No description provided for @flowSignupCreatingAlmostReadySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We are configuring the final details with maximum security.'**
+  String get flowSignupCreatingAlmostReadySubtitle;
+
+  /// No description provided for @flowSignupCreatingSecurityProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Securing your account...'**
+  String get flowSignupCreatingSecurityProgress;
+
+  /// No description provided for @flowSignupTotpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect your account even more (optional)'**
+  String get flowSignupTotpTitle;
+
+  /// No description provided for @flowSignupTotpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We recommend enabling two-factor authentication for an extra protection layer.'**
+  String get flowSignupTotpSubtitle;
+
+  /// No description provided for @flowSignupRecoveryCodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery codes'**
+  String get flowSignupRecoveryCodesTitle;
+
+  /// No description provided for @flowSignupTotpCodeInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code'**
+  String get flowSignupTotpCodeInstruction;
+
+  /// No description provided for @flowSignupRecoveryCodesCopiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery codes copied.'**
+  String get flowSignupRecoveryCodesCopiedMessage;
+
+  /// No description provided for @flowSignupRecoveryCodesUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Codes unavailable'**
+  String get flowSignupRecoveryCodesUnavailableTitle;
+
+  /// No description provided for @flowSignupRecoveryCodesUnavailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait for account creation to finish and try again.'**
+  String get flowSignupRecoveryCodesUnavailableMessage;
+
+  /// No description provided for @flowSignupSkipAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get flowSignupSkipAction;
+
+  /// No description provided for @flowSignupConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get flowSignupConfirmAction;
+
+  /// No description provided for @flowSignupPasskeyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize this device.'**
+  String get flowSignupPasskeyTitle;
+
+  /// No description provided for @flowSignupPasskeySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration is essential to ensure exclusive and protected access to your account.'**
+  String get flowSignupPasskeySubtitle;
+
+  /// No description provided for @flowSignupAuthorizeDeviceAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorize device'**
+  String get flowSignupAuthorizeDeviceAction;
+
+  /// No description provided for @flowSignupSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You are now a Kerosene user. You can start moving funds.'**
+  String get flowSignupSuccessBody;
+
+  /// No description provided for @flowSignupStartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get flowSignupStartAction;
+
+  /// No description provided for @feeTierFast.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get feeTierFast;
+
+  /// No description provided for @feeTierStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get feeTierStandard;
+
+  /// No description provided for @feeTierSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Economy'**
+  String get feeTierSlow;
+
+  /// No description provided for @feeEtaMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'~{minutes} min'**
+  String feeEtaMinutes(int minutes);
+
+  /// No description provided for @feeEtaHours.
+  ///
+  /// In en, this message translates to:
+  /// **'~{hours} h'**
+  String feeEtaHours(int hours);
+
+  /// No description provided for @txActionNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get txActionNeedsReview;
+
+  /// No description provided for @txActionUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unconfirmed'**
+  String get txActionUnconfirmed;
+
+  /// No description provided for @txActionPaymentLinkSendInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link send (internal)'**
+  String get txActionPaymentLinkSendInternal;
+
+  /// No description provided for @txActionPaymentLinkReceiveInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link received (internal)'**
+  String get txActionPaymentLinkReceiveInternal;
+
+  /// No description provided for @txActionPaymentLinkSendOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link send (on-chain)'**
+  String get txActionPaymentLinkSendOnchain;
+
+  /// No description provided for @txActionPaymentLinkReceiveOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link received (on-chain)'**
+  String get txActionPaymentLinkReceiveOnchain;
+
+  /// No description provided for @txActionInternalSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal send'**
+  String get txActionInternalSend;
+
+  /// No description provided for @txActionInternalReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal receive'**
+  String get txActionInternalReceive;
+
+  /// No description provided for @txActionLightningSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning send'**
+  String get txActionLightningSend;
+
+  /// No description provided for @txActionLightningReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning receive'**
+  String get txActionLightningReceive;
+
+  /// No description provided for @txActionColdSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold wallet send'**
+  String get txActionColdSend;
+
+  /// No description provided for @txActionColdReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold wallet receive'**
+  String get txActionColdReceive;
+
+  /// No description provided for @txActionOnchainSend.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain send'**
+  String get txActionOnchainSend;
+
+  /// No description provided for @txActionOnchainReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain receive'**
+  String get txActionOnchainReceive;
+
+  /// No description provided for @firstSendConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm address'**
+  String get firstSendConfirmTitle;
+
+  /// No description provided for @firstSendConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'First time sending to this address. Check the first and last characters carefully:\n\n{preview}'**
+  String firstSendConfirmBody(String preview);
+
+  /// No description provided for @firstSendConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks correct'**
+  String get firstSendConfirmAction;
+
+  /// No description provided for @appEntryPinCreateInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a PIN to access your account'**
+  String get appEntryPinCreateInstruction;
+
+  /// No description provided for @appEntryPinConfirmInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the PIN'**
+  String get appEntryPinConfirmInstruction;
+
+  /// No description provided for @appEntryPinUnlockInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your PIN to access your account'**
+  String get appEntryPinUnlockInstruction;
+
+  /// No description provided for @appEntryPinTorWarming.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure network is still connecting. Your PIN is saved — try again in a moment.'**
+  String get appEntryPinTorWarming;
+
+  /// No description provided for @notifBannerNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get notifBannerNow;
+
+  /// No description provided for @notifBannerOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get notifBannerOpen;
+
+  /// No description provided for @notifBannerFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification'**
+  String get notifBannerFallbackTitle;
+
+  /// No description provided for @notifCategorySecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get notifCategorySecurity;
+
+  /// No description provided for @notifCategoryRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery'**
+  String get notifCategoryRecovery;
+
+  /// No description provided for @notifCategoryAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get notifCategoryAccount;
+
+  /// No description provided for @notifCategoryReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get notifCategoryReceived;
+
+  /// No description provided for @notifCategorySent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get notifCategorySent;
+
+  /// No description provided for @notifCategoryPaymentLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link'**
+  String get notifCategoryPaymentLink;
+
+  /// No description provided for @notifCategoryMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Market'**
+  String get notifCategoryMarket;
+
+  /// No description provided for @notifCategorySystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get notifCategorySystem;
+
+  /// No description provided for @flowSignupCopyRecoveryCodesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy recovery codes'**
+  String get flowSignupCopyRecoveryCodesAction;
+
+  /// No description provided for @transactionPinInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this device PIN to authorize the transaction.'**
+  String get transactionPinInstruction;
+
+  /// No description provided for @emergencyRecoveryEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'EMERGENCY RECOVERY'**
+  String get emergencyRecoveryEyebrow;
+
+  /// No description provided for @emergencyRecoveryUnableContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to continue'**
+  String get emergencyRecoveryUnableContinue;
+
+  /// No description provided for @emergencyRecoveryTitleStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate account access'**
+  String get emergencyRecoveryTitleStart;
+
+  /// No description provided for @emergencyRecoveryTitleVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the new authenticator'**
+  String get emergencyRecoveryTitleVerify;
+
+  /// No description provided for @emergencyRecoveryTitleComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery complete'**
+  String get emergencyRecoveryTitleComplete;
+
+  /// No description provided for @emergencyRecoveryBodyStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Use offline recovery codes to create a new password, new TOTP and new passkey on this device.'**
+  String get emergencyRecoveryBodyStart;
+
+  /// No description provided for @emergencyRecoveryBodyVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the QR in your authenticator, enter the 6-digit code and confirm the new local passkey.'**
+  String get emergencyRecoveryBodyVerify;
+
+  /// No description provided for @emergencyRecoveryBodyComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Store the new codes offline before signing in again. They should not live in notes, email or cloud storage.'**
+  String get emergencyRecoveryBodyComplete;
+
+  /// No description provided for @emergencyRecoveryNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New account password'**
+  String get emergencyRecoveryNewPassword;
+
+  /// No description provided for @emergencyRecoveryConfirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get emergencyRecoveryConfirmPassword;
+
+  /// No description provided for @emergencyRecoveryCodesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery codes'**
+  String get emergencyRecoveryCodesLabel;
+
+  /// No description provided for @emergencyRecoveryCodeN.
+  ///
+  /// In en, this message translates to:
+  /// **'Code {n}'**
+  String emergencyRecoveryCodeN(int n);
+
+  /// No description provided for @emergencyRecoveryAddCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Add code'**
+  String get emergencyRecoveryAddCode;
+
+  /// No description provided for @emergencyRecoveryStartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start recovery'**
+  String get emergencyRecoveryStartAction;
+
+  /// No description provided for @emergencyRecoveryTempSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary session'**
+  String get emergencyRecoveryTempSession;
+
+  /// No description provided for @emergencyRecoveryFinishWithin.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish within {minutes} minutes to avoid restarting the flow.'**
+  String emergencyRecoveryFinishWithin(int minutes);
+
+  /// No description provided for @emergencyRecoveryConfirmPasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new passkey'**
+  String get emergencyRecoveryConfirmPasskey;
+
+  /// No description provided for @emergencyRecoveryGoBackReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back and review data'**
+  String get emergencyRecoveryGoBackReview;
+
+  /// No description provided for @emergencyRecoveryCredentialsRotated.
+  ///
+  /// In en, this message translates to:
+  /// **'Credentials rotated'**
+  String get emergencyRecoveryCredentialsRotated;
+
+  /// No description provided for @emergencyRecoveryCopyNewCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy new codes'**
+  String get emergencyRecoveryCopyNewCodes;
+
+  /// No description provided for @emergencyRecoverySignInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get emergencyRecoverySignInAgain;
+
+  /// No description provided for @emergencyRecoveryTotpInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit TOTP from the new authenticator.'**
+  String get emergencyRecoveryTotpInstruction;
+
+  /// No description provided for @emergencyRecoveryPasswordMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a new password with at least 12 characters.'**
+  String get emergencyRecoveryPasswordMin;
+
+  /// No description provided for @emergencyRecoveryPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The confirmation must match the new password.'**
+  String get emergencyRecoveryPasswordMismatch;
+
+  /// No description provided for @emergencyRecoveryNeedThreeCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least 3 distinct recovery codes.'**
+  String get emergencyRecoveryNeedThreeCodes;
+
+  /// No description provided for @emergencyRecoveryCodesDistinct.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery codes must be distinct.'**
+  String get emergencyRecoveryCodesDistinct;
+
+  /// No description provided for @emergencyRecoveryCodeEightDigits.
+  ///
+  /// In en, this message translates to:
+  /// **'Each recovery code must have 8 digits.'**
+  String get emergencyRecoveryCodeEightDigits;
+
+  /// No description provided for @emergencyRecoveryCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied.'**
+  String get emergencyRecoveryCopied;
+
+  /// No description provided for @passkeyVerifyEnterSixDigits.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter all 6 digits.'**
+  String get passkeyVerifyEnterSixDigits;
+
+  /// No description provided for @passkeyVerifyLinkNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Link a new passkey'**
+  String get passkeyVerifyLinkNew;
+
+  /// No description provided for @passkeyVerifyAccessApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Access approved'**
+  String get passkeyVerifyAccessApproved;
+
+  /// No description provided for @passkeyVerifyAuthentication.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication'**
+  String get passkeyVerifyAuthentication;
+
+  /// No description provided for @passkeyVerifyTouchSensor.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch the sensor to continue'**
+  String get passkeyVerifyTouchSensor;
+
+  /// No description provided for @notifCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifCenterTitle;
+
+  /// No description provided for @notifCenterSettingsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get notifCenterSettingsTooltip;
+
+  /// No description provided for @notifCenterFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get notifCenterFilterAll;
+
+  /// No description provided for @notifCenterFilterAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts'**
+  String get notifCenterFilterAlerts;
+
+  /// No description provided for @notifCenterFilterSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get notifCenterFilterSecurity;
+
+  /// No description provided for @notifCenterZero.
+  ///
+  /// In en, this message translates to:
+  /// **'0 notifications'**
+  String get notifCenterZero;
+
+  /// No description provided for @notifCenterUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread'**
+  String notifCenterUnread(int count);
+
+  /// No description provided for @notifCenterReadAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Read all'**
+  String get notifCenterReadAll;
+
+  /// No description provided for @notifCenterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get notifCenterClear;
+
+  /// No description provided for @notifCenterEmptyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications'**
+  String get notifCenterEmptyAll;
+
+  /// No description provided for @notifCenterEmptyAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'No alerts'**
+  String get notifCenterEmptyAlerts;
+
+  /// No description provided for @notifCenterEmptySecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'No security alerts'**
+  String get notifCenterEmptySecurity;
+
+  /// No description provided for @notifCenterEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When something important happens, it appears here.'**
+  String get notifCenterEmptyHint;
+
+  /// No description provided for @notifCenterToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get notifCenterToday;
+
+  /// No description provided for @notifCenterYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get notifCenterYesterday;
+
+  /// No description provided for @notifSidebarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Push notifications'**
+  String get notifSidebarTitle;
+
+  /// No description provided for @notifSidebarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent session alerts.'**
+  String get notifSidebarSubtitle;
+
+  /// No description provided for @notifSidebarEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When something important happens, the notification appears here.'**
+  String get notifSidebarEmptyHint;
+
+  /// No description provided for @sendFeeEstimatedAtPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee estimated at payment'**
+  String get sendFeeEstimatedAtPayment;
+
+  /// No description provided for @sendFeeCalculating.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculating fee…'**
+  String get sendFeeCalculating;
+
+  /// No description provided for @sendFeeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee unavailable'**
+  String get sendFeeUnavailable;
+
+  /// No description provided for @sendFeeQuoteExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee quote expired — updating…'**
+  String get sendFeeQuoteExpired;
+
+  /// No description provided for @emergencyRecoveryAccountRotatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Account {username} now uses the new password, new TOTP and this device passkey.'**
+  String emergencyRecoveryAccountRotatedBody(String username);
+
+  /// No description provided for @notifSidebarUnreadSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'unread'**
+  String get notifSidebarUnreadSingular;
+
+  /// No description provided for @notifSidebarUnreadPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'unread'**
+  String get notifSidebarUnreadPlural;
+
+  /// No description provided for @settingsDevicesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorized devices'**
+  String get settingsDevicesTitle;
+
+  /// No description provided for @settingsDevicesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkeys and device keys linked to your account. Block or remove access when needed.'**
+  String get settingsDevicesSubtitle;
+
+  /// No description provided for @settingsDevicesPasskeyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey registered'**
+  String get settingsDevicesPasskeyRegistered;
+
+  /// No description provided for @settingsDevicesInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Device in use'**
+  String get settingsDevicesInUse;
+
+  /// No description provided for @settingsDevicesRegisterPasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Register passkey on this device'**
+  String get settingsDevicesRegisterPasskey;
+
+  /// No description provided for @settingsDevicesLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load devices'**
+  String get settingsDevicesLoadError;
+
+  /// No description provided for @settingsDevicesRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get settingsDevicesRetry;
+
+  /// No description provided for @settingsDevicesRegisterFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not register'**
+  String get settingsDevicesRegisterFail;
+
+  /// No description provided for @settingsBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security backup'**
+  String get settingsBackupTitle;
+
+  /// No description provided for @settingsBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time recovery codes. Require active 2FA (TOTP) and replace previous codes when regenerated.'**
+  String get settingsBackupSubtitle;
+
+  /// No description provided for @settingsBackupEnableTotpFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable two-factor authentication'**
+  String get settingsBackupEnableTotpFirst;
+
+  /// No description provided for @settingsBackupCopyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get settingsBackupCopyAll;
+
+  /// No description provided for @settingsBackupCopiedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Codes copied'**
+  String get settingsBackupCopiedTitle;
+
+  /// No description provided for @settingsBackupCopiedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Store them offline in a safe place.'**
+  String get settingsBackupCopiedMessage;
+
+  /// No description provided for @settingsRecoveryHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account recovery'**
+  String get settingsRecoveryHubTitle;
+
+  /// No description provided for @settingsRecoveryHubSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Real recovery paths available for this account security mode.'**
+  String get settingsRecoveryHubSubtitle;
+
+  /// No description provided for @settingsRecoveryStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get settingsRecoveryStatus;
+
+  /// No description provided for @settingsRecoverySecurityMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Security mode'**
+  String get settingsRecoverySecurityMode;
+
+  /// No description provided for @settingsRecoveryCodesRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Codes remaining'**
+  String get settingsRecoveryCodesRemaining;
+
+  /// No description provided for @settingsRecoveryCodesRemainingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} backup code(s)'**
+  String settingsRecoveryCodesRemainingCount(int count);
+
+  /// No description provided for @settingsRecoveryBackupSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security backup'**
+  String get settingsRecoveryBackupSecurity;
+
+  /// No description provided for @settingsRecoveryEmergency.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency recovery'**
+  String get settingsRecoveryEmergency;
+
+  /// No description provided for @settingsSecurityLedgerDiagTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement diagnostics'**
+  String get settingsSecurityLedgerDiagTitle;
+
+  /// No description provided for @settingsSecurityLedgerDiagLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading counters…'**
+  String get settingsSecurityLedgerDiagLoading;
+
+  /// No description provided for @settingsSecurityLedgerDiagUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get settingsSecurityLedgerDiagUnavailable;
+
+  /// No description provided for @settingsSecurityBlockCaptures.
+  ///
+  /// In en, this message translates to:
+  /// **'Block screenshots on statement'**
+  String get settingsSecurityBlockCaptures;
+
+  /// No description provided for @homeChartUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Market unavailable'**
+  String get homeChartUnavailable;
+
+  /// No description provided for @homeChartRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to try again'**
+  String get homeChartRetry;
+
+  /// No description provided for @homeChartCustomPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom period'**
+  String get homeChartCustomPeriod;
+
+  /// No description provided for @homeChartLastNDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {days} days'**
+  String homeChartLastNDays(int days);
+
+  /// No description provided for @homeChartApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get homeChartApply;
+
+  /// No description provided for @homeChartCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get homeChartCustom;
+
+  /// No description provided for @onboardingJourneyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activation journey'**
+  String get onboardingJourneyTitle;
+
+  /// No description provided for @onboardingProgressCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{completed} of 3 completed'**
+  String onboardingProgressCount(int completed);
+
+  /// No description provided for @onboardingCreateCustodialWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Create custodial wallet'**
+  String get onboardingCreateCustodialWallet;
+
+  /// No description provided for @onboardingMakeDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a deposit'**
+  String get onboardingMakeDeposit;
+
+  /// No description provided for @onboardingInternalTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal transfer'**
+  String get onboardingInternalTransfer;
+
+  /// No description provided for @sendReviewQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote'**
+  String get sendReviewQuote;
+
+  /// No description provided for @sendReviewDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get sendReviewDestination;
+
+  /// No description provided for @sendReviewNetworkFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get sendReviewNetworkFee;
+
+  /// No description provided for @sendReviewKeroseneFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene fee'**
+  String get sendReviewKeroseneFee;
+
+  /// No description provided for @sendReviewEstimatedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated time'**
+  String get sendReviewEstimatedTime;
+
+  /// No description provided for @sendReviewYouPay.
+  ///
+  /// In en, this message translates to:
+  /// **'You pay'**
+  String get sendReviewYouPay;
+
+  /// No description provided for @sendReviewSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Sender'**
+  String get sendReviewSender;
+
+  /// No description provided for @sendReviewWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get sendReviewWallet;
+
+  /// No description provided for @sendReviewRecipientGets.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient receives'**
+  String get sendReviewRecipientGets;
+
+  /// No description provided for @sendReviewTotalDebited.
+  ///
+  /// In en, this message translates to:
+  /// **'Total debited'**
+  String get sendReviewTotalDebited;
+
+  /// No description provided for @sendReviewStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get sendReviewStatus;
+
+  /// No description provided for @sendReviewTxId.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get sendReviewTxId;
+
+  /// No description provided for @walletTxLoadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading transactions'**
+  String get walletTxLoadingTitle;
+
+  /// No description provided for @walletTxLoadingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing your recent history.'**
+  String get walletTxLoadingBody;
+
+  /// No description provided for @walletTxLoadErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load'**
+  String get walletTxLoadErrorTitle;
+
+  /// No description provided for @walletTxEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions yet'**
+  String get walletTxEmptyTitle;
+
+  /// No description provided for @walletTxEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When you send, receive, or move balance, history appears here.'**
+  String get walletTxEmptyBody;
+
+  /// No description provided for @walletSetupCreateOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Create on device'**
+  String get walletSetupCreateOnDevice;
+
+  /// No description provided for @walletSetupGenerateBip39.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate BIP39 seed'**
+  String get walletSetupGenerateBip39;
+
+  /// No description provided for @walletSetupImportSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import seed'**
+  String get walletSetupImportSeed;
+
+  /// No description provided for @walletSetupImportSeedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'12 or 24 words'**
+  String get walletSetupImportSeedHint;
+
+  /// No description provided for @walletSetupWatchOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch only'**
+  String get walletSetupWatchOnly;
+
+  /// No description provided for @walletSetupXpubSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon · xpub'**
+  String get walletSetupXpubSoon;
+
+  /// No description provided for @walletSetupMultisig.
+  ///
+  /// In en, this message translates to:
+  /// **'Multisig'**
+  String get walletSetupMultisig;
+
+  /// No description provided for @walletSetupSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get walletSetupSoon;
+
+  /// No description provided for @walletSetupRegistering.
+  ///
+  /// In en, this message translates to:
+  /// **'Registering'**
+  String get walletSetupRegistering;
+
+  /// No description provided for @walletSetupDerivingKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Deriving keys and sending to Kerosene…'**
+  String get walletSetupDerivingKeys;
+
+  /// No description provided for @walletSetupImportFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed'**
+  String get walletSetupImportFail;
+
+  /// No description provided for @walletSetupNameExample.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Main cold'**
+  String get walletSetupNameExample;
+
+  /// No description provided for @walletSetupContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get walletSetupContinue;
+
+  /// No description provided for @seedInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid seed'**
+  String get seedInvalid;
+
+  /// No description provided for @seedValidateContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Validate and continue'**
+  String get seedValidateContinue;
+
+  /// No description provided for @seedImportWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Import wallet'**
+  String get seedImportWallet;
+
+  /// No description provided for @seedFixLastWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix last word to “{word}”'**
+  String seedFixLastWord(String word);
+
+  /// No description provided for @seedUseLastWordChecksumOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Use last word “{word}” (checksum OK)'**
+  String seedUseLastWordChecksumOk(String word);
+
+  /// No description provided for @seedImportLiteralInvalidChecksum.
+  ///
+  /// In en, this message translates to:
+  /// **'Import literal phrase (invalid checksum)'**
+  String get seedImportLiteralInvalidChecksum;
+
+  /// No description provided for @seedImportAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Import anyway (literal phrase)'**
+  String get seedImportAnyway;
+
+  /// No description provided for @seedUndoPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo previous'**
+  String get seedUndoPrevious;
+
+  /// No description provided for @coldSendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send from cold'**
+  String get coldSendTitle;
+
+  /// No description provided for @coldSendDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get coldSendDestination;
+
+  /// No description provided for @coldSendDestinationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an on-chain address or choose a Kerosene wallet.'**
+  String get coldSendDestinationHint;
+
+  /// No description provided for @coldSendNoAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'No address'**
+  String get coldSendNoAddress;
+
+  /// No description provided for @coldSendOnchainDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain destination'**
+  String get coldSendOnchainDestination;
+
+  /// No description provided for @coldSendPayKeroseneWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Kerosene wallet (INTERNAL / on-chain)'**
+  String get coldSendPayKeroseneWallet;
+
+  /// No description provided for @coldSendSignBroadcast.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign and broadcast'**
+  String get coldSendSignBroadcast;
+
+  /// No description provided for @coldSendMissingSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Local seed missing'**
+  String get coldSendMissingSeed;
+
+  /// No description provided for @coldSendNetworkMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Incompatible network'**
+  String get coldSendNetworkMismatch;
+
+  /// No description provided for @coldSendAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization'**
+  String get coldSendAuth;
+
+  /// No description provided for @coldSendSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction sent'**
+  String get coldSendSuccess;
+
+  /// No description provided for @coldSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold send failed'**
+  String get coldSendFailed;
+
+  /// No description provided for @coldCreateUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold wallet unavailable'**
+  String get coldCreateUnavailable;
+
+  /// No description provided for @coldCreateMaxTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'You can create at most two cold wallets.'**
+  String get coldCreateMaxTwo;
+
+  /// No description provided for @coldCreateNamePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the name this cold wallet should have.'**
+  String get coldCreateNamePrompt;
+
+  /// No description provided for @coldCreateWalletName.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet name'**
+  String get coldCreateWalletName;
+
+  /// No description provided for @coldCreateWordN.
+  ///
+  /// In en, this message translates to:
+  /// **'word {n}'**
+  String coldCreateWordN(int n);
+
+  /// No description provided for @internalSelectCustody.
+  ///
+  /// In en, this message translates to:
+  /// **'Select custody'**
+  String get internalSelectCustody;
+
+  /// No description provided for @internalSelectCustodyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how this wallet will be custodied before continuing.'**
+  String get internalSelectCustodyBody;
+
+  /// No description provided for @internalCustodyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Custody unavailable'**
+  String get internalCustodyUnavailable;
+
+  /// No description provided for @internalCustodyAlreadyActive.
+  ///
+  /// In en, this message translates to:
+  /// **'This custody already has an active wallet.'**
+  String get internalCustodyAlreadyActive;
+
+  /// No description provided for @internalNamePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the name this wallet should have.'**
+  String get internalNamePrompt;
+
+  /// No description provided for @internalCreatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet created successfully.'**
+  String get internalCreatedSuccess;
+
+  /// No description provided for @internalWalletName.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet name'**
+  String get internalWalletName;
+
+  /// No description provided for @btcAccountsCopyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy wallet address'**
+  String get btcAccountsCopyAddress;
+
+  /// No description provided for @btcAccountsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get btcAccountsCopied;
+
+  /// No description provided for @btcAccountsCopiedClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Available on the clipboard.'**
+  String get btcAccountsCopiedClipboard;
+
+  /// No description provided for @btcAccountsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'WALLET STATUS'**
+  String get btcAccountsStatus;
+
+  /// No description provided for @btcAccountsReceiveAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'RECEIVE ADDRESS'**
+  String get btcAccountsReceiveAddress;
+
+  /// No description provided for @btcAccountsWalletName.
+  ///
+  /// In en, this message translates to:
+  /// **'WALLET NAME'**
+  String get btcAccountsWalletName;
+
+  /// No description provided for @btcAccountsRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get btcAccountsRename;
+
+  /// No description provided for @btcAccountsPublicMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'PUBLIC MATERIAL'**
+  String get btcAccountsPublicMaterial;
+
+  /// No description provided for @btcAccountsAddressRotated.
+  ///
+  /// In en, this message translates to:
+  /// **'Address rotated'**
+  String get btcAccountsAddressRotated;
+
+  /// No description provided for @btcAccountsAddressNotRotated.
+  ///
+  /// In en, this message translates to:
+  /// **'Address not rotated'**
+  String get btcAccountsAddressNotRotated;
+
+  /// No description provided for @btcAccountsRotateFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene could not generate a new address right now.'**
+  String get btcAccountsRotateFail;
+
+  /// No description provided for @btcAccountsNameUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Name updated'**
+  String get btcAccountsNameUpdated;
+
+  /// No description provided for @btcAccountsNameNotUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Name not updated'**
+  String get btcAccountsNameNotUpdated;
+
+  /// No description provided for @btcAccountsNameReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the wallet name and try again.'**
+  String get btcAccountsNameReview;
+
+  /// No description provided for @btcAccountsActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Action not completed'**
+  String get btcAccountsActionFailed;
+
+  /// No description provided for @btcAccountsCannotChange.
+  ///
+  /// In en, this message translates to:
+  /// **'The wallet cannot be changed right now.'**
+  String get btcAccountsCannotChange;
+
+  /// No description provided for @btcAccountsUtxos.
+  ///
+  /// In en, this message translates to:
+  /// **'MONITORED UTXOS'**
+  String get btcAccountsUtxos;
+
+  /// No description provided for @btcAccountsPsbt.
+  ///
+  /// In en, this message translates to:
+  /// **'PSBT WORKFLOWS'**
+  String get btcAccountsPsbt;
+
+  /// No description provided for @finStatusPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get finStatusPaid;
+
+  /// No description provided for @finStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get finStatusCompleted;
+
+  /// No description provided for @finStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get finStatusExpired;
+
+  /// No description provided for @finStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get finStatusCancelled;
+
+  /// No description provided for @finStatusValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating'**
+  String get finStatusValidating;
+
+  /// No description provided for @finStatusNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get finStatusNeedsReview;
+
+  /// No description provided for @finStatusActionNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Action needed'**
+  String get finStatusActionNeeded;
+
+  /// No description provided for @finStatusDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected'**
+  String get finStatusDetected;
+
+  /// No description provided for @finStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get finStatusPending;
+
+  /// No description provided for @finStatusConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming'**
+  String get finStatusConfirming;
+
+  /// No description provided for @finStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get finStatusFailed;
+
+  /// No description provided for @statementInsightNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get statementInsightNet;
+
+  /// No description provided for @statementInsightInternalTransfers.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal transfers'**
+  String get statementInsightInternalTransfers;
+
+  /// No description provided for @statementInsightPartialHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial history — the selected period may exceed what is loaded.'**
+  String get statementInsightPartialHistory;
+
+  /// No description provided for @coldSuccessSeedWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Important: without the seed on this device, cold send will not work. Keep it safe.'**
+  String get coldSuccessSeedWarning;
+
+  /// No description provided for @receiveNfcWriteRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Write request'**
+  String get receiveNfcWriteRequest;
+
+  /// No description provided for @receiveKeroseneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene receive'**
+  String get receiveKeroseneTitle;
+
+  /// No description provided for @statementExportLongAddressesNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Long addresses are shortened. CSV is better for reconciliation.'**
+  String get statementExportLongAddressesNote;
+
+  /// No description provided for @statementExportShareLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 200 lines · readable for sharing'**
+  String get statementExportShareLimit;
+
+  /// No description provided for @statementEmptyOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'The statement is empty on this device.'**
+  String get statementEmptyOnDevice;
+
+  /// No description provided for @movementHubReceiveInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive via internal user transfer'**
+  String get movementHubReceiveInternal;
+
+  /// No description provided for @notifCloseNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Close notification'**
+  String get notifCloseNotification;
+
+  /// No description provided for @btcAccountsRotateAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate address'**
+  String get btcAccountsRotateAddress;
+
+  /// No description provided for @btcAccountsAvailableBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Available balance'**
+  String get btcAccountsAvailableBalance;
+
+  /// No description provided for @btcAccountsReceiveAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive address'**
+  String get btcAccountsReceiveAddressLabel;
+
+  /// No description provided for @seedPassphrase25th.
+  ///
+  /// In en, this message translates to:
+  /// **'Passphrase / 25th word (not the 12)'**
+  String get seedPassphrase25th;
+
+  /// No description provided for @coldSendAuthIncompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Incomplete authorization'**
+  String get coldSendAuthIncompleteTitle;
+
+  /// No description provided for @coldSendAuthIncompleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticator code (TOTP) is required to build the PSBT.'**
+  String get coldSendAuthIncompleteBody;
+
+  /// No description provided for @coldSendAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tb1… / bc1… or Kerosene wallet'**
+  String get coldSendAddressHint;
+
+  /// No description provided for @settingsDevicesUnlinkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm unlinking in Settings → Biometrics if prompted.'**
+  String get settingsDevicesUnlinkHint;
+
+  /// No description provided for @settingsRecoveryEmergencyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotates password, TOTP and passkey with offline codes. Ends the current session.'**
+  String get settingsRecoveryEmergencyBody;
+
+  /// No description provided for @securityTotpValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating account security'**
+  String get securityTotpValidating;
+
+  /// No description provided for @homeFeedCardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene cards'**
+  String get homeFeedCardsTitle;
 }
 
 class _AppLocalizationsDelegate

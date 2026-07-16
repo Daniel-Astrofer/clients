@@ -935,15 +935,25 @@ String? sessionStorageScopeFromUser({
   required String? userId,
   required String? username,
 }) {
+  // Prefer stable numeric user id so multi-user devices never collide on
+  // display names. Username fallback only when id is truly unavailable.
   final normalizedUserId = userId?.trim();
   if (normalizedUserId != null &&
       normalizedUserId.isNotEmpty &&
+      normalizedUserId != '0' &&
+      RegExp(r'^\d+$').hasMatch(normalizedUserId)) {
+    return _sanitizeSessionStorageScope('user_$normalizedUserId');
+  }
+  if (normalizedUserId != null &&
+      normalizedUserId.isNotEmpty &&
       normalizedUserId != '0') {
+    // Non-numeric id (UUID) still scopes uniquely.
     return _sanitizeSessionStorageScope('user_$normalizedUserId');
   }
 
   final normalizedUsername = username?.trim().toLowerCase();
   if (normalizedUsername != null && normalizedUsername.isNotEmpty) {
+    // Legacy fallback only — new logins should always carry a numeric user id.
     return _sanitizeSessionStorageScope('username_$normalizedUsername');
   }
 

@@ -16,6 +16,8 @@ import 'package:kerosene/features/security/presentation/providers/security_provi
 import 'package:kerosene/features/security/presentation/widgets/app_entry_pin_gate.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import 'package:kerosene/features/security/presentation/widgets/pin_entry_scaffold.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -51,14 +53,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Crie um PIN para acessar a conta'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
 
-    await tester.tap(find.text('Toque para digitar'));
-    await tester.pumpAndSettle();
-
-    for (final digit in ['1', '2', '3', '4']) {
-      await tester.tap(find.text(digit));
-      await tester.pump();
-    }
+    await tester.enterText(find.byType(TextField), '1234');
     await tester.pumpAndSettle();
 
     expect(find.text('Confirme o PIN'), findsOneWidget);
@@ -173,21 +170,18 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Toque para digitar'));
-    await tester.pumpAndSettle();
 
-    expect(find.byType(PinNumericPad), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
 
-    for (final digit in ['1', '2', '3', '4']) {
-      await tester.tap(find.text(digit));
-      await tester.pump();
-    }
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(repository.verifyCalls, 1);
     expect(repository.lastPin, '1234');
-    expect(find.byType(PinNumericPad), findsNothing);
-    expect(find.byType(TorLoadingDots), findsOneWidget);
+    final scaffoldFinder = find.byType(PinEntryScaffold);
+    expect(scaffoldFinder, findsOneWidget);
+    expect((tester.widget(scaffoldFinder) as PinEntryScaffold).busy, isTrue);
 
     repository.completeVerify(
       const Left(
@@ -199,13 +193,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(TorLoadingDots), findsNothing);
-    expect(find.byType(PinNumericPad), findsOneWidget);
+    expect((tester.widget(scaffoldFinder) as PinEntryScaffold).busy, isFalse);
+    expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Digite o PIN para acessar sua conta'), findsOneWidget);
   });
 
   test('reloads app PIN status when the authenticated session changes',
       () async {
+    SharedPreferences.setMockInitialValues({});
+    final sharedPreferences = await SharedPreferences.getInstance();
+
     final repository = _SequencedPinStatusSecurityRepository([
       const AppPinStatus(enabled: true, configured: true),
       const AppPinStatus(enabled: false, configured: false),
@@ -213,6 +210,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         securityRepositoryProvider.overrideWithValue(repository),
         authControllerProvider.overrideWith(
           () => _SwitchableAuthController(_testUser),

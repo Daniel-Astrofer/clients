@@ -159,7 +159,7 @@ List<HomeFeedItem> resolveHomeFeedCards({
   required HomeLedgerBalanceView view,
   required List<HomeFeedItem>? remote,
 }) {
-  final localCards = _localCardPromos(view);
+  final localCards = _localCardPromos(context, view);
   if (remote != null && remote.isNotEmpty) {
     final hasCardPromo = remote.any(_isCardPromoItem);
     if (hasCardPromo) {
@@ -283,13 +283,17 @@ List<HomeFeedItem> localEducationFallback(
   // Card promos always available offline / when remote fails.
   // Prepended so they appear first in the carousel after a cold start.
   return [
-    ..._localCardPromos(view),
+    ..._localCardPromos(context, view),
     ...education,
   ];
 }
 
 /// Offline mirror of backend card catalog (Bronze / Metal / Gold).
-List<HomeFeedItem> _localCardPromos(HomeLedgerBalanceView view) {
+List<HomeFeedItem> _localCardPromos(
+  BuildContext context,
+  HomeLedgerBalanceView view,
+) {
+  final cardsTitle = context.tr.homeFeedCardsTitle;
   // On-chain / cold surface: only the trio announcement (matches backend views).
   if (view == HomeLedgerBalanceView.onChain ||
       view == HomeLedgerBalanceView.cold) {
@@ -297,7 +301,7 @@ List<HomeFeedItem> _localCardPromos(HomeLedgerBalanceView view) {
       _localCard(
         id: 'local-ann-kerosene-cards-trio',
         kind: HomeFeedKind.announcement,
-        title: 'Cartões Kerosene',
+        title: cardsTitle,
         body:
             'Três níveis: Bronze, Metal e Gold. Cada cartão assegurado com taxas e aparência próprias.',
         tag: 'CARTÕES',
@@ -310,7 +314,7 @@ List<HomeFeedItem> _localCardPromos(HomeLedgerBalanceView view) {
     _localCard(
       id: 'local-ann-kerosene-cards-trio',
       kind: HomeFeedKind.announcement,
-      title: 'Cartões Kerosene',
+      title: cardsTitle,
       body:
           'Três níveis: Bronze, Metal e Gold. Cada cartão assegurado com taxas e aparência próprias.',
       tag: 'CARTÕES',

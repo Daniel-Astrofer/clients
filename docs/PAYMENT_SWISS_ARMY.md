@@ -146,7 +146,7 @@ PRs **0–7 implementados no código**. PR8 = smoke em device + preencher matriz
 | 11 | Network mismatch block | |
 | 12 | Quote expired block | |
 | 13 | Self-pay block | |
-| 14 | Auth cancel mid-flow | |
+| 14 | Auth cancel mid-flow | unit: `isAuthUserCancellation` + payment-link passkey cancel (silent); device QA remaining |
 | 15 | Dual-rail switch | |
 | 16 | Offline banner + blocked send | |
 

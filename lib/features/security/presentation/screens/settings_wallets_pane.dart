@@ -18,13 +18,14 @@ class SettingsWalletsPane extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tr = context.tr;
     final accountsAsync = ref.watch(bitcoinAccountsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Carteiras',
+          tr.settingsWalletsTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 32,
@@ -35,7 +36,7 @@ class SettingsWalletsPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Renomeie ou arquive carteiras desta sessão. Ações usam a mesma API da tela de contas Bitcoin.',
+          tr.settingsWalletsSubtitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textSecondary,
             fontSize: 16,
@@ -52,12 +53,12 @@ class SettingsWalletsPane extends ConsumerWidget {
                 .toList(growable: false);
             if (active.isEmpty) {
               return SettingsSection(
-                title: 'Carteiras',
+                title: tr.settingsWalletsSection,
                 children: [
                   SettingsSectionRow(
                     icon: KeroseneIcons.wallet,
-                    title: 'Nenhuma carteira ativa',
-                    subtitle: 'Abra Contas Bitcoin para criar ou importar.',
+                    title: tr.settingsWalletsEmptyTitle,
+                    subtitle: tr.settingsWalletsEmptySubtitle,
                     onTap: () => pushSettingsDeferred(
                       context,
                       bitcoin_accounts.loadLibrary,
@@ -72,7 +73,7 @@ class SettingsWalletsPane extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SettingsSection(
-                  title: 'Suas carteiras',
+                  title: tr.settingsWalletsYoursSection,
                   children: [
                     for (final account in active)
                       _WalletAdminRow(account: account),
@@ -86,7 +87,7 @@ class SettingsWalletsPane extends ConsumerWidget {
                     (_) => bitcoin_accounts.BitcoinAccountsScreen(),
                   ),
                   icon: const Icon(KeroseneIcons.next, size: 16),
-                  label: const Text('Abrir gestão completa de contas'),
+                  label: Text(tr.settingsWalletsOpenFull),
                 ),
               ],
             );
@@ -98,12 +99,12 @@ class SettingsWalletsPane extends ConsumerWidget {
             ),
           ),
           error: (_, __) => SettingsSection(
-            title: 'Carteiras',
+            title: tr.settingsWalletsSection,
             children: [
               SettingsSectionRow(
                 icon: KeroseneIcons.warning,
-                title: 'Não foi possível carregar',
-                subtitle: 'Toque para abrir a gestão completa.',
+                title: tr.settingsWalletsLoadErrorTitle,
+                subtitle: tr.settingsWalletsLoadErrorSubtitle,
                 onTap: () => pushSettingsDeferred(
                   context,
                   bitcoin_accounts.loadLibrary,
@@ -139,9 +140,10 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
   }
 
   String get _kindSubtitle {
-    if (account.isWatchOnly) return 'Watch-only / cold';
-    if (account.isCustodialOnchain) return 'Custodial on-chain';
-    return 'Conta assegurada (interna)';
+    final tr = context.tr;
+    if (account.isWatchOnly) return tr.settingsWalletsWatchOnly;
+    if (account.isCustodialOnchain) return tr.settingsWalletsCustodialOnchain;
+    return tr.settingsWalletsInternal;
   }
 
   Future<void> _rename() async {
@@ -157,15 +159,15 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
       if (!mounted) return;
       AppNotice.showSuccess(
         context,
-        title: 'Nome atualizado',
+        title: context.tr.settingsWalletsRenameOk,
         message: next,
       );
     } catch (_) {
       if (!mounted) return;
       AppNotice.showError(
         context,
-        title: 'Nome não atualizado',
-        message: 'Revise o nome e tente novamente.',
+        title: context.tr.settingsWalletsRenameFailTitle,
+        message: context.tr.settingsWalletsRenameFailMessage,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -185,16 +187,16 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
       AppNotice.showSuccess(
         context,
         title: account.isWatchOnly
-            ? 'Acompanhamento arquivado'
-            : 'Carteira arquivada',
+            ? context.tr.settingsWalletsArchiveOkWatch
+            : context.tr.settingsWalletsArchiveOk,
         message: _label,
       );
     } catch (_) {
       if (!mounted) return;
       AppNotice.showError(
         context,
-        title: 'Não foi possível arquivar',
-        message: 'Tente novamente em instantes.',
+        title: context.tr.settingsWalletsArchiveFailTitle,
+        message: context.tr.settingsWalletsArchiveFailMessage,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -203,10 +205,11 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
 
   @override
   Widget build(BuildContext context) {
+    final tr = context.tr;
     return SettingsSectionRow(
       icon: KeroseneIcons.wallet,
       title: _label,
-      subtitle: _busy ? 'Processando…' : _kindSubtitle,
+      subtitle: _busy ? tr.settingsWalletsProcessing : _kindSubtitle,
       onTap: _busy
           ? null
           : () async {
@@ -215,36 +218,36 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
                 context: context,
                 backgroundColor: KeroseneBrandTokens.surfaceMuted,
                 builder: (sheetContext) {
+                  final sheetTr = sheetContext.tr;
                   return SafeArea(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
                           leading: const Icon(KeroseneIcons.edit),
-                          title: const Text('Trocar nome'),
+                          title: Text(sheetTr.settingsWalletsRename),
                           onTap: () => Navigator.pop(sheetContext, 'rename'),
                         ),
                         ListTile(
                           leading: const Icon(KeroseneIcons.trash),
                           title: Text(
                             account.isWatchOnly
-                                ? 'Arquivar acompanhamento'
-                                : 'Arquivar / bloquear carteira',
+                                ? sheetTr.settingsWalletsArchiveWatch
+                                : sheetTr.settingsWalletsArchive,
                           ),
                           onTap: () => Navigator.pop(sheetContext, 'archive'),
-                        ),
-                        ListTile(
-                          leading: const Icon(KeroseneIcons.close),
-                          title: Text(context.tr.cancel),
-                          onTap: () => Navigator.pop(sheetContext),
                         ),
                       ],
                     ),
                   );
                 },
               );
-              if (action == 'rename') await _rename();
-              if (action == 'archive') await _archive();
+              if (!mounted) return;
+              if (action == 'rename') {
+                await _rename();
+              } else if (action == 'archive') {
+                await _archive();
+              }
             },
     );
   }

@@ -169,7 +169,7 @@
   "approachToSend": "APPROACH TO SEND",
   "approachToRead": "APPROACH TO READ",
   "nfcInstructions": "Keep your device close to the reader or another smartphone to process.",
-  "cancelOperation": "CANCEL OPERATION",
+  "cancelOperation": "Cancel operation",
   "confirming": "Confirming",
   "sendBitcoin": "SEND BITCOIN",
   "receiveBitcoin": "RECEIVE BITCOIN",
@@ -1371,8 +1371,12 @@
   "authDeviceUnlinkBody": "This device is linked to account {previousUsername}.\n\n{guidance}",
   "@authDeviceUnlinkBody": {
     "placeholders": {
-      "previousUsername": { "type": "String" },
-      "guidance": { "type": "String" }
+      "previousUsername": {
+        "type": "String"
+      },
+      "guidance": {
+        "type": "String"
+      }
     }
   },
   "authDeviceUnlinkDefaultGuidance": "If you continue, the previous account's passkey will be removed from this device and that account will only be accessible with a password.",
@@ -1383,10 +1387,11 @@
   "authDeviceUnlinkCancelledMessage": "Signup cancelled. This device remains linked to {previousUsername}.",
   "@authDeviceUnlinkCancelledMessage": {
     "placeholders": {
-      "previousUsername": { "type": "String" }
+      "previousUsername": {
+        "type": "String"
+      }
     }
   },
-
   "errReceiverNotReady": "This user is not ready to receive funds yet.",
   "errOnchainReceiverMethodNotFound": "This user does not have an on-chain wallet registered to receive.",
   "errOnchainInvalidAddress": "The Bitcoin address is not valid for this network.",
@@ -2996,5 +3001,572 @@
   "walletSelectorReceiveSubtitle": "Choose where the incoming funds should arrive.",
   "walletSelectorDepositSubtitle": "Choose which wallet will receive this deposit.",
   "walletSelectorWithdrawSubtitle": "Choose which wallet will fund this external withdrawal.",
-  "walletSelectorAvailableBalance": "Available balance"
+  "walletSelectorAvailableBalance": "Available balance",
+  "settingsNavTitle": "Tune your account",
+  "settingsNavDescription": "Manage security, privacy, and preferences for your banking experience.",
+  "settingsNavPreferencesSection": "Preferences",
+  "settingsNavBack": "Back",
+  "settingsNavProfileTitle": "Profile",
+  "settingsNavProfileSubtitle": "Personal data and account information",
+  "settingsNavSecurityTitle": "Security",
+  "settingsNavSecuritySubtitle": "Password, biometrics, and two-factor authentication",
+  "settingsNavNotificationsTitle": "Notifications",
+  "settingsNavNotificationsSubtitle": "Transaction alerts and communications",
+  "settingsNavAppearanceTitle": "Appearance",
+  "settingsNavAppearanceSubtitle": "Theme and local display scale",
+  "settingsNavDisplayTitle": "Language and currency",
+  "settingsNavDisplaySubtitle": "Global language, currency, and time zone",
+  "settingsNavWalletsTitle": "Wallets",
+  "settingsNavWalletsSubtitle": "Custody and KFE cycle",
+  "settingsDisplayTitle": "Language, currency & time",
+  "settingsDisplaySubtitle": "Global app preferences. Language and time zone are sent to the backend for news and education. Local statement is encrypted — the server only keeps ~24h of history.",
+  "settingsDisplayLanguageSection": "Language",
+  "settingsDisplayCurrencySection": "Primary currency",
+  "settingsDisplayTimezoneSection": "Time zone",
+  "settingsDisplayFollowDeviceTimezone": "Follow device time zone",
+  "settingsDisplayPinnedTimezone": "Time zone used in app",
+  "settingsDisplayPickTimezone": "Choose a time zone",
+  "settingsDisplayLanguageEn": "English",
+  "settingsDisplayLanguagePt": "Português",
+  "settingsDisplayLanguageEs": "Español",
+  "settingsDisplayLanguageEnSubtitle": "Interface and feed in English",
+  "settingsDisplayLanguagePtSubtitle": "Interface and feed in Portuguese",
+  "settingsDisplayLanguageEsSubtitle": "Interface and feed in Spanish",
+  "settingsDisplayCurrencyBtcSubtitle": "Show amounts directly in Bitcoin",
+  "settingsDisplayCurrencyUsdSubtitle": "US dollar as display currency",
+  "settingsDisplayCurrencyEurSubtitle": "Euro as display currency",
+  "settingsDisplayCurrencyBrlSubtitle": "Brazilian real as display currency",
+  "settingsAppearanceTitle": "Appearance",
+  "settingsAppearanceSubtitle": "Local control of the app visual theme. This preference does not change financial data and does not depend on the backend.",
+  "settingsAppearanceThemeSection": "Theme",
+  "settingsAppearanceDarkModeTitle": "Dark mode",
+  "settingsAppearanceDarkModeOn": "Enabled for this session.",
+  "settingsAppearanceDarkModeOff": "Disabled for this session.",
+  "cancelAuthentication": "Cancel authentication",
+  "secureConnectionLoading": "Establishing secure connection...",
+  "deferredLoadFailure": "We could not open this screen right now.",
+  "deferredLoadDetails": "Try again in a moment or go back to the previous area.",
+  "nfcScannerTitle": "NFC scan",
+  "nfcReadyToScan": "Ready to scan",
+  "nfcUnavailableDevice": "NFC is not available on this device.",
+  "nfcHoldNearTag": "Hold your device near the NFC tag.",
+  "nfcPaymentRequestRead": "Payment request read.",
+  "nfcTagDetected": "Tag detected.",
+  "offlineTitle": "No connection",
+  "offlineSubtitle": "We could not confirm the connection right now.",
+  "offlineTryNow": "Try now",
+  "pinIncorrect": "We could not confirm that PIN. Try again.",
+  "pinSetupTitle": "Create your security PIN",
+  "pinEnterTitle": "Confirm your security PIN",
+  "pinSetupSubtitle": "Choose six digits to protect this access.",
+  "pinEnterSubtitle": "This local PIN protects trust on this device.",
+  "settingsAccountTitle": "Profile",
+  "settingsAccountSubtitle": "Authenticated account data, session identity, and secure local sign-out.",
+  "settingsAccountIdentitySection": "Identity",
+  "settingsAccountUsernameTitle": "Username",
+  "settingsAccountSessionSection": "Session",
+  "settingsAccountCreatedAtTitle": "Created at",
+  "settingsAccountLastAccessTitle": "Last access",
+  "settingsAccountLogoutTitle": "Sign out of this account",
+  "settingsAccountLogoutSubtitle": "Ends the current session and returns to the app entry.",
+  "settingsNotifTitle": "Notifications",
+  "settingsNotifSubtitle": "Local control of financial alerts, security events, and devices authorized for push notifications.",
+  "settingsNotifAlertsSection": "Alerts",
+  "settingsNotifBackgroundTitle": "Background mode",
+  "settingsNotifBackgroundOn": "Monitors sends and receives while the app is closed.",
+  "settingsNotifBackgroundOff": "Off — open the app to see financial alerts.",
+  "settingsNotifFinancialTitle": "Financial events",
+  "settingsNotifFinancialSubtitle": "Transactions, receives, and payment requests.",
+  "settingsNotifSecurityEventsTitle": "Security events",
+  "settingsNotifSecurityEventsSubtitle": "Login, recovery, and sensitive access attempts.",
+  "settingsNotifMarketTitle": "Bitcoin market",
+  "settingsNotifMarketOn": "Real 24h move alerts enabled.",
+  "settingsNotifMarketOff": "Off by default. No mock and no fallback.",
+  "settingsNotifDevicesSection": "Devices",
+  "settingsNotifDevicesLoading": "Loading authorized devices.",
+  "settingsNotifDevicesUnavailableTitle": "Devices unavailable",
+  "settingsNotifDevicesUnavailableSubtitle": "We could not query registered tokens right now.",
+  "settingsNotifNoDevicesTitle": "No registered devices",
+  "settingsNotifNoDevicesSubtitle": "When you allow push notifications, the backend will show the device here.",
+  "settingsNotifDeviceFallback": "Device",
+  "settingsNotifRevoke": "Revoke",
+  "settingsNotifPermissionTitle": "Permission required",
+  "settingsNotifPermissionMessage": "Allow notifications on Android to receive alerts.",
+  "settingsNotifRevokeFailedTitle": "We could not revoke",
+  "settingsNotifRevokedTitle": "Device revoked",
+  "settingsNotifRevokedMessage": "This token will not receive new notifications.",
+  "settingsNotifBackgroundDialogTitle": "Enable background alerts?",
+  "settingsNotifBackgroundDialogBody": "Kerosene can keep a discreet Android service to notify you about transactions, deposits, and critical events as soon as they arrive.",
+  "settingsNotifBackgroundDialogConfirm": "Enable now",
+  "settingsSecurityTitle": "Security",
+  "settingsSecuritySubtitle": "Protect your account with authentication, local access, and recovery controls.",
+  "settingsSecurityLoading": "Loading security profile",
+  "settingsSecurityLoadErrorTitle": "We could not load security",
+  "settingsSecurityLoadErrorBody": "Check your connection and try again.",
+  "settingsSecurityAccessSection": "Access protection",
+  "settingsSecurityChangePinTitle": "Change PIN",
+  "settingsSecurityChangePinEnabled": "Update your 4-digit code",
+  "settingsSecurityChangePinDisabled": "Set a 4-digit code",
+  "settingsSecurityBiometricsTitle": "Biometrics",
+  "settingsSecurityBiometricsOn": "Use fingerprint to open the app",
+  "settingsSecurityBiometricsOff": "Register a passkey on this device",
+  "settingsSecurityTotpTitle": "Two-factor authentication",
+  "settingsSecurityTotpOn": "On in {mode} mode",
+  "@settingsSecurityTotpOn": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityTotpOff": "Validate TOTP and enable extra protection",
+  "settingsSecurityDevicesSection": "Devices and access",
+  "settingsSecurityAuthorizedDevicesTitle": "Authorized devices",
+  "settingsSecurityNoPasskeyDevice": "No device with passkey",
+  "settingsSecurityOneDeviceManage": "{name} · manage",
+  "@settingsSecurityOneDeviceManage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityNDevicesManage": "{count} devices · manage",
+  "@settingsSecurityNDevicesManage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecuritySessionsTitle": "Sessions and devices",
+  "settingsSecuritySessionsNone": "Access tied to passkeys on this device",
+  "settingsSecuritySessionsCount": "{count} access(es) with registered key",
+  "@settingsSecuritySessionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSecurityRecoverySection": "Recovery",
+  "settingsSecurityAccountRecoveryTitle": "Account recovery",
+  "settingsSecurityAccountRecoveryPassphrase": "Phrase, shares, and emergency",
+  "settingsSecurityAccountRecoveryCodes": "Backup codes and emergency recovery",
+  "settingsSecurityBackupTitle": "Security backup",
+  "settingsSecurityBackupSubtitle": "Recovery codes (2FA)",
+  "settingsSecurityAppPinLabel": "App PIN: {detail}",
+  "@settingsSecurityAppPinLabel": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSecurityPasskeyOkTitle": "Passkey registered",
+  "settingsSecurityPasskeyOkMessage": "This device was linked to your account. Biometrics unlocked for login and confirmations.",
+  "settingsSecurityPasskeyFailTitle": "Could not register the passkey",
+  "settingsSecurityLocalDataSection": "Data on this device",
+  "settingsSecurityWipeLedgerTitle": "Erase local statement",
+  "settingsSecurityWipeLedgerSubtitle": "Removes history stored on this device. Logout does not erase the statement — only this action. On next login, the app pulls remote data.",
+  "settingsSecurityWipeConfirmTitle": "Erase local statement?",
+  "settingsSecurityWipeConfirmBody": "This deletes up to 500 entries saved on this device. It does not cancel network transactions. Continue?",
+  "settingsSecurityWipeConfirmAction": "Erase",
+  "settingsSecurityWipeSessionMissingTitle": "Session unavailable",
+  "settingsSecurityWipeSessionMissingMessage": "Sign in again to erase the statement on this device.",
+  "settingsSecurityWipeOkTitle": "Local statement erased",
+  "settingsSecurityWipeOkMessage": "History on this device was removed. Pull to sync again.",
+  "settingsSecurityWipeFailTitle": "Could not erase",
+  "settingsWalletsTitle": "Wallets",
+  "settingsWalletsSubtitle": "Rename or archive wallets in this session. Actions use the same API as the Bitcoin accounts screen.",
+  "settingsWalletsSection": "Wallets",
+  "settingsWalletsEmptyTitle": "No active wallets",
+  "settingsWalletsEmptySubtitle": "Open Bitcoin Accounts to create or import.",
+  "settingsWalletsYoursSection": "Your wallets",
+  "settingsWalletsOpenFull": "Open full account management",
+  "settingsWalletsLoadErrorTitle": "Could not load",
+  "settingsWalletsLoadErrorSubtitle": "Tap to open full management.",
+  "settingsWalletsWatchOnly": "Watch-only / cold",
+  "settingsWalletsCustodialOnchain": "Custodial on-chain",
+  "settingsWalletsInternal": "Secured account (internal)",
+  "settingsWalletsProcessing": "Processing…",
+  "settingsWalletsRename": "Rename",
+  "settingsWalletsArchiveWatch": "Archive watch",
+  "settingsWalletsArchive": "Archive / lock wallet",
+  "settingsWalletsRenameOk": "Name updated",
+  "settingsWalletsRenameFailTitle": "Name not updated",
+  "settingsWalletsRenameFailMessage": "Review the name and try again.",
+  "settingsWalletsArchiveOkWatch": "Watch archived",
+  "settingsWalletsArchiveOk": "Wallet archived",
+  "settingsWalletsArchiveFailTitle": "Could not archive",
+  "settingsWalletsArchiveFailMessage": "Try again in a moment.",
+  "settingsNotifBackgroundDialogDismiss": "Not now",
+  "flowSignupCreateAccountTitle": "Create account",
+  "flowSignupUsernameSubtitle": "Please choose a username.\nIt will be your unique identity\nin Kerosene.",
+  "flowSignupUsernameHint": "Enter your username",
+  "flowSignupUsernameCharsetRule": "Only lowercase letters, numbers, or underscore",
+  "flowSignupPassphraseTitle": "Create a strong password",
+  "flowSignupPassphraseSubtitle": "It protects your account and assets with maximum security. Nobody at Kerosene has access to your key.",
+  "flowSignupPassphraseLabel": "Your passphrase",
+  "flowSignupPassphraseHint": "Enter your chosen password",
+  "flowSignupProceedAction": "Proceed",
+  "flowSignupConfirmTitle": "Confirm your password",
+  "flowSignupConfirmSubtitle": "Please enter your passphrase again to continue.",
+  "flowSignupConfirmHint": "Confirm your passphrase",
+  "flowSignupFinishCreateAccountAction": "Finish account creation",
+  "flowSignupCreatingAlmostReadyTitle": "Almost ready",
+  "flowSignupCreatingAlmostReadySubtitle": "We are configuring the final details with maximum security.",
+  "flowSignupCreatingSecurityProgress": "Securing your account...",
+  "flowSignupTotpTitle": "Protect your account even more (optional)",
+  "flowSignupTotpSubtitle": "We recommend enabling two-factor authentication for an extra protection layer.",
+  "flowSignupRecoveryCodesTitle": "Recovery codes",
+  "flowSignupTotpCodeInstruction": "Enter the 6-digit code",
+  "flowSignupRecoveryCodesCopiedMessage": "Recovery codes copied.",
+  "flowSignupRecoveryCodesUnavailableTitle": "Codes unavailable",
+  "flowSignupRecoveryCodesUnavailableMessage": "Wait for account creation to finish and try again.",
+  "flowSignupSkipAction": "Skip",
+  "flowSignupConfirmAction": "Confirm",
+  "flowSignupPasskeyTitle": "Authorize this device.",
+  "flowSignupPasskeySubtitle": "Registration is essential to ensure exclusive and protected access to your account.",
+  "flowSignupAuthorizeDeviceAction": "Authorize device",
+  "flowSignupSuccessBody": "You are now a Kerosene user. You can start moving funds.",
+  "flowSignupStartAction": "Start",
+  "feeTierFast": "Fast",
+  "feeTierStandard": "Normal",
+  "feeTierSlow": "Economy",
+  "feeEtaMinutes": "~{minutes} min",
+  "@feeEtaMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "feeEtaHours": "~{hours} h",
+  "@feeEtaHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "txActionNeedsReview": "Needs review",
+  "txActionUnconfirmed": "Unconfirmed",
+  "txActionPaymentLinkSendInternal": "Payment link send (internal)",
+  "txActionPaymentLinkReceiveInternal": "Payment link received (internal)",
+  "txActionPaymentLinkSendOnchain": "Payment link send (on-chain)",
+  "txActionPaymentLinkReceiveOnchain": "Payment link received (on-chain)",
+  "txActionInternalSend": "Internal send",
+  "txActionInternalReceive": "Internal receive",
+  "txActionLightningSend": "Lightning send",
+  "txActionLightningReceive": "Lightning receive",
+  "txActionColdSend": "Cold wallet send",
+  "txActionColdReceive": "Cold wallet receive",
+  "txActionOnchainSend": "On-chain send",
+  "txActionOnchainReceive": "On-chain receive",
+  "firstSendConfirmTitle": "Confirm address",
+  "firstSendConfirmBody": "First time sending to this address. Check the first and last characters carefully:\n\n{preview}",
+  "@firstSendConfirmBody": {
+    "placeholders": {
+      "preview": {
+        "type": "String"
+      }
+    }
+  },
+  "firstSendConfirmAction": "Looks correct",
+  "appEntryPinCreateInstruction": "Create a PIN to access your account",
+  "appEntryPinConfirmInstruction": "Confirm the PIN",
+  "appEntryPinUnlockInstruction": "Enter your PIN to access your account",
+  "appEntryPinTorWarming": "Secure network is still connecting. Your PIN is saved — try again in a moment.",
+  "notifBannerNow": "Now",
+  "notifBannerOpen": "Open",
+  "notifBannerFallbackTitle": "Notification",
+  "notifCategorySecurity": "Security",
+  "notifCategoryRecovery": "Recovery",
+  "notifCategoryAccount": "Account",
+  "notifCategoryReceived": "Received",
+  "notifCategorySent": "Sent",
+  "notifCategoryPaymentLink": "Payment link",
+  "notifCategoryMarket": "Market",
+  "notifCategorySystem": "System",
+  "flowSignupCopyRecoveryCodesAction": "Copy recovery codes",
+  "transactionPinInstruction": "Enter this device PIN to authorize the transaction.",
+  "emergencyRecoveryEyebrow": "EMERGENCY RECOVERY",
+  "emergencyRecoveryUnableContinue": "Unable to continue",
+  "emergencyRecoveryTitleStart": "Rotate account access",
+  "emergencyRecoveryTitleVerify": "Set up the new authenticator",
+  "emergencyRecoveryTitleComplete": "Recovery complete",
+  "emergencyRecoveryBodyStart": "Use offline recovery codes to create a new password, new TOTP and new passkey on this device.",
+  "emergencyRecoveryBodyVerify": "Scan the QR in your authenticator, enter the 6-digit code and confirm the new local passkey.",
+  "emergencyRecoveryBodyComplete": "Store the new codes offline before signing in again. They should not live in notes, email or cloud storage.",
+  "emergencyRecoveryNewPassword": "New account password",
+  "emergencyRecoveryConfirmPassword": "Confirm new password",
+  "emergencyRecoveryCodesLabel": "Recovery codes",
+  "emergencyRecoveryCodeN": "Code {n}",
+  "@emergencyRecoveryCodeN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "emergencyRecoveryAddCode": "Add code",
+  "emergencyRecoveryStartAction": "Start recovery",
+  "emergencyRecoveryTempSession": "Temporary session",
+  "emergencyRecoveryFinishWithin": "Finish within {minutes} minutes to avoid restarting the flow.",
+  "@emergencyRecoveryFinishWithin": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "emergencyRecoveryConfirmPasskey": "Confirm new passkey",
+  "emergencyRecoveryGoBackReview": "Go back and review data",
+  "emergencyRecoveryCredentialsRotated": "Credentials rotated",
+  "emergencyRecoveryCopyNewCodes": "Copy new codes",
+  "emergencyRecoverySignInAgain": "Sign in again",
+  "emergencyRecoveryTotpInstruction": "Enter the 6-digit TOTP from the new authenticator.",
+  "emergencyRecoveryPasswordMin": "Use a new password with at least 12 characters.",
+  "emergencyRecoveryPasswordMismatch": "The confirmation must match the new password.",
+  "emergencyRecoveryNeedThreeCodes": "Enter at least 3 distinct recovery codes.",
+  "emergencyRecoveryCodesDistinct": "Recovery codes must be distinct.",
+  "emergencyRecoveryCodeEightDigits": "Each recovery code must have 8 digits.",
+  "emergencyRecoveryCopied": "Copied.",
+  "passkeyVerifyEnterSixDigits": "Enter all 6 digits.",
+  "passkeyVerifyLinkNew": "Link a new passkey",
+  "passkeyVerifyAccessApproved": "Access approved",
+  "passkeyVerifyAuthentication": "Authentication",
+  "passkeyVerifyTouchSensor": "Touch the sensor to continue",
+  "notifCenterTitle": "Notifications",
+  "notifCenterSettingsTooltip": "Settings",
+  "notifCenterFilterAll": "All",
+  "notifCenterFilterAlerts": "Alerts",
+  "notifCenterFilterSecurity": "Security",
+  "notifCenterZero": "0 notifications",
+  "notifCenterUnread": "{count} unread",
+  "@notifCenterUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifCenterReadAll": "Read all",
+  "notifCenterClear": "Clear",
+  "notifCenterEmptyAll": "No notifications",
+  "notifCenterEmptyAlerts": "No alerts",
+  "notifCenterEmptySecurity": "No security alerts",
+  "notifCenterEmptyHint": "When something important happens, it appears here.",
+  "notifCenterToday": "Today",
+  "notifCenterYesterday": "Yesterday",
+  "notifSidebarTitle": "Push notifications",
+  "notifSidebarSubtitle": "Recent session alerts.",
+  "notifSidebarEmptyHint": "When something important happens, the notification appears here.",
+  "sendFeeEstimatedAtPayment": "Network fee estimated at payment",
+  "sendFeeCalculating": "Calculating fee…",
+  "sendFeeUnavailable": "Fee unavailable",
+  "sendFeeQuoteExpired": "Fee quote expired — updating…",
+  "emergencyRecoveryAccountRotatedBody": "Account {username} now uses the new password, new TOTP and this device passkey.",
+  "notifSidebarUnreadSingular": "unread",
+  "notifSidebarUnreadPlural": "unread",
+  "@emergencyRecoveryAccountRotatedBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDevicesTitle": "Authorized devices",
+  "settingsDevicesSubtitle": "Passkeys and device keys linked to your account. Block or remove access when needed.",
+  "settingsDevicesPasskeyRegistered": "Passkey registered",
+  "settingsDevicesInUse": "Device in use",
+  "settingsDevicesRegisterPasskey": "Register passkey on this device",
+  "settingsDevicesLoadError": "We could not load devices",
+  "settingsDevicesRetry": "Try again",
+  "settingsDevicesRegisterFail": "Could not register",
+  "settingsBackupTitle": "Security backup",
+  "settingsBackupSubtitle": "One-time recovery codes. Require active 2FA (TOTP) and replace previous codes when regenerated.",
+  "settingsBackupEnableTotpFirst": "Enable two-factor authentication",
+  "settingsBackupCopyAll": "Copy all",
+  "settingsBackupCopiedTitle": "Codes copied",
+  "settingsBackupCopiedMessage": "Store them offline in a safe place.",
+  "settingsRecoveryHubTitle": "Account recovery",
+  "settingsRecoveryHubSubtitle": "Real recovery paths available for this account security mode.",
+  "settingsRecoveryStatus": "Status",
+  "settingsRecoverySecurityMode": "Security mode",
+  "settingsRecoveryCodesRemaining": "Codes remaining",
+  "settingsRecoveryCodesRemainingCount": "{count} backup code(s)",
+  "@settingsRecoveryCodesRemainingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRecoveryBackupSecurity": "Security backup",
+  "settingsRecoveryEmergency": "Emergency recovery",
+  "settingsSecurityLedgerDiagTitle": "Statement diagnostics",
+  "settingsSecurityLedgerDiagLoading": "Loading counters…",
+  "settingsSecurityLedgerDiagUnavailable": "Unavailable",
+  "settingsSecurityBlockCaptures": "Block screenshots on statement",
+  "homeChartUnavailable": "Market unavailable",
+  "homeChartRetry": "Tap to try again",
+  "homeChartCustomPeriod": "Custom period",
+  "homeChartLastNDays": "Last {days} days",
+  "@homeChartLastNDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeChartApply": "Apply",
+  "homeChartCustom": "Custom",
+  "onboardingJourneyTitle": "Activation journey",
+  "onboardingProgressCount": "{completed} of 3 completed",
+  "@onboardingProgressCount": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingCreateCustodialWallet": "Create custodial wallet",
+  "onboardingMakeDeposit": "Make a deposit",
+  "onboardingInternalTransfer": "Internal transfer",
+  "sendReviewQuote": "Quote",
+  "sendReviewDestination": "Destination",
+  "sendReviewNetworkFee": "Network fee",
+  "sendReviewKeroseneFee": "Kerosene fee",
+  "sendReviewEstimatedTime": "Estimated time",
+  "sendReviewYouPay": "You pay",
+  "sendReviewSender": "Sender",
+  "sendReviewWallet": "Wallet",
+  "sendReviewRecipientGets": "Recipient receives",
+  "sendReviewTotalDebited": "Total debited",
+  "sendReviewStatus": "Status",
+  "sendReviewTxId": "Transaction ID",
+  "walletTxLoadingTitle": "Loading transactions",
+  "walletTxLoadingBody": "Syncing your recent history.",
+  "walletTxLoadErrorTitle": "Could not load",
+  "walletTxEmptyTitle": "No transactions yet",
+  "walletTxEmptyBody": "When you send, receive, or move balance, history appears here.",
+  "walletSetupCreateOnDevice": "Create on device",
+  "walletSetupGenerateBip39": "Generate BIP39 seed",
+  "walletSetupImportSeed": "Import seed",
+  "walletSetupImportSeedHint": "12 or 24 words",
+  "walletSetupWatchOnly": "Watch only",
+  "walletSetupXpubSoon": "Coming soon · xpub",
+  "walletSetupMultisig": "Multisig",
+  "walletSetupSoon": "Coming soon",
+  "walletSetupRegistering": "Registering",
+  "walletSetupDerivingKeys": "Deriving keys and sending to Kerosene…",
+  "walletSetupImportFail": "Import failed",
+  "walletSetupNameExample": "e.g. Main cold",
+  "walletSetupContinue": "Continue",
+  "seedInvalid": "Invalid seed",
+  "seedValidateContinue": "Validate and continue",
+  "seedImportWallet": "Import wallet",
+  "seedFixLastWord": "Fix last word to “{word}”",
+  "@seedFixLastWord": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "seedUseLastWordChecksumOk": "Use last word “{word}” (checksum OK)",
+  "@seedUseLastWordChecksumOk": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "seedImportLiteralInvalidChecksum": "Import literal phrase (invalid checksum)",
+  "seedImportAnyway": "Import anyway (literal phrase)",
+  "seedUndoPrevious": "Undo previous",
+  "coldSendTitle": "Send from cold",
+  "coldSendDestination": "Destination",
+  "coldSendDestinationHint": "Enter an on-chain address or choose a Kerosene wallet.",
+  "coldSendNoAddress": "No address",
+  "coldSendOnchainDestination": "On-chain destination",
+  "coldSendPayKeroseneWallet": "Pay Kerosene wallet (INTERNAL / on-chain)",
+  "coldSendSignBroadcast": "Sign and broadcast",
+  "coldSendMissingSeed": "Local seed missing",
+  "coldSendNetworkMismatch": "Incompatible network",
+  "coldSendAuth": "Authorization",
+  "coldSendSuccess": "Transaction sent",
+  "coldSendFailed": "Cold send failed",
+  "coldCreateUnavailable": "Cold wallet unavailable",
+  "coldCreateMaxTwo": "You can create at most two cold wallets.",
+  "coldCreateNamePrompt": "Enter the name this cold wallet should have.",
+  "coldCreateWalletName": "Wallet name",
+  "coldCreateWordN": "word {n}",
+  "@coldCreateWordN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "internalSelectCustody": "Select custody",
+  "internalSelectCustodyBody": "Choose how this wallet will be custodied before continuing.",
+  "internalCustodyUnavailable": "Custody unavailable",
+  "internalCustodyAlreadyActive": "This custody already has an active wallet.",
+  "internalNamePrompt": "Enter the name this wallet should have.",
+  "internalCreatedSuccess": "Wallet created successfully.",
+  "internalWalletName": "Wallet name",
+  "btcAccountsCopyAddress": "Copy wallet address",
+  "btcAccountsCopied": "Copied",
+  "btcAccountsCopiedClipboard": "Available on the clipboard.",
+  "btcAccountsStatus": "WALLET STATUS",
+  "btcAccountsReceiveAddress": "RECEIVE ADDRESS",
+  "btcAccountsWalletName": "WALLET NAME",
+  "btcAccountsRename": "Rename",
+  "btcAccountsPublicMaterial": "PUBLIC MATERIAL",
+  "btcAccountsAddressRotated": "Address rotated",
+  "btcAccountsAddressNotRotated": "Address not rotated",
+  "btcAccountsRotateFail": "Kerosene could not generate a new address right now.",
+  "btcAccountsNameUpdated": "Name updated",
+  "btcAccountsNameNotUpdated": "Name not updated",
+  "btcAccountsNameReview": "Review the wallet name and try again.",
+  "btcAccountsActionFailed": "Action not completed",
+  "btcAccountsCannotChange": "The wallet cannot be changed right now.",
+  "btcAccountsUtxos": "MONITORED UTXOS",
+  "btcAccountsPsbt": "PSBT WORKFLOWS",
+  "finStatusPaid": "Paid",
+  "finStatusCompleted": "Completed",
+  "finStatusExpired": "Expired",
+  "finStatusCancelled": "Cancelled",
+  "finStatusValidating": "Validating",
+  "finStatusNeedsReview": "Needs review",
+  "finStatusActionNeeded": "Action needed",
+  "finStatusDetected": "Detected",
+  "finStatusPending": "Pending",
+  "finStatusConfirming": "Confirming",
+  "finStatusFailed": "Failed",
+  "statementInsightNet": "Net",
+  "statementInsightInternalTransfers": "Internal transfers",
+  "statementInsightPartialHistory": "Partial history — the selected period may exceed what is loaded.",
+  "coldSuccessSeedWarning": "Important: without the seed on this device, cold send will not work. Keep it safe.",
+  "receiveNfcWriteRequest": "Write request",
+  "receiveKeroseneTitle": "Kerosene receive",
+  "statementExportLongAddressesNote": "Long addresses are shortened. CSV is better for reconciliation.",
+  "statementExportShareLimit": "Up to 200 lines · readable for sharing",
+  "statementEmptyOnDevice": "The statement is empty on this device.",
+  "movementHubReceiveInternal": "Receive via internal user transfer",
+  "notifCloseNotification": "Close notification",
+  "btcAccountsRotateAddress": "Rotate address",
+  "btcAccountsAvailableBalance": "Available balance",
+  "btcAccountsReceiveAddressLabel": "Receive address",
+  "seedPassphrase25th": "Passphrase / 25th word (not the 12)",
+  "coldSendAuthIncompleteTitle": "Incomplete authorization",
+  "coldSendAuthIncompleteBody": "Authenticator code (TOTP) is required to build the PSBT.",
+  "coldSendAddressHint": "tb1… / bc1… or Kerosene wallet",
+  "settingsDevicesUnlinkHint": "Confirm unlinking in Settings → Biometrics if prompted.",
+  "settingsRecoveryEmergencyBody": "Rotates password, TOTP and passkey with offline codes. Ends the current session.",
+  "securityTotpValidating": "Validating account security",
+  "homeFeedCardsTitle": "Kerosene cards"
 }

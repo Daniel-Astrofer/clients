@@ -155,11 +155,11 @@ class _SettingsBackupCodesScreenState
                     if (!mounted) return;
                     AppNotice.showInfo(
                       context,
-                      title: 'Códigos copiados',
-                      message: 'Guarde-os offline em local seguro.',
+                      title: context.tr.settingsBackupCopiedTitle,
+                      message: context.tr.settingsBackupCopiedMessage,
                     );
                   },
-                  child: const Text('Copiar todos'),
+                  child: Text(context.tr.settingsBackupCopyAll),
                 ),
               ],
             ),
@@ -203,7 +203,7 @@ class _SettingsBackupCodesScreenState
                         ),
                         const SizedBox(height: AppSpacing.xxl),
                         Text(
-                          'Backup de segurança',
+                          context.tr.settingsBackupTitle,
                           style: AppTypography.newsreader(
                             color: KeroseneBrandTokens.textPrimary,
                             fontSize: 32,
@@ -214,7 +214,7 @@ class _SettingsBackupCodesScreenState
                         ),
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'Códigos de recuperação de uso único. Exigem 2FA (TOTP) ativo e substituem os anteriores ao regenerar.',
+                          context.tr.settingsBackupSubtitle,
                           style: AppTypography.inter(
                             color: KeroseneBrandTokens.textSecondary,
                             fontSize: 16,
@@ -238,7 +238,7 @@ class _SettingsBackupCodesScreenState
                                     ),
                                     const SizedBox(height: AppSpacing.md),
                                     Text(
-                                      'Ative a autenticação em 2 fatores',
+                                      context.tr.settingsBackupEnableTotpFirst,
                                       style: AppTypography.inter(
                                         color: KeroseneBrandTokens.textPrimary,
                                         fontSize: 16,

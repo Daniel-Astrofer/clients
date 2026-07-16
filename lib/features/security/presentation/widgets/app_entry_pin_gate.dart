@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
-import 'package:kerosene/core/presentation/widgets/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
@@ -183,10 +182,6 @@ class _AppEntryPinSetupScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_busy) {
-      return const TorNavigationLoadingScreen();
-    }
-
     return PinEntryScaffold(
       instruction: _confirming
           ? _appEntryPinConfirmInstruction(context)
@@ -194,10 +189,13 @@ class _AppEntryPinSetupScreenState
       valueLength: _currentInput.length,
       maxLength: _pinLength,
       error: _error,
-      busy: false,
+      busy: _busy,
       onDigit: _appendDigit,
       onDelete: _deleteDigit,
-      onConfirm: _submit,
+      onConfirm: _busy ? null : _submit,
+      onCancel: () async {
+        await ref.read(authControllerProvider.notifier).logout();
+      },
     );
   }
 }
@@ -378,11 +376,6 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
 
   @override
   Widget build(BuildContext context) {
-    // ONLY after full PIN submit — never while typing.
-    if (_busy) {
-      return const TorNavigationLoadingScreen();
-    }
-
     return ListenableBuilder(
       listenable: Listenable.merge([_pinNotifier, _errorNotifier]),
       builder: (context, _) {
@@ -393,51 +386,31 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
           valueLength: _pin.length,
           maxLength: _pinTargetLength,
           error: _errorMessage,
-          busy: false,
-          enabled: !widget.status.locked,
+          busy: _busy,
+          enabled: !widget.status.locked && !_busy,
           onDigit: _appendDigit,
           onDelete: _deleteDigit,
-          onConfirm: widget.status.locked ? null : _submit,
+          onConfirm: widget.status.locked || _busy ? null : _submit,
+          onCancel: () async {
+            await ref.read(authControllerProvider.notifier).logout();
+          },
         );
       },
     );
   }
 }
 
-String _appEntryPinCreateInstruction(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Create a PIN to access your account',
-    'es' => 'Crea un PIN para acceder a tu cuenta',
-    _ => 'Crie um PIN para acessar a conta',
-  };
-}
+String _appEntryPinCreateInstruction(BuildContext context) =>
+    context.tr.appEntryPinCreateInstruction;
 
-String _appEntryPinConfirmInstruction(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Confirm the PIN',
-    'es' => 'Confirma el PIN',
-    _ => 'Confirme o PIN',
-  };
-}
+String _appEntryPinConfirmInstruction(BuildContext context) =>
+    context.tr.appEntryPinConfirmInstruction;
 
-String _appEntryPinUnlockInstruction(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Enter your PIN to access your account',
-    'es' => 'Ingresa el PIN para acceder a tu cuenta',
-    _ => 'Digite o PIN para acessar sua conta',
-  };
-}
+String _appEntryPinUnlockInstruction(BuildContext context) =>
+    context.tr.appEntryPinUnlockInstruction;
 
-String _torStillWarmingMessage(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' =>
-      'Secure network is still connecting. Your PIN is saved — try again in a moment.',
-    'es' =>
-      'La red segura aún se está conectando. Tu PIN está guardado — inténtalo en un momento.',
-    _ =>
-      'A rede segura ainda está conectando. Seu PIN foi mantido — tente de novo em instantes.',
-  };
-}
+String _torStillWarmingMessage(BuildContext context) =>
+    context.tr.appEntryPinTorWarming;
 
 bool _isTorNotReadyFailure(String code, String messageLower) {
   if (code == 'ERR_NETWORK' || code == 'NETWORK') return true;

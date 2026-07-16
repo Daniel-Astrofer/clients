@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/core/services/background_service.dart';
@@ -25,23 +26,24 @@ class _SettingsNotificationsPaneState
 
   @override
   Widget build(BuildContext context) {
+    final tr = context.tr;
     final preferences = ref.watch(alertPreferencesProvider);
     final devicesAsync = ref.watch(activeDeviceTokensProvider);
     final deviceRows = devicesAsync.when<List<Widget>>(
       data: (devices) => _deviceRows(context, devices),
-      loading: () => const [
+      loading: () => [
         SettingsSectionRow(
           icon: KeroseneIcons.device,
-          title: 'Dispositivos',
-          subtitle: 'Carregando dispositivos autorizados.',
+          title: tr.settingsNotifDevicesSection,
+          subtitle: tr.settingsNotifDevicesLoading,
           onTap: null,
         ),
       ],
-      error: (_, __) => const [
+      error: (_, __) => [
         SettingsSectionRow(
           icon: KeroseneIcons.warning,
-          title: 'Dispositivos indisponíveis',
-          subtitle: 'Não conseguimos consultar os tokens registrados agora.',
+          title: tr.settingsNotifDevicesUnavailableTitle,
+          subtitle: tr.settingsNotifDevicesUnavailableSubtitle,
           onTap: null,
         ),
       ],
@@ -51,7 +53,7 @@ class _SettingsNotificationsPaneState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Notificações',
+          tr.settingsNotifTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 32,
@@ -62,7 +64,7 @@ class _SettingsNotificationsPaneState
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Controle local de alertas financeiros, segurança e dispositivos autorizados para push notifications.',
+          tr.settingsNotifSubtitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textSecondary,
             fontSize: 16,
@@ -73,14 +75,14 @@ class _SettingsNotificationsPaneState
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Alertas',
+          title: tr.settingsNotifAlertsSection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.notifications,
-              title: 'Notificações Android',
+              title: tr.settingsNotifBackgroundTitle,
               subtitle: preferences.backgroundAlertsEnabled
-                  ? 'Ativas neste dispositivo.'
-                  : 'Desativadas neste dispositivo.',
+                  ? tr.settingsNotifBackgroundOn
+                  : tr.settingsNotifBackgroundOff,
               trailing: SettingsReadonlySwitch(
                 value: preferences.backgroundAlertsEnabled,
               ),
@@ -92,8 +94,8 @@ class _SettingsNotificationsPaneState
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.moveHorizontal,
-              title: 'Eventos financeiros',
-              subtitle: 'Transações, recebimentos e payment requests.',
+              title: tr.settingsNotifFinancialTitle,
+              subtitle: tr.settingsNotifFinancialSubtitle,
               trailing: SettingsReadonlySwitch(
                 value: preferences.transactionAlertsEnabled,
               ),
@@ -105,8 +107,8 @@ class _SettingsNotificationsPaneState
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.security,
-              title: 'Eventos de segurança',
-              subtitle: 'Login, recovery e tentativas de acesso sensíveis.',
+              title: tr.settingsNotifSecurityEventsTitle,
+              subtitle: tr.settingsNotifSecurityEventsSubtitle,
               trailing: SettingsReadonlySwitch(
                 value: preferences.securityAlertsEnabled,
               ),
@@ -118,10 +120,10 @@ class _SettingsNotificationsPaneState
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.bitcoin,
-              title: 'Mercado Bitcoin',
+              title: tr.settingsNotifMarketTitle,
               subtitle: preferences.marketAlertsEnabled
-                  ? 'Alertas reais de variação 24h ativados.'
-                  : 'Desativado por padrão. Sem mock e sem fallback.',
+                  ? tr.settingsNotifMarketOn
+                  : tr.settingsNotifMarketOff,
               trailing: SettingsReadonlySwitch(
                 value: preferences.marketAlertsEnabled,
               ),
@@ -135,7 +137,7 @@ class _SettingsNotificationsPaneState
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Dispositivos',
+          title: tr.settingsNotifDevicesSection,
           children: deviceRows,
         ),
       ],
@@ -143,14 +145,14 @@ class _SettingsNotificationsPaneState
   }
 
   List<Widget> _deviceRows(BuildContext context, List<DeviceToken> devices) {
+    final tr = context.tr;
     final active = devices.where((device) => device.active).toList();
     if (active.isEmpty) {
-      return const [
+      return [
         SettingsSectionRow(
           icon: KeroseneIcons.notificationsOff,
-          title: 'Nenhum dispositivo registrado',
-          subtitle:
-              'Ao permitir push notifications, o backend exibirá o dispositivo aqui.',
+          title: tr.settingsNotifNoDevicesTitle,
+          subtitle: tr.settingsNotifNoDevicesSubtitle,
           onTap: null,
         ),
       ];
@@ -160,7 +162,9 @@ class _SettingsNotificationsPaneState
       for (final token in active)
         SettingsSectionRow(
           icon: KeroseneIcons.device,
-          title: token.platform.isEmpty ? 'Dispositivo' : token.platform,
+          title: token.platform.isEmpty
+              ? tr.settingsNotifDeviceFallback
+              : token.platform,
           subtitle: settingsDeviceTokenSubtitle(token),
           trailing: TextButton(
             onPressed: () => _revokeDevice(context, token),
@@ -171,7 +175,7 @@ class _SettingsNotificationsPaneState
                 letterSpacing: 0,
               ),
             ),
-            child: const Text('Revogar'),
+            child: Text(tr.settingsNotifRevoke),
           ),
           onTap: null,
         ),
@@ -205,8 +209,8 @@ class _SettingsNotificationsPaneState
           if (mounted) {
             AppNotice.showWarning(
               context,
-              title: 'Permissão necessária',
-              message: 'Autorize notificações no Android para receber alertas.',
+              title: context.tr.settingsNotifPermissionTitle,
+              message: context.tr.settingsNotifPermissionMessage,
             );
           }
           return;
@@ -224,21 +228,22 @@ class _SettingsNotificationsPaneState
   }
 
   Future<void> _revokeDevice(BuildContext context, DeviceToken token) async {
+    final tr = context.tr;
     final result = await ref
         .read(notificationRepositoryProvider)
         .revokeDeviceToken(token.id);
     result.fold(
       (failure) => AppNotice.showError(
         context,
-        title: 'Não conseguimos revogar',
+        title: tr.settingsNotifRevokeFailedTitle,
         message: failure.message,
       ),
       (_) {
         ref.invalidate(activeDeviceTokensProvider);
         AppNotice.showInfo(
           context,
-          title: 'Dispositivo revogado',
-          message: 'Este token não receberá novas notificações.',
+          title: tr.settingsNotifRevokedTitle,
+          message: tr.settingsNotifRevokedMessage,
         );
       },
     );
@@ -250,6 +255,7 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tr = context.tr;
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
@@ -294,7 +300,7 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
-                      'Ativar alertas em segundo plano?',
+                      tr.settingsNotifBackgroundDialogTitle,
                       style: AppTypography.newsreader(
                         color: KeroseneBrandTokens.textPrimary,
                         fontSize: 28,
@@ -308,7 +314,7 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'O Kerosene pode manter um serviço discreto no Android para avisar sobre transações, depósitos e eventos críticos assim que chegarem.',
+                tr.settingsNotifBackgroundDialogBody,
                 style: AppTypography.bodyMedium.copyWith(
                   color: KeroseneBrandTokens.textSecondary,
                   height: 1.45,
@@ -330,7 +336,7 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                       letterSpacing: 0,
                     ),
                   ),
-                  child: const Text('Ativar agora'),
+                  child: Text(tr.settingsNotifBackgroundDialogConfirm),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -342,7 +348,7 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                child: const Text('Agora não'),
+                child: Text(tr.settingsNotifBackgroundDialogDismiss),
               ),
             ],
           ),

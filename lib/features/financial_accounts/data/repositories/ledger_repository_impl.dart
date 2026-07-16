@@ -83,13 +83,20 @@ class LedgerRepositoryImpl implements LedgerRepository {
   }
 
   @override
-  Future<Either<Failure, List<Transaction>>> getHistory(
-      {int page = 0, int size = 50}) async {
+  Future<Either<Failure, List<Transaction>>> getHistory({
+    int page = 0,
+    int size = 50,
+    DateTime? since,
+  }) async {
     final currentUser = await _currentUser();
     final currentUserId = int.tryParse(currentUser?.id ?? '');
     final currentUsername = currentUser?.username.trim();
     try {
-      final rawList = await remoteDataSource.getHistory(page: page, size: size);
+      final rawList = await remoteDataSource.getHistory(
+        page: page,
+        size: size,
+        since: since,
+      );
       final transactions = rawList
           .whereType<Map>()
           .where(
@@ -111,6 +118,33 @@ class LedgerRepositoryImpl implements LedgerRepository {
       }).toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       return Right(transactions);
+    } on AppException catch (e) {
+      return Left(_failureFromAppException(e));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Transaction?>> getTransactionById(
+    String transactionId,
+  ) async {
+    try {
+      final raw = await remoteDataSource.getTransactionById(transactionId);
+      if (raw == null || raw.isEmpty) {
+        return const Right(null);
+      }
+      final currentUser = await _currentUser();
+      final currentUserId = int.tryParse(currentUser?.id ?? '');
+      final currentUsername = currentUser?.username.trim();
+      final data = Map<String, dynamic>.from(raw);
+      if (currentUserId != null) {
+        data['currentUserId'] = currentUserId;
+      }
+      if (currentUsername != null && currentUsername.isNotEmpty) {
+        data['currentUsername'] = currentUsername;
+      }
+      return Right(Transaction.fromJson(data));
     } on AppException catch (e) {
       return Left(_failureFromAppException(e));
     } catch (e) {

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
@@ -145,8 +146,15 @@ class _ReceiveRequestFlowScreenState
       if (nextAddress.isEmpty || !allocation.hasTransferId) {
         setState(() {
           _isLoadingRequest = false;
-          _errorMessage =
-              'Nao foi possivel preparar o acompanhamento deste recebimento.';
+          _errorMessage = switch (
+              Localizations.localeOf(context).languageCode) {
+            'en' =>
+              'Could not prepare tracking for this receive request.',
+            'es' =>
+              'No se pudo preparar el seguimiento de este cobro.',
+            _ =>
+              'Não foi possível preparar o acompanhamento deste recebimento.',
+          };
         });
         return;
       }
@@ -158,7 +166,7 @@ class _ReceiveRequestFlowScreenState
           address: nextAddress,
           amountBtc: widget.amountBtc,
           label: widget.wallet.name,
-          message: 'Recebimento Kerosene',
+          message: context.tr.receiveKeroseneTitle,
         );
         _txid = allocation.blockchainTxid.trim().isEmpty
             ? null
@@ -423,7 +431,7 @@ class _ReceiveRequestFlowScreenState
         address: address,
         amountBtc: widget.amountBtc,
         label: widget.wallet.name,
-        message: 'Recebimento Kerosene',
+        message: context.tr.receiveKeroseneTitle,
       );
     }
     if (_isOnChainReceive) {
@@ -431,7 +439,7 @@ class _ReceiveRequestFlowScreenState
         address: address,
         amountBtc: widget.amountBtc,
         label: widget.wallet.name,
-        message: 'Recebimento Kerosene',
+        message: context.tr.receiveKeroseneTitle,
       );
     }
     final linkId = _link?.id.trim() ?? '';
@@ -467,20 +475,20 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _networkLabel {
-    if (!_isOnChainReceive) return 'Kerosene';
+    if (!_isOnChainReceive) return 'Kerosene · interno';
     final fromAddress = bitcoinNetworkDisplayName(
       inferBitcoinNetworkFromAddress(_addressValue),
     );
     return switch (fromAddress) {
-      'Testnet' => 'Bitcoin Testnet',
-      'Regtest' => 'Bitcoin Regtest',
-      'Mainnet' => 'Bitcoin (BTC)',
+      'Testnet' => 'On-chain · Bitcoin Testnet',
+      'Regtest' => 'On-chain · Bitcoin Regtest',
+      'Mainnet' => 'On-chain · Bitcoin Mainnet',
       _ => () {
           final network = (_allocation?.network ?? '').trim().toLowerCase();
           return switch (network) {
-            'testnet' || 'testnet4' || 'testnet3' => 'Bitcoin Testnet',
-            'regtest' => 'Bitcoin Regtest',
-            _ => 'Bitcoin (BTC)',
+            'testnet' || 'testnet4' || 'testnet3' => 'On-chain · Bitcoin Testnet',
+            'regtest' => 'On-chain · Bitcoin Regtest',
+            _ => 'On-chain · Bitcoin Mainnet',
           };
         }(),
     };
@@ -525,13 +533,14 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _fiatLabel {
-    final btcUsd = ref.watch(latestBtcPriceProvider);
-    return '≈ ${MoneyDisplay.formatAmountFromBtc(
+    final money = ref.watch(moneyFormatConfigProvider);
+    final fiat = money.currency == Currency.btc ? Currency.usd : money.currency;
+    return '≈ ${money.formatAmountFromBtc(
       btcAmount: widget.amountBtc,
-      currency: Currency.usd,
-      btcUsd: btcUsd,
-      btcEur: null,
-      btcBrl: null,
+      currency: fiat,
+      btcUsd: ref.watch(latestBtcPriceProvider),
+      btcEur: ref.watch(btcEurPriceProvider),
+      btcBrl: ref.watch(btcBrlPriceProvider),
     )}';
   }
 
@@ -586,12 +595,27 @@ class _ReceiveRequestFlowScreenState
   }
 
   Widget _buildQrScreen(BuildContext context) {
-    final receiveTitle =
-        _isOnChainReceive ? 'Receber Bitcoin' : 'Receber na Kerosene';
+    final lang = Localizations.localeOf(context).languageCode;
+    final receiveTitle = _isOnChainReceive
+        ? switch (lang) {
+            'en' => 'Receive Bitcoin',
+            'es' => 'Recibir Bitcoin',
+            _ => 'Receber Bitcoin',
+          }
+        : switch (lang) {
+            'en' => 'Receive on Kerosene',
+            'es' => 'Recibir en Kerosene',
+            _ => 'Receber na Kerosene',
+          };
+    final pendingTitle = switch (lang) {
+      'en' => 'Pending',
+      'es' => 'Pendiente',
+      _ => 'Pendente',
+    };
     return Column(
       children: [
         ReceiveContextHeader(
-          title: 'Pendente',
+          title: pendingTitle,
           icon: KeroseneIcons.close,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
@@ -663,7 +687,7 @@ class _ReceiveRequestFlowScreenState
       ),
       child: Column(
         children: [
-          DetailRow(label: 'Carteira', value: widget.wallet.name),
+          DetailRow(label: context.tr.sendReviewWallet, value: widget.wallet.name),
           const ReceiveDivider(),
           DetailRow(label: 'Rede', value: _networkLabel),
           const ReceiveDivider(),
@@ -813,9 +837,9 @@ class _ReceiveRequestFlowScreenState
               amountLabel: _amountLabel,
               supportingLabel: _fiatLabel,
               rows: [
-                MovementConfirmationRow(label: 'Status', value: _statusLabel),
+                MovementConfirmationRow(label: context.tr.sendReviewStatus, value: _statusLabel),
                 MovementConfirmationRow(
-                  label: 'Destino',
+                  label: context.tr.sendReviewDestination,
                   value: shortenReceiveAddress(_addressValue),
                   technical: true,
                 ),

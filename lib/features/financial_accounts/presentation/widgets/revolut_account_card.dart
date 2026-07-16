@@ -553,6 +553,15 @@ class _CardFront extends StatelessWidget {
       resolveReceiveAddress(account, receiveRequest),
     );
     final balanceLabel = formatSats(bitcoinAccountVisibleBalance(account));
+    final balanceCaption = account.isWatchOnly
+        ? 'NA REDE'
+        : account.isCustodialOnchain
+            ? 'DISPONÍVEL'
+            : 'DISPONÍVEL';
+    final heldLabel = !account.isWatchOnly && account.heldSats > 0
+        ? 'Retido: ${formatSats(account.heldSats)}'
+        : null;
+    final chainLabel = bitcoinAccountChainObservedLabel(account);
 
     return _CardShell(
       palette: palette,
@@ -620,7 +629,7 @@ class _CardFront extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'SALDO',
+                        balanceCaption,
                         style: AppTypography.inter(
                           color: palette.inkMuted,
                           fontSize: 9,
@@ -640,6 +649,32 @@ class _CardFront extends StatelessWidget {
                           letterSpacing: -0.1,
                         ),
                       ),
+                      if (heldLabel != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          heldLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.inter(
+                            color: palette.inkMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      if (chainLabel != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          chainLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.inter(
+                            color: palette.inkMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
@@ -258,9 +258,9 @@ class KeroErrorDialog extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
-                  KeroseneUiCopy.goBack,
-                  style: TextStyle(
+                child: Text(
+                  context.tr.goBack,
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
@@ -289,7 +289,7 @@ class KeroErrorDialog extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    secondaryLabel ?? KeroseneUiCopy.deposit,
+                    secondaryLabel ?? context.tr.deposit,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,

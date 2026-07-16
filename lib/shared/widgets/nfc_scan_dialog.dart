@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
@@ -15,13 +15,21 @@ class NfcScanDialog extends StatefulWidget {
 }
 
 class _NfcScanDialogState extends State<NfcScanDialog> {
-  String _status = KeroseneUiCopy.nfcReadyToScan;
+  String _status = '';
   bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
     _startNfcSession();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_status.isEmpty) {
+      _status = context.tr.nfcReadyToScan;
+    }
   }
 
   String? _payloadFromTag(NfcTag tag) {
@@ -40,7 +48,7 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
     if (!isAvailable) {
       if (mounted) {
         setState(() {
-          _status = KeroseneUiCopy.nfcUnavailable;
+          _status = context.tr.nfcUnavailableDevice;
         });
       }
       return;
@@ -48,7 +56,7 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
 
     setState(() {
       _isScanning = true;
-      _status = KeroseneUiCopy.nfcHoldNearTag;
+      _status = context.tr.nfcHoldNearTag;
     });
 
     NfcManager.instance.startSession(
@@ -74,8 +82,8 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
         setState(() {
           _isScanning = false;
           _status = paymentRequestString != null
-              ? KeroseneUiCopy.nfcPaymentRequestRead
-              : KeroseneUiCopy.nfcTagDetected;
+              ? context.tr.nfcPaymentRequestRead
+              : context.tr.nfcTagDetected;
         });
 
         await NfcManager.instance.stopSession();
@@ -122,7 +130,7 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              KeroseneUiCopy.nfcScannerTitle,
+              context.tr.nfcScannerTitle,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onPrimary,
                 fontSize: 20,
@@ -165,7 +173,7 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                KeroseneUiCopy.cancel,
+                context.tr.cancel,
                 style: TextStyle(
                     color: Theme.of(context)
                         .colorScheme

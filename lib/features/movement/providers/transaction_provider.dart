@@ -10,9 +10,13 @@ import 'package:kerosene/core/errors/failures.dart';
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/core/services/passkey_service.dart';
+import 'package:kerosene/core/services/sovereign_auth_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
     show authControllerProvider, sessionStorageScopeProvider;
 import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
+import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
+import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
+import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
@@ -31,6 +35,21 @@ const _paymentLinkSelfPayException = ValidationException(
   message: 'You cannot pay a link created by yourself.',
   errorCode: 'LEDGER_009',
 );
+
+/// Post money-move refresh without importing financial_refresh (cycle-safe).
+Future<void> _refreshAfterMoneyMoved(Ref ref) async {
+  ref.read(transactionHistoryCursorProvider.notifier).reset();
+  ref.invalidate(transactionHistoryProvider);
+  ref.invalidate(pagedTransactionHistoryProvider);
+  ref.invalidate(depositsProvider);
+  ref.invalidate(depositBalanceProvider);
+  ref.invalidate(paymentLinksProvider);
+  ref.invalidate(externalTransfersProvider);
+  await Future.wait<void>([
+    ref.read(walletProvider.notifier).refresh(),
+    ref.read(transactionHistoryProvider.future).then((_) {}, onError: (_) {}),
+  ]);
+}
 
 // ==================== Filter Logic ====================
 
@@ -66,86 +85,88 @@ List<Transaction> _mergeExternalHistory({
   required List<ExternalTransfer> externalTransfers,
   required List<PaymentLink> paymentLinks,
 }) {
-  final merged = <String, Transaction>{};
+  // Only links with movement (paid / detecting / completed). Pure open quotes
+  // stay in the payment-link product UI, not the operational extrato.
+  final linkRows = paymentLinks
+      .where(
+        (l) =>
+            l.isPaid ||
+            l.isCompleted ||
+            l.hasObservedOnchainPayment ||
+            l.isValidatingSettlement,
+      )
+      .map((l) => l.toTransaction())
+      .toList(growable: false);
+  final extras = <Transaction>[
+    ...externalTransfers.map((t) => t.toTransaction()),
+    ...linkRows,
+  ];
+  // Field-level merge (LOCAL_LEDGER_SYNC): remote KFE first, then extras as remote batch.
+  final withKfe = TransactionLedgerAdapter.mergeTransactionLists(
+    localRows: const [],
+    remoteRows: kfeTransactions,
+  );
+  final merged = TransactionLedgerAdapter.mergeTransactionLists(
+    localRows: withKfe,
+    remoteRows: extras,
+  );
+  // Drop pl_* when KFE already has the settlement for the same chain ref.
+  return TransactionLedgerAdapter.dedupePaymentLinkOverlays(merged);
+}
 
-  void upsert(Transaction transaction) {
-    final key = _transactionHistoryKey(transaction);
-    final existing = merged[key];
-    if (existing == null || _shouldReplaceHistoryEntry(existing, transaction)) {
-      merged[key] = transaction;
+/// Last successfully merged history (survives FutureProvider reloads).
+final lastTransactionHistoryProvider =
+    NotifierProvider<LastTransactionHistoryNotifier, List<Transaction>>(
+  LastTransactionHistoryNotifier.new,
+);
+
+class LastTransactionHistoryNotifier extends Notifier<List<Transaction>> {
+  @override
+  List<Transaction> build() => const [];
+
+  void set(List<Transaction> value) => state = List.unmodifiable(value);
+}
+
+/// Wall-clock of the last successful history merge (local or remote).
+final transactionHistoryLastSyncProvider =
+    NotifierProvider<TransactionHistoryLastSyncNotifier, DateTime?>(
+  TransactionHistoryLastSyncNotifier.new,
+);
+
+class TransactionHistoryLastSyncNotifier extends Notifier<DateTime?> {
+  @override
+  DateTime? build() => null;
+
+  void touch() => state = DateTime.now();
+}
+
+/// Max server `updatedAt` seen in the last successful remote batch (for `?since=`).
+final transactionHistoryCursorProvider =
+    NotifierProvider<TransactionHistoryCursorNotifier, DateTime?>(
+  TransactionHistoryCursorNotifier.new,
+);
+
+class TransactionHistoryCursorNotifier extends Notifier<DateTime?> {
+  @override
+  DateTime? build() => null;
+
+  void advance(Iterable<Transaction> rows) {
+    DateTime? maxAt = state;
+    for (final tx in rows) {
+      final at = tx.effectiveUpdatedAt.toUtc();
+      if (maxAt == null || at.isAfter(maxAt)) {
+        maxAt = at;
+      }
+    }
+    if (maxAt != null) {
+      state = maxAt;
     }
   }
 
-  for (final transaction in kfeTransactions) {
-    upsert(transaction);
-  }
-
-  for (final transfer in externalTransfers) {
-    upsert(transfer.toTransaction());
-  }
-
-  for (final link in paymentLinks) {
-    upsert(link.toTransaction());
-  }
-
-  final history = merged.values.toList()
-    ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-  return history;
+  void reset() => state = null;
 }
 
-String _transactionHistoryKey(Transaction transaction) {
-  final blockchainTxid = transaction.blockchainTxid?.trim() ?? '';
-  if (blockchainTxid.isNotEmpty) {
-    return 'blockchain:$blockchainTxid';
-  }
-  return 'transaction:${transaction.id.trim()}';
-}
-
-bool _shouldReplaceHistoryEntry(Transaction current, Transaction candidate) {
-  final currentScore = _historyCompletenessScore(current);
-  final candidateScore = _historyCompletenessScore(candidate);
-  if (candidateScore != currentScore) {
-    return candidateScore > currentScore;
-  }
-  if (current.isInternal && !candidate.isInternal) {
-    return true;
-  }
-  if (current.feeSatoshis == 0 && candidate.feeSatoshis > 0) {
-    return true;
-  }
-  if (candidate.timestamp.isAfter(current.timestamp)) {
-    return true;
-  }
-  return false;
-}
-
-int _historyCompletenessScore(Transaction transaction) {
-  var score = 0;
-
-  if (!transaction.isInternal) {
-    score += 2;
-  }
-  if ((transaction.blockchainTxid ?? '').trim().isNotEmpty) {
-    score += 6;
-  }
-  if ((transaction.paymentHash ?? '').trim().isNotEmpty) {
-    score += 5;
-  }
-  if ((transaction.invoiceId ?? '').trim().isNotEmpty) {
-    score += 4;
-  }
-  if ((transaction.externalReference ?? '').trim().isNotEmpty) {
-    score += 2;
-  }
-  if (transaction.feeSatoshis > 0) {
-    score += 1;
-  }
-
-  score += transactionAddressCompletenessBonus(transaction);
-
-  return score;
-}
-
+/// Kept for tests / call-sites that still score address completeness.
 int transactionAddressCompletenessBonus(Transaction transaction) {
   var score = 0;
 
@@ -211,16 +232,47 @@ final _scopedTransactionHistoryProvider =
     FutureProvider.family<List<Transaction>, String>((ref, sessionScope) async {
   final ledgerRepo = ref.watch(ledgerRepositoryProvider);
   final localStore = ref.watch(localTransactionHistoryStoreProvider);
+  final ledgerSync = LocalLedgerSync(localStore);
   final localCached = await localStore.load(sessionScope);
 
-  final result = await ledgerRepo.getHistory(page: 0, size: 50);
+  // Incremental: only rows updated after last cursor when we already have local.
+  final cursor = ref.read(transactionHistoryCursorProvider);
+  DateTime? since;
+  if (localCached.isNotEmpty && cursor != null) {
+    // 90s skew buffer so clock/partition edges do not skip confs.
+    since = cursor.toUtc().subtract(const Duration(seconds: 90));
+  } else if (localCached.isNotEmpty) {
+    DateTime? maxLocal;
+    for (final tx in localCached) {
+      final at = tx.effectiveUpdatedAt.toUtc();
+      if (maxLocal == null || at.isAfter(maxLocal)) maxLocal = at;
+    }
+    if (maxLocal != null) {
+      since = maxLocal.subtract(const Duration(seconds: 90));
+    }
+  }
+
+  // Wider first page so open confs / recent activity stay in the live window.
+  if (since != null) {
+    // fire-and-forget counter
+    // ignore: unawaited_futures
+    LedgerTelemetry.recordIncrementalPull();
+  } else {
+    // ignore: unawaited_futures
+    LedgerTelemetry.recordFullPull();
+  }
+  final result = await ledgerRepo.getHistory(page: 0, size: 100, since: since);
   final externalTransfers = await _loadExternalTransfersSafely(ref);
   final paymentLinks = await _loadPaymentLinksSafely(ref);
 
   return result.fold(
     (failure) async {
-      // Backend 24h window may be offline/unreachable — serve secure local ledger.
+      // Offline / unreachable — serve secure local projection.
       if (localCached.isNotEmpty) {
+        // ignore: unawaited_futures
+        LedgerTelemetry.recordOfflineServed();
+        ref.read(lastTransactionHistoryProvider.notifier).set(localCached);
+        ref.read(transactionHistoryLastSyncProvider.notifier).touch();
         return localCached;
       }
       throw Exception(failure.message);
@@ -231,11 +283,29 @@ final _scopedTransactionHistoryProvider =
         externalTransfers: externalTransfers,
         paymentLinks: paymentLinks,
       );
-      // Persist merge so history survives after the server prunes 24h statements.
-      return localStore.mergeAndPersist(
+      // Detect conf upgrades for telemetry (local 0 → remote N).
+      if (localCached.isNotEmpty && online.isNotEmpty) {
+        final localById = {
+          for (final t in localCached) t.id: t.confirmations,
+        };
+        for (final t in online) {
+          final prev = localById[t.id];
+          if (prev != null && t.confirmations > prev) {
+            // ignore: unawaited_futures
+            LedgerTelemetry.recordMergeUpgraded();
+            break;
+          }
+        }
+      }
+      // LocalLedgerSync: field-level merge + durable projection.
+      final merged = await ledgerSync.hydrateAndMerge(
         sessionScope: sessionScope,
-        incoming: online,
+        remote: online,
       );
+      ref.read(lastTransactionHistoryProvider.notifier).set(merged);
+      ref.read(transactionHistoryLastSyncProvider.notifier).touch();
+      ref.read(transactionHistoryCursorProvider.notifier).advance(transactions);
+      return merged;
     },
   );
 });
@@ -259,28 +329,22 @@ final pagedTransactionHistoryProvider =
 final _scopedPagedTransactionHistoryProvider = FutureProvider.family<
     List<Transaction>,
     ({String sessionScope, int page, int size})>((ref, request) async {
+  // Page 0 shares the same LocalLedgerSync projection as the main feed.
+  if (request.page == 0) {
+    final full = await ref.watch(transactionHistoryProvider.future);
+    return full.take(request.size).toList(growable: false);
+  }
+
+  // Deeper pages are remote-only (not persisted); UI rarely paginates past 0.
   final ledgerRepo = ref.watch(ledgerRepositoryProvider);
   final result = await ledgerRepo.getHistory(
     page: request.page,
     size: request.size,
   );
-  final transactions = result.fold<List<Transaction>>(
+  return result.fold(
     (failure) => throw Exception(failure.message),
     (transactions) => transactions,
   );
-
-  if (request.page != 0) {
-    return transactions;
-  }
-
-  final externalTransfers = await _loadExternalTransfersSafely(ref);
-  final paymentLinks = await _loadPaymentLinksSafely(ref);
-  final merged = _mergeExternalHistory(
-    kfeTransactions: transactions,
-    externalTransfers: externalTransfers,
-    paymentLinks: paymentLinks,
-  );
-  return merged.take(request.size).toList();
 });
 
 /// Histórico filtrado por tipo
@@ -518,10 +582,7 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
       );
 
       // Refresh history from API after successful transaction
-      ref.invalidate(transactionHistoryProvider);
-      ref.invalidate(depositsProvider);
-      ref.invalidate(depositBalanceProvider);
-      await ref.read(walletProvider.notifier).refresh();
+      await _refreshAfterMoneyMoved(ref);
 
       state = AsyncActionState(result: result);
       return result;
@@ -586,13 +647,14 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
         );
         await assertion.commitIfNeeded();
 
-        ref.invalidate(transactionHistoryProvider);
-        ref.invalidate(depositsProvider);
-        ref.invalidate(depositBalanceProvider);
-        await ref.read(walletProvider.notifier).refresh();
+        await _refreshAfterMoneyMoved(ref);
         state = AsyncActionState(result: result);
         return result;
       } catch (signErr) {
+        if (isAuthUserCancellation(signErr)) {
+          state = const AsyncActionState();
+          return null;
+        }
         final renewedChallenge = _extractPasskeyChallenge(signErr);
         if (renewedChallenge == null ||
             renewedChallenge == challenge ||
@@ -649,10 +711,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
           'source': 'receive_flow',
         },
       );
-      ref.invalidate(transactionHistoryProvider);
-      ref.invalidate(depositsProvider);
-      ref.invalidate(depositBalanceProvider);
-      await ref.read(walletProvider.notifier).refresh();
+      await _refreshAfterMoneyMoved(ref);
       state = AsyncActionState(result: result);
       return result;
     } catch (e) {
@@ -691,10 +750,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         idempotencyKey: operationIdempotencyKey,
         appPin: appPin,
       );
-      ref.invalidate(transactionHistoryProvider);
-      ref.invalidate(depositsProvider);
-      ref.invalidate(depositBalanceProvider);
-      await ref.read(walletProvider.notifier).refresh();
+      await _refreshAfterMoneyMoved(ref);
       state = AsyncActionState(result: result);
       return result;
     } catch (e) {
@@ -821,13 +877,14 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         );
         await assertion.commitIfNeeded();
 
-        ref.invalidate(transactionHistoryProvider);
-        ref.invalidate(depositsProvider);
-        ref.invalidate(depositBalanceProvider);
-        await ref.read(walletProvider.notifier).refresh();
+        await _refreshAfterMoneyMoved(ref);
         state = AsyncActionState(result: result);
         return result;
       } catch (signErr) {
+        if (isAuthUserCancellation(signErr)) {
+          state = const AsyncActionState();
+          return null;
+        }
         final renewedChallenge = _extractPasskeyChallenge(signErr);
         if (renewedChallenge == null ||
             renewedChallenge == challenge ||
@@ -894,12 +951,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
         appPin: appPin,
       );
 
-      // Refresh history from API after withdrawal
-      ref.invalidate(transactionHistoryProvider);
-      ref.invalidate(depositsProvider);
-      ref.invalidate(depositBalanceProvider);
-      ref.invalidate(externalTransfersProvider);
-      await ref.read(walletProvider.notifier).refresh();
+      await _refreshAfterMoneyMoved(ref);
 
       state = AsyncActionState(result: result);
       return result;
@@ -967,14 +1019,14 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
         );
         await assertion.commitIfNeeded();
 
-        ref.invalidate(transactionHistoryProvider);
-        ref.invalidate(depositsProvider);
-        ref.invalidate(depositBalanceProvider);
-        ref.invalidate(externalTransfersProvider);
-        await ref.read(walletProvider.notifier).refresh();
+        await _refreshAfterMoneyMoved(ref);
         state = AsyncActionState(result: result);
         return result;
       } catch (signErr) {
+        if (isAuthUserCancellation(signErr)) {
+          state = const AsyncActionState();
+          return null;
+        }
         final renewedChallenge = _extractPasskeyChallenge(signErr);
         if (renewedChallenge == null ||
             renewedChallenge == challenge ||
@@ -993,6 +1045,39 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
 
 final withdrawProvider =
     NotifierProvider<WithdrawNotifier, AsyncActionState>(WithdrawNotifier.new);
+
+/// True when the user dismissed device-key / passkey / vault biometrics mid-flow.
+///
+/// Prefer known error codes; string matching is a narrow fallback only.
+bool isAuthUserCancellation(Object error) {
+  if (error is DeviceKeyException) {
+    return error.code == 'ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED';
+  }
+  if (error is SovereignAuthException) {
+    return error.code == SovereignAuthErrorCodes.authCancelled ||
+        error.code == 'ERR_AUTH_PASSKEY_AUTH_CANCELLED';
+  }
+
+  final raw = error.toString();
+  const cancelCodes = <String>[
+    'ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED',
+    'ERR_AUTH_PASSKEY_AUTH_CANCELLED',
+    'ERR_COLD_VAULT_AUTH_CANCELLED',
+  ];
+  for (final code in cancelCodes) {
+    if (raw.contains(code)) return true;
+  }
+
+  // Narrow OS / plugin messages — avoid matching "cannot cancel subscription".
+  final lower = raw.toLowerCase();
+  if (lower.contains('usercanceled') ||
+      lower.contains('user_canceled') ||
+      lower.contains('user cancelled') ||
+      lower.contains('user canceled')) {
+    return true;
+  }
+  return false;
+}
 
 String? _extractPasskeyChallenge(Object error) {
   const marker = 'PASSKEY_CHALLENGE_REQUIRED:';

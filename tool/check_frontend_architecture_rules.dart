@@ -37,6 +37,7 @@ void main(List<String> args) {
     _checkPartFiles(violations, relativePath, lines);
     _checkLegacyRoutes(violations, relativePath, lines, text);
     _checkLargeFile(violations, relativePath, lines, text);
+    _checkSensitiveDebugPrint(violations, relativePath, lines);
   }
 
   final signatures = violations.map((violation) => violation.signature).toSet();
@@ -199,6 +200,55 @@ void _checkLargeFile(
     relativePath,
     '${lines.length} lines; limit is $_largeFileLineLimit.',
   ));
+}
+
+/// Flags debugPrint that may leak financial PII outside kDebugMode guards.
+///
+/// Heuristic: in financial modules, a line with debugPrint + sensitive tokens
+/// without kDebugMode on the same line is a violation.
+void _checkSensitiveDebugPrint(
+  List<_Violation> violations,
+  String relativePath,
+  List<String> lines,
+) {
+  final financial = relativePath.contains('lib/features/movement/') ||
+      relativePath.contains('lib/features/financial_accounts/') ||
+      relativePath.contains('lib/features/ledger/') ||
+      relativePath.contains('lib/core/services/balance_websocket') ||
+      relativePath.contains('lib/core/security/local_transaction');
+  if (!financial) return;
+
+  // Only high-risk identifiers — avoid matching service names like "BalanceWebSocket".
+  final sensitive = RegExp(
+    r'''debugPrint\s*\([^)]*\b(txid|walletId|blockchainTxid|mnemonic|passphrase|privateKey|seedPhrase|amountSats|jwt)\b''',
+    caseSensitive: false,
+  );
+
+  for (var i = 0; i < lines.length; i++) {
+    final line = lines[i];
+    if (!line.contains('debugPrint')) continue;
+    if (line.contains('architecture-allow-sensitive-log')) continue;
+    if (!sensitive.hasMatch(line)) continue;
+
+    // Allow if kDebugMode appears on same line or in previous 3 lines.
+    var guarded = line.contains('kDebugMode');
+    for (var j = i - 1; j >= 0 && j >= i - 3; j--) {
+      if (lines[j].contains('kDebugMode')) {
+        guarded = true;
+        break;
+      }
+      if (lines[j].trim().isEmpty) continue;
+      // Stop at blank-ish block boundary
+      if (lines[j].contains('}') && !lines[j].contains('kDebugMode')) break;
+    }
+    if (guarded) continue;
+
+    violations.add(_Violation(
+      'sensitive_debug_print',
+      relativePath,
+      'line ${i + 1}: debugPrint may leak financial data outside kDebugMode',
+    ));
+  }
 }
 
 Iterable<File> _dartFiles(Directory dir) sync* {

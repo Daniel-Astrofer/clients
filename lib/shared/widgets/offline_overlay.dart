@@ -3,16 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
-
-class _OfflineOverlayCopy {
-  const _OfflineOverlayCopy._();
-
-  static const connectionBody =
-      'A conexão com o backend caiu. Tentaremos reconectar por tempo limitado.';
-}
 
 class OfflineOverlay extends ConsumerStatefulWidget {
   final Widget child;
@@ -31,6 +24,8 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
   late final AnimationController _retryController;
   Timer? _retryTimer;
   int _retryCount = 0;
+  /// User dismissed the blocking sheet to browse cached balances.
+  bool _dismissedForReadOnly = false;
 
   @override
   void initState() {
@@ -58,8 +53,11 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
     final isOnline = ref.read(networkStatusProvider);
     if (isOnline) {
       _stopRetryLoop();
-      if (_retryCount != 0 && mounted) {
-        setState(() => _retryCount = 0);
+      if ((_retryCount != 0 || _dismissedForReadOnly) && mounted) {
+        setState(() {
+          _retryCount = 0;
+          _dismissedForReadOnly = false;
+        });
       }
       return;
     }
@@ -94,16 +92,121 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
     _retryTimer = null;
   }
 
+  String _body(BuildContext context) {
+    return switch (Localizations.localeOf(context).languageCode) {
+      'en' =>
+        'Connection to the backend was lost. We will retry for a limited time. You can still browse cached balances.',
+      'es' =>
+        'Se perdió la conexión con el backend. Reintentaremos por un tiempo limitado. Aún puedes ver saldos en caché.',
+      _ =>
+        'A conexão com o backend caiu. Tentaremos reconectar por tempo limitado. Você ainda pode ver saldos em cache.',
+    };
+  }
+
+  String _retryNow(BuildContext context) {
+    return context.tr.offlineTryNow;
+  }
+
+  String _browseCached(BuildContext context) {
+    return switch (Localizations.localeOf(context).languageCode) {
+      'en' => 'Browse offline (cached)',
+      'es' => 'Ver sin conexión (caché)',
+      _ => 'Navegar offline (cache)',
+    };
+  }
+
+  String _retryHint(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (_retryCount == 0) {
+      return switch (lang) {
+        'en' =>
+          'We will automatically retry up to $_maxAutomaticRetries times.',
+        'es' =>
+          'Reintentaremos automáticamente hasta $_maxAutomaticRetries veces.',
+        _ =>
+          'Tentaremos automaticamente até $_maxAutomaticRetries vezes.',
+      };
+    }
+    if (_retryCount >= _maxAutomaticRetries) {
+      return switch (lang) {
+        'en' =>
+          'Automatic retries paused. Use Try again to check connectivity.',
+        'es' =>
+          'Reintentos automáticos en pausa. Usa Reintentar para comprobar de nuevo.',
+        _ =>
+          context.tr.offlineSubtitle,
+      };
+    }
+    return switch (lang) {
+      'en' => 'Attempt $_retryCount of $_maxAutomaticRetries sent.',
+      'es' => 'Intento $_retryCount de $_maxAutomaticRetries enviado.',
+      _ => 'Tentativa $_retryCount de $_maxAutomaticRetries enviada.',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final isOnline = ref.watch(networkStatusProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncRetryLoop());
 
+    final showBlocking = !isOnline && !_dismissedForReadOnly;
+    final showBanner = !isOnline && _dismissedForReadOnly;
+
     return RepaintBoundary(
       child: Stack(
         children: [
           widget.child,
-          if (!isOnline)
+          if (showBanner)
+            Positioned(
+              left: 12,
+              right: 12,
+              top: MediaQuery.paddingOf(context).top + 8,
+              child: Material(
+                color: KeroseneBrandTokens.warning.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(
+                        KeroseneIcons.wifiOff,
+                        size: 18,
+                        color: KeroseneBrandTokens.warning,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          switch (Localizations.localeOf(context).languageCode) {
+                            'en' => 'Offline · showing cached data',
+                            'es' => 'Sin conexión · datos en caché',
+                            _ => 'Offline · exibindo dados em cache',
+                          },
+                          style: TextStyle(
+                            color: KeroseneBrandTokens.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => _performRetry(manual: true),
+                        child: Text(
+                          _retryNow(context),
+                          style: TextStyle(
+                            color: KeroseneBrandTokens.warning,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (showBlocking)
             Positioned.fill(
               child: Material(
                 color: KeroseneBrandTokens.background.withValues(alpha: 0.94),
@@ -129,7 +232,7 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                                 ),
                                 const SizedBox(height: 28),
                                 Text(
-                                  KeroseneUiCopy.offlineTitle,
+                                  context.tr.offlineTitle,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: KeroseneBrandTokens.textPrimary,
@@ -143,7 +246,7 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  _OfflineOverlayCopy.connectionBody,
+                                  _body(context),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: KeroseneBrandTokens.textMuted,
@@ -155,16 +258,27 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                                 ),
                                 const SizedBox(height: 24),
                                 AppButton(
-                                  label: 'Tentar agora',
+                                  label: _retryNow(context),
                                   onPressed: () => _performRetry(manual: true),
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() => _dismissedForReadOnly = true);
+                                  },
+                                  child: Text(
+                                    _browseCached(context),
+                                    style: TextStyle(
+                                      color: KeroseneBrandTokens.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      decoration: TextDecoration.none,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 14),
                                 Text(
-                                  _retryCount == 0
-                                      ? 'Tentaremos automaticamente até $_maxAutomaticRetries vezes.'
-                                      : _retryCount >= _maxAutomaticRetries
-                                          ? 'Tentativas automáticas pausadas. Use Tentar agora para verificar novamente.'
-                                          : 'Tentativa $_retryCount de $_maxAutomaticRetries enviada.',
+                                  _retryHint(context),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: KeroseneBrandTokens.textMuted

@@ -1,10 +1,128 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
+
+final filteredHomeTransactionsProvider =
+    Provider.autoDispose<List<Transaction>>((ref) {
+  final transactionsAsync = ref.watch(transactionHistoryProvider);
+  final lastHistory = ref.watch(lastTransactionHistoryProvider);
+  final txs = transactionsAsync.asData?.value ??
+      (lastHistory.isNotEmpty ? lastHistory : null);
+
+  if (txs == null) return const [];
+
+  final filter = ref.watch(homeActivityFilterProvider);
+  final walletState = ref.watch(walletProvider);
+  final wallets = walletState is WalletLoaded
+      ? walletState.wallets
+      : const <Wallet>[];
+  final accounts = ref.watch(bitcoinAccountsProvider).asData?.value ??
+      const <BitcoinAccount>[];
+
+  final walletScope = ref.watch(homeExtratoWalletScopeProvider);
+  final selected = walletState is WalletLoaded
+      ? walletState.selectedWallet ??
+          (walletState.wallets.isNotEmpty ? walletState.wallets.first : null)
+      : null;
+
+  var scoped = txs;
+  if (walletScope == HomeExtratoWalletScope.selected && selected != null) {
+    final ids = <String>{
+      selected.id.trim(),
+      if (selected.name.trim().isNotEmpty) selected.name.trim(),
+    };
+    // Also match cold wallet id via bitcoin accounts.
+    for (final account in accounts) {
+      if (account.id == selected.id ||
+          account.label == selected.name ||
+          (account.coldWalletId ?? '') == selected.id) {
+        ids.add(account.id);
+        if ((account.coldWalletId ?? '').isNotEmpty) {
+          ids.add(account.coldWalletId!.trim());
+        }
+      }
+    }
+    scoped = txs.where((tx) {
+      final candidates = <String?>[
+        tx.walletId,
+        tx.sourceWalletId,
+        tx.destinationWalletId,
+        tx.fromAddress,
+        tx.toAddress,
+      ];
+      for (final c in candidates) {
+        final v = (c ?? '').trim();
+        if (v.isNotEmpty && ids.contains(v)) return true;
+      }
+      return false;
+    }).toList(growable: false);
+  }
+
+  // Cancelled/expired activity stays off the principal feed and other
+  // operational filters; it only appears under [HomeActivityFilter.cancelled].
+  return switch (filter) {
+    HomeActivityFilter.all =>
+      scoped.where((tx) => !tx.isCancelled).toList(growable: false),
+    HomeActivityFilter.incoming =>
+      scoped.where((tx) => tx.isCredit && !tx.isCancelled).toList(growable: false),
+    HomeActivityFilter.outgoing =>
+      scoped.where((tx) => tx.isDebit && !tx.isCancelled).toList(growable: false),
+    HomeActivityFilter.internal => scoped.where((tx) {
+        if (tx.isCancelled) return false;
+        final network = resolveTransactionNetwork(
+          tx,
+          wallets: wallets,
+          accounts: accounts,
+        );
+        return network == TransactionNetwork.internal ||
+            network == TransactionNetwork.paymentLinkInternal;
+      }).toList(growable: false),
+    HomeActivityFilter.onchain => scoped.where((tx) {
+        if (tx.isCancelled) return false;
+        final network = resolveTransactionNetwork(
+          tx,
+          wallets: wallets,
+          accounts: accounts,
+        );
+        return network == TransactionNetwork.onchain ||
+            network == TransactionNetwork.paymentLinkOnchain;
+      }).toList(growable: false),
+    HomeActivityFilter.cold => scoped.where((tx) {
+        if (tx.isCancelled) return false;
+        return resolveTransactionNetwork(
+              tx,
+              wallets: wallets,
+              accounts: accounts,
+            ) ==
+            TransactionNetwork.cold;
+      }).toList(growable: false),
+    HomeActivityFilter.pending => scoped
+        .where(
+          (tx) =>
+              !tx.isUnconfirmedExpired &&
+              (tx.status == TransactionStatus.pending ||
+                  tx.status == TransactionStatus.confirming),
+        )
+        .toList(growable: false),
+    HomeActivityFilter.failed => scoped
+        .where(
+          (tx) =>
+              tx.status == TransactionStatus.failed ||
+              tx.isUnconfirmedExpired,
+        )
+        .toList(growable: false),
+    HomeActivityFilter.cancelled =>
+      scoped.where((tx) => tx.isCancelled).toList(growable: false),
+  };
+});
 
 class HomeTransactionsList extends ConsumerStatefulWidget {
   final VoidCallback onCreateWallet;
@@ -29,122 +147,165 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
   Widget build(BuildContext context) {
     final selectedFilter = ref.watch(homeActivityFilterProvider);
     final transactionsAsync = ref.watch(transactionHistoryProvider);
-    final walletState = ref.watch(walletProvider);
-    final activeWallet = walletState is WalletLoaded
-        ? walletState.selectedWallet ??
-            (walletState.wallets.isNotEmpty ? walletState.wallets.first : null)
-        : null;
+    final lastHistory = ref.watch(lastTransactionHistoryProvider);
+    final lastSync = ref.watch(transactionHistoryLastSyncProvider);
+    final isOnline = ref.watch(networkStatusProvider);
+    final hasWallet = ref.watch(walletProvider.select(
+        (state) => state is WalletLoaded && state.wallets.isNotEmpty));
+    final hasBalance = ref.watch(walletProvider.select((state) {
+      if (state is WalletLoaded) {
+        final w = state.selectedWallet ??
+            (state.wallets.isNotEmpty ? state.wallets.first : null);
+        return (w?.balance ?? 0) > 0;
+      }
+      return false;
+    }));
 
-    return transactionsAsync.when(
-      data: (txs) {
-        final filteredTxs = _filterHomeTransactions(txs, selectedFilter);
-        if (filteredTxs.isEmpty) {
-          final hasWallet = activeWallet != null;
-          final hasBalance = (activeWallet?.balance ?? 0) > 0;
+    // Keep previous projection while reloading so the feed does not flash empty.
+    final txs = transactionsAsync.asData?.value ??
+        (lastHistory.isNotEmpty ? lastHistory : null);
+    final isReloading = transactionsAsync.isLoading && txs != null;
+    final hasError = transactionsAsync.hasError && txs == null;
 
-          return Padding(
-            padding: EdgeInsets.zero,
-            child: HomeEmptyTransactionsPanel(
-              icon: !hasWallet
-                  ? KeroseneIcons.wallet
-                  : !hasBalance
-                      ? KeroseneIcons.institution
-                      : KeroseneIcons.history,
-              title: !hasWallet
-                  ? context.tr.homeEmptyNoWalletTitle
-                  : !hasBalance
-                      ? context.tr.homeEmptyNoBalanceTitle
-                      : context.tr.homeEmptyNoTransactionsTitle,
-              description: !hasWallet
-                  ? context.tr.homeEmptyNoWalletDescription
-                  : !hasBalance
-                      ? context.tr.homeEmptyNoBalanceDescription
-                      : context.tr.homeEmptyNoTransactionsDescription,
-              actionLabel: !hasWallet
-                  ? context.tr.homeCreateWalletAction
-                  : !hasBalance
-                      ? context.tr.homeDepositAction
-                      : context.tr.homeRefreshAction,
-              actionIcon: !hasWallet
-                  ? KeroseneIcons.next
-                  : !hasBalance
-                      ? KeroseneIcons.download
-                      : KeroseneIcons.refresh,
-              onAction: () {
-                if (!hasWallet) {
-                  widget.onCreateWallet();
-                  return;
-                }
-
-                if (!hasBalance) {
-                  widget.onDepositWallet(activeWallet);
-                  return;
-                }
-
-                ref.invalidate(transactionHistoryProvider);
-              },
-              showAction: false,
-              blackSurface: true,
-              plainCenteredIcon: true,
-              serifTitle: true,
-            ),
-          );
-        }
-
-        final visibleTxs = filteredTxs.take(6).toList(growable: false);
-
-        return StatementTransactionScrollStack(
-          itemCount: visibleTxs.length,
-          itemGap: homeSize(12),
-          itemBuilder: (context, index) {
-            final tx = visibleTxs[index];
-            
-            Widget? dateHeader;
-            if (index == 0) {
-              dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-            } else {
-              final previousTx = visibleTxs[index - 1];
-              if (!_isSameDay(tx.timestamp.toLocal(), previousTx.timestamp.toLocal())) {
-                dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-              }
-            }
-
-            final tile = _buildTransactionTile(
-              tx,
-              expanded: _expandedTransactionIds.contains(tx.id),
-            );
-
-            if (dateHeader != null) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (index > 0) const SizedBox(height: 16),
-                  dateHeader,
-                  const SizedBox(height: 8),
-                  tile,
-                ],
-              );
-            }
-            return tile;
-          },
-        );
-      },
-      loading: () => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-        child: StateFeedbackView(
-          state: FeedbackState.loading,
-          title: context.tr.homeLoadingTransactionsTitle,
-          description: context.tr.homeLoadingTransactionsSubtitle,
-        ),
-      ),
-      error: (e, __) => Padding(
+    if (hasError) {
+      return Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: StateFeedbackView.networkError(
           context: context,
           onAction: () => ref.refresh(transactionHistoryProvider),
         ),
-      ),
+      );
+    }
+
+    if (txs == null) {
+      return const _TransactionsSkeletonLoading();
+    }
+
+    final filteredTxs = ref.watch(filteredHomeTransactionsProvider);
+    final filterIsAll = selectedFilter == HomeActivityFilter.all;
+
+    Widget body;
+    if (filteredTxs.isEmpty) {
+      body = Padding(
+        padding: EdgeInsets.zero,
+        child: HomeEmptyTransactionsPanel(
+          icon: !filterIsAll
+              ? KeroseneIcons.history
+              : !hasWallet
+                  ? KeroseneIcons.wallet
+                  : !hasBalance
+                      ? KeroseneIcons.institution
+                      : KeroseneIcons.history,
+          title: !filterIsAll
+              ? 'Nada neste filtro'
+              : !hasWallet
+                  ? context.tr.homeEmptyNoWalletTitle
+                  : hasBalance
+                      ? 'Histórico ainda vazio'
+                      : context.tr.homeEmptyNoBalanceTitle,
+          description: !filterIsAll
+              ? 'Não há lançamentos para este filtro. Tente “Tudo” ou puxe para atualizar.'
+              : !hasWallet
+                  ? context.tr.homeEmptyNoWalletDescription
+                  : hasBalance
+                      ? 'Há saldo, mas nenhum lançamento na projeção local. Puxe para sincronizar com o servidor.'
+                      : context.tr.homeEmptyNoBalanceDescription,
+          actionLabel: !filterIsAll
+              ? 'Limpar filtro'
+              : !hasWallet
+                  ? context.tr.homeCreateWalletAction
+                  : hasBalance
+                      ? context.tr.homeRefreshAction
+                      : context.tr.homeDepositAction,
+          actionIcon: !filterIsAll
+              ? KeroseneIcons.close
+              : !hasWallet
+                  ? KeroseneIcons.next
+                  : hasBalance
+                      ? KeroseneIcons.refresh
+                      : KeroseneIcons.download,
+          onAction: () {
+            if (!filterIsAll) {
+              ref.read(homeActivityFilterProvider.notifier).state =
+                  HomeActivityFilter.all;
+              return;
+            }
+            if (!hasWallet) {
+              widget.onCreateWallet();
+              return;
+            }
+            if (!hasBalance) {
+              final state = ref.read(walletProvider);
+              if (state is WalletLoaded) {
+                final w = state.selectedWallet ??
+                    (state.wallets.isNotEmpty ? state.wallets.first : null);
+                if (w != null) widget.onDepositWallet(w);
+              }
+              return;
+            }
+            unawaited(refreshFinancialProjectionUi(ref, forceFullHistory: true));
+          },
+          showAction: true,
+          blackSurface: true,
+          plainCenteredIcon: true,
+          serifTitle: true,
+        ),
+      );
+    } else {
+      body = StatementTransactionScrollStack(
+        itemCount: filteredTxs.length,
+        itemGap: homeSize(12),
+        itemBuilder: (context, index) {
+          final tx = filteredTxs[index];
+
+          Widget? dateHeader;
+          if (index == 0) {
+            dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+          } else {
+            final previousTx = filteredTxs[index - 1];
+            if (!_isSameDay(
+              tx.timestamp.toLocal(),
+              previousTx.timestamp.toLocal(),
+            )) {
+              dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+            }
+          }
+
+          final tile = _buildTransactionTile(
+            tx,
+            expanded: _expandedTransactionIds.contains(tx.id),
+          );
+
+          if (dateHeader != null) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
+                dateHeader,
+                SizedBox(height: homeSize(AppSpacing.sm)),
+                tile,
+              ],
+            );
+          }
+          return tile;
+        },
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!isOnline || isReloading || lastSync != null)
+          _HomeHistoryStatusBar(
+            isOnline: isOnline,
+            isReloading: isReloading,
+            lastSync: lastSync,
+            count: filteredTxs.length,
+          ),
+        body,
+      ],
     );
   }
 
@@ -167,272 +328,231 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     );
   }
 
-  List<Transaction> _filterHomeTransactions(
-    List<Transaction> txs,
-    HomeActivityFilter filter,
-  ) {
-    // Cancelled/expired activity stays off the principal feed and other
-    // operational filters; it only appears under [HomeActivityFilter.cancelled].
-    return switch (filter) {
-      HomeActivityFilter.all => txs
-          .where((tx) => !tx.isCancelled)
-          .toList(growable: false),
-      HomeActivityFilter.incoming => txs
-          .where((tx) => tx.isCredit && !tx.isCancelled)
-          .toList(growable: false),
-      HomeActivityFilter.outgoing => txs
-          .where((tx) => tx.isDebit && !tx.isCancelled)
-          .toList(growable: false),
-      HomeActivityFilter.pending => txs
-          .where(
-            (tx) =>
-                tx.status == TransactionStatus.pending ||
-                tx.status == TransactionStatus.confirming,
-          )
-          .toList(growable: false),
-      HomeActivityFilter.failed => txs
-          .where((tx) => tx.status == TransactionStatus.failed)
-          .toList(growable: false),
-      HomeActivityFilter.cancelled => txs
-          .where((tx) => tx.isCancelled)
-          .toList(growable: false),
-    };
-  }
 
   Widget _buildTransactionTile(
     Transaction tx, {
     required bool expanded,
   }) {
-    return StatementTransactionCard(
-      transaction: tx,
-      expanded: expanded,
-      mode: StatementTransactionCardMode.stacked,
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() {
-          if (expanded) {
-            _expandedTransactionIds.remove(tx.id);
-          } else {
-            _expandedTransactionIds.add(tx.id);
-          }
-        });
-      },
-    );
-  }
-}
+    final isIncoming = tx.type == TransactionType.receive;
+    final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
+    final semanticLabel = '${isIncoming ? "Recebido de" : "Enviado para"} ${tx.counterpartyLabel ?? "Desconhecido"}. Valor: $amountBtc BTC. Data: ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. Status: ${tx.status.name}';
 
-class HomeNotificationsList extends ConsumerWidget {
-  const HomeNotificationsList();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifications = ref.watch(sessionNotificationFeedProvider);
-    final visibleNotifications = notifications.take(6).toList(growable: false);
-
-    if (visibleNotifications.isEmpty) {
-      return HomeEmptyTransactionsPanel(
-        icon: KeroseneIcons.notificationsOff,
-        title: homeNoticeEmptyTitle(context),
-        description: homeNoticeEmptyDescription(context),
-        actionLabel: homeNoticeEmptyAction(context),
-        actionIcon: KeroseneIcons.notifications,
-        onAction: () {
-          unawaited(openNotificationCenter(context, originKey: GlobalKey()));
-        },
-      );
-    }
-
-    return Column(
-      children: [
-        for (var index = 0; index < visibleNotifications.length; index++) ...[
-          if (index > 0) SizedBox(height: homeSize(10)),
-          HomeNotificationCard(item: visibleNotifications[index]),
-        ],
-      ],
-    );
-  }
-}
-
-class HomeNotificationCard extends ConsumerWidget {
-  final SessionNotificationItem item;
-
-  const HomeNotificationCard({required this.item});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final visuals = resolveNotificationVisuals(context, item);
-    final accent = homeNotificationAccent(visuals.tone);
-    final title = item.title.trim().isNotEmpty
-        ? item.title.trim()
-        : visuals.categoryLabel;
-    final body = item.body.trim();
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () async {
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      excludeSemantics: true,
+      child: StatementTransactionCard(
+        transaction: tx,
+        expanded: expanded,
+        mode: StatementTransactionCardMode.stacked,
+        onTap: () {
           HapticFeedback.selectionClick();
-          await ref
-              .read(sessionNotificationFeedProvider.notifier)
-              .markRead(item.id);
-          if (context.mounted && item.isActionable) {
-            await NotificationNavigation.openFromContext(context, item);
-          }
+          setState(() {
+            if (expanded) {
+              _expandedTransactionIds.remove(tx.id);
+            } else {
+              _expandedTransactionIds.add(tx.id);
+            }
+          });
         },
-        borderRadius: BorderRadius.circular(homeSize(18)),
-        child: Ink(
-          padding: EdgeInsets.all(homeSize(14)),
-          decoration: BoxDecoration(
-            color: homeCardColor,
-            borderRadius: BorderRadius.circular(homeSize(18)),
-            border: Border.all(color: homePanelBorderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.24),
-                blurRadius: homeSize(18),
-                offset: Offset(0, homeSize(8)),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: homeSize(42),
-                height: homeSize(42),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: accent.withValues(alpha: 0.14),
-                ),
-                child: Icon(visuals.icon, color: accent, size: homeSize(20)),
-              ),
-              SizedBox(width: homeSize(12)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: homeFontSize(13),
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 0,
-                                ),
-                          ),
-                        ),
-                        SizedBox(width: homeSize(8)),
-                        Text(
-                          homeNotificationTimeLabel(context, item.timestamp),
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.42),
-                                    fontSize: homeFontSize(10),
-                                    fontWeight: FontWeight.w300,
-                                    letterSpacing: 0,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    if (body.isNotEmpty) ...[
-                      SizedBox(height: homeSize(6)),
-                      Text(
-                        body,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.62),
-                              fontSize: homeFontSize(12),
-                              height: 1.35,
-                              letterSpacing: 0,
-                            ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (!item.read) ...[
-                SizedBox(width: homeSize(10)),
-                Container(
-                  width: homeSize(7),
-                  height: homeSize(7),
-                  decoration: BoxDecoration(
-                    color: accent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
-Color homeNotificationAccent(AppNotificationTone tone) {
-  return switch (tone) {
-    AppNotificationTone.success => homePositiveColor,
-    AppNotificationTone.warning => AppColors.hexFFF59E0B,
-    AppNotificationTone.error => AppColors.hexFFFF5A67,
-    AppNotificationTone.info => AppColors.hexFFA7B0BA,
-    AppNotificationTone.neutral => AppColors.hexFF9CA3AF,
-  };
+
+
+class _HomeHistoryStatusBar extends StatelessWidget {
+  final bool isOnline;
+  final bool isReloading;
+  final DateTime? lastSync;
+  final int count;
+
+  const _HomeHistoryStatusBar({
+    required this.isOnline,
+    required this.isReloading,
+    required this.lastSync,
+    required this.count,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final label = !isOnline
+        ? (lastSync != null
+            ? 'Offline · extrato local · ${AppDateTime.formatRelative(context, lastSync!)}'
+            : 'Offline · extrato local')
+        : isReloading
+            ? 'Sincronizando extrato…'
+            : lastSync != null
+                ? '$count lançamentos · atualizado ${AppDateTime.formatRelative(context, lastSync!)}'
+                : null;
+    if (label == null) return const SizedBox.shrink();
+
+    final tone = !isOnline ? homeAmberColor : homeMutedTextColor;
+    return Padding(
+      padding: EdgeInsets.only(left: 4, right: 4, bottom: homeSize(10)),
+      child: Row(
+        children: [
+          Icon(
+            !isOnline
+                ? KeroseneIcons.cloudOff
+                : isReloading
+                    ? KeroseneIcons.refresh
+                    : KeroseneIcons.history,
+            size: homeSize(14),
+            color: tone,
+          ),
+          SizedBox(width: homeSize(6)),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption.copyWith(
+                color: tone,
+                fontSize: homeFontSize(11),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-String homeNotificationTimeLabel(BuildContext context, DateTime timestamp) {
-  return AppDateTime.formatTime(context, timestamp);
-}
+/// Skeleton shimmer loading that mimics the real transaction feed layout.
+/// Uses [HomeSkeletonBox] with staggered fade-slide entrance for each row.
+class _TransactionsSkeletonLoading extends StatelessWidget {
+  const _TransactionsSkeletonLoading();
 
-String homeNoticeEmptyTitle(BuildContext context) {
-  return homeLocalizedCopy(
-    context,
-    pt: 'Sem avisos',
-    en: 'No alerts',
-    es: 'Sin avisos',
-  );
-}
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = KeroseneMotion.reduceMotion(context);
 
-String homeNoticeEmptyDescription(BuildContext context) {
-  return homeLocalizedCopy(
-    context,
-    pt: 'Quando houver notificações importantes do aplicativo, elas aparecerão aqui.',
-    en: 'Important app notifications will appear here.',
-    es: 'Las notificaciones importantes de la app aparecerán aquí.',
-  );
-}
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Date header skeleton
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0, top: 12.0, bottom: 12.0),
+          child: HomeSkeletonBox(
+            width: homeSize(140),
+            height: homeSize(24),
+            borderRadius: BorderRadius.circular(homeSize(7)),
+          ),
+        ),
+        // ── Transaction row skeletons (staggered entrance)
+        for (var i = 0; i < 4; i++)
+          _buildSkeletonRow(i, reduceMotion),
+        // ── Second date header
+        Padding(
+          padding: EdgeInsets.only(
+            left: 4.0,
+            top: homeSize(20),
+            bottom: 12.0,
+          ),
+          child: HomeSkeletonBox(
+            width: homeSize(110),
+            height: homeSize(24),
+            borderRadius: BorderRadius.circular(homeSize(7)),
+          ),
+        ),
+        // ── More rows under second date
+        for (var i = 4; i < 6; i++)
+          _buildSkeletonRow(i, reduceMotion),
+      ],
+    );
+  }
 
-String homeNoticeEmptyAction(BuildContext context) {
-  return homeLocalizedCopy(
-    context,
-    pt: 'Ver central',
-    en: 'Open center',
-    es: 'Ver central',
-  );
-}
+  Widget _buildSkeletonRow(int index, bool reduceMotion) {
+    // Vary widths slightly for organic feel.
+    final titleWidths = [136.0, 152.0, 120.0, 144.0, 128.0, 160.0];
+    final subtitleWidths = [104.0, 88.0, 116.0, 96.0, 108.0, 92.0];
+    final amountWidths = [90.0, 78.0, 96.0, 84.0, 72.0, 88.0];
+    final subAmountWidths = [70.0, 62.0, 74.0, 66.0, 58.0, 68.0];
+    final i = index % titleWidths.length;
 
-String homeLocalizedCopy(
-  BuildContext context, {
-  required String pt,
-  required String en,
-  required String es,
-}) {
-  switch (Localizations.localeOf(context).languageCode) {
-    case 'en':
-      return en;
-    case 'es':
-      return es;
-    default:
-      return pt;
+    final row = Padding(
+      padding: EdgeInsets.symmetric(vertical: homeSize(8)),
+      child: Container(
+        padding: EdgeInsets.all(homeSize(16)),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.025),
+          borderRadius: BorderRadius.circular(homeSize(22)),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.04),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icon circle placeholder
+            HomeSkeletonBox(
+              width: homeSize(42),
+              height: homeSize(42),
+              borderRadius: BorderRadius.circular(homeSize(999)),
+            ),
+            SizedBox(width: homeSize(12)),
+            // Title + subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeSkeletonBox(
+                    width: homeSize(titleWidths[i]),
+                    height: homeSize(14),
+                    borderRadius: BorderRadius.circular(homeSize(5)),
+                  ),
+                  SizedBox(height: homeSize(AppSpacing.sm)),
+                  HomeSkeletonBox(
+                    width: homeSize(subtitleWidths[i]),
+                    height: homeSize(11),
+                    borderRadius: BorderRadius.circular(homeSize(5)),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: homeSize(10)),
+            // Amount + sub-amount (right-aligned)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                HomeSkeletonBox(
+                  width: homeSize(amountWidths[i]),
+                  height: homeSize(13),
+                  borderRadius: BorderRadius.circular(homeSize(5)),
+                ),
+                SizedBox(height: homeSize(AppSpacing.sm)),
+                HomeSkeletonBox(
+                  width: homeSize(subAmountWidths[i]),
+                  height: homeSize(11),
+                  borderRadius: BorderRadius.circular(homeSize(5)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (reduceMotion) return row;
+
+    return row
+        .animate()
+        .fade(
+          begin: 0,
+          end: 1,
+          duration: KeroseneMotion.medium,
+          delay: Duration(milliseconds: index * 60),
+          curve: KeroseneMotion.standard,
+        )
+        .slideY(
+          begin: 0.06,
+          end: 0,
+          duration: KeroseneMotion.medium,
+          delay: Duration(milliseconds: index * 60),
+          curve: KeroseneMotion.standard,
+        );
   }
 }
 
@@ -502,7 +622,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
                     letterSpacing: 0,
                   ),
           ),
-          SizedBox(height: homeSize(6)),
+          SizedBox(height: homeSize(AppSpacing.sm)),
           Text(
             description,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,

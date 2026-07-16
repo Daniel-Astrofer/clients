@@ -122,22 +122,96 @@ class WalletNotifier extends Notifier<WalletState> {
     );
   }
 
-  /// Atualiza saldo de uma wallet via WebSocket (tempo real)
-  /// Este método é chamado quando uma atualização de saldo é recebida via WebSocket
-  void updateBalanceFromWebSocket(String walletName, double newBalance) {
+  /// Atualiza saldo de uma wallet via WebSocket (tempo real).
+  /// Prefer [updateBalanceFromWebSocketUpdate] when bucket snapshot is present.
+  void updateBalanceFromWebSocket(String walletKey, double newBalance) {
+    updateBalanceFromWebSocketUpdate(
+      walletKey: walletKey,
+      newBalance: newBalance,
+    );
+  }
+
+  /// Dual-ledger-aware realtime update.
+  ///
+  /// - Cold / observed-only: only [observedSats] drives primary balance.
+  /// - Custodial/internal: [availableSats] is spendable; observed events must
+  ///   not overwrite hero balance (dual-ledger).
+  void updateBalanceFromWebSocketUpdate({
+    required String walletKey,
+    required double newBalance,
+    String? kind,
+    int? availableSats,
+    int? observedSats,
+    int? primarySats,
+    String? bucket,
+    String context = '',
+  }) {
     if (state is! WalletLoaded) return;
 
+    final key = walletKey.trim();
+    if (key.isEmpty) return;
+
     final currentState = state as WalletLoaded;
+    var matched = false;
+    final ctx = context.toLowerCase();
+    final bucketUpper = (bucket ?? '').toUpperCase();
+    final isObservedEvent =
+        bucketUpper == 'OBSERVED' || ctx.contains('observ');
+
     final updatedWallets = currentState.wallets.map((wallet) {
-      if (wallet.name == walletName) {
-        return wallet.copyWith(balance: newBalance);
+      // Prefer stable KFE wallet UUID only — never match by name/label (collision risk).
+      final hit = wallet.id == key;
+      if (!hit) return wallet;
+      matched = true;
+
+      final cold = wallet.isColdWallet || wallet.isObservedOnlyBalance;
+      final nextObserved = observedSats ??
+          (isObservedEvent || cold
+              ? (primarySats ?? (newBalance * 100000000).round())
+              : null);
+      final nextAvailable = availableSats ??
+          (!cold && !isObservedEvent
+              ? (primarySats ?? (newBalance * 100000000).round())
+              : null);
+
+      if (cold) {
+        final obs = nextObserved ?? wallet.observedSats;
+        return wallet.copyWith(
+          observedSats: obs,
+          balance: obs / 100000000.0,
+        );
       }
-      return wallet;
+
+      // Custodial/internal: never let an observed-only event clobber available.
+      if (isObservedEvent && availableSats == null) {
+        final obs = nextObserved ?? wallet.observedSats;
+        return wallet.copyWith(
+          observedSats: obs,
+          // keep available + balance (spendable) unchanged
+        );
+      }
+
+      final avail = nextAvailable ?? wallet.availableSats;
+      final obs = nextObserved ?? wallet.observedSats;
+      return wallet.copyWith(
+        availableSats: avail,
+        observedSats: obs,
+        balance: avail / 100000000.0,
+      );
     }).toList();
+
+    if (!matched) {
+      debugPrint(
+        'Wallet realtime update ignored — no wallet matched key=$key',
+      );
+      return;
+    }
 
     state = currentState.copyWith(wallets: updatedWallets);
 
-    debugPrint('Wallet balance refreshed from realtime feed.');
+    debugPrint(
+      'Wallet balance refreshed from realtime feed (bucket=$bucket context=$context).',
+    );
   }
 }
 

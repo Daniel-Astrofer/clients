@@ -1,21 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/core/security/financial_secure_scope.dart';
+import 'package:kerosene/features/movement/utils/blockchain_explorer.dart';
+import 'package:kerosene/features/movement/utils/transaction_display.dart';
 import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 
@@ -64,6 +70,7 @@ class _TransactionDetailScreenState
     extends ConsumerState<TransactionDetailScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entrance;
+  bool _technicalExpanded = false;
 
   @override
   void initState() {
@@ -95,14 +102,18 @@ class _TransactionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final actionTitle = resolveTransactionActionTitle(context, tx);
-    final selectedCurrency = ref.watch(currencyProvider);
+    final actionTitle = resolveTransactionActionTitle(
+      context,
+      tx,
+      wallets: _wallets,
+      accounts: _accounts,
+    );
+    final money = ref.watch(moneyFormatConfigProvider);
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final amountLabel = MoneyDisplay.formatFrozenAmountFromBtc(
+    final amountLabel = money.formatFrozenAmountFromBtc(
       btcAmount: tx.signedAmountBTC,
-      currency: selectedCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
@@ -114,7 +125,7 @@ class _TransactionDetailScreenState
       displayBtcBrl: tx.displayBtcBrl,
       signed: true,
     );
-    final btcLabel = MoneyDisplay.formatAmountFromBtc(
+    final btcLabel = money.formatAmountFromBtc(
       btcAmount: tx.signedAmountBTC,
       currency: Currency.btc,
       btcUsd: btcUsd,
@@ -134,36 +145,68 @@ class _TransactionDetailScreenState
       accounts: _accounts,
       compactHash: false,
     );
-    final network = resolveTransactionNetworkLabel(tx);
-    final when =
-        DateFormat('dd MMM yyyy · HH:mm').format(tx.timestamp.toLocal());
+    final network = resolveTransactionNetworkLabel(
+      tx,
+      wallets: _wallets,
+      accounts: _accounts,
+    );
+    final ownWallet = resolveOwnWalletLabel(
+      tx,
+      wallets: _wallets,
+      accounts: _accounts,
+    );
+    final when = AppDateTime.formatRelativeWithClock(context, tx.timestamp);
+    final whenAbsolute = AppDateTime.formatFull(context, tx.timestamp);
+    final statusLabel = _statusLabel(context, tx);
 
-    final rows = <_DetailRowData>[
-      _DetailRowData('De', from, copyable: false),
-      _DetailRowData('Para', to, copyable: looksLikeOnchainAddress(to)),
-      _DetailRowData('Valor', amountLabel),
+    final primaryRows = <_DetailRowData>[
+      _DetailRowData(SendMoneyCopy.detailYourWallet(context), ownWallet),
+      _DetailRowData(SendMoneyCopy.detailFrom(context), from),
+      _DetailRowData(
+        SendMoneyCopy.detailTo(context),
+        to,
+        copyable: looksLikeOnchainAddress(to),
+      ),
+      _DetailRowData(SendMoneyCopy.networkRowLabel(context), network),
+      _DetailRowData(context.tr.sendReviewStatus, statusLabel),
+      _DetailRowData(SendMoneyCopy.detailWhen(context), when),
+    ];
+
+    final technicalRows = <_DetailRowData>[
       _DetailRowData('Valor (BTC)', btcLabel),
-      _DetailRowData(
-        'Taxa de transação',
-        tx.hasNetworkFee || tx.feeSatoshis > 0
-            ? formatSatsAsBtc(tx.feeSatoshis)
-            : '—',
-      ),
-      _DetailRowData(
-        'Taxa de serviço',
-        tx.hasServiceFee ? formatSatsAsBtc(tx.serviceFeeSatoshis) : '—',
-      ),
-      _DetailRowData('Rede', network),
-      _DetailRowData('Status', _statusLabel(tx)),
+      if (tx.showsNetworkFee)
+        _DetailRowData(
+          context.tr.sendReviewNetworkFee,
+          formatSatsAsBtc(tx.feeSatoshis),
+        ),
+      if (tx.showsServiceFee)
+        _DetailRowData(
+          context.tr.sendReviewKeroseneFee,
+          formatSatsAsBtc(tx.serviceFeeSatoshis),
+        ),
+      if (resolveTransactionFailureLabel(context, tx) != null)
+        _DetailRowData(
+          'Motivo',
+          resolveTransactionFailureLabel(context, tx)!,
+        ),
       _DetailRowData('Tipo', actionTitle),
-      _DetailRowData('Data e hora', when),
-      if (tx.confirmations > 0)
-        _DetailRowData('Confirmações', '${tx.confirmations}'),
-      if ((tx.blockHeight ?? 0) > 0)
+      _DetailRowData('Data e hora', whenAbsolute),
+      if (tx.showsOnchainConfirmations)
+        _DetailRowData(
+          'Confirmações',
+          tx.confirmations <= 0
+              ? 'Na mempool (0/6)'
+              : tx.confirmations >= 6
+                  ? '6+'
+                  : '${tx.confirmations}/6',
+        ),
+      if (tx.showsOnchainConfirmations && (tx.blockHeight ?? 0) > 0)
         _DetailRowData('Bloco', '#${tx.blockHeight}'),
-      if ((tx.blockHash ?? '').trim().isNotEmpty)
+      if (tx.showsOnchainConfirmations &&
+          (tx.blockHash ?? '').trim().isNotEmpty)
         _DetailRowData('Hash do bloco', tx.blockHash!.trim(), copyable: true),
-      if ((tx.blockchainTxid ?? '').trim().isNotEmpty)
+      if (tx.showsOnchainConfirmations &&
+          (tx.blockchainTxid ?? '').trim().isNotEmpty)
         _DetailRowData(
           'TXID on-chain',
           tx.blockchainTxid!.trim(),
@@ -203,7 +246,11 @@ class _TransactionDetailScreenState
       if ((tx.externalTransferType ?? '').trim().isNotEmpty)
         _DetailRowData('Tipo externo', tx.externalTransferType!.trim()),
       if ((tx.walletId ?? '').trim().isNotEmpty)
-        _DetailRowData('Carteira', tx.walletId!.trim(), copyable: true),
+        _DetailRowData(
+          context.tr.sendReviewWallet,
+          tx.walletId!.trim(),
+          copyable: true,
+        ),
       if ((tx.sourceWalletId ?? '').trim().isNotEmpty)
         _DetailRowData(
           'Carteira origem',
@@ -217,9 +264,15 @@ class _TransactionDetailScreenState
           copyable: true,
         ),
       if ((tx.senderDisplayName ?? '').trim().isNotEmpty)
-        _DetailRowData('Remetente', tx.senderDisplayName!.trim()),
+        _DetailRowData(
+          context.tr.sendReviewSender,
+          tx.senderDisplayName!.trim(),
+        ),
       if ((tx.receiverDisplayName ?? '').trim().isNotEmpty)
-        _DetailRowData('Destinatário', tx.receiverDisplayName!.trim()),
+        _DetailRowData(
+          context.tr.sendReviewDestination,
+          tx.receiverDisplayName!.trim(),
+        ),
       if ((tx.fromAddress).trim().isNotEmpty)
         _DetailRowData(
           'Endereço origem',
@@ -240,7 +293,7 @@ class _TransactionDetailScreenState
       if (tx.displayAmountUsd != null)
         _DetailRowData(
           'Valor USD (congelado)',
-          MoneyDisplay.format(
+          money.format(
             amount: tx.displayAmountUsd!,
             currency: Currency.usd,
           ),
@@ -248,7 +301,7 @@ class _TransactionDetailScreenState
       if (tx.displayAmountBrl != null)
         _DetailRowData(
           'Valor BRL (congelado)',
-          MoneyDisplay.format(
+          money.format(
             amount: tx.displayAmountBrl!,
             currency: Currency.brl,
           ),
@@ -256,115 +309,244 @@ class _TransactionDetailScreenState
       if (tx.displayAmountEur != null)
         _DetailRowData(
           'Valor EUR (congelado)',
-          MoneyDisplay.format(
+          money.format(
             amount: tx.displayAmountEur!,
             currency: Currency.eur,
           ),
         ),
     ];
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(
-                      KeroseneIcons.back,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _statusLabel(tx).toUpperCase(),
-                    style: AppTypography.caption.copyWith(
-                      color: TransactionPalette.statusStrong(
-                        TransactionPalette.toneFor(tx),
+    final explorerUri = BlockchainExplorer.txUri(tx.blockchainTxid);
+
+    return FinancialSecureScope(
+      child: Scaffold(
+        backgroundColor: KeroseneBrandTokens.background,
+        body: SafeArea(
+          child: Semantics(
+            label:
+                '$actionTitle. $amountLabel. $network. $statusLabel',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(
+                          KeroseneIcons.back,
+                          color: KeroseneBrandTokens.textPrimary,
+                        ),
                       ),
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.w700,
-                    ),
+                      const Spacer(),
+                      if (explorerUri != null)
+                        TextButton(
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            unawaited(
+                              BlockchainExplorer.openTx(tx.blockchainTxid),
+                            );
+                          },
+                          child: Text(
+                            SendMoneyCopy.detailExplorer(context),
+                            style: AppTypography.caption.copyWith(
+                              color: KeroseneBrandTokens.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KeroseneBrandTokens.surfaceHigh,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          statusLabel,
+                          style: AppTypography.caption.copyWith(
+                            color: TransactionPalette.statusStrong(
+                              TransactionPalette.toneFor(tx),
+                            ),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+                    children: [
+                      FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: _entrance,
+                          curve:
+                              const Interval(0, 0.35, curve: Curves.easeOut),
+                        ),
+                        child: Text(
+                          actionTitle,
+                          style: AppTypography.newsreader(
+                            color: KeroseneBrandTokens.textPrimary,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w400,
+                            height: 1.15,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: _entrance,
+                          curve: const Interval(
+                            0.08,
+                            0.42,
+                            curve: Curves.easeOut,
+                          ),
+                        ),
+                        child: Text(
+                          amountLabel,
+                          style: AppTypography.financial(
+                            color: KeroseneBrandTokens.textPrimary,
+                            fontSize: 40,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: _entrance,
+                          curve: const Interval(
+                            0.12,
+                            0.48,
+                            curve: Curves.easeOut,
+                          ),
+                        ),
+                        child: Text(
+                          btcLabel,
+                          style: AppTypography.inter(
+                            color: KeroseneBrandTokens.textMuted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: _entrance,
+                          curve: const Interval(
+                            0.14,
+                            0.5,
+                            curve: Curves.easeOut,
+                          ),
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: KeroseneBrandTokens.surfaceHigh,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: KeroseneBrandTokens.border,
+                              ),
+                            ),
+                            child: Text(
+                              network,
+                              style: AppTypography.inter(
+                                color: KeroseneBrandTokens.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      for (var i = 0; i < primaryRows.length; i++)
+                        _StaggeredDetailRow(
+                          animation: _entrance,
+                          index: i,
+                          total: primaryRows.length,
+                          row: primaryRows[i],
+                        ),
+                      if (technicalRows.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(
+                              () =>
+                                  _technicalExpanded = !_technicalExpanded,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    SendMoneyCopy.detailTechnical(context),
+                                    style: AppTypography.inter(
+                                      color: KeroseneBrandTokens.textMuted,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  _technicalExpanded
+                                      ? Icons.keyboard_arrow_up_rounded
+                                      : Icons.keyboard_arrow_down_rounded,
+                                  color: KeroseneBrandTokens.textMuted,
+                                  size: 22,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_technicalExpanded)
+                          for (var i = 0; i < technicalRows.length; i++)
+                            _StaggeredDetailRow(
+                              animation: _entrance,
+                              index: i + primaryRows.length,
+                              total:
+                                  primaryRows.length + technicalRows.length,
+                              row: technicalRows[i],
+                            ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
-                children: [
-                  FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: _entrance,
-                      curve: const Interval(0, 0.35, curve: Curves.easeOut),
-                    ),
-                    child: Text(
-                      actionTitle,
-                      style: AppTypography.display.copyWith(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w500,
-                        height: 1.15,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: _entrance,
-                      curve: const Interval(0.08, 0.42, curve: Curves.easeOut),
-                    ),
-                    child: Text(
-                      amountLabel,
-                      style: AppTypography.financial(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: _entrance,
-                      curve: const Interval(0.12, 0.48, curve: Curves.easeOut),
-                    ),
-                    child: Text(
-                      network,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: KeroseneBrandTokens.textMuted,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  for (var i = 0; i < rows.length; i++)
-                    _StaggeredDetailRow(
-                      animation: _entrance,
-                      index: i,
-                      total: rows.length,
-                      row: rows[i],
-                    ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  static String _statusLabel(Transaction tx) {
+  static String _statusLabel(BuildContext context, Transaction tx) {
     return switch (tx.status) {
-      TransactionStatus.confirmed => 'Confirmada',
-      TransactionStatus.confirming => 'Confirmando',
-      TransactionStatus.pending => 'Pendente',
-      TransactionStatus.cancelled => 'Cancelada',
-      TransactionStatus.failed => 'Falhou',
+      TransactionStatus.confirmed => context.tr.confirmed,
+      TransactionStatus.confirming =>
+        SendMoneyCopy.detailStatusConfirming(context),
+      TransactionStatus.pending => context.tr.pending,
+      TransactionStatus.cancelled =>
+        SendMoneyCopy.detailStatusCancelled(context),
+      TransactionStatus.failed => SendMoneyCopy.detailStatusFailed(context),
+      TransactionStatus.reconciling =>
+        SendMoneyCopy.detailStatusReconciling(context),
     };
   }
 }
@@ -417,7 +599,7 @@ class _StaggeredDetailRow extends StatelessWidget {
           child: DecoratedBox(
             decoration: const BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: Color(0xFF1F1F1F)),
+                bottom: BorderSide(color: KeroseneBrandTokens.border),
               ),
             ),
             child: Padding(
@@ -447,12 +629,12 @@ class _StaggeredDetailRow extends StatelessWidget {
                             textAlign: TextAlign.right,
                             style: row.mono
                                 ? AppTypography.technicalMono(
-                                    color: Colors.white,
+                                    color: KeroseneBrandTokens.textPrimary,
                                     fontSize: 14,
                                     height: 1.35,
                                   )
                                 : AppTypography.bodyMedium.copyWith(
-                                    color: Colors.white,
+                                    color: KeroseneBrandTokens.textPrimary,
                                     height: 1.35,
                                   ),
                           ),
@@ -469,17 +651,17 @@ class _StaggeredDetailRow extends StatelessWidget {
                               ScaffoldMessenger.maybeOf(context)
                                 ?..hideCurrentSnackBar()
                                 ..showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Copiado'),
+                                  SnackBar(
+                                    content: Text(context.tr.btcAccountsCopied),
                                     behavior: SnackBarBehavior.floating,
-                                    duration: Duration(seconds: 1),
+                                    duration: const Duration(seconds: 1),
                                   ),
                                 );
                             },
                             child: const Icon(
                               KeroseneIcons.copy,
                               size: 16,
-                              color: Color(0xFF8A8A8E),
+                              color: KeroseneBrandTokens.textMuted,
                             ),
                           ),
                         ],

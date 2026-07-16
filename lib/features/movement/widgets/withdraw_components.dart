@@ -23,7 +23,11 @@ class FiatReferenceLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       context.tr.withdrawUiEquivalentTo(
-        MoneyDisplay.format(amount: amountBtc, currency: Currency.btc),
+        MoneyDisplay.format(
+          amount: amountBtc,
+          currency: Currency.btc,
+          appLocale: Localizations.localeOf(context),
+        ),
       ),
       textAlign: TextAlign.center,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(

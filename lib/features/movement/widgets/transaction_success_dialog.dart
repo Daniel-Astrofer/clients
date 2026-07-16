@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
-import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/design_system/icons.dart';
 
+/// Legacy animated success dialog — not used by the unified send flow.
+/// Prefer [SendPaymentReceiptScreen] + [AppNotice] for send/receive outcomes.
+@Deprecated(
+  'Use SendPaymentReceiptScreen / AppNotice. Kept for reference only.',
+)
 class TransactionSuccessDialog extends ConsumerStatefulWidget {
   final TransactionType type;
   final double? amountBtc;
@@ -86,15 +90,15 @@ class _TransactionSuccessDialogState
 
   @override
   Widget build(BuildContext context) {
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
+    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final primaryAmount = widget.amountBtc == null
         ? null
-        : MoneyDisplay.formatAmountFromBtc(
+        : money.formatAmountFromBtc(
             btcAmount: widget.amountBtc!,
-            currency: selectedCurrency,
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
@@ -102,7 +106,7 @@ class _TransactionSuccessDialogState
     final secondaryAmount =
         widget.amountBtc == null || selectedCurrency == Currency.btc
             ? null
-            : MoneyDisplay.format(
+            : money.format(
                 amount: widget.amountBtc!,
                 currency: Currency.btc,
               );

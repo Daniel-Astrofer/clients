@@ -51,18 +51,6 @@ class _EmergencyRecoveryScreenState
     super.dispose();
   }
 
-  String _copy({
-    required String pt,
-    required String en,
-    required String es,
-  }) {
-    return switch (Localizations.localeOf(context).languageCode) {
-      'en' => en,
-      'es' => es,
-      _ => pt,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -100,11 +88,7 @@ class _EmergencyRecoveryScreenState
                           ),
                           const SizedBox(height: AppSpacing.xl2),
                           _RecoveryTitle(
-                            eyebrow: _copy(
-                              pt: 'RECUPERAÇÃO EMERGENCIAL',
-                              en: 'EMERGENCY RECOVERY',
-                              es: 'RECUPERACIÓN DE EMERGENCIA',
-                            ),
+                            eyebrow: context.tr.emergencyRecoveryEyebrow,
                             title: _titleForStep(),
                             body: _bodyForStep(),
                           ),
@@ -112,11 +96,7 @@ class _EmergencyRecoveryScreenState
                             const SizedBox(height: AppSpacing.xl2),
                             _RecoveryNotice(
                               icon: KeroseneIcons.error,
-                              title: _copy(
-                                pt: 'Não foi possível continuar',
-                                en: 'Unable to continue',
-                                es: 'No se pudo continuar',
-                              ),
+                              title: context.tr.emergencyRecoveryUnableContinue,
                               message: _error!,
                               tone: _RecoveryNoticeTone.error,
                             ),
@@ -142,41 +122,17 @@ class _EmergencyRecoveryScreenState
 
   String _titleForStep() {
     return switch (_step) {
-      _RecoveryStep.start => _copy(
-          pt: 'Rotacione o acesso da conta',
-          en: 'Rotate account access',
-          es: 'Rota el acceso de la cuenta',
-        ),
-      _RecoveryStep.verify => _copy(
-          pt: 'Configure o novo autenticador',
-          en: 'Set up the new authenticator',
-          es: 'Configura el nuevo autenticador',
-        ),
-      _RecoveryStep.complete => _copy(
-          pt: 'Recovery concluído',
-          en: 'Recovery complete',
-          es: 'Recuperación completada',
-        ),
+      _RecoveryStep.start => context.tr.emergencyRecoveryTitleStart,
+      _RecoveryStep.verify => context.tr.emergencyRecoveryTitleVerify,
+      _RecoveryStep.complete => context.tr.emergencyRecoveryTitleComplete,
     };
   }
 
   String _bodyForStep() {
     return switch (_step) {
-      _RecoveryStep.start => _copy(
-          pt: 'Use códigos de recuperação salvos offline para criar uma nova senha, novo TOTP e nova passkey neste dispositivo.',
-          en: 'Use offline recovery codes to create a new password, new TOTP and new passkey on this device.',
-          es: 'Usa códigos de recuperación guardados offline para crear nueva contraseña, TOTP y passkey en este dispositivo.',
-        ),
-      _RecoveryStep.verify => _copy(
-          pt: 'Escaneie o QR no autenticador, digite o código de 6 dígitos e confirme a nova passkey local.',
-          en: 'Scan the QR in your authenticator, enter the 6-digit code and confirm the new local passkey.',
-          es: 'Escanea el QR en tu autenticador, ingresa el código de 6 dígitos y confirma la nueva passkey local.',
-        ),
-      _RecoveryStep.complete => _copy(
-          pt: 'Guarde os novos códigos offline antes de entrar novamente. Eles não devem ficar no app de notas, email ou nuvem.',
-          en: 'Store the new codes offline before signing in again. They should not live in notes, email or cloud storage.',
-          es: 'Guarda los nuevos códigos offline antes de entrar de nuevo. No deben quedar en notas, email o nube.',
-        ),
+      _RecoveryStep.start => context.tr.emergencyRecoveryBodyStart,
+      _RecoveryStep.verify => context.tr.emergencyRecoveryBodyVerify,
+      _RecoveryStep.complete => context.tr.emergencyRecoveryBodyComplete,
     };
   }
 
@@ -195,11 +151,7 @@ class _EmergencyRecoveryScreenState
         const SizedBox(height: AppSpacing.base),
         _RecoveryTextField(
           controller: _passphraseController,
-          label: _copy(
-            pt: 'Nova senha da conta',
-            en: 'New account password',
-            es: 'Nueva contraseña de cuenta',
-          ),
+          label: context.tr.emergencyRecoveryNewPassword,
           icon: KeroseneIcons.lock,
           enabled: !_busy,
           obscureText: true,
@@ -210,11 +162,7 @@ class _EmergencyRecoveryScreenState
         const SizedBox(height: AppSpacing.base),
         _RecoveryTextField(
           controller: _confirmPassphraseController,
-          label: _copy(
-            pt: 'Confirmar nova senha',
-            en: 'Confirm new password',
-            es: 'Confirmar nueva contraseña',
-          ),
+          label: context.tr.emergencyRecoveryConfirmPassword,
           icon: KeroseneIcons.passkey,
           enabled: !_busy,
           obscureText: true,
@@ -224,11 +172,7 @@ class _EmergencyRecoveryScreenState
         ),
         const SizedBox(height: AppSpacing.xl2),
         Text(
-          _copy(
-            pt: 'Códigos de recuperação',
-            en: 'Recovery codes',
-            es: 'Códigos de recuperación',
-          ),
+          context.tr.emergencyRecoveryCodesLabel,
           style: AppTypography.bodyMedium.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -238,11 +182,7 @@ class _EmergencyRecoveryScreenState
         for (var i = 0; i < _codeControllers.length; i++) ...[
           _RecoveryTextField(
             controller: _codeControllers[i],
-            label: _copy(
-              pt: 'Código ${i + 1}',
-              en: 'Code ${i + 1}',
-              es: 'Código ${i + 1}',
-            ),
+            label: context.tr.emergencyRecoveryCodeN(i + 1),
             icon: KeroseneIcons.binary,
             enabled: !_busy,
             keyboardType: TextInputType.number,
@@ -265,21 +205,13 @@ class _EmergencyRecoveryScreenState
                 : _addRecoveryCodeField,
             icon: const Icon(KeroseneIcons.plus, size: 16),
             label: Text(
-              _copy(
-                pt: 'Adicionar código',
-                en: 'Add code',
-                es: 'Agregar código',
-              ),
+              context.tr.emergencyRecoveryAddCode,
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.xl2),
         _RecoveryActionButton(
-          label: _copy(
-            pt: 'Iniciar recovery',
-            en: 'Start recovery',
-            es: 'Iniciar recuperación',
-          ),
+          label: context.tr.emergencyRecoveryStartAction,
           loading: _busy,
           onPressed: _busy ? null : _startRecovery,
         ),
@@ -299,16 +231,8 @@ class _EmergencyRecoveryScreenState
       children: [
         _RecoveryNotice(
           icon: KeroseneIcons.timer,
-          title: _copy(
-            pt: 'Sessão temporária',
-            en: 'Temporary session',
-            es: 'Sesión temporal',
-          ),
-          message: _copy(
-            pt: 'Conclua em até $minutes minutos para evitar reiniciar o fluxo.',
-            en: 'Finish within $minutes minutes to avoid restarting the flow.',
-            es: 'Termina en hasta $minutes minutos para no reiniciar el flujo.',
-          ),
+          title: context.tr.emergencyRecoveryTempSession,
+          message: context.tr.emergencyRecoveryFinishWithin(minutes),
           tone: _RecoveryNoticeTone.info,
         ),
         const SizedBox(height: AppSpacing.xl2),
@@ -337,11 +261,7 @@ class _EmergencyRecoveryScreenState
         ),
         const SizedBox(height: AppSpacing.xl2),
         _RecoveryActionButton(
-          label: _copy(
-            pt: 'Confirmar nova passkey',
-            en: 'Confirm new passkey',
-            es: 'Confirmar nueva passkey',
-          ),
+          label: context.tr.emergencyRecoveryConfirmPasskey,
           loading: _busy,
           onPressed: _busy ? null : _finishRecovery,
         ),
@@ -357,11 +277,7 @@ class _EmergencyRecoveryScreenState
                   });
                 },
           child: Text(
-            _copy(
-              pt: 'Voltar e revisar dados',
-              en: 'Go back and review data',
-              es: 'Volver y revisar datos',
-            ),
+            context.tr.emergencyRecoveryGoBackReview,
           ),
         ),
       ],
@@ -376,27 +292,15 @@ class _EmergencyRecoveryScreenState
       children: [
         _RecoveryNotice(
           icon: KeroseneIcons.success,
-          title: _copy(
-            pt: 'Credenciais rotacionadas',
-            en: 'Credentials rotated',
-            es: 'Credenciales rotadas',
-          ),
-          message: _copy(
-            pt: 'A conta ${finished?.username ?? ''} agora usa a nova senha, novo TOTP e nova passkey deste dispositivo.',
-            en: 'Account ${finished?.username ?? ''} now uses the new password, new TOTP and this device passkey.',
-            es: 'La cuenta ${finished?.username ?? ''} ahora usa nueva contraseña, nuevo TOTP y la passkey de este dispositivo.',
-          ),
+          title: context.tr.emergencyRecoveryCredentialsRotated,
+          message: context.tr.emergencyRecoveryAccountRotatedBody(finished?.username ?? ''),
           tone: _RecoveryNoticeTone.success,
         ),
         const SizedBox(height: AppSpacing.xl2),
         _BackupCodesGrid(codes: codes),
         const SizedBox(height: AppSpacing.xl2),
         _RecoveryActionButton(
-          label: _copy(
-            pt: 'Copiar novos códigos',
-            en: 'Copy new codes',
-            es: 'Copiar nuevos códigos',
-          ),
+          label: context.tr.emergencyRecoveryCopyNewCodes,
           icon: KeroseneIcons.copy,
           loading: false,
           onPressed: codes.isEmpty
@@ -411,11 +315,7 @@ class _EmergencyRecoveryScreenState
               .pushNamedAndRemoveUntil('/login', (route) => false),
           icon: const Icon(KeroseneIcons.login, size: 18),
           label: Text(
-            _copy(
-              pt: 'Entrar novamente',
-              en: 'Sign in again',
-              es: 'Entrar de nuevo',
-            ),
+            context.tr.emergencyRecoverySignInAgain,
           ),
         ),
       ],
@@ -485,11 +385,7 @@ class _EmergencyRecoveryScreenState
     final totp = _totpController.text.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(totp)) {
       setState(() {
-        _error = _copy(
-          pt: 'Digite o código TOTP de 6 dígitos do novo autenticador.',
-          en: 'Enter the 6-digit TOTP from the new authenticator.',
-          es: 'Ingresa el TOTP de 6 dígitos del nuevo autenticador.',
-        );
+        _error = context.tr.emergencyRecoveryTotpInstruction;
       });
       return;
     }
@@ -529,39 +425,19 @@ class _EmergencyRecoveryScreenState
       return context.tr.authUsernameRequiredMessage;
     }
     if (passphrase.length < 12) {
-      return _copy(
-        pt: 'Use uma nova senha com pelo menos 12 caracteres.',
-        en: 'Use a new password with at least 12 characters.',
-        es: 'Usa una nueva contraseña con al menos 12 caracteres.',
-      );
+      return context.tr.emergencyRecoveryPasswordMin;
     }
     if (passphrase != confirmPassphrase) {
-      return _copy(
-        pt: 'A confirmação precisa ser igual à nova senha.',
-        en: 'The confirmation must match the new password.',
-        es: 'La confirmación debe coincidir con la nueva contraseña.',
-      );
+      return context.tr.emergencyRecoveryPasswordMismatch;
     }
     if (codes.length < 3) {
-      return _copy(
-        pt: 'Informe pelo menos 3 códigos de recuperação distintos.',
-        en: 'Enter at least 3 distinct recovery codes.',
-        es: 'Ingresa al menos 3 códigos de recuperación distintos.',
-      );
+      return context.tr.emergencyRecoveryNeedThreeCodes;
     }
     if (codes.toSet().length != codes.length) {
-      return _copy(
-        pt: 'Os códigos de recuperação precisam ser distintos.',
-        en: 'Recovery codes must be distinct.',
-        es: 'Los códigos de recuperación deben ser distintos.',
-      );
+      return context.tr.emergencyRecoveryCodesDistinct;
     }
     if (codes.any((code) => !RegExp(r'^\d{8}$').hasMatch(code))) {
-      return _copy(
-        pt: 'Cada código de recuperação deve ter 8 dígitos.',
-        en: 'Each recovery code must have 8 digits.',
-        es: 'Cada código de recuperación debe tener 8 dígitos.',
-      );
+      return context.tr.emergencyRecoveryCodeEightDigits;
     }
     return null;
   }
@@ -580,11 +456,7 @@ class _EmergencyRecoveryScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _copy(
-            pt: 'Copiado.',
-            en: 'Copied.',
-            es: 'Copiado.',
-          ),
+          context.tr.emergencyRecoveryCopied,
         ),
       ),
     );

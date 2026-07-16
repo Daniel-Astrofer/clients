@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -86,7 +86,7 @@ class _PinDialogState extends State<PinDialog> {
         } else {
           HapticFeedback.heavyImpact();
           setState(() {
-            _error = KeroseneUiCopy.pinIncorrect;
+            _error = context.tr.pinIncorrect;
             _entered = '';
           });
         }
@@ -94,21 +94,21 @@ class _PinDialogState extends State<PinDialog> {
     }
   }
 
-  String get _title {
+  String _title(BuildContext context) {
     switch (_mode) {
       case _PinMode.setup:
-        return KeroseneUiCopy.pinSetupTitle;
+        return context.tr.pinSetupTitle;
       case _PinMode.enter:
-        return KeroseneUiCopy.pinEnterTitle;
+        return context.tr.pinEnterTitle;
     }
   }
 
-  String get _subtitle {
+  String _subtitle(BuildContext context) {
     switch (_mode) {
       case _PinMode.setup:
-        return KeroseneUiCopy.pinSetupSubtitle;
+        return context.tr.pinSetupSubtitle;
       case _PinMode.enter:
-        return KeroseneUiCopy.pinEnterSubtitle;
+        return context.tr.pinEnterSubtitle;
     }
   }
 
@@ -144,7 +144,7 @@ class _PinDialogState extends State<PinDialog> {
               ),
 
               Text(
-                _title,
+                _title(context),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimary,
@@ -156,7 +156,7 @@ class _PinDialogState extends State<PinDialog> {
               ),
               const SizedBox(height: 12),
               Text(
-                _subtitle,
+                _subtitle(context),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Theme.of(context)
@@ -232,9 +232,9 @@ class _PinDialogState extends State<PinDialog> {
                         .onPrimary
                         .withValues(alpha: 0.4),
                   ),
-                  child: const Text(
-                    KeroseneUiCopy.cancelAuthentication,
-                    style: TextStyle(
+                  child: Text(
+                    context.tr.cancelAuthentication,
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,

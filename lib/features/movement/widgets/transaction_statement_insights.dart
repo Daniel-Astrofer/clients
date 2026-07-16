@@ -246,7 +246,7 @@ class _KpiSummaryPanel extends StatelessWidget {
                   ),
                   _KpiTile(
                     icon: KeroseneIcons.trendUp,
-                    label: 'Líquido',
+                    label: context.tr.statementInsightNet,
                     value: _formatSignedBtc(report.netSats),
                     accent: report.netSats >= 0 ? _positive : _negative,
                   ),
@@ -288,7 +288,7 @@ class _KpiSummaryPanel extends StatelessWidget {
               const SizedBox(height: 12),
               _SecondaryMetricRow(
                 icon: KeroseneIcons.swap,
-                label: 'Transferências internas',
+                label: context.tr.statementInsightInternalTransfers,
                 value: _formatBtc(report.internalTransferSats),
               ),
             ],
@@ -859,7 +859,7 @@ class _MonthlyMovementPanel extends StatelessWidget {
                 ),
               _MonthlyMetric(
                 icon: KeroseneIcons.trendUp,
-                label: 'Líquido',
+                label: context.tr.statementInsightNet,
                 value: _formatSignedBtc(report.netSats),
               ),
             ],

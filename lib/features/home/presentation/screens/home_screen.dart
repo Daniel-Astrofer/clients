@@ -36,6 +36,7 @@ import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 import 'package:kerosene/features/movement/screens/movement_hub_screen.dart'
     deferred as deposits;
+import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/widgets/statement_transaction_card.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
@@ -58,6 +59,15 @@ import 'package:kerosene/features/notifications/presentation/providers/session_n
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
+
+import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
+import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
+import 'package:kerosene/features/home/presentation/widgets/home_greeting_slot.dart';
+import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
+import 'package:kerosene/features/home/presentation/widgets/home_education_host.dart';
+
+import '../design/home_design_tokens.dart';
+export '../design/home_design_tokens.dart';
 
 import 'home_screen_surface.dart';
 import 'home_screen_education.dart';
@@ -82,7 +92,26 @@ enum HomeLedgerBalanceView {
   platform,
 }
 
-enum HomeActivityFilter { all, incoming, outgoing, pending, failed, cancelled }
+enum HomeActivityFilter {
+  all,
+  incoming,
+  outgoing,
+  internal,
+  onchain,
+  cold,
+  pending,
+  failed,
+  cancelled,
+}
+
+/// Extrato scope relative to the active wallet card.
+enum HomeExtratoWalletScope {
+  /// All wallets / accounts.
+  all,
+
+  /// Only rows that touch the selected wallet (source, dest, or walletId).
+  selected,
+}
 
 final homeLedgerBalanceViewProvider = StateProvider<HomeLedgerBalanceView>((
   ref,
@@ -96,21 +125,14 @@ final homeActivityFilterProvider = StateProvider<HomeActivityFilter>((ref) {
   return HomeActivityFilter.all;
 });
 
+final homeExtratoWalletScopeProvider =
+    StateProvider<HomeExtratoWalletScope>((ref) {
+  return HomeExtratoWalletScope.all;
+});
+
 final homeRouteActiveProvider = StateProvider<bool>((ref) => true);
 
-const Color homeBackgroundColor = AppColors.hexFF000000;
-const Color homeCardColor = AppColors.hexFF141517;
-const Color homePanelTopColor = AppColors.hexFF1A1A1A;
-const Color homePanelBottomColor = AppColors.hexFF121212;
-const Color homePanelBorderColor = AppColors.hexFF2A2A2A;
-const Color homeMutedTextColor = AppColors.hexFFA3A3A3;
-const Color homeAmberColor = AppColors.hexFFF59E0B;
-const Color homePositiveColor = AppColors.hexFF4ADE80;
-const double homeDensityScale = 1.0;
 
-double homeSize(double value) => value * homeDensityScale;
-
-double homeFontSize(double value) => value;
 
 bool isLightningPaymentPayload(String value) {
   final trimmed = value.trim();
@@ -182,7 +204,8 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => HomeScreenState();
 }
 
-class HomeScreenState extends ConsumerState<HomeScreen> {
+class HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   Future<void>? _refreshHomeFuture;
   String? _firstUseActionPanelUserId;
   late final StateController<bool> homeRouteActiveController;
@@ -190,6 +213,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     homeRouteActiveController = ref.read(homeRouteActiveProvider.notifier);
     homeRouteActiveController.state = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -200,8 +224,17 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     homeRouteActiveController.state = false;
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Background/WS may have marked dirty — pull extrato + balance together.
+      unawaited(refreshFinancialProjectionIfDirty(ref));
+    }
   }
 
   Wallet? _resolveActiveWallet(WalletState walletState) {
@@ -239,14 +272,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _performHomeRefresh() async {
     try {
-      final walletRefresh = ref.read(walletProvider.notifier).refresh();
-      final historyRefresh = ref.refresh(transactionHistoryProvider.future);
-      ref.invalidate(depositsProvider);
-      ref.invalidate(depositBalanceProvider);
-
+      ref.invalidate(homeFeedProvider);
       await Future.wait<dynamic>([
-        walletRefresh,
-        historyRefresh,
+        refreshFinancialProjectionUi(ref, forceFullHistory: true),
+        ref.read(homeSurfaceProvider.notifier).refresh(),
       ], eagerError: false);
     } catch (_) {}
   }
@@ -256,10 +285,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _syncAfterFinancialAction() async {
-    ref.invalidate(transactionHistoryProvider);
-    ref.invalidate(depositsProvider);
-    ref.invalidate(depositBalanceProvider);
-    await ref.read(walletProvider.notifier).refresh();
+    await refreshFinancialProjectionUi(ref, forceFullHistory: true);
   }
 
   Future<void> _presentFinancialActionResult(dynamic result) async {
@@ -326,8 +352,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _openSend(WalletState walletState) {
-    final wallet = _resolveActiveWallet(walletState);
+  void _openSend(Wallet? wallet) {
     HapticFeedback.lightImpact();
 
     if (wallet == null) {
@@ -338,8 +363,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     unawaited(_openSendFlow(wallet: wallet));
   }
 
-  void _openReceiveFlow(WalletState walletState) {
-    final wallet = _resolveActiveWallet(walletState);
+  void _openReceiveFlow(Wallet? wallet) {
     HapticFeedback.lightImpact();
 
     if (wallet == null) {
@@ -361,9 +385,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _openDeposit(WalletState walletState) {
-    final wallet = _resolveActiveWallet(walletState);
-
+  void _openDeposit(Wallet? wallet) {
     if (wallet == null) {
       HapticFeedback.lightImpact();
       _showWalletRequiredNotice();
@@ -406,9 +428,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    ref.invalidate(transactionHistoryProvider);
-    ref.invalidate(depositsProvider);
-    ref.invalidate(depositBalanceProvider);
+    unawaited(refreshFinancialProjectionUi(ref));
   }
 
   String _firstUseActionPanelKey(String userId) =>
@@ -449,10 +469,19 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     final navigationClearance =
         MediaQuery.viewPaddingOf(context).bottom + homeSize(32);
 
-    final authState = ref.watch(authControllerProvider);
-    final walletState = ref.watch(walletProvider);
+    final authenticatedUserId = ref.watch(
+        authControllerProvider.select((s) => s is AuthAuthenticated ? s.user.id : null));
+    final authenticatedUserName = ref.watch(
+        authControllerProvider.select((s) => s is AuthAuthenticated ? s.user.name.trim() : ''));
+    final authIsLoading = ref.watch(
+        authControllerProvider.select((s) => s is AuthLoading));
+
+    final activeWallet = ref.watch(
+        walletProvider.select((w) => _resolveActiveWallet(w)));
+    final isWalletLoading = ref.watch(
+        walletProvider.select((w) => w is WalletInitial || w is WalletLoading));
+
     final transactionHistoryAsync = ref.watch(transactionHistoryProvider);
-    final activeWallet = _resolveActiveWallet(walletState);
     final hasWallet = activeWallet != null;
     final hasBalance = (activeWallet?.balance ?? 0) > 0;
     final isReadyActionsVariant = hasWallet && hasBalance;
@@ -460,8 +489,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         transactionHistoryAsync.asData?.value ?? const <Transaction>[];
     final hasLoadedTransactionHistory = transactionHistoryAsync.hasValue;
     final hasTransactions = transactionHistory.isNotEmpty;
-    final authenticatedUserId =
-        authState is AuthAuthenticated ? authState.user.id : null;
     final hasSeenFirstUseActionPanel = _hasSeenFirstUseActionPanel(
       authenticatedUserId,
     );
@@ -470,10 +497,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       _firstUseActionPanelUserId = null;
     }
 
+    // Do not open first-use "deposit" when balance already exists but history
+    // is still empty (race / sync lag) — that confuses users who just received.
     if (authenticatedUserId != null &&
         isReadyActionsVariant &&
         hasLoadedTransactionHistory &&
         !hasTransactions &&
+        !hasBalance &&
         !hasSeenFirstUseActionPanel) {
       _activateFirstUseActionPanel(authenticatedUserId);
     }
@@ -487,8 +517,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     // Full-body dots only while wallets have never loaded.
     // History loading must not replace the home with a second (higher) dots
     // strip after the post-PIN TorNavigationLoadingScreen already finished.
-    final showHomeLoading =
-        walletState is WalletInitial || walletState is WalletLoading;
+    final showHomeLoading = isWalletLoading;
 
     void openStatement() {
       unawaited(
@@ -504,21 +533,27 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     // ── NOME DE USUÁRIO REAL E SEGURO ──
     String userName = '';
 
-    if (authState is AuthAuthenticated) {
-      final fullName = authState.user.name.trim();
-      if (fullName.isNotEmpty) {
-        userName =
-            fullName.split(' ').first; // Pega o primeiro nome para UI limpa
-      }
+    if (authenticatedUserName.isNotEmpty) {
+      userName =
+          authenticatedUserName.split(' ').first; // Pega o primeiro nome para UI limpa
     } else if (activeWallet != null) {
       userName = activeWallet.name;
-    } else if (authState is AuthLoading) {
+    } else if (authIsLoading) {
       userName = '...';
     }
 
     if (userName.isEmpty || userName == 'Not Found') {
       userName = context.tr.homeFallbackUser;
     }
+
+    final layout = ref.watch(homeSurfaceProvider.select((s) => s.layout));
+    final gapAfterHeader = homeSize(layout.sectionGapAfterHeader);
+    final gapBeforeFeed = homeSize(layout.sectionGapBeforeFeed);
+    // Scaffold paints this solid so pull-to-refresh overscroll matches the
+    // header (Flutter stretch-header pattern). Header itself scrolls away.
+    final scaffoldSolid = ref.watch(theaterScaffoldSolidColorProvider);
+    final pageTopPad =
+        responsive.isTinyPhone ? homeSize(8) : homeSize(16);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -527,140 +562,156 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: homeBackgroundColor,
+        // Same solid as header top → overscroll is continuous (no black cut).
+        backgroundColor: scaffoldSolid,
         body: Stack(
           fit: StackFit.expand,
           children: [
-            const HomePageBackground(),
-            const HomeTopAmbientGlow(),
             const HomeRealtimeBootstrap(),
-            SafeArea(
-              bottom: false,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
+            // Theater education / receive messages (Communication Stage).
+            const HomeEducationHost(),
+            CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              slivers: [
+                BitcoinRefreshIndicator(onRefresh: _refreshHomeData),
+                // ── HEADER (scrolls away): wash only on theater row; balance on black
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                      child: showHomeLoading
+                          ? Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                pageHorizontalPadding,
+                                pageTopPad +
+                                    MediaQuery.paddingOf(context).top,
+                                pageHorizontalPadding,
+                                homeSize(8),
+                              ),
+                              child: const HomeLoadingContent()
+                                  .animate()
+                                  .fade(duration: 220.ms),
+                            )
+                          : HomeEntryTransition(
+                              child: HomeBalanceSection(
+                                userName: userName,
+                                walletState: ref.read(walletProvider),
+                                activeWallet: activeWallet,
+                                pageHorizontalPadding: pageHorizontalPadding,
+                                pageTopPad: pageTopPad,
+                                onReceive: () =>
+                                    _openReceiveFlow(activeWallet),
+                                onSend: () => _openSend(activeWallet),
+                                onViewStatement: openStatement,
+                                onOpenWallets: () =>
+                                    AppPrimaryNavigationBar.navigateTo(
+                                  context,
+                                  AppPrimaryDestination.card,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
                 ),
-                slivers: [
-                  BitcoinRefreshIndicator(onRefresh: _refreshHomeData),
-                  SliverToBoxAdapter(
+                // ── FEED: solid black covers scaffold so body stays black
+                SliverToBoxAdapter(
+                  child: ColoredBox(
+                    color: homeBackgroundColor,
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                        constraints:
+                            BoxConstraints(maxWidth: contentMaxWidth),
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(
                             pageHorizontalPadding,
-                            responsive.isTinyPhone ? homeSize(8) : homeSize(16),
+                            gapAfterHeader,
                             pageHorizontalPadding,
-                            0,
+                            navigationClearance,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (showHomeLoading)
-                                const HomeLoadingContent().animate().fade(
-                                      duration: 220.ms,
-                                    )
-                              else
-                                HomeEntryTransition(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      HomeBalanceSection(
-                                        userName: userName,
-                                        walletState: walletState,
-                                        activeWallet: activeWallet,
-                                        onReceive: () =>
-                                            _openReceiveFlow(walletState),
-                                        onSend: () => _openSend(walletState),
-                                        onViewStatement: openStatement,
-                                        onOpenWallets: () =>
-                                            AppPrimaryNavigationBar.navigateTo(
-                                          context,
-                                          AppPrimaryDestination.card,
-                                        ),
-                                      ),
-                                      const HomeOnboardingProgressCard(),
-                                      SizedBox(height: homeSize(18)),
-                                      const HomeBitcoinMarketChartCard(),
-                                      if (showPrimaryActionPanel) ...[
-                                        SizedBox(height: homeSize(18)),
-                                        HomeSetupNotice(
-                                          icon: !hasWallet
-                                              ? KeroseneIcons.wallet
-                                              : !hasBalance
-                                                  ? KeroseneIcons.download
-                                                  : KeroseneIcons.send,
-                                          title: !hasWallet
-                                              ? context
-                                                  .l10n.homePrimaryNoWalletTitle
-                                              : !hasBalance
-                                                  ? context.tr
-                                                      .homePrimaryReadyNoBalanceTitle
-                                                  : context
-                                                      .tr.homePrimaryReadyTitle,
-                                          subtitle: !hasWallet
-                                              ? context.tr
-                                                  .homePrimaryNoWalletSubtitle
-                                              : !hasBalance
-                                                  ? context.tr
-                                                      .homePrimaryReadyNoBalanceSubtitle
-                                                  : context.tr
-                                                      .homePrimaryReadySubtitle,
-                                          actionLabel: !hasWallet
-                                              ? context
-                                                  .l10n.homeCreateWalletAction
-                                              : !hasBalance
-                                                  ? context
-                                                      .tr.homeDepositFundsAction
-                                                  : context
-                                                      .l10n.homeSendBtcAction,
-                                          onAction: !hasWallet
-                                              ? _openCreateWallet
-                                              : !hasBalance
-                                                  ? () =>
-                                                      _openDeposit(walletState)
-                                                  : () =>
-                                                      _openSend(walletState),
-                                        ),
-                                      ],
-                                      SizedBox(height: homeSize(24)),
-                                      const HomeEducationCarousel(),
-                                      SizedBox(height: homeSize(14)),
-                                      SizedBox(height: homeSize(28)),
-                                      HomeFundsDistributionSection(
-                                        walletState: walletState,
-                                        onViewStatement: openStatement,
-                                      ),
-                                      SizedBox(height: homeSize(28)),
-                                      HomeSectionHeader(
-                                        title: homeRecentActivitiesTitle(
-                                          context,
-                                        ),
-                                        actionLabel: homeViewAllLabel(context),
-                                        onAction: openStatement,
-                                      ),
-                                      SizedBox(height: homeSize(12)),
-                                      if (hasTransactions) ...[
-                                        const HomeActivityFilterChips(),
-                                        SizedBox(height: homeSize(14)),
-                                      ],
-                                      HomeTransactionsList(
-                                        onCreateWallet: _openCreateWallet,
-                                        onDepositWallet: _openDepositForWallet,
+                          child: showHomeLoading
+                              ? const SizedBox.shrink()
+                              : Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    const HomeOnboardingProgressCard(),
+                                    SizedBox(height: gapAfterHeader),
+                                    const HomeBitcoinMarketChartCard(),
+                                    if (showPrimaryActionPanel) ...[
+                                      SizedBox(height: gapAfterHeader),
+                                      HomeSetupNotice(
+                                        icon: !hasWallet
+                                            ? KeroseneIcons.wallet
+                                            : !hasBalance
+                                                ? KeroseneIcons.download
+                                                : KeroseneIcons.send,
+                                        title: !hasWallet
+                                            ? context
+                                                .l10n.homePrimaryNoWalletTitle
+                                            : !hasBalance
+                                                ? context.tr
+                                                    .homePrimaryReadyNoBalanceTitle
+                                                : context
+                                                    .tr.homePrimaryReadyTitle,
+                                        subtitle: !hasWallet
+                                            ? context.tr
+                                                .homePrimaryNoWalletSubtitle
+                                            : !hasBalance
+                                                ? context.tr
+                                                    .homePrimaryReadyNoBalanceSubtitle
+                                                : context.tr
+                                                    .homePrimaryReadySubtitle,
+                                        actionLabel: !hasWallet
+                                            ? context
+                                                .l10n.homeCreateWalletAction
+                                            : !hasBalance
+                                                ? context
+                                                    .tr.homeDepositFundsAction
+                                                : context
+                                                    .l10n.homeSendBtcAction,
+                                        onAction: !hasWallet
+                                            ? _openCreateWallet
+                                            : !hasBalance
+                                                ? () =>
+                                                    _openDeposit(activeWallet)
+                                                : () =>
+                                                    _openSend(activeWallet),
                                       ),
                                     ],
-                                  ),
+                                    SizedBox(height: gapBeforeFeed),
+                                    const HomeEducationCarousel(),
+                                    SizedBox(height: homeSize(AppSpacing.md)),
+                                    SizedBox(height: homeSize(AppSpacing.xl)),
+                                    HomeFundsDistributionSection(
+                                      walletState: ref.read(walletProvider),
+                                      onViewStatement: openStatement,
+                                    ),
+                                    SizedBox(height: homeSize(AppSpacing.xl)),
+                                    HomeSectionHeader(
+                                      title:
+                                          homeRecentActivitiesTitle(context),
+                                      actionLabel: homeViewAllLabel(context),
+                                      onAction: openStatement,
+                                    ),
+                                    SizedBox(height: homeSize(AppSpacing.md)),
+                                    if (hasTransactions) ...[
+                                      const HomeActivityFilterChips(),
+                                      SizedBox(height: homeSize(AppSpacing.md)),
+                                    ],
+                                    HomeTransactionsList(
+                                      onCreateWallet: _openCreateWallet,
+                                      onDepositWallet: _openDepositForWallet,
+                                    ),
+                                  ],
                                 ),
-                              SizedBox(height: navigationClearance),
-                            ],
-                          ),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             const HomeBottomNavigationOverlay(
               currentDestination: AppPrimaryDestination.home,

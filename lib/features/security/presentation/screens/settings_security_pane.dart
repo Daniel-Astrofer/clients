@@ -3,9 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
+import 'package:kerosene/core/providers/privacy_preferences_provider.dart';
+import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
-import 'package:kerosene/features/auth/controller/auth_controller.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show authControllerProvider, sessionStorageScopeProvider;
+import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
+import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
@@ -19,14 +24,6 @@ import 'settings_modern_components.dart';
 import 'settings_recovery_hub_screen.dart';
 import 'settings_route_helpers.dart';
 import 'settings_section_components.dart';
-
-class _SettingsSecurityPaneCopy {
-  const _SettingsSecurityPaneCopy._();
-
-  static const title = 'Seguran\u00e7a';
-  static const description =
-      'Proteja sua conta com autentica\u00e7\u00e3o, acesso local e controles de recupera\u00e7\u00e3o.';
-}
 
 class SettingsSecurityPane extends ConsumerWidget {
   const SettingsSecurityPane({super.key});
@@ -87,9 +84,8 @@ class SettingsSecurityPane extends ConsumerWidget {
         if (context.mounted) {
           AppNotice.showInfo(
             context,
-            title: 'Passkey cadastrada',
-            message:
-                'Este dispositivo foi vinculado à sua conta. Biometria liberada para login e confirmações.',
+            title: context.tr.settingsSecurityPasskeyOkTitle,
+            message: context.tr.settingsSecurityPasskeyOkMessage,
           );
         }
         return;
@@ -98,7 +94,7 @@ class SettingsSecurityPane extends ConsumerWidget {
       if (context.mounted) {
         AppNotice.showError(
           context,
-          title: 'Não foi possível cadastrar a passkey',
+          title: context.tr.settingsSecurityPasskeyFailTitle,
           message: ErrorTranslator.translate(context.tr, result.message),
         );
       }
@@ -134,7 +130,7 @@ class SettingsSecurityPane extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _SettingsSecurityPaneCopy.title,
+          context.tr.settingsSecurityTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 32,
@@ -145,7 +141,7 @@ class SettingsSecurityPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          _SettingsSecurityPaneCopy.description,
+          context.tr.settingsSecuritySubtitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textSecondary,
             fontSize: 16,
@@ -162,17 +158,167 @@ class SettingsSecurityPane extends ConsumerWidget {
             onOpenTotpSecurity: openTotpSecurity,
             onRegisterPasskey: registerPasskey,
           ),
-          loading: () => const SettingsLoadingPanel(
-            label: 'Carregando perfil de segurança',
+          loading: () => SettingsLoadingPanel(
+            label: context.tr.settingsSecurityLoading,
           ),
-          error: (_, __) => const SettingsEmptyPanel(
+          error: (_, __) => SettingsEmptyPanel(
             icon: KeroseneIcons.warning,
-            title: 'Não conseguimos carregar a segurança',
-            body: 'Revise sua conexão e tente novamente.',
+            title: context.tr.settingsSecurityLoadErrorTitle,
+            body: context.tr.settingsSecurityLoadErrorBody,
           ),
         ),
+        const SizedBox(height: AppSpacing.xxl),
+        const _LocalLedgerWipeSection(),
       ],
     );
+  }
+}
+
+class _LedgerTelemetryRow extends ConsumerWidget {
+  const _LedgerTelemetryRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final snap = ref.watch(ledgerTelemetrySnapshotProvider);
+    return snap.when(
+      data: (s) => SettingsSectionRow(
+        icon: KeroseneIcons.history,
+        title: context.tr.settingsSecurityLedgerDiagTitle,
+        subtitle:
+            'Pulls: ${s.fullPulls} full / ${s.incrementalPulls} incr. · '
+            'offline: ${s.offlineServed} · fallback: ${s.statementFallback} · '
+            'MAC: ${s.macDiscarded} · conf↑: ${s.mergeUpgraded}',
+        onTap: () async {
+          HapticFeedback.selectionClick();
+          ref.invalidate(ledgerTelemetrySnapshotProvider);
+        },
+      ),
+      loading: () => SettingsSectionRow(
+        icon: KeroseneIcons.history,
+        title: context.tr.settingsSecurityLedgerDiagTitle,
+        subtitle: context.tr.settingsSecurityLedgerDiagLoading,
+        onTap: () {},
+      ),
+      error: (_, __) => SettingsSectionRow(
+        icon: KeroseneIcons.history,
+        title: context.tr.settingsSecurityLedgerDiagTitle,
+        subtitle: context.tr.settingsSecurityLedgerDiagUnavailable,
+        onTap: () {},
+      ),
+    );
+  }
+}
+
+/// Explicit wipe of on-device extrato. Logout never does this.
+class _LocalLedgerWipeSection extends ConsumerWidget {
+  const _LocalLedgerWipeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final privacy = ref.watch(privacyPreferencesProvider);
+    return SettingsSection(
+      title: context.tr.settingsSecurityLocalDataSection,
+      children: [
+        SettingsSectionRow(
+          icon: KeroseneIcons.lock,
+          title: context.tr.settingsSecurityBlockCaptures,
+          subtitle: privacy.blockFinancialScreenshots
+              ? 'Ativo: impede screenshots e prévia no multitarefa (Android).'
+              : 'Desligado. Ative para esconder saldo e extrato em capturas.',
+          trailing: SettingsReadonlySwitch(
+            value: privacy.blockFinancialScreenshots,
+          ),
+          onTap: () async {
+            HapticFeedback.selectionClick();
+            await ref
+                .read(privacyPreferencesProvider.notifier)
+                .setBlockFinancialScreenshots(
+                  !privacy.blockFinancialScreenshots,
+                );
+          },
+        ),
+        SettingsSectionRow(
+          icon: KeroseneIcons.trash,
+          title: context.tr.settingsSecurityWipeLedgerTitle,
+          subtitle: context.tr.settingsSecurityWipeLedgerSubtitle,
+          onTap: () => _confirmAndWipe(context, ref),
+        ),
+        const _LedgerTelemetryRow(),
+      ],
+    );
+  }
+
+  Future<void> _confirmAndWipe(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.mediumImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: KeroseneBrandTokens.surfaceMuted,
+        title: Text(
+          context.tr.settingsSecurityWipeConfirmTitle,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          context.tr.settingsSecurityWipeConfirmBody,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textSecondary,
+            height: 1.45,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              context.tr.settingsSecurityWipeConfirmAction,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final scope = ref.read(sessionStorageScopeProvider);
+    if (scope == null || scope.trim().isEmpty) {
+      if (context.mounted) {
+        AppNotice.showError(
+          context,
+          title: context.tr.settingsSecurityWipeSessionMissingTitle,
+          message: context.tr.settingsSecurityWipeSessionMissingMessage,
+        );
+      }
+      return;
+    }
+
+    try {
+      await ref.read(localTransactionHistoryStoreProvider).clear(scope);
+      ref.read(lastTransactionHistoryProvider.notifier).set(const []);
+      ref.read(transactionHistoryCursorProvider.notifier).reset();
+      ref.invalidate(transactionHistoryProvider);
+      ref.invalidate(localTransactionHistoryProvider);
+      if (context.mounted) {
+        AppNotice.showInfo(
+          context,
+          title: context.tr.settingsSecurityWipeOkTitle,
+          message: context.tr.settingsSecurityWipeOkMessage,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppNotice.showError(
+          context,
+          title: context.tr.settingsSecurityWipeFailTitle,
+          message: e.toString(),
+        );
+      }
+    }
   }
 }
 
@@ -201,47 +347,47 @@ class _SecurityAdvancedContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SettingsSection(
-          title: 'Proteção de acesso',
+          title: context.tr.settingsSecurityAccessSection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.lock,
-              title: 'Alterar PIN',
+              title: context.tr.settingsSecurityChangePinTitle,
               subtitle: appPin.enabled
-                  ? 'Atualize seu código de 4 dígitos'
-                  : 'Configure um código de 4 dígitos',
+                  ? context.tr.settingsSecurityChangePinEnabled
+                  : context.tr.settingsSecurityChangePinDisabled,
               onTap: () => onOpenAppPin(appPin),
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.biometric,
-              title: 'Biometria',
+              title: context.tr.settingsSecurityBiometricsTitle,
               subtitle: registeredPasskey
-                  ? 'Usar digital para entrar no app'
-                  : 'Registre uma passkey neste dispositivo',
+                  ? context.tr.settingsSecurityBiometricsOn
+                  : context.tr.settingsSecurityBiometricsOff,
               trailing: SettingsReadonlySwitch(value: registeredPasskey),
               onTap: onRegisterPasskey,
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.verified,
-              title: 'Autenticação em 2 fatores',
+              title: context.tr.settingsSecurityTotpTitle,
               subtitle: profile.requiresTotp
-                  ? 'Ativa no modo ${settingsSecurityModeLabel(profile.mode)}'
-                  : 'Validar TOTP e ativar proteção extra',
+                  ? context.tr.settingsSecurityTotpOn(settingsSecurityModeLabel(profile.mode))
+                  : context.tr.settingsSecurityTotpOff,
               onTap: onOpenTotpSecurity,
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Dispositivos e acesso',
+          title: context.tr.settingsSecurityDevicesSection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.devices,
-              title: 'Dispositivos autorizados',
+              title: context.tr.settingsSecurityAuthorizedDevicesTitle,
               subtitle: firstDevice == null
-                  ? 'Nenhum dispositivo com passkey'
+                  ? context.tr.settingsSecurityNoPasskeyDevice
                   : deviceCount == 1
-                      ? '${firstDevice.deviceName} · gerenciar'
-                      : '$deviceCount dispositivos · gerenciar',
+                      ? context.tr.settingsSecurityOneDeviceManage(firstDevice.deviceName)
+                      : context.tr.settingsSecurityNDevicesManage(deviceCount),
               onTap: () {
                 HapticFeedback.selectionClick();
                 pushSettingsPage(context, const SettingsDevicesScreen());
@@ -249,10 +395,10 @@ class _SecurityAdvancedContent extends StatelessWidget {
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.monitor,
-              title: 'Sessões e dispositivos',
+              title: context.tr.settingsSecuritySessionsTitle,
               subtitle: deviceCount == 0
-                  ? 'Acesso ligado a passkeys deste aparelho'
-                  : '$deviceCount acesso(s) com chave registrada',
+                  ? context.tr.settingsSecuritySessionsNone
+                  : context.tr.settingsSecuritySessionsCount(deviceCount),
               onTap: () {
                 // Sessions JWT are not exposed as a separate API — device keys
                 // are the product model for authorized access.
@@ -264,14 +410,14 @@ class _SecurityAdvancedContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Recuperação',
+          title: context.tr.settingsSecurityRecoverySection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.inbox,
-              title: 'Recuperação da conta',
+              title: context.tr.settingsSecurityAccountRecoveryTitle,
               subtitle: profile.requiresPassphrase
-                  ? 'Frase, shares e emergência'
-                  : 'Backup codes e recuperação de emergência',
+                  ? context.tr.settingsSecurityAccountRecoveryPassphrase
+                  : context.tr.settingsSecurityAccountRecoveryCodes,
               onTap: () {
                 HapticFeedback.selectionClick();
                 pushSettingsPage(context, const SettingsRecoveryHubScreen());
@@ -279,8 +425,8 @@ class _SecurityAdvancedContent extends StatelessWidget {
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.download,
-              title: 'Backup de segurança',
-              subtitle: 'Códigos de recuperação (2FA)',
+              title: context.tr.settingsSecurityBackupTitle,
+              subtitle: context.tr.settingsSecurityBackupSubtitle,
               onTap: () {
                 HapticFeedback.selectionClick();
                 pushSettingsPage(context, const SettingsBackupCodesScreen());
@@ -290,7 +436,7 @@ class _SecurityAdvancedContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          'PIN do app: ${settingsPinAttemptsLabel(appPin)}',
+          context.tr.settingsSecurityAppPinLabel(settingsPinAttemptsLabel(appPin)),
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textMuted,
             fontSize: 12,

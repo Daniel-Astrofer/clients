@@ -28,7 +28,8 @@ void main() {
         'AUTH_016': l10n.errPasskeyRejected,
         'AUTH_017': l10n.errPasskeyDeviceNotLinked,
         'AUTH_018': l10n.appEntryPinUnavailableMessage,
-        'AUTH_019': l10n.errAuthInvalidCredentials,
+        // App PIN invalid — never conflate with login credentials copy.
+        'AUTH_019': 'PIN incorreto. Tente novamente.',
         'AUTH_020': l10n.appEntryLockedHelper,
         'AUTH_021': l10n.appEntryPinUnavailableMessage,
         'AUTH_022': l10n.errPasskeyRejected,
@@ -124,6 +125,31 @@ void main() {
           'SovereignAuthException(ERR_AUTH_PASSKEY_NOT_REGISTERED): No sovereign key is registered on this device.',
         ),
         'Este dispositivo não está vinculado à sua conta para confirmar com passkey. Vincule este aparelho e tente novamente.',
+      );
+    });
+
+    test('maps user auth cancellation codes to calm cancelled copy', () {
+      expect(
+        ErrorTranslator.translate(l10n, 'ERR_AUTH_PASSKEY_AUTH_CANCELLED'),
+        l10n.withdrawAuthCancelled,
+      );
+      expect(
+        ErrorTranslator.translate(
+          l10n,
+          'DeviceKeyException(ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED): A confirmação do dispositivo foi cancelada.',
+        ),
+        l10n.withdrawAuthCancelled,
+      );
+      expect(
+        ErrorTranslator.translate(
+          l10n,
+          'SovereignAuthException(ERR_AUTH_PASSKEY_AUTH_CANCELLED): cancelled',
+        ),
+        l10n.withdrawAuthCancelled,
+      );
+      expect(
+        ErrorTranslator.translate(l10n, 'ERR_COLD_VAULT_AUTH_CANCELLED'),
+        l10n.withdrawAuthCancelled,
       );
     });
 

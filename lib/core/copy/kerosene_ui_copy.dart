@@ -1,34 +1,40 @@
+import 'package:kerosene/core/l10n/app_localizations.dart';
+
+/// @nodoc
+///
+/// Legacy static Portuguese copy. **Do not add new strings here.**
+/// All keys live in ARB (`context.tr`). This facade keeps older call sites
+/// compiling while they migrate to [AppLocalizations].
+@Deprecated('Use context.tr / AppLocalizations from ARB instead')
 class KeroseneUiCopy {
   const KeroseneUiCopy._();
 
-  static const goBack = 'Voltar';
-  static const cancel = 'Cancelar';
-  static const cancelOperation = 'Cancelar operação';
-  static const cancelAuthentication = 'Cancelar autenticação';
-  static const deposit = 'Depositar';
-  static const secureConnectionLoading = 'Estabelecendo conexão segura...';
-
-  static const deferredLoadFailure = 'Não foi possível abrir esta tela agora.';
-  static const deferredLoadDetails =
-      'Tente novamente em instantes ou retorne para a área anterior.';
-
-  static const nfcScannerTitle = 'Leitura por NFC';
-  static const nfcReadyToScan = 'Pronto para ler';
-  static const nfcUnavailable = 'NFC não está disponível neste dispositivo.';
-  static const nfcHoldNearTag = 'Aproxime o dispositivo da etiqueta NFC.';
-  static const nfcPaymentRequestRead = 'Solicitação de pagamento lida.';
-  static const nfcTagDetected = 'Etiqueta detectada.';
-
-  static const offlineTitle = 'Sem conexão';
-  static const offlineSubtitle = 'Não foi possível confirmar a conexão agora.';
-  static const offlineRetryHint = 'Arraste para tentar novamente';
-
-  static const pinIncorrect =
-      'Não conseguimos confirmar esse PIN. Tente novamente.';
-  static const pinSetupTitle = 'Crie seu PIN de segurança';
-  static const pinEnterTitle = 'Confirme seu PIN de segurança';
-  static const pinSetupSubtitle =
-      'Escolha seis dígitos para proteger este acesso.';
-  static const pinEnterSubtitle =
-      'Este PIN local protege a estrutura de confiança deste dispositivo.';
+  static String goBack(AppLocalizations l10n) => l10n.goBack;
+  static String cancel(AppLocalizations l10n) => l10n.cancel;
+  static String cancelOperation(AppLocalizations l10n) => l10n.cancelOperation;
+  static String cancelAuthentication(AppLocalizations l10n) =>
+      l10n.cancelAuthentication;
+  static String deposit(AppLocalizations l10n) => l10n.deposit;
+  static String secureConnectionLoading(AppLocalizations l10n) =>
+      l10n.secureConnectionLoading;
+  static String deferredLoadFailure(AppLocalizations l10n) =>
+      l10n.deferredLoadFailure;
+  static String deferredLoadDetails(AppLocalizations l10n) =>
+      l10n.deferredLoadDetails;
+  static String nfcScannerTitle(AppLocalizations l10n) => l10n.nfcScannerTitle;
+  static String nfcReadyToScan(AppLocalizations l10n) => l10n.nfcReadyToScan;
+  static String nfcUnavailable(AppLocalizations l10n) =>
+      l10n.nfcUnavailableDevice;
+  static String nfcHoldNearTag(AppLocalizations l10n) => l10n.nfcHoldNearTag;
+  static String nfcPaymentRequestRead(AppLocalizations l10n) =>
+      l10n.nfcPaymentRequestRead;
+  static String nfcTagDetected(AppLocalizations l10n) => l10n.nfcTagDetected;
+  static String offlineTitle(AppLocalizations l10n) => l10n.offlineTitle;
+  static String offlineSubtitle(AppLocalizations l10n) => l10n.offlineSubtitle;
+  static String offlineRetryHint(AppLocalizations l10n) => l10n.offlineRetryHint;
+  static String pinIncorrect(AppLocalizations l10n) => l10n.pinIncorrect;
+  static String pinSetupTitle(AppLocalizations l10n) => l10n.pinSetupTitle;
+  static String pinEnterTitle(AppLocalizations l10n) => l10n.pinEnterTitle;
+  static String pinSetupSubtitle(AppLocalizations l10n) => l10n.pinSetupSubtitle;
+  static String pinEnterSubtitle(AppLocalizations l10n) => l10n.pinEnterSubtitle;
 }

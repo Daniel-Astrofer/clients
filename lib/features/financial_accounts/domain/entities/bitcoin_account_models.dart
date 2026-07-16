@@ -55,17 +55,23 @@ class BitcoinAccount {
     return 'Carteira global';
   }
 
-  /// Spendable / primary total for UI.
-  /// Cold: only chain-observed. Custodial/internal: ledger buckets only
-  /// (chain observed is a separate reconciliation field — never summed).
+  /// Primary UI balance (what the user can treat as "the" number for this account).
+  /// Cold: chain-observed only. Custodial/internal: **available only** (not locked/holds).
+  int get primarySats {
+    if (isWatchOnly) return observedBalanceSats;
+    return balanceAvailableSats;
+  }
+
+  /// Held ledger sats (pending + locked + auto-hold) — never fold into hero balance.
+  int get heldSats {
+    if (isWatchOnly) return 0;
+    return balancePendingSats + balanceLockedSats + balanceAutoHoldSats;
+  }
+
+  /// Full ledger footprint (available + holds). Prefer [primarySats] for display.
   int get totalSats {
-    if (isWatchOnly) {
-      return observedBalanceSats;
-    }
-    return balanceAvailableSats +
-        balancePendingSats +
-        balanceLockedSats +
-        balanceAutoHoldSats;
+    if (isWatchOnly) return observedBalanceSats;
+    return balanceAvailableSats + heldSats;
   }
 
   /// Blockchain-observed sats for cold/custodial on-chain reconciliation.

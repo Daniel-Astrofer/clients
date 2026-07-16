@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/design_system/icons.dart';
@@ -19,139 +20,80 @@ NotificationVisuals resolveNotificationVisuals(
   BuildContext context,
   SessionNotificationItem item,
 ) {
+  final tr = context.tr;
   switch (item.kind) {
     case SessionNotificationItem.kindSecurityLoginDetected:
       return NotificationVisuals(
         tone: AppNotificationTone.warning,
         icon: KeroseneIcons.shield,
-        categoryLabel: _copy(
-          context,
-          pt: 'Segurança',
-          en: 'Security',
-          es: 'Seguridad',
-        ),
+        categoryLabel: tr.notifCategorySecurity,
       );
     case SessionNotificationItem.kindSecurityAdminAccessAttempt:
       return NotificationVisuals(
         tone: AppNotificationTone.warning,
         icon: KeroseneIcons.admin,
-        categoryLabel: _copy(
-          context,
-          pt: 'Segurança',
-          en: 'Security',
-          es: 'Seguridad',
-        ),
+        categoryLabel: tr.notifCategorySecurity,
       );
     case SessionNotificationItem.kindSecurityRecoveryCompleted:
       return NotificationVisuals(
         tone: AppNotificationTone.warning,
         icon: KeroseneIcons.key,
-        categoryLabel: _copy(
-          context,
-          pt: 'Recuperação',
-          en: 'Recovery',
-          es: 'Recuperación',
-        ),
+        categoryLabel: tr.notifCategoryRecovery,
       );
     case SessionNotificationItem.kindAccountCreated:
       return NotificationVisuals(
         tone: _toneForSeverity(item.severity),
         icon: KeroseneIcons.personAdd,
-        categoryLabel: _copy(
-          context,
-          pt: 'Conta',
-          en: 'Account',
-          es: 'Cuenta',
-        ),
+        categoryLabel: tr.notifCategoryAccount,
       );
     case SessionNotificationItem.kindTransferReceived:
       return NotificationVisuals(
         tone: AppNotificationTone.success,
         icon: KeroseneIcons.southWest,
-        categoryLabel: _copy(
-          context,
-          pt: 'Recebido',
-          en: 'Received',
-          es: 'Recibido',
-        ),
+        categoryLabel: tr.notifCategoryReceived,
       );
     case SessionNotificationItem.kindTransferSent:
       return NotificationVisuals(
         tone: _toneForSeverity(item.severity),
         icon: KeroseneIcons.northEast,
-        categoryLabel: _copy(
-          context,
-          pt: 'Enviado',
-          en: 'Sent',
-          es: 'Enviado',
-        ),
+        categoryLabel: tr.notifCategorySent,
       );
     case SessionNotificationItem.kindPaymentRequestCreated:
       return NotificationVisuals(
         tone: AppNotificationTone.info,
         icon: KeroseneIcons.receipt,
-        categoryLabel: _copy(
-          context,
-          pt: 'Link',
-          en: 'Payment link',
-          es: 'Link',
-        ),
+        categoryLabel: tr.notifCategoryPaymentLink,
       );
     case SessionNotificationItem.kindPaymentRequestPaid:
       return NotificationVisuals(
         tone: AppNotificationTone.success,
         icon: KeroseneIcons.verified,
-        categoryLabel: _copy(
-          context,
-          pt: 'Liquidado',
-          en: 'Paid',
-          es: 'Liquidado',
-        ),
+        categoryLabel: tr.notifCategoryPaymentLink,
       );
     case SessionNotificationItem.kindDepositDetected:
       return NotificationVisuals(
         tone: AppNotificationTone.info,
         icon: KeroseneIcons.download,
-        categoryLabel: _copy(
-          context,
-          pt: 'Depósito',
-          en: 'Deposit',
-          es: 'Depósito',
-        ),
+        categoryLabel: tr.notifCategoryReceived,
       );
     case SessionNotificationItem.kindDepositConfirmed:
       return NotificationVisuals(
         tone: AppNotificationTone.success,
         icon: KeroseneIcons.wallet,
-        categoryLabel: _copy(
-          context,
-          pt: 'Confirmado',
-          en: 'Confirmed',
-          es: 'Confirmado',
-        ),
+        categoryLabel: tr.notifCategoryReceived,
       );
     case SessionNotificationItem.kindPaymentSent:
       return NotificationVisuals(
         tone: _toneForSeverity(item.severity),
         icon: KeroseneIcons.send,
-        categoryLabel: _copy(
-          context,
-          pt: 'Pagamento',
-          en: 'Payment',
-          es: 'Pago',
-        ),
+        categoryLabel: tr.notifCategorySent,
       );
     default:
       final tone = _toneForSeverity(item.severity);
       return NotificationVisuals(
         tone: tone,
         icon: AppNotificationStyle.iconFor(tone),
-        categoryLabel: _copy(
-          context,
-          pt: 'Sistema',
-          en: 'System',
-          es: 'Sistema',
-        ),
+        categoryLabel: tr.notifCategorySystem,
       );
   }
 }
@@ -176,21 +118,5 @@ AppNotificationTone _toneForSeverity(String severity) {
     case SessionNotificationItem.severityInfo:
     default:
       return AppNotificationTone.info;
-  }
-}
-
-String _copy(
-  BuildContext context, {
-  required String pt,
-  required String en,
-  required String es,
-}) {
-  switch (Localizations.localeOf(context).languageCode) {
-    case 'en':
-      return en;
-    case 'es':
-      return es;
-    default:
-      return pt;
   }
 }

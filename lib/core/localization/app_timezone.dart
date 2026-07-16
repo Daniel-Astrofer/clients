@@ -10,6 +10,34 @@ class AppTimezone {
   static final RegExp _ianaLike = RegExp(r'^[A-Za-z_]+(?:/[A-Za-z0-9_+\-]+)+$');
   static final RegExp _utcOffset = RegExp(r'^UTC[+-]\d{2}:\d{2}$');
 
+  /// Curated list for settings picker (covers main Kerosene markets).
+  static const curatedZones = <String>[
+    'America/Sao_Paulo',
+    'America/Manaus',
+    'America/Fortaleza',
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Mexico_City',
+    'America/Bogota',
+    'America/Lima',
+    'America/Argentina/Buenos_Aires',
+    'America/Santiago',
+    'Europe/Lisbon',
+    'Europe/Madrid',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Europe/Amsterdam',
+    'Africa/Lagos',
+    'Asia/Dubai',
+    'Asia/Tokyo',
+    'Asia/Singapore',
+    'Australia/Sydney',
+    'UTC',
+  ];
+
   /// Best-effort id for API headers and backend content scheduling.
   static String detectId() {
     // PlatformDispatcher has no timezoneName; DateTime does.
@@ -56,6 +84,15 @@ class AppTimezone {
       return id;
     }
     return '$id ($offset)';
+  }
+
+  /// Short city-style label for curated zones.
+  static String shortLabel(String timeZoneId) {
+    final id = timeZoneId.trim();
+    if (id.isEmpty || id.toUpperCase() == 'UTC') return 'UTC';
+    final slash = id.lastIndexOf('/');
+    if (slash < 0) return id;
+    return id.substring(slash + 1).replaceAll('_', ' ');
   }
 
   /// Minutes east of UTC for the running device (for headers).

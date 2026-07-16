@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/l10n/app_localizations.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/localization/app_localization_manager.dart';
 import 'package:kerosene/core/localization/app_timezone.dart';
 import 'package:kerosene/core/providers/app_display_preferences_provider.dart';
@@ -16,13 +19,13 @@ class SettingsDisplayPane extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(appDisplayPreferencesProvider);
     final notifier = ref.read(appDisplayPreferencesProvider.notifier);
-    final lang = preferences.locale.languageCode;
+    final tr = context.tr;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _title(lang),
+          tr.settingsDisplayTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 32,
@@ -33,7 +36,7 @@ class SettingsDisplayPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          _subtitle(lang),
+          tr.settingsDisplaySubtitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textSecondary,
             fontSize: 16,
@@ -44,13 +47,13 @@ class SettingsDisplayPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: _sectionLanguage(lang),
+          title: tr.settingsDisplayLanguageSection,
           children: [
             for (final locale in AppLocalizationManager.supportedLocales)
               _DisplayOptionRow(
                 icon: KeroseneIcons.language,
-                title: _languageName(locale),
-                subtitle: _languageSubtitle(locale),
+                title: _languageName(tr, locale),
+                subtitle: _languageSubtitle(tr, locale),
                 selected:
                     preferences.locale.languageCode == locale.languageCode,
                 onTap: () => notifier.setLocale(locale),
@@ -59,7 +62,7 @@ class SettingsDisplayPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: _sectionCurrency(lang),
+          title: tr.settingsDisplayCurrencySection,
           children: [
             for (final currency in Currency.values)
               _DisplayOptionRow(
@@ -68,7 +71,7 @@ class SettingsDisplayPane extends ConsumerWidget {
                     : KeroseneIcons.fiat,
                 title:
                     '${MoneyDisplay.tickerSymbolFor(currency)} ${currency.code}',
-                subtitle: _currencySubtitle(currency, lang),
+                subtitle: _currencySubtitle(tr, currency),
                 selected: preferences.currency == currency,
                 onTap: () => notifier.setCurrency(currency),
               ),
@@ -76,21 +79,21 @@ class SettingsDisplayPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: _sectionTimezone(lang),
+          title: tr.settingsDisplayTimezoneSection,
           children: [
             _DisplayOptionRow(
               icon: KeroseneIcons.globe,
-              title: _followDeviceTitle(lang),
+              title: tr.settingsDisplayFollowDeviceTimezone,
               subtitle: AppTimezone.displayLabel(AppTimezone.detectId()),
               selected: preferences.timeZoneFollowDevice,
               onTap: () => notifier.setTimeZoneFollowDevice(true),
             ),
             _DisplayOptionRow(
               icon: KeroseneIcons.schedule,
-              title: _currentTimezoneTitle(lang),
+              title: tr.settingsDisplayPinnedTimezone,
               subtitle: AppTimezone.displayLabel(preferences.timeZoneId),
               selected: !preferences.timeZoneFollowDevice,
-              onTap: () => notifier.setTimeZoneId(preferences.timeZoneId),
+              onTap: () => _pickTimezone(context, ref),
             ),
           ],
         ),
@@ -98,90 +101,106 @@ class SettingsDisplayPane extends ConsumerWidget {
     );
   }
 
-  static String _title(String lang) => switch (lang) {
-        'pt' => 'Idioma, moeda e fuso',
-        'es' => 'Idioma, moneda y zona',
-        _ => 'Language, currency & time',
-      };
-
-  static String _subtitle(String lang) => switch (lang) {
-        'pt' =>
-          'Preferências globais do app. Idioma e fuso vão ao backend para notícias e educação. O extrato local é criptografado — o servidor só guarda ~24h de histórico.',
-        'es' =>
-          'Preferencias globales. Idioma y zona se envían al backend para noticias y educación. El extracto local está cifrado — el servidor solo guarda ~24h de historial.',
-        _ =>
-          'Global app preferences. Language and timezone are sent to the backend for news and education. Local statement is encrypted — the server only keeps ~24h of history.',
-      };
-
-  static String _sectionLanguage(String lang) => switch (lang) {
-        'pt' => 'Idioma',
-        'es' => 'Idioma',
-        _ => 'Language',
-      };
-
-  static String _sectionCurrency(String lang) => switch (lang) {
-        'pt' => 'Moeda principal',
-        'es' => 'Moneda principal',
-        _ => 'Primary currency',
-      };
-
-  static String _sectionTimezone(String lang) => switch (lang) {
-        'pt' => 'Fuso horário',
-        'es' => 'Zona horaria',
-        _ => 'Time zone',
-      };
-
-  static String _followDeviceTitle(String lang) => switch (lang) {
-        'pt' => 'Seguir fuso do aparelho',
-        'es' => 'Seguir zona del dispositivo',
-        _ => 'Follow device time zone',
-      };
-
-  static String _currentTimezoneTitle(String lang) => switch (lang) {
-        'pt' => 'Fuso usado no app',
-        'es' => 'Zona usada en la app',
-        _ => 'Time zone used in app',
-      };
-
-  static String _languageName(Locale locale) {
+  static String _languageName(AppLocalizations tr, Locale locale) {
     return switch (locale.languageCode) {
-      'pt' => 'Português',
-      'es' => 'Español',
-      _ => 'English',
+      'pt' => tr.settingsDisplayLanguagePt,
+      'es' => tr.settingsDisplayLanguageEs,
+      _ => tr.settingsDisplayLanguageEn,
     };
   }
 
-  static String _languageSubtitle(Locale locale) {
+  static String _languageSubtitle(AppLocalizations tr, Locale locale) {
     return switch (locale.languageCode) {
-      'pt' => 'Interface e feed em português',
-      'es' => 'Interfaz y feed en español',
-      _ => 'Interface and feed in English',
+      'pt' => tr.settingsDisplayLanguagePtSubtitle,
+      'es' => tr.settingsDisplayLanguageEsSubtitle,
+      _ => tr.settingsDisplayLanguageEnSubtitle,
     };
   }
 
-  static String _currencySubtitle(Currency currency, String lang) {
+  static String _currencySubtitle(AppLocalizations tr, Currency currency) {
     return switch (currency) {
-      Currency.btc => switch (lang) {
-          'pt' => 'Exibe valores diretamente em Bitcoin',
-          'es' => 'Muestra valores directamente en Bitcoin',
-          _ => 'Show amounts directly in Bitcoin',
-        },
-      Currency.usd => switch (lang) {
-          'pt' => 'Dólar americano como moeda de leitura',
-          'es' => 'Dólar estadounidense como moneda de lectura',
-          _ => 'US dollar as display currency',
-        },
-      Currency.eur => switch (lang) {
-          'pt' => 'Euro como moeda de leitura',
-          'es' => 'Euro como moneda de lectura',
-          _ => 'Euro as display currency',
-        },
-      Currency.brl => switch (lang) {
-          'pt' => 'Real brasileiro como moeda de leitura',
-          'es' => 'Real brasileño como moneda de lectura',
-          _ => 'Brazilian real as display currency',
-        },
+      Currency.btc => tr.settingsDisplayCurrencyBtcSubtitle,
+      Currency.usd => tr.settingsDisplayCurrencyUsdSubtitle,
+      Currency.eur => tr.settingsDisplayCurrencyEurSubtitle,
+      Currency.brl => tr.settingsDisplayCurrencyBrlSubtitle,
     };
+  }
+
+  Future<void> _pickTimezone(BuildContext context, WidgetRef ref) async {
+    final tr = context.tr;
+    final current = ref.read(appDisplayPreferencesProvider).timeZoneId;
+    final maxH = MediaQuery.sizeOf(context).height * 0.62;
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: KeroseneBrandTokens.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: SizedBox(
+            height: maxH,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Text(
+                    tr.settingsDisplayPickTimezone,
+                    style: AppTypography.inter(
+                      color: KeroseneBrandTokens.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: AppTimezone.curatedZones.length,
+                    itemBuilder: (context, index) {
+                      final zone = AppTimezone.curatedZones[index];
+                      final isSelected = zone == current ||
+                          (current.startsWith('UTC') && zone == 'UTC');
+                      return ListTile(
+                        title: Text(
+                          AppTimezone.shortLabel(zone),
+                          style: AppTypography.inter(
+                            color: KeroseneBrandTokens.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text(
+                          zone,
+                          style: AppTypography.inter(
+                            color: KeroseneBrandTokens.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? Icon(
+                                KeroseneIcons.check,
+                                color: KeroseneBrandTokens.textPrimary,
+                                size: 18,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(ctx).pop(zone),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (selected == null) return;
+    HapticFeedback.selectionClick();
+    await ref
+        .read(appDisplayPreferencesProvider.notifier)
+        .setTimeZoneId(selected);
   }
 }
 

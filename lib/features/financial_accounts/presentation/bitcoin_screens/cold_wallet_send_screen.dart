@@ -128,8 +128,8 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
     if (raw.isEmpty) {
       AppNotice.showWarning(
         context,
-        title: 'Destino',
-        message: 'Informe um endereço on-chain ou escolha uma carteira Kerosene.',
+        title: context.tr.sendReviewDestination,
+        message: context.tr.coldSendDestinationHint,
       );
       return null;
     }
@@ -151,7 +151,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
         if (address.isEmpty) {
           AppNotice.showError(
             context,
-            title: 'Sem endereço',
+            title: context.tr.coldSendNoAddress,
             message:
                 'A carteira ${wallet.name} ainda não tem endereço on-chain. Gere um na aba receber e tente de novo.',
           );
@@ -163,7 +163,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
 
     AppNotice.showWarning(
       context,
-      title: 'Destino on-chain',
+      title: context.tr.coldSendOnchainDestination,
       message:
           'Para pagar com a cold, use um endereço Bitcoin (tb1…/bc1…) ou o endereço de uma carteira Kerosene sua listada abaixo.',
     );
@@ -175,7 +175,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
     if (!_hasLocalSeed) {
       AppNotice.showError(
         context,
-        title: 'Seed local ausente',
+        title: context.tr.coldSendMissingSeed,
         message:
             'Esta cold não tem seed neste aparelho. Restaure o backup BIP39 neste aparelho para assinar.',
       );
@@ -195,11 +195,12 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
     if (destination == null || !mounted) return;
 
     // Fail-closed: network must match app network.
-    final networkError = networkMismatchMessage(destination);
+    final networkError =
+        networkMismatchMessage(destination, context: context);
     if (networkError != null) {
       AppNotice.showError(
         context,
-        title: 'Rede incompatível',
+        title: context.tr.coldSendNetworkMismatch,
         message: networkError,
       );
       return;
@@ -222,10 +223,23 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
       // Never skip device/server factors just because biometrics are unavailable.
       allowDeviceAuthUnavailable: false,
     );
-    if (!auth.isAuthenticated || !mounted) {
+    if (!mounted) return;
+    // Intentional cancel (PIN/back/biometrics) — stay on form, no error chrome.
+    if (auth.isCancelled) {
+      return;
+    }
+    if (auth.isUnavailable) {
       AppNotice.showWarning(
         context,
-        title: 'Autorização',
+        title: context.tr.coldSendAuth,
+        message: context.tr.sendMoneyAuthFailed,
+      );
+      return;
+    }
+    if (!auth.isAuthenticated) {
+      AppNotice.showWarning(
+        context,
+        title: context.tr.coldSendAuth,
         message: context.tr.sendMoneyAuthFailed,
       );
       return;
@@ -235,7 +249,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
     if (totp.length < 6) {
       AppNotice.showError(
         context,
-        title: 'Autorização incompleta',
+        title: context.tr.coldSendAuthIncompleteTitle,
         message:
             'É necessário o código do autenticador (TOTP) para montar a PSBT da cold.',
       );
@@ -272,7 +286,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
       final txid = result.txid?.trim();
       AppNotice.showSuccess(
         context,
-        title: 'Transação enviada',
+        title: context.tr.coldSendSuccess,
         message: txid != null && txid.isNotEmpty
             ? 'Enviada: $txid'
             : 'Assinada e enviada ao Kerosene (status ${result.workflow.status}).',
@@ -282,7 +296,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
       if (!mounted) return;
       AppNotice.showError(
         context,
-        title: 'Envio da cold falhou',
+        title: context.tr.coldSendFailed,
         message: ErrorTranslator.translate(context.tr, error.toString()),
       );
     } finally {
@@ -316,7 +330,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
         backgroundColor: KeroseneBrandTokens.background,
         foregroundColor: KeroseneBrandTokens.textPrimary,
         title: Text(
-          'Enviar da cold',
+          context.tr.coldSendTitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 18,
@@ -350,7 +364,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Destino on-chain',
+              context.tr.coldSendOnchainDestination,
               style: AppTypography.inter(
                 color: KeroseneBrandTokens.textPrimary,
                 fontSize: 14,
@@ -365,7 +379,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                 fontSize: 14,
               ),
               decoration: InputDecoration(
-                hintText: 'tb1… / bc1… ou carteira Kerosene',
+                hintText: context.tr.coldSendAddressHint,
                 hintStyle: AppTypography.inter(
                   color: KeroseneBrandTokens.textMuted,
                   fontSize: 14,
@@ -381,7 +395,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
             if (keroseneTargets.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
-                'Pagar carteira Kerosene (INTERNAL / on-chain)',
+                context.tr.coldSendPayKeroseneWallet,
                 style: AppTypography.inter(
                   color: KeroseneBrandTokens.textMuted,
                   fontSize: 12,
@@ -519,7 +533,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text(
-                        'Assinar e transmitir',
+                        context.tr.coldSendSignBroadcast,
                         style: AppTypography.inter(
                           color: KeroseneBrandTokens.background,
                           fontSize: 15,

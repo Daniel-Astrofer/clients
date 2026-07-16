@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
@@ -170,6 +171,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     }
 
     final flowState = ref.watch(movementFlowCoordinatorProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
@@ -186,11 +188,16 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
+            fiatCurrency: money.currency == Currency.btc
+                ? Currency.brl
+                : money.currency,
+            appLocale: money.locale,
           )
         : '≈ ${MoneyDisplay.formatCompact(
             amount: amountBtc,
             currency: Currency.btc,
             maxDecimalPlaces: 8,
+            appLocale: money.locale,
           )}';
 
     final title = switch (widget.method) {
@@ -217,6 +224,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         availableLabel: MoneyDisplay.formatCompact(
           amount: widget.wallet.balance,
           currency: Currency.btc,
+          appLocale: money.locale,
           maxDecimalPlaces: 8,
         ),
         ctaLabel: widget.method == ReceiveAmountMethod.paymentLink
@@ -279,7 +287,11 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       btcBrl: btcBrl,
     );
     final nextCurrency =
-        _selectedCurrency == Currency.btc ? Currency.brl : Currency.btc;
+        _selectedCurrency == Currency.btc
+            ? (ref.read(moneyFormatConfigProvider).currency == Currency.btc
+                ? Currency.brl
+                : ref.read(moneyFormatConfigProvider).currency)
+            : Currency.btc;
     final nextAmount = nextCurrency == Currency.btc
         ? amountBtc
         : MoneyDisplay.convertFromBtcAmount(
@@ -368,16 +380,23 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     required double? btcUsd,
     required double? btcEur,
     required double? btcBrl,
+    required Currency fiatCurrency,
+    Locale? appLocale,
   }) {
     if (btcAmount <= 0) {
-      return '≈ R\$ 0,00';
+      return '≈ ${MoneyDisplay.format(
+        amount: 0,
+        currency: fiatCurrency,
+        appLocale: appLocale,
+      )}';
     }
     return '≈ ${MoneyDisplay.formatAmountFromBtc(
       btcAmount: btcAmount,
-      currency: Currency.brl,
+      currency: fiatCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
+      appLocale: appLocale,
     )}';
   }
 }

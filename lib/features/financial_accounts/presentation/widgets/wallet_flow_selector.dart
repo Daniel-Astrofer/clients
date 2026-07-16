@@ -181,6 +181,13 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
 
   Widget _buildWalletGrid(BuildContext context, WalletLoaded walletState) {
     final wallets = walletState.wallets.toList();
+    if (wallets.length == 3) {
+      final insuredIndex = wallets.indexWhere((w) => w.isInternalCustody);
+      if (insuredIndex != -1 && insuredIndex != 1) {
+        final insuredWallet = wallets.removeAt(insuredIndex);
+        wallets.insert(1, insuredWallet);
+      }
+    }
     final selectedWallet = _resolveSelectedWallet(
       walletState.copyWith(wallets: wallets),
     );
@@ -271,6 +278,10 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
     if (stateSelected != null) {
       final loaded = _findLoadedWallet(walletState.wallets, stateSelected);
       if (loaded != null) return loaded;
+    }
+    if (walletState.wallets.length == 3) {
+      final insured = walletState.wallets.firstWhere((w) => w.isInternalCustody, orElse: () => walletState.wallets[1]);
+      return insured;
     }
     return walletState.wallets.isNotEmpty ? walletState.wallets.first : null;
   }

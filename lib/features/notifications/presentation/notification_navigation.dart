@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
+    show ledgerRepositoryProvider;
+import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
@@ -85,110 +91,67 @@ class NotificationNavigation {
 
     try {
       final container = ProviderScope.containerOf(context, listen: false);
-      final history = await container.read(transactionHistoryProvider.future);
       final keys = <String>{
         if (entityId.isNotEmpty) entityId,
         if (metaId.isNotEmpty) metaId,
       };
-      for (final key in keys) {
-        for (final tx in history) {
-          if (tx.id == key ||
-              (tx.blockchainTxid ?? '') == key ||
-              (tx.paymentHash ?? '') == key ||
-              (tx.externalTransferId ?? '') == key ||
-              (tx.invoiceId ?? '') == key) {
-            return tx;
+
+      // 1) Local/remote projection already loaded.
+      try {
+        final history =
+            await container.read(transactionHistoryProvider.future);
+        final hit = _matchInList(history, keys);
+        if (hit != null) return hit;
+      } catch (_) {}
+
+      // 2) Single-tx fetch by KFE UUID + merge into durable projection.
+      if (entityId.isNotEmpty &&
+          RegExp(
+            r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+          ).hasMatch(entityId)) {
+        final repo = container.read(ledgerRepositoryProvider);
+        final result = await repo.getTransactionById(entityId);
+        final remote = result.fold((_) => null, (tx) => tx);
+        if (remote != null) {
+          final scope = container.read(sessionStorageScopeProvider);
+          if (scope != null && scope.trim().isNotEmpty) {
+            final store = container.read(localTransactionHistoryStoreProvider);
+            final merged = await LocalLedgerSync(store).hydrateAndMerge(
+              sessionScope: scope,
+              remote: [remote],
+            );
+            container
+                .read(lastTransactionHistoryProvider.notifier)
+                .set(merged);
+            container.invalidate(transactionHistoryProvider);
           }
+          return remote;
         }
       }
     } catch (error) {
       debugPrint('Could not resolve notification transaction: $error');
     }
 
-    // Synthesize a minimal transaction from notification metadata so the
-    // exclusive detail screen still opens with available data.
-    return _transactionFromNotificationMetadata(notification);
+    // Prefer opening the extrato (deeplink) over a synthetic incomplete detail.
+    return null;
   }
 
-  static Transaction? _transactionFromNotificationMetadata(
-    SessionNotificationItem notification,
+  static Transaction? _matchInList(
+    List<Transaction> history,
+    Set<String> keys,
   ) {
-    final amountRaw = _firstMetadataValue(notification, const [
-      'amountBtc',
-      'amount',
-      'btcAmount',
-    ]);
-    final amountBtc = double.tryParse(
-          (amountRaw ?? '').replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.\-]'), ''),
-        ) ??
-        0;
-    final isReceive = notification.kind ==
-            SessionNotificationItem.kindTransferReceived ||
-        notification.kind == SessionNotificationItem.kindDepositDetected ||
-        notification.kind == SessionNotificationItem.kindDepositConfirmed ||
-        notification.kind == SessionNotificationItem.kindPaymentRequestPaid;
-
-    final walletName = _firstMetadataValue(notification, const [
-      'walletName',
-      'wallet_name',
-      'wallet',
-      'accountName',
-    ]);
-    final from = _firstMetadataValue(notification, const [
-          'sender',
-          'from',
-          'payerName',
-        ]) ??
-        (isReceive ? 'Rede Bitcoin' : (walletName ?? ''));
-    final to = _firstMetadataValue(notification, const [
-          'receiver',
-          'to',
-          'payeeName',
-        ]) ??
-        (isReceive ? (walletName ?? '') : '');
-    final txid = _firstMetadataValue(notification, const [
-      'blockchainTxid',
-      'txid',
-      'txId',
-      'transactionId',
-    ]);
-    final id = (notification.entityId?.trim().isNotEmpty == true)
-        ? notification.entityId!.trim()
-        : (txid ?? notification.id);
-
-    final amountSats = (amountBtc.abs() * 100000000).round();
-    final isLightning = notification.kind ==
-            SessionNotificationItem.kindPaymentRequestPaid ||
-        (notification.body.toLowerCase().contains('lightning'));
-
-    return Transaction(
-      id: id,
-      fromAddress: from,
-      toAddress: to,
-      walletId: walletName,
-      amountSatoshis: amountSats,
-      feeSatoshis: 0,
-      status: notification.kind == SessionNotificationItem.kindDepositDetected
-          ? TransactionStatus.confirming
-          : TransactionStatus.confirmed,
-      type: isReceive
-          ? (notification.kind.contains('deposit')
-              ? TransactionType.deposit
-              : TransactionType.receive)
-          : TransactionType.send,
-      confirmations:
-          notification.kind == SessionNotificationItem.kindDepositConfirmed
-              ? 6
-              : 0,
-      timestamp: notification.timestamp,
-      blockchainTxid: txid,
-      description: notification.body,
-      isInternal: notification.kind ==
-              SessionNotificationItem.kindTransferReceived ||
-          notification.kind == SessionNotificationItem.kindTransferSent,
-      isLightning: isLightning,
-      hasNetworkFee: false,
-    );
+    for (final key in keys) {
+      for (final tx in history) {
+        if (tx.id == key ||
+            (tx.blockchainTxid ?? '') == key ||
+            (tx.paymentHash ?? '') == key ||
+            (tx.externalTransferId ?? '') == key ||
+            (tx.invoiceId ?? '') == key) {
+          return tx;
+        }
+      }
+    }
+    return null;
   }
 
   static bool _shouldShowProfessionalDialog(

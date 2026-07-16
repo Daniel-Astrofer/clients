@@ -480,6 +480,62 @@ String receiveStatusMessage(
   };
 }
 
+/// Fills gaps when a cold PSBT was broadcast but the KFE observation row is
+/// not yet visible (race with scheduler / local-only view).
+List<Transaction> mergeColdPsbtBroadcastsIntoHistory({
+  required List<Transaction> transactions,
+  required List<PsbtWorkflowView> workflows,
+  required String coldWalletId,
+}) {
+  final walletId = coldWalletId.trim();
+  if (walletId.isEmpty || workflows.isEmpty) {
+    return transactions;
+  }
+
+  final existingTxids = transactions
+      .map((tx) => tx.blockchainTxid?.trim().toLowerCase() ?? '')
+      .where((id) => id.isNotEmpty)
+      .toSet();
+
+  final synthetic = <Transaction>[];
+  for (final workflow in workflows) {
+    final status = workflow.status.toUpperCase();
+    if (status != 'BROADCAST' && status != 'BROADCASTED') continue;
+    final txid = (workflow.broadcastTxid ?? workflow.broadcastTxidRef ?? '')
+        .trim();
+    if (txid.isEmpty) continue;
+    if (existingTxids.contains(txid.toLowerCase())) continue;
+
+    final created = DateTime.tryParse(workflow.createdAt) ?? DateTime.now();
+    synthetic.add(
+      Transaction(
+        id: 'cold-psbt:$txid',
+        fromAddress: walletId,
+        toAddress: workflow.destinationAddress,
+        walletId: walletId,
+        sourceWalletId: walletId,
+        amountSatoshis: workflow.amountSats,
+        feeSatoshis: workflow.estimatedFeeSats,
+        status: TransactionStatus.confirming,
+        type: TransactionType.withdrawal,
+        confirmations: 0,
+        timestamp: created,
+        blockchainTxid: txid,
+        description: 'Envio carteira fria',
+        externalReference: workflow.destinationAddress,
+        isInternal: false,
+        isLightning: false,
+        hasNetworkFee: workflow.estimatedFeeSats > 0,
+      ),
+    );
+  }
+
+  if (synthetic.isEmpty) return transactions;
+  final merged = [...transactions, ...synthetic];
+  merged.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  return merged;
+}
+
 List<Transaction> transactionsForAccount({
   required BitcoinAccount account,
   required List<Transaction> transactions,
@@ -495,7 +551,13 @@ List<Transaction> transactionsForAccount({
     for (final request in requests) request.bip21,
   }.map((value) => value.trim()).where((value) => value.isNotEmpty).toSet();
 
-  if (keys.isEmpty) return const [];
+  // KFE wallet UUIDs used on cold/custodial rows (source/dest/walletId).
+  final walletIds = <String>{
+    account.id.trim(),
+    if (account.coldWalletId != null) account.coldWalletId!.trim(),
+  }.where((value) => value.isNotEmpty).toSet();
+
+  if (keys.isEmpty && walletIds.isEmpty) return const [];
 
   bool matches(String value) {
     final normalized = value.trim();
@@ -503,7 +565,18 @@ List<Transaction> transactionsForAccount({
     return keys.any((key) => normalized == key || normalized.contains(key));
   }
 
+  bool matchesWalletId(String? value) {
+    final normalized = value?.trim() ?? '';
+    if (normalized.isEmpty) return false;
+    return walletIds.contains(normalized);
+  }
+
   final rows = transactions.where((tx) {
+    if (matchesWalletId(tx.walletId) ||
+        matchesWalletId(tx.sourceWalletId) ||
+        matchesWalletId(tx.destinationWalletId)) {
+      return true;
+    }
     return matches(tx.fromAddress) ||
         matches(tx.toAddress) ||
         matches(tx.description ?? '') ||
@@ -741,6 +814,7 @@ String transactionStatusLabel(
     TransactionStatus.confirmed => context.tr.bitcoinReceiveStatusPaid,
     TransactionStatus.cancelled =>
       context.tr.financialStatementFilterCancelled,
-    TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
+    TransactionStatus.reconciling => 'Em análise',
+      TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
   };
 }

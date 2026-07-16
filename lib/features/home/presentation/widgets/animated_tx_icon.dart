@@ -46,6 +46,8 @@ class _AnimatedTxIconState extends State<AnimatedTxIcon>
   late AnimationController _primary;
   late AnimationController _secondary;
 
+  ScrollPosition? _scrollPosition;
+
   @override
   void initState() {
     super.initState();
@@ -59,35 +61,61 @@ class _AnimatedTxIconState extends State<AnimatedTxIcon>
       duration: _secondaryDuration(widget.kind),
     );
 
+    _startAnimations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scrollable = Scrollable.maybeOf(context);
+    final pos = scrollable?.position;
+    if (_scrollPosition != pos) {
+      _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
+      _scrollPosition = pos;
+      _scrollPosition?.isScrollingNotifier.addListener(_onScrollChanged);
+      _onScrollChanged(); // check initial state
+    }
+  }
+
+  void _onScrollChanged() {
+    if (!mounted) return;
+    final isScrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
+    if (isScrolling) {
+      _primary.stop();
+      _secondary.stop();
+    } else {
+      _startAnimations();
+    }
+  }
+
+  void _startAnimations() {
     switch (widget.kind) {
       case TxIconKind.nfc:
       case TxIconKind.pending:
       case TxIconKind.swap:
-        _primary.repeat();
-        _secondary.repeat(reverse: true);
+        if (!_primary.isAnimating) _primary.repeat();
+        if (!_secondary.isAnimating) _secondary.repeat(reverse: true);
         break;
       case TxIconKind.send:
       case TxIconKind.receive:
       case TxIconKind.deposit:
       case TxIconKind.withdrawal:
-        _primary.repeat(reverse: false);
-        _secondary.repeat(reverse: true);
+        if (!_primary.isAnimating) _primary.repeat(reverse: false);
+        if (!_secondary.isAnimating) _secondary.repeat(reverse: true);
         break;
       case TxIconKind.qrCode:
-        _primary.repeat(reverse: false);
+        if (!_primary.isAnimating) _primary.repeat(reverse: false);
         break;
       case TxIconKind.confirmed:
-        _primary.forward();
-        break;
       case TxIconKind.failed:
-        _primary.forward();
+        if (!_primary.isAnimating && !_primary.isCompleted) _primary.forward();
         break;
       case TxIconKind.fee:
       case TxIconKind.clock:
       case TxIconKind.address:
       case TxIconKind.network:
       case TxIconKind.card:
-        _primary.repeat(reverse: true);
+        if (!_primary.isAnimating) _primary.repeat(reverse: true);
         break;
     }
   }
@@ -125,6 +153,7 @@ class _AnimatedTxIconState extends State<AnimatedTxIcon>
 
   @override
   void dispose() {
+    _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
     _primary.dispose();
     _secondary.dispose();
     super.dispose();

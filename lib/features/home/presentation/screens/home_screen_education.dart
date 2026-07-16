@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
 import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
+import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -32,13 +33,21 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final view = ref.watch(homeLedgerBalanceViewProvider);
+    final surfaceFeed = ref.watch(homeSurfaceProvider.select((s) => s.feed));
     final remoteAsync = ref.watch(homeFeedProvider);
-    final remote = remoteAsync.asData?.value;
+    final remoteFromLegacy = remoteAsync.asData?.value;
+    // Prefer surface feed items when the envelope already carried them.
+    final remote = surfaceFeed.items.isNotEmpty
+        ? surfaceFeed.items
+        : remoteFromLegacy;
     final cards = resolveHomeFeedCards(
       context: context,
       view: view,
       remote: remote,
     );
+    final feedHeight = homeSize(surfaceFeed.resolvedHeight);
+    final cardPadding = homeSize(surfaceFeed.cardPadding);
+    final gap = homeSize(surfaceFeed.gap);
 
     if (_lastView != view) {
       _lastView = view;
@@ -56,9 +65,13 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
 
     return Column(
       children: [
-        SizedBox(
-          height: homeSize(154),
-          child: PageView.builder(
+        AnimatedSize(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: feedHeight,
+            child: PageView.builder(
             controller: _pageController,
             physics: const BouncingScrollPhysics(),
             itemCount: cards.length,
@@ -70,8 +83,8 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
               final card = cards[index];
               return Padding(
                 padding: EdgeInsets.only(
-                  left: index == 0 ? 0 : homeSize(4),
-                  right: index == cards.length - 1 ? 0 : homeSize(4),
+                  left: index == 0 ? 0 : gap / 2,
+                  right: index == cards.length - 1 ? 0 : gap / 2,
                 ),
                 child: Material(
                   color: Colors.transparent,
@@ -82,7 +95,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                         : null,
                     child: HomeGlassPanel(
                       borderRadius: BorderRadius.circular(homeSize(16)),
-                      padding: EdgeInsets.all(homeSize(18)),
+                      padding: EdgeInsets.all(cardPadding),
                       child: Row(
                         children: [
                           _HomeFeedMediaThumb(
@@ -161,6 +174,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                 ),
               );
             },
+          ),
           ),
         ),
         SizedBox(height: homeSize(12)),
@@ -694,6 +708,9 @@ class HomeActivityFilterChips extends ConsumerWidget {
       HomeActivityFilter.all,
       HomeActivityFilter.incoming,
       HomeActivityFilter.outgoing,
+      HomeActivityFilter.internal,
+      HomeActivityFilter.onchain,
+      HomeActivityFilter.cold,
       HomeActivityFilter.pending,
       HomeActivityFilter.failed,
       HomeActivityFilter.cancelled,
@@ -704,21 +721,66 @@ class HomeActivityFilterChips extends ConsumerWidget {
       ref.read(homeActivityFilterProvider.notifier).state = filter;
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          for (var index = 0; index < filters.length; index++) ...[
-            if (index > 0) SizedBox(width: homeSize(8)),
-            HomeActivityFilterChip(
-              label: homeFilterLabel(context, filters[index]),
-              selected: selectedFilter == filters[index],
-              onTap: () => selectFilter(filters[index]),
-            ),
-          ],
-        ],
-      ),
+    final walletScope = ref.watch(homeExtratoWalletScopeProvider);
+    final walletState = ref.watch(walletProvider);
+    final selectedWallet = walletState is WalletLoaded
+        ? walletState.selectedWallet ??
+            (walletState.wallets.isNotEmpty ? walletState.wallets.first : null)
+        : null;
+    final selectedWalletLabel = (selectedWallet?.name.trim().isNotEmpty == true)
+        ? selectedWallet!.name.trim()
+        : 'carteira';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              HomeActivityFilterChip(
+                label: 'Todas',
+                selected: walletScope == HomeExtratoWalletScope.all,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(homeExtratoWalletScopeProvider.notifier).state =
+                      HomeExtratoWalletScope.all;
+                },
+              ),
+              SizedBox(width: homeSize(8)),
+              HomeActivityFilterChip(
+                label: selectedWallet == null
+                    ? 'Esta carteira'
+                    : 'Esta: $selectedWalletLabel',
+                selected: walletScope == HomeExtratoWalletScope.selected,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(homeExtratoWalletScopeProvider.notifier).state =
+                      HomeExtratoWalletScope.selected;
+                },
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: homeSize(10)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              for (var index = 0; index < filters.length; index++) ...[
+                if (index > 0) SizedBox(width: homeSize(8)),
+                HomeActivityFilterChip(
+                  label: homeFilterLabel(context, filters[index]),
+                  selected: selectedFilter == filters[index],
+                  onTap: () => selectFilter(filters[index]),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -736,8 +798,6 @@ class HomeActivityFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -759,7 +819,7 @@ class HomeActivityFilterChip extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: AppTypography.label.copyWith(
               color: selected ? Colors.black : homeMutedTextColor,
               fontSize: homeFontSize(12),
               fontWeight: FontWeight.w300,
@@ -805,6 +865,9 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
     HomeActivityFilter.all => context.tr.financialStatementFilterAll,
     HomeActivityFilter.incoming => context.tr.financialStatementFilterIncoming,
     HomeActivityFilter.outgoing => context.tr.financialStatementFilterOutgoing,
+    HomeActivityFilter.internal => 'Interna',
+    HomeActivityFilter.onchain => 'On-chain',
+    HomeActivityFilter.cold => 'Cold',
     HomeActivityFilter.pending => context.tr.financialStatementFilterPending,
     HomeActivityFilter.failed => context.tr.financialStatementFilterFailed,
     HomeActivityFilter.cancelled =>

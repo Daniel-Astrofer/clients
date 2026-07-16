@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
@@ -837,13 +838,8 @@ class RecoveryCodesCopyButton extends StatelessWidget {
   }
 }
 
-String _signupCopyRecoveryCodesAction(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Copy recovery codes',
-    'es' => 'Copiar códigos de recuperación',
-    _ => 'Copiar códigos de recuperação',
-  };
-}
+String _signupCopyRecoveryCodesAction(BuildContext context) =>
+    context.tr.flowSignupCopyRecoveryCodesAction;
 
 class SignupBullet extends StatelessWidget {
   final String text;

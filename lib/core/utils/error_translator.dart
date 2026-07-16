@@ -50,6 +50,21 @@ class ErrorTranslator {
       codeToTest = sovereignCode.group(1) ?? codeToTest;
     }
 
+    final deviceKeyCode = RegExp(
+      r'DeviceKeyException\((ERR_[A-Z0-9_]+)\)',
+    ).firstMatch(codeOrMessage);
+    if (deviceKeyCode != null) {
+      codeToTest = deviceKeyCode.group(1) ?? codeToTest;
+    }
+
+    // Any remaining bare cancel codes embedded in exception strings.
+    final embeddedCancel = RegExp(
+      r'(ERR_AUTH_PASSKEY_AUTH_CANCELLED|ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED|ERR_COLD_VAULT_AUTH_CANCELLED)',
+    ).firstMatch(codeOrMessage);
+    if (embeddedCancel != null && !codeToTest.startsWith('ERR_')) {
+      codeToTest = embeddedCancel.group(1) ?? codeToTest;
+    }
+
     final normalizedCode = codeToTest.trim().toUpperCase();
     final safeExtractedMessage = _safeUserMessage(extractedMessage);
 
@@ -144,6 +159,11 @@ class ErrorTranslator {
         return l10n.errAuthUserAlreadyExists;
       case 'ERR_AUTH_SESSION_NOT_FOUND':
         return l10n.passkeySessionNotFound;
+      // User cancelled mid-auth (PIN/biometrics/passkey/device-key) — calm copy.
+      case 'ERR_AUTH_PASSKEY_AUTH_CANCELLED':
+      case 'ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED':
+      case 'ERR_COLD_VAULT_AUTH_CANCELLED':
+        return l10n.withdrawAuthCancelled;
 
       // Ledger / Balance Errors
       case 'LEDGER_001':

@@ -9,7 +9,8 @@ class AlertPreferencesState {
   final bool marketAlertsEnabled;
 
   const AlertPreferencesState({
-    this.backgroundAlertsEnabled = false,
+    // Default ON so cold/on-chain alerts work after install without digging settings.
+    this.backgroundAlertsEnabled = true,
     this.inAppBannersEnabled = true,
     this.transactionAlertsEnabled = true,
     this.securityAlertsEnabled = true,
@@ -52,7 +53,7 @@ class AlertPreferencesNotifier extends Notifier<AlertPreferencesState> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(
-      backgroundAlertsEnabled: prefs.getBool(backgroundAlertsKey) ?? false,
+      backgroundAlertsEnabled: prefs.getBool(backgroundAlertsKey) ?? true,
       inAppBannersEnabled: prefs.getBool(inAppBannersKey) ?? true,
       transactionAlertsEnabled: prefs.getBool(transactionAlertsKey) ?? true,
       securityAlertsEnabled: prefs.getBool(securityAlertsKey) ?? true,
@@ -93,7 +94,7 @@ class AlertPreferencesNotifier extends Notifier<AlertPreferencesState> {
 
 Future<bool> loadBackgroundAlertsEnabled() async {
   final prefs = await SharedPreferences.getInstance();
-  return prefs.getBool(AlertPreferencesNotifier.backgroundAlertsKey) ?? false;
+  return prefs.getBool(AlertPreferencesNotifier.backgroundAlertsKey) ?? true;
 }
 
 final alertPreferencesProvider =

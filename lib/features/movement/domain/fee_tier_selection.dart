@@ -1,3 +1,6 @@
+import 'package:flutter/widgets.dart';
+import 'package:kerosene/core/l10n/app_localizations.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 
@@ -46,13 +49,22 @@ class FeeTierSelection {
     };
   }
 
-  static String tierLabel(NetworkFeeTier tier, String languageCode) {
+  static String tierLabel(NetworkFeeTier tier, AppLocalizations l10n) {
+    return switch (tier) {
+      NetworkFeeTier.fast => l10n.feeTierFast,
+      NetworkFeeTier.standard => l10n.feeTierStandard,
+      NetworkFeeTier.slow => l10n.feeTierSlow,
+    };
+  }
+
+  /// Prefer [tierLabelForContext] from widgets.
+  @Deprecated('Pass AppLocalizations via tierLabel')
+  static String tierLabelLegacy(NetworkFeeTier tier, String languageCode) {
+    // Fallback without ARB (tests / pure helpers).
     return switch ((tier, languageCode)) {
       (NetworkFeeTier.fast, 'en') => 'Fast',
       (NetworkFeeTier.fast, 'es') => 'Rápido',
       (NetworkFeeTier.fast, _) => 'Rápido',
-      (NetworkFeeTier.standard, 'en') => 'Normal',
-      (NetworkFeeTier.standard, 'es') => 'Normal',
       (NetworkFeeTier.standard, _) => 'Normal',
       (NetworkFeeTier.slow, 'en') => 'Economy',
       (NetworkFeeTier.slow, 'es') => 'Económico',
@@ -60,21 +72,30 @@ class FeeTierSelection {
     };
   }
 
-  static String formatEta(int? seconds, String languageCode) {
+  static String tierLabelForContext(BuildContext context, NetworkFeeTier tier) {
+    return tierLabel(tier, context.tr);
+  }
+
+  static String formatEta(int? seconds, AppLocalizations l10n) {
     if (seconds == null || seconds <= 0) return '';
     final minutes = (seconds / 60).ceil();
     if (minutes < 60) {
-      return switch (languageCode) {
-        'en' => '~$minutes min',
-        'es' => '~$minutes min',
-        _ => '~$minutes min',
-      };
+      return l10n.feeEtaMinutes(minutes);
     }
     final hours = (minutes / 60).ceil();
-    return switch (languageCode) {
-      'en' => '~$hours h',
-      'es' => '~$hours h',
-      _ => '~$hours h',
-    };
+    return l10n.feeEtaHours(hours);
+  }
+
+  static String formatEtaForContext(BuildContext context, int? seconds) {
+    return formatEta(seconds, context.tr);
+  }
+
+  @Deprecated('Pass AppLocalizations via formatEta')
+  static String formatEtaLegacy(int? seconds, String languageCode) {
+    if (seconds == null || seconds <= 0) return '';
+    final minutes = (seconds / 60).ceil();
+    if (minutes < 60) return '~$minutes min';
+    final hours = (minutes / 60).ceil();
+    return '~$hours h';
   }
 }

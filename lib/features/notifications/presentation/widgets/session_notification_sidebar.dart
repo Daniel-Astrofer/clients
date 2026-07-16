@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
 import 'package:kerosene/core/presentation/widgets/push_notification_card.dart';
@@ -26,37 +27,12 @@ class SessionNotificationSidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifications = ref.watch(sessionNotificationFeedProvider);
     final unreadCount = ref.watch(sessionNotificationUnreadCountProvider);
-    final headerTitle = _copy(
-      context,
-      pt: 'Notificações',
-      en: 'Push notifications',
-      es: 'Notificaciones',
-    );
-    final headerSubtitle = _copy(
-      context,
-      pt: 'Alertas recentes da sessão.',
-      en: 'Recent session alerts.',
-      es: 'Alertas recientes de la sesión.',
-    );
-    final clearLabel = _copy(context, pt: 'Limpar', en: 'Clear', es: 'Limpiar');
-    final emptyStateTitle = _copy(
-      context,
-      pt: 'Sem alertas',
-      en: 'No alerts',
-      es: 'Sin alertas',
-    );
-    final emptyStateMessage = _copy(
-      context,
-      pt: 'Quando algo importante acontecer, a notificação aparece aqui.',
-      en: 'When something important happens, the notification appears here.',
-      es: 'Cuando ocurra algo importante, la notificacion aparece aqui.',
-    );
-    final alertLabel = _copy(
-      context,
-      pt: unreadCount == 1 ? 'não lida' : 'não lidas',
-      en: unreadCount == 1 ? 'unread' : 'unread',
-      es: unreadCount == 1 ? 'sin leer' : 'sin leer',
-    );
+    final headerTitle = context.tr.notifSidebarTitle;
+    final headerSubtitle = context.tr.notifSidebarSubtitle;
+    final clearLabel = context.tr.notifCenterClear;
+    final emptyStateTitle = context.tr.notifCenterEmptyAlerts;
+    final emptyStateMessage = context.tr.notifSidebarEmptyHint;
+    final alertLabel = unreadCount == 1 ? context.tr.notifSidebarUnreadSingular : context.tr.notifSidebarUnreadPlural;
     final unreadLabel = '$unreadCount $alertLabel';
     final responsive = context.responsive;
     final sidebarWidth = math.min(
@@ -169,12 +145,7 @@ class SessionNotificationSidebar extends ConsumerWidget {
                       ),
                     ),
                     child: Text(
-                      _copy(
-                        context,
-                        pt: 'Ler tudo',
-                        en: 'Read all',
-                        es: 'Leer todo',
-                      ),
+                      context.tr.notifCenterReadAll,
                     ),
                   ),
                   TextButton(
@@ -299,28 +270,13 @@ class SessionNotificationSidebar extends ConsumerWidget {
     );
   }
 
-  String _copy(
-    BuildContext context, {
-    required String pt,
-    required String en,
-    required String es,
-  }) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return en;
-      case 'es':
-        return es;
-      default:
-        return pt;
-    }
-  }
 
   String _footerLabel(BuildContext context, DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
     if (difference.inMinutes < 1) {
-      return _copy(context, pt: 'Agora', en: 'Now', es: 'Ahora');
+      return context.tr.notifBannerNow;
     }
     if (difference.inHours < 1) {
       return '${difference.inMinutes} min';

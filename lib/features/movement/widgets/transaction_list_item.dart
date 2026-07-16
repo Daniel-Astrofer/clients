@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
@@ -16,25 +16,15 @@ class TransactionListItem extends ConsumerWidget {
 
   const TransactionListItem({super.key, required this.transaction});
 
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'agora';
-    if (diff.inHours < 1) return '${diff.inMinutes}m atrás';
-    if (diff.inDays < 1) return '${diff.inHours}h atrás';
-    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final visual = TransactionVisualSpec.fromTransaction(transaction);
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final amountLabel = MoneyDisplay.formatFrozenAmountFromBtc(
+    final amountLabel = money.formatFrozenAmountFromBtc(
       btcAmount: transaction.signedAmountBTC,
-      currency: selectedCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
@@ -46,7 +36,7 @@ class TransactionListItem extends ConsumerWidget {
       displayBtcBrl: transaction.displayBtcBrl,
       signed: true,
     );
-    final btcAmountLabel = MoneyDisplay.formatAmountFromBtc(
+    final btcAmountLabel = money.formatAmountFromBtc(
       btcAmount: transaction.signedAmountBTC,
       currency: Currency.btc,
       btcUsd: btcUsd,
@@ -143,7 +133,7 @@ class TransactionListItem extends ConsumerWidget {
                             color: visual.amountColor,
                           ),
                     ),
-                    if (selectedCurrency != Currency.btc) ...[
+                    if (money.currency != Currency.btc) ...[
                       const SizedBox(height: 2),
                       Text(
                         btcAmountLabel,
@@ -157,7 +147,10 @@ class TransactionListItem extends ConsumerWidget {
                     ],
                     const SizedBox(height: 2),
                     Text(
-                      _formatDate(transaction.timestamp),
+                      AppDateTime.formatRelative(
+                        context,
+                        transaction.timestamp,
+                      ),
                       style: Theme.of(context).textTheme.labelSmall!.copyWith(
                           color: Theme.of(context)
                               .colorScheme

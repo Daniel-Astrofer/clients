@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
@@ -103,7 +102,7 @@ class DestinationCaptureSheet extends StatelessWidget {
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
-                    KeroseneUiCopy.cancel,
+                    context.tr.cancel,
                     style: AppTypography.inter(
                       color: KeroseneBrandTokens.textMuted,
                       fontSize: 15,

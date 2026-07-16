@@ -27,6 +27,14 @@ Wallet? resolveSendWallet({
     }
   }
 
+  if (walletState.wallets.length == 3) {
+    final insured = walletState.wallets.firstWhere(
+      (w) => w.isInternalCustody,
+      orElse: () => walletState.wallets[0],
+    );
+    return insured;
+  }
+
   return walletState.selectedWallet ??
       (walletState.wallets.isNotEmpty ? walletState.wallets.first : null);
 }

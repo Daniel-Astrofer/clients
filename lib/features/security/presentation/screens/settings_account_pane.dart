@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 
@@ -11,6 +12,7 @@ class SettingsAccountPane extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tr = context.tr;
     final authState = ref.watch(authControllerProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
 
@@ -18,7 +20,7 @@ class SettingsAccountPane extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Perfil',
+          tr.settingsAccountTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 32,
@@ -29,7 +31,7 @@ class SettingsAccountPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Dados da conta autenticada, identificação de sessão e encerramento seguro do acesso local.',
+          tr.settingsAccountSubtitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textSecondary,
             fontSize: 16,
@@ -40,11 +42,11 @@ class SettingsAccountPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Identidade',
+          title: tr.settingsAccountIdentitySection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.userCheck,
-              title: 'Nome de usuário',
+              title: tr.settingsAccountUsernameTitle,
               subtitle: settingsFormatHandle(user?.username ?? ''),
               onTap: null,
             ),
@@ -52,25 +54,24 @@ class SettingsAccountPane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Sessão',
+          title: tr.settingsAccountSessionSection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.history,
-              title: 'Criada em',
+              title: tr.settingsAccountCreatedAtTitle,
               subtitle: settingsDateLabel(user?.createdAt),
               onTap: null,
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.device,
-              title: 'Último acesso',
+              title: tr.settingsAccountLastAccessTitle,
               subtitle: settingsDateLabel(user?.lastLogin),
               onTap: null,
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.logout,
-              title: 'Sair desta conta',
-              subtitle:
-                  'Encerra a sessão atual e retorna para a entrada do app.',
+              title: tr.settingsAccountLogoutTitle,
+              subtitle: tr.settingsAccountLogoutSubtitle,
               onTap: () async {
                 await ref.read(authControllerProvider.notifier).logout();
                 if (context.mounted) {

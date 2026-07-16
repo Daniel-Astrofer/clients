@@ -62,7 +62,6 @@ class PaymentPayloadDraft {
       : null;
 
   static PaymentPayloadDraft analyze(BuildContext context, String raw) {
-    final l10n = context.tr;
     final intent = const PaymentIntentParser().parse(raw);
     return fromPaymentIntent(context, intent);
   }
@@ -203,7 +202,8 @@ class PaymentLinkEntryScreenState
     final linkAsync = linkId == null
         ? null
         : ref.watch(homePaymentLinkPreviewProvider(linkId));
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
+    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
@@ -309,6 +309,7 @@ class PaymentPayloadPreview extends StatelessWidget {
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
+            appLocale: Localizations.localeOf(context),
           )
         : draft.isPaymentLink
             ? context.tr.homeAmountFromLink

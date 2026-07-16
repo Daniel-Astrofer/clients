@@ -7,12 +7,14 @@ class MovementConfirmationRow {
   final String value;
   final bool numeric;
   final bool technical;
+  final bool emphasize;
 
   const MovementConfirmationRow({
     required this.label,
     required this.value,
     this.numeric = false,
     this.technical = false,
+    this.emphasize = false,
   });
 }
 
@@ -39,15 +41,15 @@ class MovementConfirmationSurface extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final titleFontSize = width < 360 ? 32.0 : 38.0;
-        final amountFontSize = width < 360 ? 42.0 : 52.0;
+        final titleFontSize = width < 360 ? 28.0 : 34.0;
+        final amountFontSize = width < 360 ? 40.0 : 48.0;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (leading != null) ...[
               leading!,
-              const SizedBox(height: 16),
+              const SizedBox(height: 28),
             ],
             Text(
               title,
@@ -55,12 +57,12 @@ class MovementConfirmationSurface extends StatelessWidget {
               style: AppTypography.newsreader(
                 color: AppColors.hexFFFFFFFF,
                 fontSize: titleFontSize,
-                fontWeight: FontWeight.w300,
-                height: 1.08,
-                letterSpacing: 0,
+                fontWeight: FontWeight.w400,
+                height: 1.12,
+                letterSpacing: -0.2,
               ),
             ),
-            const SizedBox(height: 38),
+            const SizedBox(height: 28),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -72,7 +74,7 @@ class MovementConfirmationSurface extends StatelessWidget {
                   fontSize: amountFontSize,
                   fontWeight: FontWeight.w600,
                   height: 1.02,
-                  letterSpacing: 3,
+                  letterSpacing: -0.6,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
@@ -81,17 +83,17 @@ class MovementConfirmationSurface extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 supportingLabel,
-                textAlign: TextAlign.right,
+                textAlign: TextAlign.center,
                 style: AppTypography.inter(
                   color: AppColors.hexFFA3A3A3,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                   height: 1.2,
                   letterSpacing: 0,
                 ),
               ),
             ],
-            const SizedBox(height: 38),
+            const SizedBox(height: 32),
             for (final row in rows)
               _MovementConfirmationDetailRow(
                 row: row,
@@ -100,6 +102,29 @@ class MovementConfirmationSurface extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Compact row list without title/amount hero (for collapsible details).
+class MovementConfirmationRows extends StatelessWidget {
+  final List<MovementConfirmationRow> rows;
+  final bool compact;
+
+  const MovementConfirmationRows({
+    super.key,
+    required this.rows,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final row in rows)
+          _MovementConfirmationDetailRow(row: row, compact: compact),
+      ],
     );
   }
 }
@@ -115,37 +140,48 @@ class _MovementConfirmationDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelColor =
+        row.emphasize ? AppColors.hexFFFFFFFF : AppColors.hexFFA3A3A3;
     final valueStyle = AppTypography.inter(
       color: AppColors.hexFFFFFFFF,
-      fontSize: compact ? 13.5 : 14,
-      fontWeight: row.numeric ? FontWeight.w600 : FontWeight.w300,
+      fontSize: row.emphasize
+          ? (compact ? 15.0 : 16.0)
+          : (compact ? 13.5 : 14),
+      fontWeight: row.emphasize
+          ? FontWeight.w700
+          : (row.numeric ? FontWeight.w600 : FontWeight.w400),
       height: 1.3,
-      letterSpacing: row.numeric && !row.technical ? 1.4 : 0,
+      letterSpacing: row.numeric && !row.technical ? -0.1 : 0,
       fontFeatures: row.numeric ? const [FontFeature.tabularFigures()] : null,
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(vertical: compact ? 11 : 16),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.symmetric(vertical: compact ? 12 : 15),
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppColors.hexFF2A2A2A),
+          bottom: BorderSide(
+            color: row.emphasize
+                ? AppColors.hexFF2A2A2A.withValues(alpha: 0)
+                : AppColors.hexFF2A2A2A,
+          ),
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: compact ? 118 : 132,
+            width: compact ? 120 : 136,
             child: Text(
-              row.label.toUpperCase(),
+              // Sentence case — softer than bank micro-caps.
+              row.label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.inter(
-                color: AppColors.hexFFA3A3A3,
-                fontSize: compact ? 11 : 12,
-                fontWeight: FontWeight.w300,
-                height: 1.2,
-                letterSpacing: compact ? 1.1 : 1.2,
+                color: labelColor,
+                fontSize: compact ? 12.5 : 13,
+                fontWeight: row.emphasize ? FontWeight.w600 : FontWeight.w400,
+                height: 1.25,
+                letterSpacing: 0,
               ),
             ),
           ),

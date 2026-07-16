@@ -6,8 +6,13 @@ abstract class LedgerRepository {
   Future<Either<Failure, List<dynamic>>> getAllLedgers();
   Future<Either<Failure, Map<String, dynamic>>> findLedger(String walletName);
   Future<Either<Failure, double>> getBalance(String walletName);
-  Future<Either<Failure, List<Transaction>>> getHistory(
-      {int page = 0, int size = 50});
+  Future<Either<Failure, List<Transaction>>> getHistory({
+    int page = 0,
+    int size = 50,
+    DateTime? since,
+  });
+
+  Future<Either<Failure, Transaction?>> getTransactionById(String transactionId);
 
   Future<Either<Failure, Map<String, dynamic>>> sendInternalTransaction({
     required String senderWalletName,

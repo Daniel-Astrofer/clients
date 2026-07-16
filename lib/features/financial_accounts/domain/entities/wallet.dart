@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:kerosene/features/ledger/domain/balance_display.dart';
 
 /// Entidade Wallet - Carteira Bitcoin/DeFi
 /// Representa uma carteira HD (Hierarchical Deterministic) seguindo BIP32/BIP44
@@ -18,8 +19,14 @@ final class Wallet extends Equatable {
   /// Hash da passphrase retornado pela API autenticada.
   final String passphraseHash;
 
-  /// Saldo em BTC (exatamente como vem da API)
+  /// Saldo primário em BTC para UI (cold=observed, custodial/internal=available).
   final double balance;
+
+  /// Ledger available sats (custodial/internal). Cold usually 0.
+  final int availableSats;
+
+  /// Chain-observed sats (cold truth; custodial reconciliation).
+  final int observedSats;
 
   /// Path de derivação HD (ex: "m/84'/0'/0'/0/0" para Native SegWit)
   final String derivationPath;
@@ -116,6 +123,8 @@ final class Wallet extends Equatable {
     this.depositFeeRate = WalletCardType.bronzeDefaultFeeRate,
     this.spendable = true,
     this.custodyExplanation = '',
+    this.availableSats = 0,
+    this.observedSats = 0,
   });
 
   /// Cria cópia com modificações
@@ -148,14 +157,29 @@ final class Wallet extends Equatable {
     double? depositFeeRate,
     bool? spendable,
     String? custodyExplanation,
+    int? availableSats,
+    int? observedSats,
   }) {
+    final nextAvailable = availableSats ?? this.availableSats;
+    final nextObserved = observedSats ?? this.observedSats;
+    final nextMode = walletMode ?? this.walletMode;
+    final nextSpendable = spendable ?? this.spendable;
+    final nextBalance = balance ??
+        _primaryBtcFromSats(
+          walletMode: nextMode,
+          spendable: nextSpendable,
+          availableSats: nextAvailable,
+          observedSats: nextObserved,
+        );
     return Wallet(
       id: id ?? this.id,
       name: name ?? this.name,
       address: address ?? this.address,
-      walletMode: walletMode ?? this.walletMode,
+      walletMode: nextMode,
       passphraseHash: passphraseHash ?? this.passphraseHash,
-      balance: balance ?? this.balance,
+      balance: nextBalance,
+      availableSats: nextAvailable,
+      observedSats: nextObserved,
       derivationPath: derivationPath ?? this.derivationPath,
       type: type ?? this.type,
       createdAt: createdAt ?? this.createdAt,
@@ -178,7 +202,7 @@ final class Wallet extends Equatable {
           previousCardExpiresAt ?? this.previousCardExpiresAt,
       withdrawalFeeRate: withdrawalFeeRate ?? this.withdrawalFeeRate,
       depositFeeRate: depositFeeRate ?? this.depositFeeRate,
-      spendable: spendable ?? this.spendable,
+      spendable: nextSpendable,
       custodyExplanation: custodyExplanation ?? this.custodyExplanation,
     );
   }
@@ -191,10 +215,20 @@ final class Wallet extends Equatable {
     final kind = data['kind']?.toString().toUpperCase();
     final status = data['status']?.toString().toUpperCase();
     final spendable = _parseBool(data['spendable'], fallback: true);
-    final fallbackSats = spendable
-        ? data['availableSats']
-        : (data['observedSats'] ?? data['availableSats']);
-    final btcValue = _parseBtcValue(balanceVal, fallbackSats);
+    final availableSats = _parseSats(data['availableSats']) ?? 0;
+    final observedSats = _parseSats(data['observedSats']) ?? 0;
+    final walletMode =
+        data['walletMode']?.toString() ?? _walletModeFromKfeKind(kind);
+    final primarySats = BalanceDisplayRules.primarySats(
+      kind: kind ??
+          (spendable ? 'INTERNAL' : 'WATCH_ONLY'),
+      availableSats: availableSats,
+      observedSats: observedSats,
+    );
+    // Prefer explicit balance only when dual sats missing; else use primary rule.
+    final btcValue = (availableSats > 0 || observedSats > 0)
+        ? primarySats / 100000000.0
+        : _parseBtcValue(balanceVal, primarySats);
     final cardType = WalletCardType.fromApi(data['cardType']);
     final walletName =
         (data['walletName'] ?? data['name'] ?? data['label'] ?? 'Wallet')
@@ -212,10 +246,11 @@ final class Wallet extends Equatable {
               data['address'] ??
               '')
           .toString(),
-      walletMode:
-          data['walletMode']?.toString() ?? _walletModeFromKfeKind(kind),
+      walletMode: walletMode,
       passphraseHash: data['passphraseHash']?.toString() ?? '',
       balance: btcValue,
+      availableSats: availableSats,
+      observedSats: observedSats,
       derivationPath: "m/84'/0'/0'",
       type: WalletType.nativeSegwit,
       createdAt: _parseDateTime(data['createdAt']),
@@ -356,7 +391,56 @@ final class Wallet extends Equatable {
   String get custodyDisplayLabel {
     if (isColdWallet) return 'Cold wallet';
     if (isCustodialOnchain) return 'Custodial on-chain';
-    return 'Carteira global';
+    return 'Carteira interna';
+  }
+
+  /// Primary UI label for the big balance number.
+  String get primaryBalanceLabel {
+    if (isColdWallet || isObservedOnlyBalance) return 'Saldo na rede';
+    if (isCustodialOnchain) return 'Disponível para enviar';
+    return 'Saldo disponível';
+  }
+
+  /// Secondary line: chain observed for custodial when it diverges from available.
+  String? get chainObservedSubtitle {
+    if (!isCustodialOnchain) return null;
+    if (!BalanceDisplayRules.showObservedAsSubtitle(
+      kind: 'CUSTODIAL_ONCHAIN',
+      availableSats: availableSats,
+      observedSats: observedSats,
+    )) {
+      return null;
+    }
+    final btc = (observedSats / 100000000.0).toStringAsFixed(8);
+    final trimmed = btc
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+    return 'Na rede (cadeia): $trimmed BTC';
+  }
+
+  static double _primaryBtcFromSats({
+    required String walletMode,
+    required bool spendable,
+    required int availableSats,
+    required int observedSats,
+  }) {
+    final mode = walletMode.trim().toUpperCase();
+    final kind = mode.contains('COLD') ||
+            mode == 'SELF_CUSTODY' ||
+            mode == 'WATCH_ONLY' ||
+            !spendable
+        ? 'WATCH_ONLY'
+        : (mode == 'CUSTODIAL_ONCHAIN' ||
+                mode == 'CUSTODIAL ONCHAIN' ||
+                mode == 'ONCHAIN'
+            ? 'CUSTODIAL_ONCHAIN'
+            : 'INTERNAL');
+    final sats = BalanceDisplayRules.primarySats(
+      kind: kind,
+      availableSats: availableSats,
+      observedSats: observedSats,
+    );
+    return sats / 100000000.0;
   }
 
   @override
@@ -367,6 +451,8 @@ final class Wallet extends Equatable {
         walletMode,
         passphraseHash,
         balance,
+        availableSats,
+        observedSats,
         derivationPath,
         type,
         createdAt,
@@ -395,6 +481,8 @@ final class Wallet extends Equatable {
   bool get isCardRotating => cardRotationStatus == 'ROTATING';
 
   bool get isCardExpiring => cardRotationStatus == 'EXPIRING';
+
+  String get label => name;
 
   String get effectiveCardHolderName =>
       cardHolderName.trim().isNotEmpty ? cardHolderName : name;

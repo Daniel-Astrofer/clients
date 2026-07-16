@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 
 import 'settings_modern_components.dart';
@@ -25,7 +26,7 @@ class SettingsHeader extends StatelessWidget {
         children: [
           SettingsIconButtonFrame(
             icon: KeroseneIcons.back,
-            semanticLabel: 'Voltar',
+            semanticLabel: context.tr.settingsNavBack,
             onTap: onClose,
           ),
           const Spacer(),
@@ -36,25 +37,17 @@ class SettingsHeader extends StatelessWidget {
   }
 }
 
-class _SettingsNavigationCopy {
-  const _SettingsNavigationCopy._();
-
-  static const title = 'Ajuste sua conta';
-  static const description =
-      'Gerencie seguran\u00e7a, privacidade e prefer\u00eancias da sua experi\u00eancia banc\u00e1ria.';
-  static const preferences = 'Prefer\u00eancias';
-}
-
 class SettingsHero extends StatelessWidget {
   const SettingsHero({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final tr = context.tr;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _SettingsNavigationCopy.title,
+          tr.settingsNavTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 40,
@@ -65,7 +58,7 @@ class SettingsHero extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          _SettingsNavigationCopy.description,
+          tr.settingsNavDescription,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textMuted,
             fontSize: 16,
@@ -91,48 +84,49 @@ class SettingsNavigationRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = <SettingsPaneSpec>[
+    final tr = context.tr;
+    final items = <SettingsPaneSpec>[
       SettingsPaneSpec(
         pane: SettingsPane.account,
         icon: KeroseneIcons.userCheck,
         animation: KeroseneAnimationAsset.secureConnection,
-        title: 'Perfil',
-        subtitle: 'Dados pessoais e informações da conta',
+        title: tr.settingsNavProfileTitle,
+        subtitle: tr.settingsNavProfileSubtitle,
       ),
       SettingsPaneSpec(
         pane: SettingsPane.security,
         icon: KeroseneIcons.security,
         animation: KeroseneAnimationAsset.securityShield,
-        title: 'Segurança',
-        subtitle: 'Senha, biometria e autenticação em 2 fatores',
+        title: tr.settingsNavSecurityTitle,
+        subtitle: tr.settingsNavSecuritySubtitle,
       ),
       SettingsPaneSpec(
         pane: SettingsPane.notifications,
         icon: KeroseneIcons.notifications,
         animation: KeroseneAnimationAsset.transactionStatus,
-        title: 'Notificações',
-        subtitle: 'Alertas de transações e comunicações',
+        title: tr.settingsNavNotificationsTitle,
+        subtitle: tr.settingsNavNotificationsSubtitle,
       ),
       SettingsPaneSpec(
         pane: SettingsPane.appearance,
         icon: KeroseneIcons.contrast,
         animation: KeroseneAnimationAsset.networkReview,
-        title: 'Aparência',
-        subtitle: 'Tema e escala local',
+        title: tr.settingsNavAppearanceTitle,
+        subtitle: tr.settingsNavAppearanceSubtitle,
       ),
       SettingsPaneSpec(
         pane: SettingsPane.display,
         icon: KeroseneIcons.language,
         animation: KeroseneAnimationAsset.networkReview,
-        title: 'Idioma e moeda',
-        subtitle: 'Preferência global de idioma e unidade monetária',
+        title: tr.settingsNavDisplayTitle,
+        subtitle: tr.settingsNavDisplaySubtitle,
       ),
       SettingsPaneSpec(
         pane: SettingsPane.wallets,
         icon: KeroseneIcons.wallet,
         animation: KeroseneAnimationAsset.emptyWallet,
-        title: 'Carteiras',
-        subtitle: 'Custódia e ciclo KFE',
+        title: tr.settingsNavWalletsTitle,
+        subtitle: tr.settingsNavWalletsSubtitle,
       ),
     ];
 
@@ -140,7 +134,7 @@ class SettingsNavigationRail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _SettingsNavigationCopy.preferences.toUpperCase(),
+          tr.settingsNavPreferencesSection.toUpperCase(),
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textMuted,
             fontSize: 12,

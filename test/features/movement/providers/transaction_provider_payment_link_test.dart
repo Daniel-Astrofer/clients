@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
+import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/domain/entities/user.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
@@ -264,6 +265,40 @@ void main() {
       container.read(paymentLinkNotifierProvider).error,
       contains('ERR_KFE_PAYMENT_LINK_NOT_OPEN'),
     );
+  });
+
+  test('clears error when passkey assertion is cancelled by the user', () async {
+    final repository = _PaymentLinkRepository(
+      _link(
+        paymentRail: 'INTERNAL',
+        depositAddress: 'kerosene:wallet:$destinationWalletId',
+        destinationHash: destinationWalletId,
+      ),
+      challengeFailures: 1,
+    );
+    final container = _container(
+      repository,
+      passkeyAssertionBuilder: (_) async {
+        throw const DeviceKeyException(
+          'ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED',
+          'A confirmação do dispositivo foi cancelada.',
+        );
+      },
+    );
+    addTearDown(container.dispose);
+
+    final result =
+        await container.read(paymentLinkNotifierProvider.notifier).pay(
+              linkId: 'cancel-passkey-link',
+              payerWalletId: 'payer-wallet-id',
+              idempotencyKey: 'cancel-passkey-idempotency',
+            );
+
+    expect(result, isNull);
+    // First attempt triggers challenge; retry builder cancels — no ugly error.
+    expect(repository.withdrawalDestinations, [destinationWalletId]);
+    expect(container.read(paymentLinkNotifierProvider).error, isNull);
+    expect(container.read(paymentLinkNotifierProvider).isLoading, isFalse);
   });
 
   test('does not retry withdrawal when the link becomes paid', () async {

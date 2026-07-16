@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/admin_providers.dart';
 import '../../theme/admin_colors.dart';
@@ -46,7 +47,7 @@ class OnchainScreen extends ConsumerWidget {
                     AdminResponsiveGrid(
                       children: [
                         AdminMetricCard(
-                          label: 'Status',
+                          label: context.tr.sendReviewStatus,
                           value: '${data['status'] ?? 'UNKNOWN'}',
                           icon: KeroseneIcons.onchain,
                           accentColor: _statusColor('${data['status'] ?? ''}'),

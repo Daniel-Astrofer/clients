@@ -330,7 +330,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
           _buildNfcOrb(size: 200),
           const SizedBox(height: 32),
           Text(
-            'Gravar solicitação',
+            context.tr.receiveNfcWriteRequest,
             textAlign: TextAlign.center,
             style: AppTypography.newsreader(
               color: _text,
@@ -857,7 +857,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
       ),
       child: Column(
         children: [
-          _buildDetailRow('Destino', _shortenAddress(widget.wallet.address)),
+          _buildDetailRow(context.tr.sendReviewDestination, _shortenAddress(widget.wallet.address)),
           const SizedBox(height: 16),
           Divider(color: _border.withValues(alpha: 0.6), height: 1),
           const SizedBox(height: 16),
@@ -865,7 +865,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
           const SizedBox(height: 16),
           Divider(color: _border.withValues(alpha: 0.6), height: 1),
           const SizedBox(height: 16),
-          _buildDetailRow('Status', _statusLabel),
+          _buildDetailRow(context.tr.sendReviewStatus, _statusLabel),
           const SizedBox(height: 16),
           Divider(color: _border.withValues(alpha: 0.6), height: 1),
           const SizedBox(height: 16),
@@ -875,7 +875,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
             Divider(color: _border.withValues(alpha: 0.6), height: 1),
             const SizedBox(height: 16),
           ] else if (_detectedMethod == ReceiveNfcMethod.onchain) ...[
-            _buildDetailRow('Taxa de rede', 'A confirmar'),
+            _buildDetailRow(context.tr.sendReviewNetworkFee, 'A confirmar'),
             const SizedBox(height: 16),
             Divider(color: _border.withValues(alpha: 0.6), height: 1),
             const SizedBox(height: 16),

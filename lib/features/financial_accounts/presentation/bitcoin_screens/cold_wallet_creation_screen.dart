@@ -136,8 +136,8 @@ class ColdWalletCreationScreenState
     if (activeColdWalletCountFrom(accounts) >= maxActiveColdWallets) {
       AppNotice.showWarning(
         context,
-        title: 'Carteira fria indisponivel',
-        message: 'Voce pode criar no maximo duas carteiras frias.',
+        title: context.tr.coldCreateUnavailable,
+        message: context.tr.coldCreateMaxTwo,
       );
       return;
     }
@@ -145,7 +145,7 @@ class ColdWalletCreationScreenState
       AppNotice.showWarning(
         context,
         title: context.tr.createWalletNameRequired,
-        message: 'Digite o nome que essa carteira fria deve receber.',
+        message: context.tr.coldCreateNamePrompt,
       );
       return;
     }
@@ -423,7 +423,7 @@ class ColdWalletCreationScreenState
                     const SizedBox(height: 32),
                     WalletCreationLineTextField(
                       controller: walletNameController,
-                      label: 'Nome da carteira',
+                      label: context.tr.coldCreateWalletName,
                       hintText: context.tr.coldWalletNameLabel,
                       onSubmitted: (_) => continueFromPurpose(),
                     ),
@@ -439,7 +439,7 @@ class ColdWalletCreationScreenState
                 MediaQuery.viewInsetsOf(context).bottom > 0 ? 20 : 40,
               ),
               child: CreationPrimaryButton(
-                label: 'Continuar',
+                label: context.tr.walletSetupContinue,
                 onPressed: coldWalletLimitReached ? null : continueFromPurpose,
               ),
             ),

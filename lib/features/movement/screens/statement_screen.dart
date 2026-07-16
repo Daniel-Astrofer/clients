@@ -13,11 +13,21 @@ import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/core/security/financial_secure_scope.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
+import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
+import 'package:kerosene/core/presentation/widgets/app_notice.dart';
+import 'package:kerosene/features/movement/utils/statement_csv_export.dart';
+import 'package:kerosene/features/movement/utils/statement_pdf_export.dart';
 import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
+import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/statement_transaction_card.dart';
 import 'package:kerosene/features/movement/widgets/transaction_statement_insights.dart';
 import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
@@ -28,11 +38,13 @@ enum _StatementFilter {
   all,
   incoming,
   outgoing,
+  internal,
+  onchain,
+  cold,
+  lightning,
   pending,
   failed,
-  onchain,
-  lightning,
-  internal,
+  cancelled,
 }
 
 class TransactionStatementScreen extends ConsumerStatefulWidget {
@@ -86,12 +98,8 @@ class _TransactionStatementScreenState
 
   Future<void> _refreshData() async {
     await HapticFeedback.lightImpact();
-    ref.invalidate(transactionHistoryProvider);
     ref.invalidate(statementInsightsReportProvider);
-    await Future.wait([
-      ref.read(walletProvider.notifier).refresh(),
-      ref.read(transactionHistoryProvider.future),
-    ]);
+    await refreshFinancialProjectionUi(ref, forceFullHistory: true);
   }
 
   void _handleBack() {
@@ -127,16 +135,20 @@ class _TransactionStatementScreenState
   @override
   Widget build(BuildContext context) {
     final historyAsync = ref.watch(transactionHistoryProvider);
+    final lastHistory = ref.watch(lastTransactionHistoryProvider);
+    final historyValue = historyAsync.asData?.value ??
+        (lastHistory.isNotEmpty ? lastHistory : null);
     final bottomPadding =
         AppPrimaryNavigationBar.scaffoldBottomClearance(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final maxWidth = screenWidth >= 900 ? 980.0 : 430.0;
 
-    if (historyAsync.isLoading && !historyAsync.hasValue) {
+    if (historyValue == null && historyAsync.isLoading) {
       return const Center(child: TorLoadingDots());
     }
 
-    return Scaffold(
+    return FinancialSecureScope(
+      child: Scaffold(
       backgroundColor: _StatementColors.background,
       body: Stack(
         children: [
@@ -159,7 +171,10 @@ class _TransactionStatementScreenState
                           AppSpacing.xl2,
                           0,
                         ),
-                        child: _StatementTopBar(onBack: _handleBack),
+                        child: _StatementTopBar(
+                          onBack: _handleBack,
+                          onExport: () => _exportCsv(historyValue ?? const []),
+                        ),
                       ),
                     ),
                     SliverToBoxAdapter(
@@ -240,6 +255,102 @@ class _TransactionStatementScreenState
           ),
         ],
       ),
+    ),
+    );
+  }
+
+  Future<void> _exportCsv(List<Transaction> transactions) async {
+    HapticFeedback.selectionClick();
+    if (transactions.isEmpty) {
+      if (!mounted) return;
+      AppNotice.showInfo(
+        context,
+        title: 'Nada para exportar',
+        message: context.tr.statementEmptyOnDevice,
+      );
+      return;
+    }
+
+    final format = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: _StatementColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Exportar extrato',
+                  style: AppTypography.newsreader(
+                    color: _StatementColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Endereços longos são encurtados. CSV é melhor para reconciliação.',
+                  style: AppTypography.inter(
+                    color: _StatementColors.textMuted,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(KeroseneIcons.download,
+                      color: _StatementColors.textPrimary),
+                  title: Text(
+                    'CSV',
+                    style: TextStyle(color: _StatementColors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    'Copia e compartilha · valores em sats',
+                    style: TextStyle(color: _StatementColors.textMuted),
+                  ),
+                  onTap: () => Navigator.of(ctx).pop('csv'),
+                ),
+                ListTile(
+                  leading: Icon(KeroseneIcons.receipt,
+                      color: _StatementColors.textPrimary),
+                  title: Text(
+                    'PDF',
+                    style: TextStyle(color: _StatementColors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    context.tr.statementExportShareLimit,
+                    style: TextStyle(color: _StatementColors.textMuted),
+                  ),
+                  onTap: () => Navigator.of(ctx).pop('pdf'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (format == null || !mounted) return;
+
+    final result = format == 'pdf'
+        ? await exportStatementPdf(transactions)
+        : await exportStatementCsv(transactions);
+    if (!mounted) return;
+    AppNotice.showInfo(
+      context,
+      title: result.shared
+          ? 'Extrato compartilhado'
+          : (format == 'csv' ? 'CSV copiado' : 'Exportação'),
+      message: result.shared
+          ? '${result.rowCount} lançamentos (${format.toUpperCase()}).'
+          : format == 'csv'
+              ? '${result.rowCount} lançamentos copiados para a área de transferência.'
+              : 'Não foi possível compartilhar o PDF.',
     );
   }
 
@@ -264,18 +375,41 @@ class _TransactionStatementScreenState
   }
 
   bool _matchesFilter(Transaction transaction, _StatementFilter filter) {
+    final wallets = ref.read(walletProvider);
+    final walletList = wallets is WalletLoaded ? wallets.wallets : const <Wallet>[];
+    final accounts =
+        ref.read(bitcoinAccountsProvider).asData?.value ?? const <BitcoinAccount>[];
+    final network = resolveTransactionNetwork(
+      transaction,
+      wallets: walletList,
+      accounts: accounts,
+    );
     return switch (filter) {
-      _StatementFilter.all => true,
-      _StatementFilter.incoming => transaction.isCredit,
-      _StatementFilter.outgoing => transaction.isDebit,
-      _StatementFilter.pending =>
-        transaction.status == TransactionStatus.pending ||
-            transaction.status == TransactionStatus.confirming,
-      _StatementFilter.failed => transaction.status == TransactionStatus.failed,
+      _StatementFilter.all => !transaction.isCancelled,
+      _StatementFilter.incoming =>
+        transaction.isCredit && !transaction.isCancelled,
+      _StatementFilter.outgoing =>
+        transaction.isDebit && !transaction.isCancelled,
+      _StatementFilter.internal =>
+        !transaction.isCancelled &&
+            (network == TransactionNetwork.internal ||
+                network == TransactionNetwork.paymentLinkInternal),
       _StatementFilter.onchain =>
-        !transaction.isLightning && !transaction.isInternal,
-      _StatementFilter.lightning => transaction.isLightning,
-      _StatementFilter.internal => transaction.isInternal,
+        !transaction.isCancelled &&
+            (network == TransactionNetwork.onchain ||
+                network == TransactionNetwork.paymentLinkOnchain),
+      _StatementFilter.cold =>
+        !transaction.isCancelled && network == TransactionNetwork.cold,
+      _StatementFilter.lightning =>
+        !transaction.isCancelled && network == TransactionNetwork.lightning,
+      _StatementFilter.pending =>
+        !transaction.isUnconfirmedExpired &&
+            (transaction.status == TransactionStatus.pending ||
+                transaction.status == TransactionStatus.confirming),
+      _StatementFilter.failed =>
+        transaction.status == TransactionStatus.failed ||
+            transaction.isUnconfirmedExpired,
+      _StatementFilter.cancelled => transaction.isCancelled,
     };
   }
 
@@ -289,10 +423,16 @@ class _TransactionStatementScreenState
       transaction.destinationWalletId,
       transaction.senderDisplayName,
       transaction.receiverDisplayName,
+      transaction.walletLabel,
+      transaction.sourceWalletLabel,
+      transaction.destinationWalletLabel,
+      transaction.counterpartyLabel,
       transaction.description,
       transaction.blockchainTxid,
       transaction.paymentHash,
       transaction.externalReference,
+      transaction.provider,
+      transaction.failureCode,
       _transactionTitle(transaction),
       _transactionRailLabel(transaction),
       _transactionStatusLabel(transaction),
@@ -681,14 +821,21 @@ class _StatementNoResults extends StatelessWidget {
 
 class _StatementTopBar extends StatelessWidget {
   final VoidCallback onBack;
+  final VoidCallback? onExport;
 
-  const _StatementTopBar({required this.onBack});
+  const _StatementTopBar({required this.onBack, this.onExport});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         _RoundIconButton(icon: KeroseneIcons.back, onPressed: onBack),
+        const Spacer(),
+        if (onExport != null)
+          _RoundIconButton(
+            icon: KeroseneIcons.download,
+            onPressed: onExport!,
+          ),
       ],
     );
   }
@@ -786,14 +933,17 @@ String _filterLabel(BuildContext context, _StatementFilter filter) {
       _copy(context, pt: 'Recebidos', en: 'Received', es: 'Recibidos'),
     _StatementFilter.outgoing =>
       _copy(context, pt: 'Enviados', en: 'Sent', es: 'Enviados'),
+    _StatementFilter.internal =>
+      _copy(context, pt: 'Internas', en: 'Internal', es: 'Internas'),
+    _StatementFilter.onchain => 'On-chain',
+    _StatementFilter.cold => 'Cold',
+    _StatementFilter.lightning => 'Lightning',
     _StatementFilter.pending =>
       _copy(context, pt: 'Pendentes', en: 'Pending', es: 'Pendientes'),
     _StatementFilter.failed =>
       _copy(context, pt: 'Falhas', en: 'Failed', es: 'Fallidas'),
-    _StatementFilter.onchain => 'On-chain',
-    _StatementFilter.lightning => 'Lightning',
-    _StatementFilter.internal =>
-      _copy(context, pt: 'Internas', en: 'Internal', es: 'Internas'),
+    _StatementFilter.cancelled =>
+      _copy(context, pt: 'Canceladas', en: 'Cancelled', es: 'Canceladas'),
   };
 }
 
@@ -823,6 +973,7 @@ String _transactionStatusLabel(Transaction transaction) {
     TransactionStatus.pending => 'Pendente',
     TransactionStatus.cancelled => 'Cancelada',
     TransactionStatus.failed => 'Falhou',
+    TransactionStatus.reconciling => 'Em revisão',
   };
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
@@ -451,6 +452,7 @@ class _AmountHeroState extends State<_AmountHero>
       rawValue: widget.amountInput,
       currency: widget.currency,
       withSymbol: false,
+      appLocale: Localizations.localeOf(context),
     );
     final color = widget.hasWarning ? _C.warning : _C.text;
     final reduce = _reduceMotion(context);
@@ -690,11 +692,14 @@ class _ContextPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (availableLabel != null)
-          _ContextLine(label: 'Disponível', value: availableLabel!),
+          _ContextLine(
+            label: _availableLabel(context),
+            value: availableLabel!,
+          ),
         if (availableLabel != null && feeLabel != null)
           const SizedBox(height: 8),
         if (feeLabel != null)
-          _ContextLine(label: 'Taxa de rede', value: feeLabel!),
+          _ContextLine(label: context.tr.sendReviewNetworkFee, value: feeLabel!),
         if (warningLabel != null && warningLabel!.trim().isNotEmpty) ...[
           if (availableLabel != null || feeLabel != null)
             const SizedBox(height: 10),
@@ -712,6 +717,14 @@ class _ContextPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+String _availableLabel(BuildContext context) {
+  return switch (Localizations.localeOf(context).languageCode) {
+    'en' => 'Available',
+    'es' => 'Disponible',
+    _ => 'Disponível',
+  };
 }
 
 class _ContextLine extends StatelessWidget {
@@ -927,6 +940,13 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
 // CTA
 // ---------------------------------------------------------------------------
 
+String _softCtaLabel(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return trimmed;
+  final lower = trimmed.toLowerCase();
+  return '${lower[0].toUpperCase()}${lower.substring(1)}';
+}
+
 class _CtaBar extends StatelessWidget {
   final String label;
   final bool enabled;
@@ -958,9 +978,9 @@ class _CtaBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             textStyle: AppTypography.inter(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
+              letterSpacing: -0.2,
             ),
           ),
           child: AnimatedSwitcher(
@@ -972,7 +992,7 @@ class _CtaBar extends StatelessWidget {
                     color: _C.muted,
                   )
                 : Text(
-                    label,
+                    _softCtaLabel(label),
                     key: ValueKey(label),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

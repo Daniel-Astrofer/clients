@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
@@ -357,7 +358,7 @@ class _NotificationCenterHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         IconButton(
-          tooltip: _copy(context, pt: 'Voltar', en: 'Back', es: 'Volver'),
+          tooltip: context.tr.goBack,
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(KeroseneIcons.back),
           color: Colors.white,
@@ -368,12 +369,7 @@ class _NotificationCenterHeader extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            _copy(
-              context,
-              pt: 'Notificações',
-              en: 'Notifications',
-              es: 'Notificaciones',
-            ),
+            context.tr.notifCenterTitle,
             style: AppTypography.newsreader(
               color: Colors.white,
               fontSize: 30,
@@ -384,12 +380,7 @@ class _NotificationCenterHeader extends StatelessWidget {
           ),
         ),
         IconButton(
-          tooltip: _copy(
-            context,
-            pt: 'Configurações',
-            en: 'Settings',
-            es: 'Configuración',
-          ),
+          tooltip: context.tr.notifCenterSettingsTooltip,
           onPressed: () =>
               Navigator.of(context).pushNamed('/settings/notifications'),
           icon: const Icon(KeroseneIcons.settings),
@@ -422,24 +413,19 @@ class _NotificationFilterBar extends StatelessWidget {
       runSpacing: 8,
       children: [
         _NotificationFilterChip(
-          label: _copy(context, pt: 'Todos', en: 'All', es: 'Todos'),
+          label: context.tr.notifCenterFilterAll,
           icon: null,
           selected: selected == _NotificationCenterFilter.all,
           onTap: () => onChanged(_NotificationCenterFilter.all),
         ),
         _NotificationFilterChip(
-          label: _copy(context, pt: 'Avisos', en: 'Alerts', es: 'Avisos'),
+          label: context.tr.notifCenterFilterAlerts,
           icon: KeroseneIcons.notifications,
           selected: selected == _NotificationCenterFilter.alerts,
           onTap: () => onChanged(_NotificationCenterFilter.alerts),
         ),
         _NotificationFilterChip(
-          label: _copy(
-            context,
-            pt: 'Segurança',
-            en: 'Security',
-            es: 'Seguridad',
-          ),
+          label: context.tr.notifCenterFilterSecurity,
           icon: KeroseneIcons.security,
           selected: selected == _NotificationCenterFilter.security,
           onTap: () => onChanged(_NotificationCenterFilter.security),
@@ -465,18 +451,8 @@ class _NotificationCenterActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusLabel = totalCount == 0
-        ? _copy(
-            context,
-            pt: '0 notificações',
-            en: '0 notifications',
-            es: '0 notificaciones',
-          )
-        : _copy(
-            context,
-            pt: '$unreadCount não lidas',
-            en: '$unreadCount unread',
-            es: '$unreadCount sin leer',
-          );
+        ? context.tr.notifCenterZero
+        : context.tr.notifCenterUnread(unreadCount);
 
     return Row(
       children: [
@@ -502,17 +478,12 @@ class _NotificationCenterActions extends StatelessWidget {
         ),
         const Spacer(),
         _NotificationActionTextButton(
-          label: _copy(
-            context,
-            pt: 'Ler tudo',
-            en: 'Read all',
-            es: 'Leer todo',
-          ),
+          label: context.tr.notifCenterReadAll,
           onPressed: onMarkAllRead,
         ),
         const SizedBox(width: 6),
         _NotificationActionTextButton(
-          label: _copy(context, pt: 'Limpar', en: 'Clear', es: 'Limpiar'),
+          label: context.tr.notifCenterClear,
           onPressed: onClear,
         ),
       ],
@@ -723,24 +694,9 @@ class _NotificationEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = switch (filter) {
-      _NotificationCenterFilter.all => _copy(
-          context,
-          pt: 'Sem notificações',
-          en: 'No notifications',
-          es: 'Sin notificaciones',
-        ),
-      _NotificationCenterFilter.alerts => _copy(
-          context,
-          pt: 'Sem avisos',
-          en: 'No alerts',
-          es: 'Sin avisos',
-        ),
-      _NotificationCenterFilter.security => _copy(
-          context,
-          pt: 'Sem alertas de segurança',
-          en: 'No security alerts',
-          es: 'Sin alertas de seguridad',
-        ),
+      _NotificationCenterFilter.all => context.tr.notifCenterEmptyAll,
+      _NotificationCenterFilter.alerts => context.tr.notifCenterEmptyAlerts,
+      _NotificationCenterFilter.security => context.tr.notifCenterEmptySecurity,
     };
 
     return Padding(
@@ -774,12 +730,7 @@ class _NotificationEmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                _copy(
-                  context,
-                  pt: 'Quando algo importante acontecer, aparece aqui.',
-                  en: 'When something important happens, it appears here.',
-                  es: 'Cuando ocurra algo importante, aparece aqui.',
-                ),
+                context.tr.notifCenterEmptyHint,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
                   color: Colors.white.withValues(alpha: 0.48),
@@ -829,10 +780,10 @@ String _dateLabel(BuildContext context, DateTime timestamp) {
   final date = DateUtils.dateOnly(timestamp);
 
   if (date == today) {
-    return _copy(context, pt: 'Hoje', en: 'Today', es: 'Hoy');
+    return context.tr.notifCenterToday;
   }
   if (date == today.subtract(const Duration(days: 1))) {
-    return _copy(context, pt: 'Ontem', en: 'Yesterday', es: 'Ayer');
+    return context.tr.notifCenterYesterday;
   }
   return MaterialLocalizations.of(context).formatMediumDate(timestamp);
 }
@@ -845,18 +796,3 @@ String _timeLabel(BuildContext context, DateTime timestamp) {
   );
 }
 
-String _copy(
-  BuildContext context, {
-  required String pt,
-  required String en,
-  required String es,
-}) {
-  switch (Localizations.localeOf(context).languageCode) {
-    case 'en':
-      return en;
-    case 'es':
-      return es;
-    default:
-      return pt;
-  }
-}

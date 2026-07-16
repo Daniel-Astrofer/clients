@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/money_display.dart';
@@ -17,7 +18,6 @@ import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
 import 'package:kerosene/features/movement/domain/payment_intent.dart';
 import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
 import 'package:kerosene/features/movement/domain/payment_intent_resolver.dart';
@@ -164,8 +164,12 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       btcBrl: btcBrl,
       amountVal: _amount.value,
     );
+    // Toggle BTC ↔ preferred fiat (from app display prefs), not always BRL.
+    final prefsCurrency = ref.read(moneyFormatConfigProvider).currency;
+    final preferredFiat =
+        prefsCurrency == Currency.btc ? Currency.brl : prefsCurrency;
     final nextCurrency =
-        _selectedCurrency == Currency.btc ? Currency.brl : Currency.btc;
+        _selectedCurrency == Currency.btc ? preferredFiat : Currency.btc;
     final nextAmount = nextCurrency == Currency.btc
         ? amountBtc
         : MoneyDisplay.convertFromBtcAmount(
@@ -265,6 +269,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       body: Column(
         children: [
           if (!isOnline) _OfflineSendBanner(onRetry: _retryOnline),
+          SafeArea(
+            bottom: false,
+            child: _SendWizardProgress(
+              currentStep: _currentStep,
+              firstStep: _firstStep,
+            ),
+          ),
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -388,6 +399,26 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
             : SendMoneyCopy.unrecognizedDestination(context),
       );
       return;
+    }
+
+    // Cold: only on-chain destinations — block early (before amount/auth).
+    if (_isColdSource(currentWallet)) {
+      if (destination.isPaymentLink) {
+        SnackbarHelper.showError(SendMoneyCopy.coldNoPaymentLink(context));
+        return;
+      }
+      if (destination.isInternal) {
+        SnackbarHelper.showError(SendMoneyCopy.coldNoInternal(context));
+        return;
+      }
+      if (destination.isLightning) {
+        SnackbarHelper.showError(SendMoneyCopy.coldNoLightning(context));
+        return;
+      }
+      if (!destination.isOnChain) {
+        SnackbarHelper.showError(SendMoneyCopy.coldOnlyOnchain(context));
+        return;
+      }
     }
 
     if (destination.isPaymentLink && _pendingPaymentLinkId == null) {
@@ -833,6 +864,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       analysis: analysis,
       recentDestinations: recentDestinations,
       isLoading: _destinationResolutionBusy || _liveResolving,
+      canWizardBack: _currentStep > _firstStep,
+      onLeading: _handleBack,
       onDestinationChanged: () {
         setState(() {
           _destinationEditVersion += 1;
@@ -1405,13 +1438,15 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       btcEur: btcEur,
       btcBrl: btcBrl,
       isPaymentLink: isPaymentLink,
-      onConfirm: (confirmationContext) => _confirmPayment(
+      onConfirm: (confirmationContext, {required firstSendAcknowledgedInReview}) =>
+          _confirmPayment(
         confirmationContext: confirmationContext,
         wallet: wallet,
         destination: destination,
         amount: amount,
         feeQuote: feeQuote,
         toAddress: toAddress,
+        firstSendAcknowledgedInReview: firstSendAcknowledgedInReview,
       ),
     );
 
@@ -1452,6 +1487,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     required double amount,
     required SendFeeQuote feeQuote,
     required String toAddress,
+    bool firstSendAcknowledgedInReview = false,
   }) async {
     return confirmSendPayment(
       context: context,
@@ -1468,6 +1504,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       resolveRecentDestinationLabel: _resolveRecentInternalDestinationLabel,
       resolveRecentDestinationAddress: _resolveRecentInternalDestinationAddress,
       isMounted: () => mounted,
+      firstSendAcknowledgedInReview: firstSendAcknowledgedInReview,
     );
   }
 
@@ -1565,6 +1602,47 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   }
 }
 
+/// Discrete 1–2–3 progress for the send wizard (not review/receipt).
+class _SendWizardProgress extends StatelessWidget {
+  final int currentStep;
+  final int firstStep;
+
+  const _SendWizardProgress({
+    required this.currentStep,
+    required this.firstStep,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final total = 3 - firstStep; // 2 or 3 pages in the active path
+    final active = (currentStep - firstStep).clamp(0, total - 1);
+    if (total <= 1) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < total; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            AnimatedContainer(
+              duration: KeroseneMotion.fast,
+              width: i == active ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: i == active
+                    ? KeroseneBrandTokens.textPrimary
+                    : KeroseneBrandTokens.surfaceHigh,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _OfflineSendBanner extends StatelessWidget {
   final VoidCallback onRetry;
 
@@ -1602,7 +1680,7 @@ class _OfflineSendBanner extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    KeroseneUiCopy.offlineRetryHint,
+                    context.tr.offlineRetryHint,
                     style: AppTypography.inter(
                       color: KeroseneBrandTokens.textMuted,
                       fontSize: 11,

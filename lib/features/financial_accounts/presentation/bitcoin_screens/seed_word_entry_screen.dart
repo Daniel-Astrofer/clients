@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/security/secure_screen_guard.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -286,7 +287,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(parsed.message ?? 'Semente inválida'),
+          content: Text(parsed.message ?? context.tr.seedInvalid),
           backgroundColor: Colors.redAccent,
           duration: const Duration(seconds: 8),
         ),
@@ -484,7 +485,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           onPressed: () =>
                               _applyPaste(forceInvalidChecksum: true),
                           child: Text(
-                            'Importar mesmo assim (frase literal)',
+                            context.tr.seedImportAnyway,
                             style: AppTypography.bodySmall.copyWith(
                               color: Colors.orangeAccent,
                             ),
@@ -502,7 +503,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () => _applyPaste(),
-                          child: const Text('Validar e continuar'),
+                          child: Text(context.tr.seedValidateContinue),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -581,7 +582,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           ),
                           decoration: InputDecoration(
                             hintText:
-                                'Passphrase / 25ª palavra (não são as 12)',
+                                context.tr.seedPassphrase25th,
                             hintStyle: AppTypography.bodySmall.copyWith(
                               color: Colors.white38,
                             ),
@@ -632,7 +633,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           onPressed: () =>
                               _finish(forceInvalidChecksum: true),
                           child: Text(
-                            'Importar frase literal (checksum inválido)',
+                            context.tr.seedImportLiteralInvalidChecksum,
                             style: AppTypography.bodySmall.copyWith(
                               color: Colors.orangeAccent,
                             ),
@@ -650,7 +651,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () => _finish(),
-                          child: const Text('Importar carteira'),
+                          child: Text(context.tr.seedImportWallet),
                         ),
                       ),
                     ],
@@ -734,7 +735,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                       GestureDetector(
                         onTap: _undoLastWord,
                         child: Text(
-                          'Desfazer anterior',
+                          context.tr.seedUndoPrevious,
                           style: AppTypography.bodySmall.copyWith(
                             color: Colors.white54,
                           ),

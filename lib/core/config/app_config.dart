@@ -200,6 +200,27 @@ class AppConfig {
     return buffer.toString();
   }
 
+  /// Full home surface composition (layout, greeting, header actions, feed).
+  static String contentHomeSurface({
+    required String balanceView,
+    required String locale,
+    String? timeZone,
+  }) {
+    final buffer = StringBuffer(
+      '/content/home-surface'
+      '?balanceView=${Uri.encodeComponent(balanceView)}'
+      '&locale=${Uri.encodeComponent(locale)}',
+    );
+    final tz = timeZone?.trim();
+    if (tz != null && tz.isNotEmpty) {
+      buffer.write('&timeZone=${Uri.encodeComponent(tz)}');
+    }
+    return buffer.toString();
+  }
+
+  /// Mark Communication Stage as received/read (ONCE — do not re-show).
+  static const String contentHomeStageAck = '/content/home-stage/ack';
+
   static String kfeColdWalletPsbtCreate(String walletId) =>
       '$kfeWallets/$walletId/cold-wallet/psbt';
   static String kfeColdWalletUtxos(String walletId) =>

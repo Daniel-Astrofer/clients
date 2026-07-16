@@ -48,7 +48,8 @@ class StatementReportCalculator {
     final usableTransactions = transactions
         .where((tx) =>
             tx.status != TransactionStatus.failed &&
-            tx.status != TransactionStatus.cancelled)
+            tx.status != TransactionStatus.cancelled &&
+            tx.status != TransactionStatus.reconciling)
         .toList(growable: false);
 
     final buckets = ranges.map((range) {
@@ -89,7 +90,8 @@ class StatementReportCalculator {
         continue;
       }
       if (tx.status == TransactionStatus.failed ||
-          tx.status == TransactionStatus.cancelled) {
+          tx.status == TransactionStatus.cancelled ||
+          tx.status == TransactionStatus.reconciling) {
         ignoredFailedTransactions += 1;
         continue;
       }
@@ -252,7 +254,7 @@ class StatementReportCalculator {
             id: account.id,
             name: _accountDisplayName(account),
             matchKeys: _accountMatchKeys(account),
-            balanceSats: math.max(0, account.totalSats),
+            balanceSats: math.max(0, account.primarySats),
           ),
       ]..sort((a, b) {
           final balance = b.balanceSats.compareTo(a.balanceSats);

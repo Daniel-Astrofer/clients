@@ -187,6 +187,26 @@ class SendMoneyCopy {
         _ => 'Carteira fria não envia Lightning. Use um endereço on-chain.',
       };
 
+  static String coldNoPaymentLink(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'Cold wallets cannot pay Kerosene links via the ledger. Use an on-chain address.',
+        'es' =>
+          'La cold no paga links de Kerosene por el ledger. Usa una dirección on-chain.',
+        _ =>
+          'Carteira fria não paga link Kerosene pelo ledger. Use um endereço on-chain.',
+      };
+
+  static String coldNoInternal(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'Cold wallets cannot send internal Kerosene transfers. Use an on-chain address.',
+        'es' =>
+          'La cold no envía transferencias internas. Usa una dirección on-chain.',
+        _ =>
+          'Carteira fria não faz transferência interna. Use um endereço on-chain.',
+      };
+
   static String sendSuccessTitle(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Send submitted',
@@ -231,6 +251,468 @@ class SendMoneyCopy {
         'en' => 'Sending…',
         'es' => 'Enviando…',
         _ => 'Enviando…',
+      };
+
+  // --- Amount step context (bank sticky party) ---
+
+  static String amountToTitle(BuildContext context, String recipient) {
+    final clean = recipient.trim();
+    if (clean.isEmpty) {
+      return switch (_language(context)) {
+        'en' => 'Amount',
+        'es' => 'Monto',
+        _ => 'Valor',
+      };
+    }
+    return switch (_language(context)) {
+      'en' => 'To $clean',
+      'es' => 'Para $clean',
+      _ => 'Para $clean',
+    };
+  }
+
+  static String amountFromSubtitle(BuildContext context, String walletName) {
+    final clean = walletName.trim();
+    if (clean.isEmpty) return '';
+    return switch (_language(context)) {
+      'en' => 'From $clean',
+      'es' => 'Desde $clean',
+      _ => 'De $clean',
+    };
+  }
+
+  // --- Destination type feedback ---
+
+  static String destinationEmptyHint(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Enter a destination to continue.',
+        'es' => 'Ingresa un destino para continuar.',
+        _ => 'Informe o destino para continuar.',
+      };
+
+  static String destinationInvalidHint(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'Fix the destination: Kerosene user, Bitcoin address, Lightning invoice, or link — or use QR / NFC / paste.',
+        'es' =>
+          'Corrige el destino: usuario Kerosene, dirección Bitcoin, invoice Lightning o link — o usa QR / NFC / pegar.',
+        _ =>
+          'Corrija o destino: usuário Kerosene, endereço Bitcoin, invoice Lightning, link — ou use QR / NFC / colar.',
+      };
+
+  static String destinationPaymentLinkHint(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Kerosene payment link detected.',
+        'es' => 'Link de pago Kerosene detectado.',
+        _ => 'Link de pagamento Kerosene detectado.',
+      };
+
+  static String destinationInternalHint(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Internal Kerosene transfer detected.',
+        'es' => 'Transferencia interna Kerosene detectada.',
+        _ => 'Transferência interna Kerosene detectada.',
+      };
+
+  static String destinationOnchainHint(BuildContext context, String network) =>
+      switch (_language(context)) {
+        'en' => 'Bitcoin on-chain address detected · $network.',
+        'es' => 'Dirección Bitcoin on-chain detectada · $network.',
+        _ => 'Endereço Bitcoin on-chain detectado · $network.',
+      };
+
+  static String destinationLightningHint(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Lightning payment detected.',
+        'es' => 'Pago Lightning detectado.',
+        _ => 'Pagamento Lightning detectado.',
+      };
+
+  // --- Review / auth soft copy ---
+
+  static String reviewTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Does this look right?',
+        'es' => '¿Está todo correcto?',
+        _ => 'Confere essa transferência?',
+      };
+
+  static String authorizeAction(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Authorize',
+        'es' => 'Autorizar',
+        _ => 'Autorizar',
+      };
+
+  static String authorizingAction(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Authorizing…',
+        'es' => 'Autorizando…',
+        _ => 'Autorizando…',
+      };
+
+  static String firstSendAckTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'New address',
+        'es' => 'Dirección nueva',
+        _ => 'Endereço novo',
+      };
+
+  static String firstSendAckBody(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'First time sending here. Check the characters carefully.',
+        'es' => 'Primera vez enviando aquí. Revisa los caracteres con cuidado.',
+        _ =>
+          'Primeira vez enviando para este endereço. Confira os caracteres com cuidado.',
+      };
+
+  static String firstSendAckCheckbox(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'I confirm this address',
+        'es' => 'Confirmo esta dirección',
+        _ => 'Confirmo este endereço',
+      };
+
+  static String authNextDevicePin(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Next: app PIN',
+        'es' => 'Siguiente: PIN de la app',
+        _ => 'Em seguida: PIN do app',
+      };
+
+  static String authNextPinAndTotp(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Next: app PIN · authenticator',
+        'es' => 'Siguiente: PIN de la app · autenticador',
+        _ => 'Em seguida: PIN do app · autenticador',
+      };
+
+  static String receiptSubtitleConfirmed(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Completed',
+        'es' => 'Completada',
+        _ => 'Concluída',
+      };
+
+  static String receiptSubtitlePending(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Submitted · waiting for network',
+        'es' => 'Enviada · esperando la red',
+        _ => 'Enviada · aguardando a rede',
+      };
+
+  static String reviewDetailsLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Details',
+        'es' => 'Detalles',
+        _ => 'Detalhes',
+      };
+
+  static String destinationScanAction(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Scan QR',
+        'es' => 'Escanear QR',
+        _ => 'Escanear QR',
+      };
+
+  static String destinationTipInternal(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Kerosene user · instant',
+        'es' => 'Usuario Kerosene · instantáneo',
+        _ => 'Usuário Kerosene · instantâneo',
+      };
+
+  static String destinationTipLightning(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Lightning invoice',
+        'es' => 'Invoice Lightning',
+        _ => 'Invoice Lightning',
+      };
+
+  static String destinationTipOnchain(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Bitcoin address · on-chain',
+        'es' => 'Dirección Bitcoin · on-chain',
+        _ => 'Endereço Bitcoin · on-chain',
+      };
+
+  static String networkLabel(
+    BuildContext context, {
+    required bool isPaymentLink,
+    required bool isLightning,
+    required bool isOnChain,
+  }) {
+    if (isPaymentLink) {
+      return switch (_language(context)) {
+        'en' => 'Internal link',
+        'es' => 'Link interno',
+        _ => 'Link interno',
+      };
+    }
+    if (isLightning) return 'Lightning';
+    if (isOnChain) return 'On-chain';
+    return 'Kerosene';
+  }
+
+  static String networkRowLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Network',
+        'es' => 'Red',
+        _ => 'Rede',
+      };
+
+  static String signatureRowLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Signature',
+        'es' => 'Firma',
+        _ => 'Assinatura',
+      };
+
+  static String signatureOnDevice(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'On this device · local seed',
+        'es' => 'En este dispositivo · seed local',
+        _ => 'No aparelho · seed local',
+      };
+
+  static String feeFree(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Free',
+        'es' => 'Gratis',
+        _ => 'Grátis',
+      };
+
+  static String feeEstimatedAtPayment(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Estimated at payment',
+        'es' => 'Estimada al pagar',
+        _ => 'Estimada no pagamento',
+      };
+
+  static String feeCalculating(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Calculating…',
+        'es' => 'Calculando…',
+        _ => 'Calculando…',
+      };
+
+  static String feeTierFast(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Fast',
+        'es' => 'Rápido',
+        _ => 'Rápido',
+      };
+
+  static String feeTierSlow(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Economy',
+        'es' => 'Económico',
+        _ => 'Econômico',
+      };
+
+  static String feeTierStandard(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Standard',
+        'es' => 'Normal',
+        _ => 'Normal',
+      };
+
+  static String reviewNotePaymentLink(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Payment via internal link',
+        'es' => 'Pago por link interno',
+        _ => 'Pagamento por link interno',
+      };
+
+  static String reviewNoteLightning(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Lightning payment',
+        'es' => 'Pago Lightning',
+        _ => 'Pagamento Lightning',
+      };
+
+  static String reviewNoteOnchainCold(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'You sign on-device · Kerosene only observes the chain',
+        'es' => 'Firmas en el dispositivo · Kerosene solo observa la cadena',
+        _ => 'Você assina no aparelho · Kerosene só observa a blockchain',
+      };
+
+  static String reviewNoteOnchain(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'On-chain send',
+        'es' => 'Envío on-chain',
+        _ => 'Envio on-chain',
+      };
+
+  static String reviewNoteInternal(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Internal Kerosene transfer',
+        'es' => 'Transferencia interna Kerosene',
+        _ => 'Transferência interna Kerosene',
+      };
+
+  // --- Receipt / success ---
+
+  static String receiptTitleConfirmed(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Transfer complete',
+        'es' => 'Transferencia completada',
+        _ => 'Transferência concluída',
+      };
+
+  static String receiptTitleSubmitted(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Transfer sent',
+        'es' => 'Transferencia enviada',
+        _ => 'Transferência enviada',
+      };
+
+  static String receiptDateLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Date',
+        'es' => 'Fecha',
+        _ => 'Data',
+      };
+
+  static String receiptShareAction(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Share receipt',
+        'es' => 'Compartir comprobante',
+        _ => 'Compartilhar comprovante',
+      };
+
+  static String receiptDoneAction(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Done',
+        'es' => 'Listo',
+        _ => 'Concluir',
+      };
+
+  static String receiptCopied(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Receipt copied',
+        'es' => 'Comprobante copiado',
+        _ => 'Comprovante copiado',
+      };
+
+  static String receiptShareAmount(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Amount',
+        'es' => 'Monto',
+        _ => 'Valor',
+      };
+
+  static String closeTooltip(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Close',
+        'es' => 'Cerrar',
+        _ => 'Fechar',
+      };
+
+  static String networkMismatch(
+    BuildContext context, {
+    required String detected,
+    required String expected,
+  }) =>
+      switch (_language(context)) {
+        'en' =>
+          'Address network ($detected) does not match the app network ($expected).',
+        'es' =>
+          'La red de la dirección ($detected) no coincide con la del app ($expected).',
+        _ =>
+          'Rede do endereço ($detected) não confere com a rede do app ($expected).',
+      };
+
+  static String detailFrom(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'From',
+        'es' => 'De',
+        _ => 'De',
+      };
+
+  static String detailTo(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'To',
+        'es' => 'Para',
+        _ => 'Para',
+      };
+
+  static String detailWhen(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'When',
+        'es' => 'Cuándo',
+        _ => 'Quando',
+      };
+
+  static String detailYourWallet(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Your wallet',
+        'es' => 'Tu billetera',
+        _ => 'Sua carteira',
+      };
+
+  static String detailTechnical(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Technical details',
+        'es' => 'Detalles técnicos',
+        _ => 'Detalhes técnicos',
+      };
+
+  static String detailExplorer(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Explorer',
+        'es' => 'Explorador',
+        _ => 'Explorer',
+      };
+
+  static String detailStatusConfirming(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Confirming',
+        'es' => 'Confirmando',
+        _ => 'Confirmando',
+      };
+
+  static String detailStatusCancelled(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Cancelled',
+        'es' => 'Cancelada',
+        _ => 'Cancelada',
+      };
+
+  static String detailStatusFailed(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Failed',
+        'es' => 'Falló',
+        _ => 'Falhou',
+      };
+
+  static String detailStatusReconciling(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Under review',
+        'es' => 'En revisión',
+        _ => 'Em revisão',
+      };
+
+  static String destinationKindInternal(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Internal transfer',
+        'es' => 'Transferencia interna',
+        _ => 'Transferência interna',
+      };
+
+  static String destinationKindOnchain(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'On-chain address',
+        'es' => 'Dirección on-chain',
+        _ => 'Endereço on-chain',
+      };
+
+  static String destinationKindLightning(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Lightning invoice',
+        'es' => 'Invoice Lightning',
+        _ => 'Invoice Lightning',
       };
 
   static String _language(BuildContext context) =>

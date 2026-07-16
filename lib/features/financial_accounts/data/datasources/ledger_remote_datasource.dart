@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart' show Options;
+import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
@@ -16,7 +17,17 @@ abstract class LedgerRemoteDataSource {
   Future<double> getBalance({required String walletName});
 
   /// Retrieves paginated transaction history.
-  Future<List<dynamic>> getHistory({int page = 0, int size = 50});
+  ///
+  /// [since] — when set, only rows with server `updatedAt` after this instant
+  /// (incremental sync). Null = full page window.
+  Future<List<dynamic>> getHistory({
+    int page = 0,
+    int size = 50,
+    DateTime? since,
+  });
+
+  /// Single transaction by KFE UUID (deep-link / notification resolve).
+  Future<Map<String, dynamic>?> getTransactionById(String transactionId);
 
   /// Processes an internal funds transfer between users.
   Future<Map<String, dynamic>> sendInternalTransaction({
@@ -76,17 +87,24 @@ class LedgerRemoteDataSourceImpl implements LedgerRemoteDataSource {
 
   Map<String, dynamic> _walletLedgerPayload(Map<String, dynamic> wallet) {
     final spendable = wallet['spendable'] != false;
-    final sats = spendable
-        ? wallet['availableSats']
-        : (wallet['observedSats'] ?? wallet['availableSats']);
+    final kind = wallet['kind']?.toString().toUpperCase() ?? '';
+    final available = wallet['availableSats'];
+    final observed = wallet['observedSats'];
+    // Primary display: cold/watch-only → observed; else available (LocalLedgerSync §4.3).
+    final primarySats = (!spendable || kind == 'WATCH_ONLY')
+        ? (observed ?? available)
+        : (available ?? observed);
     return {
       'id': wallet['walletId'] ?? wallet['id'],
       'walletName': wallet['label'] ?? wallet['walletName'] ?? wallet['name'],
-      'balance': _satsToBtc(sats),
-      'availableSats': wallet['availableSats'],
-      'observedSats': wallet['observedSats'],
+      'balance': _satsToBtc(primarySats),
+      'availableSats': available,
+      'observedSats': observed,
       'status': wallet['status'],
       'kind': wallet['kind'],
+      'spendable': spendable,
+      'walletMode': wallet['walletMode'],
+      'walletTypeDescription': wallet['walletTypeDescription'],
     };
   }
 
@@ -183,29 +201,84 @@ class LedgerRemoteDataSourceImpl implements LedgerRemoteDataSource {
   }
 
   @override
-  Future<List<dynamic>> getHistory({int page = 0, int size = 50}) async {
+  Future<List<dynamic>> getHistory({
+    int page = 0,
+    int size = 50,
+    DateTime? since,
+  }) async {
     try {
+      // Prefer live /kfe/transactions. A successful empty list is legitimate
+      // (no rows / page beyond end) — do NOT fall back to the 24h statement
+      // payload, which freezes confs and confuses users with balance > 0.
+      Object? kfeError;
       try {
+        final query = <String, dynamic>{
+          'page': page,
+          'size': size,
+        };
+        if (since != null) {
+          query['since'] = since.toUtc().toIso8601String();
+        }
         final response = await apiClient.get(
           AppConfig.kfeTransactions,
-          queryParameters: {
-            'page': page,
-            'size': size,
-          },
+          queryParameters: query,
         );
-        final transactions = _parseApiList(response.data);
-        if (transactions.isNotEmpty) {
-          return transactions;
-        }
-      } catch (_) {}
+        return _parseApiList(response.data);
+      } catch (e) {
+        kfeError = e;
+      }
 
-      final dashboard = await _getDashboard();
-      final statement = _dashboardStatement(dashboard);
-      final offset = page * size;
-      return statement.skip(offset).take(size).toList();
+      // Incremental failed (old server?) → retry full page once without since.
+      if (since != null) {
+        try {
+          final response = await apiClient.get(
+            AppConfig.kfeTransactions,
+            queryParameters: {
+              'page': page,
+              'size': size,
+            },
+          );
+          return _parseApiList(response.data);
+        } catch (e) {
+          kfeError = e;
+        }
+      }
+
+      // Network / server failure only → short statement window as last resort.
+      try {
+        final dashboard = await _getDashboard();
+        final statement = _dashboardStatement(dashboard);
+        final offset = page * size;
+        // ignore: unawaited_futures
+        LedgerTelemetry.recordStatementFallback();
+        return statement.skip(offset).take(size).toList();
+      } catch (_) {
+        if (kfeError is AppException) rethrow;
+        throw ServerException(
+          message: 'Erro ao buscar histórico: $kfeError',
+        );
+      }
     } catch (e) {
       if (e is AppException) rethrow;
       throw ServerException(message: 'Erro ao buscar histórico: $e');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getTransactionById(String transactionId) async {
+    final id = transactionId.trim();
+    if (id.isEmpty) return null;
+    try {
+      final response = await apiClient.get('${AppConfig.kfeTransactions}/$id');
+      final map = _parseMap(response.data);
+      final data = map['data'] ?? map['result'] ?? map;
+      if (data is Map) {
+        return Map<String, dynamic>.from(data);
+      }
+      return null;
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(message: 'Erro ao buscar transação: $e');
     }
   }
 

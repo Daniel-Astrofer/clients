@@ -159,11 +159,7 @@ class TransactionPinSetupScreenState
       onDigit: _appendDigit,
       onDelete: _deleteDigit,
       onConfirm: _busy ? null : _submit,
-      footer: TextButton(
-        onPressed: _busy ? null : _cancel,
-        style: TextButton.styleFrom(foregroundColor: Colors.white70),
-        child: Text(transactionPinCancel(context)),
-      ),
+      onCancel: _busy ? null : _cancel,
     );
   }
 }
@@ -208,6 +204,9 @@ class TransactionPinAuthorizationScreenState
       _pin += digit;
       _error = null;
     });
+    if (_pin.length == _pinLength) {
+      unawaited(_submit());
+    }
   }
 
   void _deleteDigit() {
@@ -278,32 +277,16 @@ class TransactionPinAuthorizationScreenState
       maxLength: _pinLength,
       error: _error,
       busy: _busy,
-      enabled: !widget.status.locked,
-      confirmLabel: context.tr.appEntryConfirm,
+      enabled: !widget.status.locked && !_busy,
       onDigit: _appendDigit,
       onDelete: _deleteDigit,
       onConfirm: _busy || widget.status.locked ? null : _submit,
-      footer: TextButton(
-        onPressed: _busy ? null : _cancel,
-        style: TextButton.styleFrom(foregroundColor: Colors.white70),
-        child: Text(transactionPinCancel(context)),
-      ),
+      onCancel: _busy ? null : _cancel,
     );
   }
 }
 
-String transactionPinInstruction(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Enter this device PIN to authorize the transaction.',
-    'es' => 'Ingresa el PIN de este dispositivo para autorizar la transacción.',
-    _ => 'Digite o PIN deste dispositivo para autorizar a transação.',
-  };
-}
+String transactionPinInstruction(BuildContext context) =>
+    context.tr.transactionPinInstruction;
 
-String transactionPinCancel(BuildContext context) {
-  return switch (Localizations.localeOf(context).languageCode) {
-    'en' => 'Cancel',
-    'es' => 'Cancelar',
-    _ => 'Cancelar',
-  };
-}
+String transactionPinCancel(BuildContext context) => context.tr.cancel;

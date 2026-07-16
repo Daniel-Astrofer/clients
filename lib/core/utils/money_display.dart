@@ -1,9 +1,22 @@
+import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/price_provider.dart';
 
 class MoneyDisplay {
   const MoneyDisplay._();
+
+  /// Bound from [MaterialApp] when the user changes language so every
+  /// [format] / [formatCompact] call picks number separators from the app
+  /// locale even when the caller omits [appLocale].
+  static Locale? _boundAppLocale;
+
+  /// Call from the app root whenever [localeProvider] changes.
+  static void bindAppLocale(Locale locale) {
+    _boundAppLocale = locale;
+  }
+
+  static Locale? get boundAppLocale => _boundAppLocale;
 
   static const List<Currency> pickerCurrencies = [
     Currency.btc,
@@ -38,6 +51,17 @@ class MoneyDisplay {
     }
   }
 
+  /// Number grouping / decimal separators follow the **app language** when
+  /// [appLocale] is provided. Currency symbols always follow [currency].
+  static String numberLocaleTag(Locale locale) {
+    return switch (locale.languageCode.toLowerCase()) {
+      'pt' => 'pt_BR',
+      'es' => 'es_ES',
+      _ => 'en_US',
+    };
+  }
+
+  /// Currency-native default (legacy). Prefer [resolveNumberLocale] with app locale.
   static String localeFor(Currency currency) {
     switch (currency) {
       case Currency.btc:
@@ -48,6 +72,17 @@ class MoneyDisplay {
       case Currency.brl:
         return 'pt_BR';
     }
+  }
+
+  static String resolveNumberLocale(
+    Currency currency, {
+    Locale? appLocale,
+  }) {
+    final effective = appLocale ?? _boundAppLocale;
+    if (effective != null) {
+      return numberLocaleTag(effective);
+    }
+    return localeFor(currency);
   }
 
   static int decimalsFor(Currency currency) {
@@ -98,9 +133,10 @@ class MoneyDisplay {
     required Currency currency,
     bool withSymbol = true,
     int? decimalPlaces,
+    Locale? appLocale,
   }) {
     final decimals = decimalPlaces ?? decimalsFor(currency);
-    final locale = localeFor(currency);
+    final locale = resolveNumberLocale(currency, appLocale: appLocale);
 
     if (currency == Currency.btc) {
       final formatter = NumberFormat.decimalPattern(locale)
@@ -126,9 +162,10 @@ class MoneyDisplay {
     required Currency currency,
     bool withSymbol = true,
     int? maxDecimalPlaces,
+    Locale? appLocale,
   }) {
     final decimals = maxDecimalPlaces ?? decimalsFor(currency);
-    final locale = localeFor(currency);
+    final locale = resolveNumberLocale(currency, appLocale: appLocale);
     final formatter = NumberFormat.decimalPattern(locale)
       ..minimumFractionDigits = 0
       ..maximumFractionDigits = decimals;
@@ -156,9 +193,10 @@ class MoneyDisplay {
     required String rawValue,
     required Currency currency,
     bool withSymbol = true,
+    Locale? appLocale,
   }) {
     final normalized = rawValue.trim().isEmpty ? '0' : rawValue.trim();
-    final locale = localeFor(currency);
+    final locale = resolveNumberLocale(currency, appLocale: appLocale);
     final formatter = NumberFormat.decimalPattern(locale)
       ..minimumFractionDigits = 0
       ..maximumFractionDigits = 0;
@@ -259,6 +297,7 @@ class MoneyDisplay {
     bool withSymbol = true,
     bool signed = false,
     int? decimalPlaces,
+    Locale? appLocale,
   }) {
     final value = convertFromBtcAmount(
       btcAmount: btcAmount,
@@ -272,6 +311,7 @@ class MoneyDisplay {
       currency: currency,
       withSymbol: withSymbol,
       decimalPlaces: decimalPlaces,
+      appLocale: appLocale,
     );
 
     if (!signed) {
@@ -296,6 +336,7 @@ class MoneyDisplay {
     double? displayBtcBrl,
     bool withSymbol = true,
     bool signed = false,
+    Locale? appLocale,
   }) {
     final amount = _historicalAmount(
       btcAmount: btcAmount.abs(),
@@ -315,6 +356,7 @@ class MoneyDisplay {
       amount: amount,
       currency: currency,
       withSymbol: withSymbol,
+      appLocale: appLocale,
     );
 
     if (!signed) {

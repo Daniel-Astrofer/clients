@@ -949,7 +949,7 @@ class _SovereigntyStatusScreenState
                   ),
                   child: Text(
                     _copy(
-                      pt: 'Tentar novamente',
+                      pt: context.tr.settingsDevicesRetry,
                       en: 'Try again',
                       es: 'Intentar de nuevo',
                     ),

@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
@@ -22,15 +23,15 @@ class WalletBalanceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final balanceSettings = ref.watch(balanceSettingsProvider);
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
+    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final balanceValueLabel = balanceSettings.isHidden
         ? '${MoneyDisplay.tickerSymbolFor(selectedCurrency)} ••••••••'
-        : MoneyDisplay.formatAmountFromBtc(
+        : money.formatAmountFromBtc(
             btcAmount: wallet.balance,
-            currency: selectedCurrency,
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
@@ -39,11 +40,15 @@ class WalletBalanceCard extends ConsumerWidget {
                 : null,
           );
     final responsive = context.responsive;
-    final balanceLabel =
-        wallet.isObservedOnlyBalance ? 'Observed balance' : 'Balance';
-    final portfolioLabel = wallet.isObservedOnlyBalance
-        ? 'Not spendable by Kerosene'
-        : 'Total Portfolio Value';
+    final balanceLabel = wallet.primaryBalanceLabel;
+    final portfolioLabel = wallet.isColdWallet || wallet.isObservedOnlyBalance
+        ? 'Saldo na rede (só observação / assinar no aparelho)'
+        : wallet.isCustodialOnchain
+            ? 'Disponível para envio'
+            : context.tr.btcAccountsAvailableBalance;
+    final chainSubtitle = wallet.chainObservedSubtitle;
+    // Real chart: for custodial, fraction available vs chain observed when diverged.
+    final chartPct = _chartPercentage(wallet);
     final chartSize = responsive.isTinyPhone ? 132.0 : 160.0;
     final innerSize = chartSize * 0.625;
 
@@ -66,21 +71,16 @@ class WalletBalanceCard extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // Gráfico circular de balanço
           SizedBox(
             width: chartSize,
             height: chartSize,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Gráfico circular
                 CustomPaint(
                   size: Size(chartSize, chartSize),
-                  painter: BalanceChartPainter(
-                    percentage: 0.65, // 65% do total
-                  ),
+                  painter: BalanceChartPainter(percentage: chartPct),
                 ),
-                // Ícone central
                 Container(
                   width: innerSize,
                   height: innerSize,
@@ -89,7 +89,9 @@ class WalletBalanceCard extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    KeroseneIcons.chart,
+                    wallet.isColdWallet
+                        ? KeroseneIcons.lock
+                        : KeroseneIcons.wallet,
                     color: Theme.of(context).colorScheme.onPrimary,
                     size: 40,
                   ),
@@ -99,7 +101,6 @@ class WalletBalanceCard extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // Label "Balance"
           Text(
             balanceLabel,
             style: TextStyle(
@@ -152,6 +153,21 @@ class WalletBalanceCard extends ConsumerWidget {
               fontSize: 14,
             ),
           ),
+          if (chainSubtitle != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              chainSubtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimary
+                    .withValues(alpha: 0.48),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
           if (wallet.isObservedOnlyBalance &&
               wallet.custodyExplanation.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -172,6 +188,20 @@ class WalletBalanceCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Full ring when balance is healthy; partial when custodial available ≪ chain.
+  static double _chartPercentage(Wallet wallet) {
+    if (wallet.isColdWallet || wallet.isObservedOnlyBalance) {
+      return wallet.observedSats > 0 ? 1.0 : 0.0;
+    }
+    final available = wallet.availableSats;
+    final observed = wallet.observedSats;
+    if (wallet.isCustodialOnchain && observed > 0 && available >= 0) {
+      final ratio = available / observed;
+      return ratio.clamp(0.0, 1.0);
+    }
+    return available > 0 || wallet.balance > 0 ? 1.0 : 0.0;
   }
 }
 

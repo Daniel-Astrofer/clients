@@ -1,9 +1,12 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'dart:ui';
+
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 
+/// Pure OLED black body. Top accent color is owned solely by
+/// [HomeStageFixedAtmosphere] (fixed stack layer — does not scroll).
 class HomePageBackground extends StatelessWidget {
   const HomePageBackground();
 
@@ -78,9 +81,10 @@ class HomeGlassPanel extends StatelessWidget {
   final Color? backgroundColor;
 
   const HomeGlassPanel({
+    super.key,
     required this.child,
     this.padding = EdgeInsets.zero,
-    this.borderRadius = const BorderRadius.all(Radius.circular(22)),
+    this.borderRadius = const BorderRadius.all(Radius.circular(HomeRadius.panel)),
     this.backgroundColor,
   });
 
@@ -100,7 +104,7 @@ class HomeGlassPanel extends StatelessWidget {
         border: Border.all(color: homePanelBorderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: HomeColors.overlayDim,
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -123,263 +127,16 @@ class HomeLoadingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rare path (wallet still loading on home). Keep dots centered — not a
-    // short strip near the top of the scroll view.
-    if (MediaQuery.sizeOf(context).width >= 0) {
-      final height = MediaQuery.sizeOf(context).height;
-      return SizedBox(
-        height: height * 0.72,
-        child: const Center(
-          child: TorLoadingDots(travel: 5),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            HomeSkeletonBox(
-              width: homeSize(40),
-              height: homeSize(40),
-              borderRadius: BorderRadius.circular(homeSize(999)),
-            ),
-            SizedBox(width: homeSize(12)),
-            Expanded(
-              child: HomeSkeletonBox(
-                height: homeSize(22),
-                borderRadius: BorderRadius.circular(homeSize(7)),
-              ),
-            ),
-            SizedBox(width: homeSize(44)),
-            HomeSkeletonBox(
-              width: homeSize(24),
-              height: homeSize(24),
-              borderRadius: BorderRadius.circular(homeSize(999)),
-            ),
-            SizedBox(width: homeSize(16)),
-            HomeSkeletonBox(
-              width: homeSize(24),
-              height: homeSize(24),
-              borderRadius: BorderRadius.circular(homeSize(999)),
-            ),
-          ],
-        ),
-        SizedBox(height: homeSize(18)),
-        // Balance hero skeleton — no glass card; matches floating OLED layout.
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            HomeSkeletonBox(
-              width: homeSize(100),
-              height: homeSize(12),
-              borderRadius: BorderRadius.circular(homeSize(5)),
-            ),
-            SizedBox(height: homeSize(22)),
-            HomeSkeletonBox(
-              width: homeSize(220),
-              height: homeSize(48),
-              borderRadius: BorderRadius.circular(homeSize(10)),
-            ),
-            SizedBox(height: homeSize(12)),
-            HomeSkeletonBox(
-              width: homeSize(140),
-              height: homeSize(14),
-              borderRadius: BorderRadius.circular(homeSize(5)),
-            ),
-            SizedBox(height: homeSize(10)),
-            HomeSkeletonBox(
-              width: homeSize(118),
-              height: homeSize(14),
-              borderRadius: BorderRadius.circular(homeSize(5)),
-            ),
-          ],
-        ),
-        SizedBox(height: homeSize(20)),
-        Row(
-          children: [
-            Expanded(
-              child: HomeSkeletonBox(
-                height: homeSize(50),
-                borderRadius: BorderRadius.circular(homeSize(12)),
-              ),
-            ),
-            SizedBox(width: homeSize(12)),
-            Expanded(
-              child: HomeSkeletonBox(
-                height: homeSize(50),
-                borderRadius: BorderRadius.circular(homeSize(12)),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: homeSize(24)),
-        HomeGlassPanel(
-          borderRadius: BorderRadius.circular(homeSize(16)),
-          padding: EdgeInsets.all(homeSize(20)),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    HomeSkeletonBox(
-                      width: homeSize(152),
-                      height: homeSize(18),
-                      borderRadius: BorderRadius.circular(homeSize(6)),
-                    ),
-                    SizedBox(height: homeSize(10)),
-                    HomeSkeletonBox(
-                      width: homeSize(178),
-                      height: homeSize(38),
-                      borderRadius: BorderRadius.circular(homeSize(6)),
-                    ),
-                    SizedBox(height: homeSize(16)),
-                    HomeSkeletonBox(
-                      width: homeSize(86),
-                      height: homeSize(34),
-                      borderRadius: BorderRadius.circular(homeSize(8)),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: homeSize(18)),
-              HomeSkeletonBox(
-                width: homeSize(92),
-                height: homeSize(92),
-                borderRadius: BorderRadius.circular(homeSize(18)),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: homeSize(28)),
-        HomeGlassPanel(
-          borderRadius: BorderRadius.circular(homeSize(16)),
-          padding: EdgeInsets.all(homeSize(20)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HomeSkeletonBox(
-                width: homeSize(154),
-                height: homeSize(16),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-              SizedBox(height: homeSize(20)),
-              Row(
-                children: [
-                  HomeSkeletonBox(
-                    width: homeSize(96),
-                    height: homeSize(96),
-                    borderRadius: BorderRadius.circular(homeSize(999)),
-                  ),
-                  SizedBox(width: homeSize(24)),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        HomeSkeletonBox(
-                          height: homeSize(16),
-                          borderRadius: BorderRadius.circular(homeSize(5)),
-                        ),
-                        SizedBox(height: homeSize(14)),
-                        HomeSkeletonBox(
-                          height: homeSize(16),
-                          borderRadius: BorderRadius.circular(homeSize(5)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: homeSize(28)),
-        HomeSkeletonBox(
-          width: homeSize(112),
-          height: homeSize(22),
-          borderRadius: BorderRadius.circular(homeSize(7)),
-        ),
-        SizedBox(height: homeSize(16)),
-        Row(
-          children: [
-            HomeSkeletonBox(
-              width: homeSize(96),
-              height: homeSize(30),
-              borderRadius: BorderRadius.circular(homeSize(999)),
-            ),
-            SizedBox(width: homeSize(8)),
-            HomeSkeletonBox(
-              width: homeSize(112),
-              height: homeSize(30),
-              borderRadius: BorderRadius.circular(homeSize(999)),
-            ),
-          ],
-        ),
-        SizedBox(height: homeSize(10)),
-        const HomeLoadingTransactionRow(),
-        const HomeLoadingTransactionRow(),
-        const HomeLoadingTransactionRow(),
-      ],
-    );
-  }
-}
-
-class HomeLoadingTransactionRow extends StatelessWidget {
-  const HomeLoadingTransactionRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: homeSize(14)),
-      child: Row(
-        children: [
-          HomeSkeletonBox(
-            width: homeSize(40),
-            height: homeSize(40),
-            borderRadius: BorderRadius.circular(homeSize(999)),
-          ),
-          SizedBox(width: homeSize(14)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                HomeSkeletonBox(
-                  width: homeSize(136),
-                  height: homeSize(14),
-                  borderRadius: BorderRadius.circular(homeSize(5)),
-                ),
-                SizedBox(height: homeSize(7)),
-                HomeSkeletonBox(
-                  width: homeSize(104),
-                  height: homeSize(11),
-                  borderRadius: BorderRadius.circular(homeSize(5)),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: homeSize(14)),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              HomeSkeletonBox(
-                width: homeSize(90),
-                height: homeSize(13),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-              SizedBox(height: homeSize(7)),
-              HomeSkeletonBox(
-                width: homeSize(70),
-                height: homeSize(11),
-                borderRadius: BorderRadius.circular(homeSize(5)),
-              ),
-            ],
-          ),
-        ],
+    final height = MediaQuery.sizeOf(context).height;
+    return SizedBox(
+      height: height * 0.72,
+      child: const Center(
+        child: TorLoadingDots(travel: 5),
       ),
     );
   }
 }
+
 
 class HomeSkeletonBox extends StatelessWidget {
   final double? width;
@@ -387,9 +144,10 @@ class HomeSkeletonBox extends StatelessWidget {
   final BorderRadius borderRadius;
 
   const HomeSkeletonBox({
+    super.key,
     this.width,
     this.height,
-    this.borderRadius = const BorderRadius.all(Radius.circular(8)),
+    this.borderRadius = const BorderRadius.all(Radius.circular(HomeRadius.small)),
   });
 
   @override
@@ -398,9 +156,9 @@ class HomeSkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
+        color: HomeColors.surfaceDim,
         borderRadius: borderRadius,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.035)),
+        border: Border.all(color: HomeColors.surfaceBorder),
       ),
     );
 
@@ -412,7 +170,7 @@ class HomeSkeletonBox extends StatelessWidget {
         .animate(onPlay: (controller) => controller.repeat())
         .shimmer(
           duration: 1300.ms,
-          color: Colors.white.withValues(alpha: 0.08),
+          color: HomeColors.surfaceBorder,
         );
   }
 }
@@ -420,12 +178,14 @@ class HomeSkeletonBox extends StatelessWidget {
 class HomeHeaderIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final String? semanticLabel;
   final bool hasBadge;
 
   const HomeHeaderIconButton({
     super.key,
     required this.icon,
     required this.onTap,
+    this.semanticLabel,
     this.hasBadge = false,
   });
 
@@ -437,17 +197,24 @@ class HomeHeaderIconButton extends StatelessWidget {
         Material(
           color: Colors.transparent,
           shape: const CircleBorder(),
-          child: InkResponse(
-            onTap: onTap,
-            radius: homeSize(24),
-            child: SizedBox(
-              width: homeSize(42),
-              height: homeSize(42),
-              child: Center(
-                child: Icon(
-                  icon,
-                  size: homeSize(24),
-                  color: Colors.white.withValues(alpha: 0.9),
+          child: Semantics(
+            button: true,
+            label: semanticLabel,
+            child: InkResponse(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onTap();
+              },
+              radius: homeSize(24),
+              child: SizedBox(
+                width: homeSize(48), // Bumped touch target to 48px min
+                height: homeSize(48),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: homeSize(24),
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                 ),
               ),
             ),

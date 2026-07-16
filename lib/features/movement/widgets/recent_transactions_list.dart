@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,11 +9,9 @@ import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/presentation/widgets/glass_container.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:timeago/timeago.dart' as timeago;
-import 'package:intl/intl.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 
 class RecentTransactionsList extends ConsumerWidget {
@@ -90,13 +88,12 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
     final t = widget.transaction;
     final visual = TransactionVisualSpec.fromTransaction(t);
     final statusColor = visual.amountColor;
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
-    final amountLabel = MoneyDisplay.formatFrozenAmountFromBtc(
+    final amountLabel = money.formatFrozenAmountFromBtc(
       btcAmount: t.signedAmountBTC,
-      currency: selectedCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
@@ -108,7 +105,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
       displayBtcBrl: t.displayBtcBrl,
       signed: true,
     );
-    final btcAmountLabel = MoneyDisplay.format(
+    final btcAmountLabel = money.format(
       amount: t.signedAmountBTC.abs(),
       currency: Currency.btc,
     );
@@ -167,7 +164,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            timeago.format(t.timestamp.toLocal()).toUpperCase(),
+                            AppDateTime.formatRelative(context, t.timestamp),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall!
@@ -192,7 +189,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           amountLabel,
                           statusColor,
                         ),
-                        if (selectedCurrency != Currency.btc) ...[
+                        if (money.currency != Currency.btc) ...[
                           const SizedBox(height: 2),
                           Text(
                             btcAmountLabel,
@@ -231,18 +228,57 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                               .onPrimary
                               .withValues(alpha: 0.05)),
                       const SizedBox(height: AppSpacing.sm),
-                      _buildDetailRow('VALOR BASE', MoneyDisplay.format(amount: t.amountBTC, currency: Currency.btc)),
-                      const SizedBox(height: AppSpacing.xs),
-                      _buildDetailRow('TAXA DE REDE', t.isInternal || t.feeSatoshis == 0 ? 'ISENTA' : MoneyDisplay.format(amount: t.feeBTC, currency: Currency.btc)),
-                      const SizedBox(height: AppSpacing.xs),
-                      _buildDetailRow('VALOR TOTAL', MoneyDisplay.format(amount: (t.amountSatoshis + t.feeSatoshis) / 100000000.0, currency: Currency.btc)),
-                      
-                      if (!t.isInternal) ...[
+                      _buildDetailRow('VALOR BASE', money.format(amount: t.amountBTC, currency: Currency.btc)),
+                      if (t.showsNetworkFee) ...[
                         const SizedBox(height: AppSpacing.xs),
-                        _buildDetailRow('REDE', t.isLightning ? 'LIGHTNING NETWORK' : 'BITCOIN ON-CHAIN'),
-                        if (!t.isLightning) ...[
+                        _buildDetailRow(
+                          'TAXA DE REDE',
+                          money.format(
+                            amount: t.feeBTC,
+                            currency: Currency.btc,
+                          ),
+                        ),
+                      ],
+                      if (t.showsServiceFee) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        _buildDetailRow(
+                          'TAXA DE SERVIÇO',
+                          money.format(
+                            amount: t.serviceFeeBTC,
+                            currency: Currency.btc,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.xs),
+                      _buildDetailRow(
+                        'VALOR TOTAL',
+                        money.format(
+                          amount: (t.amountSatoshis +
+                                  (t.showsNetworkFee ? t.feeSatoshis : 0)) /
+                              100000000.0,
+                          currency: Currency.btc,
+                        ),
+                      ),
+                      if (t.showsOnchainConfirmations || t.isLightning) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        _buildDetailRow(
+                          'REDE',
+                          t.isLightning
+                              ? 'LIGHTNING NETWORK'
+                              : 'BITCOIN ON-CHAIN',
+                        ),
+                        if (t.showsOnchainConfirmations) ...[
                           const SizedBox(height: AppSpacing.xs),
-                          _buildDetailRow('CONFIRMAÇÕES', t.confirmations >= 6 ? '6+ (SEGURO)' : '${t.confirmations}/6'),
+                          _buildDetailRow(
+                            'CONFIRMAÇÕES',
+                            t.confirmations >= t.onchainConfirmationTarget
+                                ? '${t.confirmations}+'
+                                : t.confirmations > 0
+                                    ? '${t.confirmations}/${t.onchainConfirmationTarget}'
+                                    : (t.status == TransactionStatus.confirmed
+                                        ? 'CONFIRMADA'
+                                        : 'PENDENTE'),
+                          ),
                           if (t.blockHeight != null && t.blockHeight! > 0) ...[
                             const SizedBox(height: AppSpacing.xs),
                             _buildDetailRow('BLOCO', '#${t.blockHeight}'),
@@ -252,7 +288,10 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                       const SizedBox(height: AppSpacing.xs),
                       _buildDetailRow('TXID', t.id),
                       const SizedBox(height: AppSpacing.xs),
-                      _buildDetailRow('DATA E HORA', DateFormat('dd/MM/yyyy HH:mm:ss').format(t.timestamp.toLocal())),
+                      _buildDetailRow(
+                        'DATA E HORA',
+                        AppDateTime.formatRelativeWithClock(context, t.timestamp),
+                      ),
                     ],
                   ),
                 ),
@@ -301,6 +340,10 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
         break;
       case TransactionStatus.failed:
         text = 'FALHOU';
+        break;
+      case TransactionStatus.reconciling:
+        text = 'EM ANÁLISE';
+        isProcessing = true;
         break;
     }
 

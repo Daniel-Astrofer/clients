@@ -39,8 +39,8 @@ class InternalAccountCreationFlowState
     if (selectedCustodyIndex == null) {
       AppNotice.showWarning(
         context,
-        title: 'Selecione a custódia',
-        message: 'Escolha como essa carteira será custodiada antes de seguir.',
+        title: context.tr.internalSelectCustody,
+        message: context.tr.internalSelectCustodyBody,
       );
       return;
     }
@@ -65,8 +65,8 @@ class InternalAccountCreationFlowState
         .any((option) => option.index == selectedCustodyIndex)) {
       AppNotice.showWarning(
         context,
-        title: 'Custódia indisponível',
-        message: 'Essa custódia já possui uma carteira ativa.',
+        title: context.tr.internalCustodyUnavailable,
+        message: context.tr.internalCustodyAlreadyActive,
       );
       return;
     }
@@ -79,7 +79,7 @@ class InternalAccountCreationFlowState
       AppNotice.showWarning(
         context,
         title: context.tr.createWalletNameRequired,
-        message: 'Digite o nome que essa carteira deve receber.',
+        message: context.tr.internalNamePrompt,
       );
       return;
     }
@@ -100,7 +100,7 @@ class InternalAccountCreationFlowState
       AppNotice.showSuccess(
         context,
         title: context.tr.bitcoinAccountsCreateCardTitle,
-        message: 'Carteira criada com sucesso.',
+        message: context.tr.internalCreatedSuccess,
       );
       Navigator.of(context).pop(true);
     } catch (_) {
@@ -215,7 +215,7 @@ class InternalAccountCreationFlowState
               right: 24,
               bottom: 24,
               child: CreationPrimaryButton(
-                label: 'Continuar',
+                label: context.tr.walletSetupContinue,
                 onPressed: options.isEmpty ? null : onCustodyContinue,
               ),
             ),
@@ -321,7 +321,7 @@ class InternalAccountCreationFlowState
           WalletCreationLineTextField(
             controller: walletNameController,
             enabled: !busy,
-            label: 'Nome da carteira',
+            label: context.tr.coldCreateWalletName,
             hintText: context.tr.createWalletNameHint,
             onSubmitted: (_) => continueFromDetails(),
           ),

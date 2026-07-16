@@ -108,6 +108,8 @@ class ExternalTransfer extends Equatable {
       description: context,
       isInternal: false,
       isLightning: isLightning,
+      rail: isLightning ? 'LIGHTNING' : (isOnchain ? 'ONCHAIN' : network),
+      provider: provider.isNotEmpty ? provider : null,
     );
   }
 

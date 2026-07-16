@@ -290,47 +290,84 @@ class UtxoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = BitcoinAccountsColors.of(context);
     final outpointLabel = '${utxo.txidRef}:${utxo.vout}';
+    final confLabel = utxo.confirmations <= 0
+        ? 'mempool'
+        : utxo.confirmations >= 6
+            ? '6+ confs'
+            : '${utxo.confirmations} confs';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(
-                bottom: BorderSide(
-                  color: colors.rowDivider,
-                ),
-              )
-            : null,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              outpointLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.technicalMono(
-                textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.mutedText,
-                      fontSize: 11,
-                      letterSpacing: 0,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: utxo.txidRef.trim().isEmpty
+            ? null
+            : () async {
+                await Clipboard.setData(ClipboardData(text: utxo.txidRef.trim()));
+                if (!context.mounted) return;
+                AppNotice.showSuccess(
+                  context,
+                  title: 'Txid copiado',
+                  message: confLabel,
+                );
+              },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            border: showDivider
+                ? Border(
+                    bottom: BorderSide(
+                      color: colors.rowDivider,
                     ),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      outpointLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.technicalMono(
+                        textStyle:
+                            Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: colors.mutedText,
+                                  fontSize: 11,
+                                  letterSpacing: 0,
+                                ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      confLabel,
+                      style: AppTypography.inter(
+                        color: colors.mutedText,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                formatSats(utxo.amountSats),
+                style: AppTypography.inter(
+                  color: colors.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Pill(text: utxoStatusLabel(context, utxo.status)),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            formatSats(utxo.amountSats),
-            style: AppTypography.inter(
-              color: colors.text,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Pill(text: utxoStatusLabel(context, utxo.status)),
-        ],
+        ),
       ),
     );
   }
@@ -840,7 +877,7 @@ class InternalAccountManagementViewState
         InternalWalletCard(account: widget.account, onTap: () {}),
         const SizedBox(height: 18),
         ManagementItem(
-          title: 'Saldo disponível',
+          title: context.tr.btcAccountsAvailableBalance,
           expanded: expandedKey == 'balance',
           onTap: () => toggle('balance'),
           rows: [
@@ -848,7 +885,7 @@ class InternalAccountManagementViewState
           ],
         ),
         ManagementItem(
-          title: 'Endereço de recebimento',
+          title: context.tr.btcAccountsReceiveAddressLabel,
           expanded: expandedKey == 'receive',
           onTap: () {
             toggle('receive');

@@ -27,6 +27,18 @@ final class Transaction extends Equatable {
   /// Nome ou identificador seguro do destinatário quando a API fornece.
   final String? receiverDisplayName;
 
+  /// Label da carteira de perspectiva (API).
+  final String? walletLabel;
+
+  /// Label da carteira de origem (API).
+  final String? sourceWalletLabel;
+
+  /// Label da carteira de destino (API).
+  final String? destinationWalletLabel;
+
+  /// Contraparte resolvida no servidor (API) — preferir no card.
+  final String? counterpartyLabel;
+
   /// Valor em satoshis
   final int amountSatoshis;
 
@@ -47,6 +59,9 @@ final class Transaction extends Equatable {
 
   /// Timestamp da transação
   final DateTime timestamp;
+
+  /// Last server-side update (merge clock). Falls back to [timestamp] when absent.
+  final DateTime? updatedAt;
 
   /// Hash do bloco (null se pendente)
   final String? blockHash;
@@ -87,6 +102,15 @@ final class Transaction extends Equatable {
   /// Indica se é uma transação Lightning
   final bool isLightning;
 
+  /// Rail bruto da API KFE: INTERNAL | ONCHAIN | LIGHTNING (quando presente).
+  final String? rail;
+
+  /// Provider bruto da API KFE (ex.: COLD_EXTERNAL_SPEND, BITCOIN_CORE, PAYMENT_LINK).
+  final String? provider;
+
+  /// Stable failure code from KFE (safe for localized mapping). Never a stack.
+  final String? failureCode;
+
   /// Indica se a transação possui taxa de rede exibível.
   final bool hasNetworkFee;
 
@@ -117,6 +141,10 @@ final class Transaction extends Equatable {
     this.destinationWalletId,
     this.senderDisplayName,
     this.receiverDisplayName,
+    this.walletLabel,
+    this.sourceWalletLabel,
+    this.destinationWalletLabel,
+    this.counterpartyLabel,
     required this.amountSatoshis,
     required this.feeSatoshis,
     this.serviceFeeSatoshis = 0,
@@ -124,6 +152,7 @@ final class Transaction extends Equatable {
     required this.type,
     required this.confirmations,
     required this.timestamp,
+    this.updatedAt,
     this.blockHash,
     this.blockHeight,
     this.blockchainTxid,
@@ -137,6 +166,9 @@ final class Transaction extends Equatable {
     this.description,
     this.isInternal = false,
     this.isLightning = false,
+    this.rail,
+    this.provider,
+    this.failureCode,
     this.hasNetworkFee = false,
     this.displayAmountUsd,
     this.displayAmountEur,
@@ -146,8 +178,23 @@ final class Transaction extends Equatable {
     this.displayBtcBrl,
   });
 
+  /// Merge / freshness clock (server updatedAt when known).
+  DateTime get effectiveUpdatedAt => updatedAt ?? timestamp;
+
   /// Valor total (amount + fee)
   int get totalSatoshis => amountSatoshis + feeSatoshis;
+
+  /// Debit compact amount: principal + network fee + service fee when present.
+  int get signedDisplaySatoshis {
+    if (!isDebit) return amountSatoshis;
+    var total = amountSatoshis;
+    if (showsNetworkFee) total += feeSatoshis;
+    if (showsServiceFee) total += serviceFeeSatoshis;
+    return total;
+  }
+
+  double get signedDisplayAmountBTC =>
+      isDebit ? -(signedDisplaySatoshis / 100000000.0) : amountBTC;
 
   /// Valor em BTC
   double get amountBTC => amountSatoshis / 100000000.0;
@@ -173,8 +220,121 @@ final class Transaction extends Equatable {
   /// Valor em BTC com sinal do ponto de vista do usuario atual.
   double get signedAmountBTC => isDebit ? -amountBTC : amountBTC;
 
-  /// Verifica se a transação está confirmada (6+ confirmações)
-  bool get isConfirmed => confirmations >= 6;
+  /// Ledger-internal transfer (Kerosene → Kerosene). Not a chain object.
+  bool get isLedgerInternal => isInternal && !isLightning;
+
+  /// Bitcoin on-chain movement (external deposit/withdraw/cold observation).
+  bool get isOnChain => !isInternal && !isLightning;
+
+  /// Normalized rail string (INTERNAL / ONCHAIN / LIGHTNING / empty).
+  String get normalizedRail {
+    final raw = (rail ?? '').trim().toUpperCase();
+    if (raw.isNotEmpty) return raw;
+    if (isLightning) return 'LIGHTNING';
+    if (isInternal) return 'INTERNAL';
+    if (isOnChain) return 'ONCHAIN';
+    return '';
+  }
+
+  /// Provider uppercased for classification (cold observer, payment link, etc.).
+  String get normalizedProvider => (provider ?? '').trim().toUpperCase();
+
+  /// True when KFE tagged this as cold external observe/spend/PSBT.
+  bool get isColdProvider {
+    final p = normalizedProvider;
+    if (p.isEmpty) return false;
+    return p == 'COLD_OBSERVE' ||
+        p == 'COLD_SPEND' ||
+        p.contains('COLD_EXTERNAL') ||
+        p.contains('COLD_OBSERVER') ||
+        p.contains('COLD_OBSERVE') ||
+        p.contains('COLD_PSBT') ||
+        p.contains('COLD_SPEND') ||
+        p.contains('WATCH_ONLY') ||
+        p == 'COLD';
+  }
+
+  /// Payment-link product flow (id pl_* or provider/description markers).
+  bool get isPaymentLink {
+    if (id.startsWith('pl_')) return true;
+    final p = normalizedProvider;
+    if (p.contains('PAYMENT_LINK') || p.contains('PAYLINK')) return true;
+    final d = (description ?? '').toLowerCase();
+    return d.contains('link de pagamento') ||
+        d.contains('payment link') ||
+        d.contains('pagamento por link');
+  }
+
+  /// Payment link settled on internal ledger (not on-chain address).
+  bool get isPaymentLinkInternal =>
+      isPaymentLink && (isInternal || normalizedRail == 'INTERNAL');
+
+  /// Payment link settled via on-chain deposit address.
+  bool get isPaymentLinkOnchain =>
+      isPaymentLink && !isPaymentLinkInternal && !isLightning;
+
+  /// UI: blockchain confirmation progress (rings).
+  /// Internal ledger and Lightning settle by protocol status, not block confs.
+  /// Mempool (0 confs) still shows progress UI — empty/spinning rings, never 6/6.
+  bool get showsOnchainConfirmations {
+    if (!isOnChain) return false;
+    final txid = blockchainTxid?.trim() ?? '';
+    if (txid.isNotEmpty) return true;
+    return type == TransactionType.deposit ||
+        type == TransactionType.withdrawal ||
+        type == TransactionType.send ||
+        type == TransactionType.receive;
+  }
+
+  /// Target rings for on-chain progress UI (always 0→6, never fake full ring at 0).
+  int get onchainConfirmationTarget => 6;
+
+  /// True when backend marked settled but chain confs are still 0 (mempool).
+  bool get isMempoolSettled =>
+      isOnChain &&
+      status == TransactionStatus.confirmed &&
+      confirmations <= 0;
+
+  /// Backend still exposes the row, but it never got a confirmation within 24h.
+  /// UI should leave the "pending" path and surface "não confirmada".
+  bool get isUnconfirmedExpired {
+    if (!isOnChain) return false;
+    if (status == TransactionStatus.confirmed ||
+        status == TransactionStatus.failed ||
+        status == TransactionStatus.cancelled ||
+        status == TransactionStatus.reconciling) {
+      return false;
+    }
+    // Only pure zero-conf waits expire; any backend conf keeps it alive.
+    if (confirmations > 0) return false;
+    return DateTime.now().toUtc().difference(timestamp.toUtc()) >
+        const Duration(hours: 24);
+  }
+
+  /// Effective status for home/statement UI (applies 24h unconfirmed rule).
+  /// Does **not** map reconciliation to failed — funds may still be reserved.
+  TransactionStatus get displayStatus {
+    if (status == TransactionStatus.reconciling) {
+      return TransactionStatus.reconciling;
+    }
+    if (isUnconfirmedExpired) return TransactionStatus.failed;
+    return status;
+  }
+
+  /// UI: miner / routing network fee row.
+  bool get showsNetworkFee {
+    if (isLedgerInternal) return false;
+    return hasNetworkFee || feeSatoshis > 0;
+  }
+
+  /// UI: platform service fee row (hide when zero).
+  bool get showsServiceFee => hasServiceFee;
+
+  /// Verifica se a transação está confirmada (status final ou confs suficientes).
+  bool get isConfirmed =>
+      status == TransactionStatus.confirmed ||
+      (showsOnchainConfirmations &&
+          confirmations >= onchainConfirmationTarget);
 
   /// Verifica se a transação está pendente
   bool get isPending => status == TransactionStatus.pending;
@@ -192,6 +352,10 @@ final class Transaction extends Equatable {
       'destinationWalletId': destinationWalletId,
       'senderDisplayName': senderDisplayName,
       'receiverDisplayName': receiverDisplayName,
+      'walletLabel': walletLabel,
+      'sourceWalletLabel': sourceWalletLabel,
+      'destinationWalletLabel': destinationWalletLabel,
+      'counterpartyLabel': counterpartyLabel,
       'amountSatoshis': amountSatoshis,
       'feeSatoshis': feeSatoshis,
       'serviceFeeSatoshis': serviceFeeSatoshis,
@@ -199,6 +363,7 @@ final class Transaction extends Equatable {
       'type': type.name,
       'confirmations': confirmations,
       'timestamp': timestamp.toIso8601String(),
+      'updatedAt': (updatedAt ?? timestamp).toIso8601String(),
       'blockHash': blockHash,
       'blockHeight': blockHeight,
       'blockchainTxid': blockchainTxid,
@@ -212,6 +377,9 @@ final class Transaction extends Equatable {
       'description': description,
       'isInternal': isInternal,
       'isLightning': isLightning,
+      'rail': rail,
+      'provider': provider,
+      'failureCode': failureCode,
       'hasNetworkFee': hasNetworkFee,
       'displayAmountUsd': displayAmountUsd,
       'displayAmountEur': displayAmountEur,
@@ -242,6 +410,10 @@ final class Transaction extends Equatable {
         destinationWalletId: json['destinationWalletId']?.toString(),
         senderDisplayName: json['senderDisplayName']?.toString(),
         receiverDisplayName: json['receiverDisplayName']?.toString(),
+        walletLabel: json['walletLabel']?.toString(),
+        sourceWalletLabel: json['sourceWalletLabel']?.toString(),
+        destinationWalletLabel: json['destinationWalletLabel']?.toString(),
+        counterpartyLabel: json['counterpartyLabel']?.toString(),
         amountSatoshis: json['amountSatoshis'] is int
             ? json['amountSatoshis']
             : (json['amountSatoshis'] as num).toInt(),
@@ -258,7 +430,9 @@ final class Transaction extends Equatable {
         ),
         type: TransactionType.values.firstWhere((e) => e.name == json['type']),
         confirmations: json['confirmations'],
-        timestamp: DateTime.parse(json['timestamp']),
+        timestamp: _parseDateTime(json['timestamp'] ?? json['createdAt']) ??
+            DateTime.now(),
+        updatedAt: _parseDateTime(json['updatedAt']),
         blockHash: json['blockHash'],
         blockHeight: json['blockHeight'],
         blockchainTxid: json['blockchainTxid']?.toString(),
@@ -272,6 +446,10 @@ final class Transaction extends Equatable {
         description: json['description'],
         isInternal: json['isInternal'] ?? false,
         isLightning: json['isLightning'] ?? false,
+        rail: json['rail']?.toString(),
+        provider: json['provider']?.toString(),
+        // Never persist raw failureMessage (may contain internal detail).
+        failureCode: json['failureCode']?.toString(),
         hasNetworkFee: json['hasNetworkFee'] == true,
         displayAmountUsd: _parseDouble(_firstJsonValue(json, const [
           'displayAmountUsd',
@@ -393,11 +571,28 @@ final class Transaction extends Equatable {
       senderIdentifier: senderField,
       receiverIdentifier: receiverField,
     );
+    final isInternalLegacy = typeField == 'INTERNAL' ||
+        typeField == 'TRANSFER' ||
+        typeField == 'TRANSACTION_SEND' ||
+        typeField == 'TRANSACTION_RECEIVE' ||
+        json['context'] == 'transfer' ||
+        (json['description']?.toString().toLowerCase().contains('transfer') ??
+            false);
+    final isLightningLegacy = typeField.contains('LIGHTNING') ||
+        (json['description']?.toString().toUpperCase().contains(
+                  'LIGHTNING',
+                ) ??
+            false) ||
+        (json['context']?.toString().toUpperCase().contains('LIGHTNING') ??
+            false);
     final txStatus = _resolveStatus(
       rawStatus: json['status']?.toString(),
-      confirmations: confirmations,
+      confirmations: isInternalLegacy || isLightningLegacy ? 0 : confirmations,
     );
     final createdAt = _parseDateTime(json['createdAt'] ?? json['timestamp']);
+    final networkFeeSats = isInternalLegacy
+        ? 0
+        : (networkFee.abs() * 100000000).round();
 
     return Transaction(
       id: (json['id'] ?? json['blockchainTxid'] ?? '').toString(),
@@ -415,15 +610,18 @@ final class Transaction extends Equatable {
       sourceWalletId: rawSourceWalletId,
       destinationWalletId: rawDestinationWalletId,
       amountSatoshis: (amountVal.abs() * 100000000).round(),
-      feeSatoshis: (networkFee.abs() * 100000000).round(),
+      feeSatoshis: networkFeeSats,
       serviceFeeSatoshis: _parseServiceFeeSats(json, networkFeeBtc: networkFee),
       status: txStatus,
       type: txType,
-      confirmations: confirmations,
+      confirmations:
+          isInternalLegacy || isLightningLegacy ? 0 : confirmations,
       timestamp: createdAt ?? DateTime.now(),
+      updatedAt: _parseDateTime(json['updatedAt']) ?? createdAt,
       description:
           json['context']?.toString() ?? json['description']?.toString(),
-      blockchainTxid: json['blockchainTxid']?.toString(),
+      blockchainTxid:
+          isInternalLegacy ? null : json['blockchainTxid']?.toString(),
       externalReference: json['externalReference']?.toString(),
       invoiceId: json['invoiceId']?.toString(),
       lightningInvoice: json['lightningInvoice']?.toString(),
@@ -433,20 +631,16 @@ final class Transaction extends Equatable {
       externalTransferStatus: json['externalTransferStatus']?.toString(),
       externalTransferType: json['externalTransferType']?.toString() ??
           json['transferType']?.toString(),
-      isInternal: typeField == 'INTERNAL' ||
-          typeField == 'TRANSFER' ||
-          typeField == 'TRANSACTION_SEND' ||
-          typeField == 'TRANSACTION_RECEIVE' ||
-          json['context'] == 'transfer' ||
-          (json['description']?.toString().toLowerCase().contains('transfer') ??
-              false),
-      isLightning: typeField.contains('LIGHTNING') ||
-          (json['description']?.toString().toUpperCase().contains(
-                    'LIGHTNING',
-                  ) ??
-              false) ||
-          (json['context']?.toString().toUpperCase().contains('LIGHTNING') ??
-              false),
+      isInternal: isInternalLegacy,
+      isLightning: isLightningLegacy,
+      rail: json['rail']?.toString() ??
+          (isLightningLegacy
+              ? 'LIGHTNING'
+              : isInternalLegacy
+                  ? 'INTERNAL'
+                  : null),
+      provider: json['provider']?.toString(),
+      hasNetworkFee: networkFeeSats > 0,
       displayAmountUsd: _parseDouble(_firstJsonValue(json, const [
         'displayAmountUsd',
         'historicalAmountUsd',
@@ -515,42 +709,119 @@ final class Transaction extends Equatable {
     final status = _resolveKfeStatus(
       json['status']?.toString(),
       confirmations: confirmations,
+      isInternal: isInternal,
+      isLightning: isLightning,
     );
     final blockchainTxid = json['blockchainTxid']?.toString();
+    // Prefer stable KFE UUID so cold observer/spend rows never collide when
+    // multiple history items share a funding txid or one lacks a spend txid.
     final id = [
-      blockchainTxid,
-      json['transactionId']?.toString(),
       json['id']?.toString(),
+      json['transactionId']?.toString(),
+      blockchainTxid,
     ].firstWhere(
       (value) => value != null && value.trim().isNotEmpty,
       orElse: () => '',
     )!;
 
+    // Internal ledger never has miner fees; ignore accidental non-zero noise.
+    final effectiveNetworkFee =
+        isInternal ? 0 : networkFeeSats.abs();
+    final effectiveConfs = isInternal || isLightning ? 0 : confirmations;
+
+    final memo = json['memo']?.toString();
+    final provider = json['provider']?.toString() ?? '';
+    final providerUpper = provider.toUpperCase();
+    final isColdExternal = providerUpper.contains('COLD_EXTERNAL') ||
+        providerUpper.contains('COLD_OBSERVER') ||
+        providerUpper.contains('COLD_PSBT') ||
+        providerUpper.contains('WATCH_ONLY');
+    final isPaymentLinkProvider = providerUpper.contains('PAYMENT_LINK') ||
+        providerUpper.contains('PAYLINK') ||
+        (memo ?? '').toLowerCase().contains('link de pagamento') ||
+        (memo ?? '').toLowerCase().contains('payment link');
+    // Parties:
+    // - Debit (send): from = our source wallet; to = on-chain dest (externalReference).
+    // - Credit (receive): from = external network (NOT our receive address in externalReference);
+    //   to = destination wallet. Cold inbound stores our address in externalReference.
+    final resolvedTo = isCredit
+        ? (destinationWalletId ?? walletId ?? '')
+        : (externalReference?.trim().isNotEmpty == true
+            ? externalReference!.trim()
+            : (destinationWalletId ?? blockchainTxid ?? ''));
+    final resolvedFrom = isCredit
+        ? (isInternal
+            ? (sourceWalletId ?? 'Kerosene')
+            : (sourceWalletId ??
+                (isColdExternal ? 'Rede Bitcoin (cold)' : 'Rede Bitcoin')))
+        : (sourceWalletId ?? walletId ?? '');
+
+    // VALIDATING/EXECUTING at 0 confs = mempool; do not map SETTLED+0 into "Confirmado 6/6".
+    var resolvedStatus = status;
+    if (!isInternal &&
+        !isLightning &&
+        effectiveConfs <= 0 &&
+        (resolvedStatus == TransactionStatus.confirmed ||
+            json['status']?.toString().toUpperCase() == 'SETTLED')) {
+      resolvedStatus = TransactionStatus.confirming;
+    }
+
+    String? resolvedDescription = memo;
+    if (resolvedDescription == null || resolvedDescription.trim().isEmpty) {
+      if (isPaymentLinkProvider) {
+        resolvedDescription = isInternal
+            ? 'Link de pagamento (interno)'
+            : 'Link de pagamento (on-chain)';
+      } else if (resolvedStatus == TransactionStatus.confirming &&
+          !isInternal &&
+          !isLightning) {
+        resolvedDescription = isColdExternal
+            ? 'Cold wallet — na mempool, aguardando confirmações'
+            : 'On-chain — detectada, aguardando confirmações';
+      } else if (isColdExternal && !isInternal) {
+        resolvedDescription =
+            isCredit ? 'Recebimento cold (on-chain)' : 'Envio cold (on-chain)';
+      }
+    }
+
     return Transaction(
       id: id,
-      fromAddress: sourceWalletId ?? (isCredit ? 'Rede Bitcoin' : ''),
-      toAddress: destinationWalletId ?? externalReference ?? '',
+      fromAddress: resolvedFrom,
+      toAddress: resolvedTo,
       walletId: walletId,
       sourceWalletId: sourceWalletId,
       destinationWalletId: destinationWalletId,
       amountSatoshis: receiverAmountSats.abs(),
-      feeSatoshis: networkFeeSats.abs(),
+      feeSatoshis: effectiveNetworkFee,
       serviceFeeSatoshis: serviceFeeSats.abs(),
-      status: status,
+      status: resolvedStatus,
       type: txType,
-      confirmations: confirmations,
+      confirmations: effectiveConfs,
       timestamp: _parseDateTime(json['createdAt'] ?? json['timestamp']) ??
           DateTime.now(),
-      blockchainTxid: blockchainTxid,
+      updatedAt: _parseDateTime(json['updatedAt']) ??
+          _parseDateTime(json['createdAt'] ?? json['timestamp']),
+      blockchainTxid: isInternal ? null : blockchainTxid,
       externalReference: externalReference,
       paymentHash: json['paymentHash']?.toString(),
-      description: json['memo']?.toString() ??
-          (status == TransactionStatus.confirming
-              ? 'Transação detectada, aguardando confirmações'
-              : null),
+      description: resolvedDescription,
       isInternal: isInternal,
       isLightning: isLightning,
-      hasNetworkFee: networkFeeSats.abs() > 0,
+      rail: rail.isNotEmpty
+          ? rail
+          : (isLightning
+              ? 'LIGHTNING'
+              : isInternal
+                  ? 'INTERNAL'
+                  : 'ONCHAIN'),
+      provider: provider.isNotEmpty ? provider : null,
+      // Only the stable code — never raw failureMessage in local storage/UI.
+      failureCode: json['failureCode']?.toString(),
+      walletLabel: json['walletLabel']?.toString(),
+      sourceWalletLabel: json['sourceWalletLabel']?.toString(),
+      destinationWalletLabel: json['destinationWalletLabel']?.toString(),
+      counterpartyLabel: json['counterpartyLabel']?.toString(),
+      hasNetworkFee: effectiveNetworkFee > 0,
       displayAmountUsd: _parseDouble(_firstJsonValue(json, const [
         'displayAmountUsd',
         'historicalAmountUsd',
@@ -642,21 +913,29 @@ final class Transaction extends Equatable {
   }
 
   static DateTime? _parseDateTime(dynamic value) {
-    final raw = value?.toString().trim();
-    if (raw == null || raw.isEmpty) {
-      return null;
+    // Keep parsing logic centralized (UTC bare ISO → local).
+    // Inline copy of AppDateTime.parse to avoid circular imports in domain.
+    if (value == null) return null;
+    if (value is DateTime) {
+      return value.isUtc ? value.toLocal() : value.toLocal();
     }
-    final parsed = DateTime.tryParse(raw);
-    if (parsed == null) {
-      return null;
+    if (value is int) {
+      final ms = value > 20000000000 ? value : value * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
     }
+    final raw = value.toString().trim();
+    if (raw.isEmpty) return null;
+    final normalized = raw.contains('T') ? raw : raw.replaceFirst(' ', 'T');
+    final parsed = DateTime.tryParse(normalized);
+    if (parsed == null) return null;
     final hasExplicitOffset = RegExp(
       r'(z|[+-]\d{2}:?\d{2})$',
       caseSensitive: false,
-    ).hasMatch(raw);
+    ).hasMatch(normalized);
     if (parsed.isUtc || hasExplicitOffset) {
       return parsed.toLocal();
     }
+    // Bare ISO from KFE LocalDateTime (JVM UTC) → treat as UTC wall clock.
     return DateTime.utc(
       parsed.year,
       parsed.month,
@@ -815,6 +1094,8 @@ final class Transaction extends Equatable {
   static TransactionStatus _resolveKfeStatus(
     String? rawStatus, {
     int confirmations = 0,
+    bool isInternal = false,
+    bool isLightning = false,
   }) {
     switch (rawStatus?.toUpperCase()) {
       case 'SETTLED':
@@ -825,15 +1106,21 @@ final class Transaction extends Equatable {
       case 'HIDDEN':
         return TransactionStatus.cancelled;
       case 'FAILED':
-      case 'REQUIRES_RECONCILIATION':
         return TransactionStatus.failed;
+      case 'REQUIRES_RECONCILIATION':
+        // Not "failed" — funds may remain locked pending ops.
+        return TransactionStatus.reconciling;
       case 'EXECUTING':
       case 'LOCKED':
       case 'QUORUM_SYNC':
       case 'VALIDATING':
-        return confirmations > 0
-            ? TransactionStatus.confirming
-            : TransactionStatus.pending;
+        // Ledger-internal settles by status, not block confs.
+        if (isInternal || isLightning) {
+          return TransactionStatus.pending;
+        }
+        // On-chain mempool (0 conf) and partial confs both use confirming UI
+        // ("Na mempool" / "N/6") — not a generic pending.
+        return TransactionStatus.confirming;
       case 'INTENT':
       default:
         return TransactionStatus.pending;
@@ -850,6 +1137,10 @@ final class Transaction extends Equatable {
         destinationWalletId,
         senderDisplayName,
         receiverDisplayName,
+        walletLabel,
+        sourceWalletLabel,
+        destinationWalletLabel,
+        counterpartyLabel,
         amountSatoshis,
         feeSatoshis,
         serviceFeeSatoshis,
@@ -857,6 +1148,7 @@ final class Transaction extends Equatable {
         type,
         confirmations,
         timestamp,
+        updatedAt,
         blockHash,
         blockHeight,
         blockchainTxid,
@@ -870,6 +1162,9 @@ final class Transaction extends Equatable {
         description,
         isInternal,
         isLightning,
+        rail,
+        provider,
+        failureCode,
         hasNetworkFee,
         displayAmountUsd,
         displayAmountEur,
@@ -895,7 +1190,10 @@ enum TransactionStatus {
   cancelled('Cancelled', 'Transaction cancelled'),
 
   /// Falhou
-  failed('Failed', 'Transaction failed');
+  failed('Failed', 'Transaction failed'),
+
+  /// Em análise / reconciliação (fundos podem estar reservados — não é falha final)
+  reconciling('Needs review', 'Transaction needs review');
 
   const TransactionStatus(this.displayName, this.description);
 

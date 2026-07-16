@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -369,7 +370,7 @@ class _NotificationBannerCard extends ConsumerWidget {
                   right: compact ? 10 : 14,
                   child: Semantics(
                     button: true,
-                    label: 'Fechar notificação',
+                    label: context.tr.notifCloseNotification,
                     child: IconButton(
                       onPressed: () => ref
                           .read(notificationBannerProvider.notifier)
@@ -426,38 +427,13 @@ class _NotificationBannerCard extends ConsumerWidget {
     };
   }
 
-  static String _localizedNow(BuildContext context) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return 'Now';
-      case 'es':
-        return 'Ahora';
-      default:
-        return 'Agora';
-    }
-  }
+  static String _localizedNow(BuildContext context) => context.tr.notifBannerNow;
 
-  static String _localizedAction(BuildContext context) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return 'Open';
-      case 'es':
-        return 'Abrir';
-      default:
-        return 'Abrir';
-    }
-  }
+  static String _localizedAction(BuildContext context) =>
+      context.tr.notifBannerOpen;
 
-  static String _fallbackTitle(BuildContext context) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return 'Notification';
-      case 'es':
-        return 'Notificación';
-      default:
-        return 'Notificação';
-    }
-  }
+  static String _fallbackTitle(BuildContext context) =>
+      context.tr.notifBannerFallbackTitle;
 }
 
 class _BannerActionPill extends StatelessWidget {

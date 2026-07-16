@@ -14,6 +14,7 @@ import '../core/providers/shared_preferences_provider.dart';
 import '../core/providers/appearance_provider.dart';
 import '../core/providers/locale_provider.dart';
 import '../core/providers/session_invalidation_provider.dart';
+import '../core/utils/money_display.dart';
 import '../core/responsive/kerosene_responsive.dart';
 import '../features/auth/presentation/screens/welcome_screen.dart';
 import '../features/auth/presentation/screens/emergency_recovery_screen.dart';
@@ -177,6 +178,9 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider).locale;
     final appearance = ref.watch(appearanceProvider);
+    // Keep number formatting (thousands/decimals) in sync with app language
+    // for every MoneyDisplay call site, including pure helpers.
+    MoneyDisplay.bindAppLocale(locale);
     ref.listen<int>(sessionInvalidationProvider, (previous, next) {
       if (previous == next) {
         return;

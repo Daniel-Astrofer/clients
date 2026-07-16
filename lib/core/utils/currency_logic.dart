@@ -67,21 +67,16 @@ class CurrencyLogic {
   }
 
   /// Formats a double value into a string with the correct currency format.
+  /// Prefer [MoneyDisplay.format] with [appLocale] for full app reactivity.
   static String formatAmount(
     double amount,
     Currency currency, {
     String locale = 'en_US',
   }) {
-    // Map our Currency enum to specific locales if needed, or use the app's current locale.
-    // For specific currencies like BRL, we might want to force pt_BR format if that's the convention,
-    // but usually, it should follow the user's locale preference (e.g. standard US format for BRL if user is US).
-    // However, the request implies "fixed for the whole app", so we should respect the app's global locale.
-
     final formatter = NumberFormat.currency(
       locale: locale,
       customPattern: currency == Currency.btc ? '#,##0.00000000' : '#,##0.00',
-      symbol:
-          '', // We usually show the symbol separately or let the UI handle it
+      symbol: '',
       decimalDigits: currency == Currency.btc ? 8 : 2,
     );
     return formatter.format(amount).trim();

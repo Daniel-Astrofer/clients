@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
@@ -71,29 +72,29 @@ class WalletSetupHubScreen extends ConsumerWidget {
                   childAspectRatio: 1.05,
                   children: [
                     _HubCard(
-                      title: 'Criar no aparelho',
-                      subtitle: 'Gerar semente BIP39',
+                      title: context.tr.walletSetupCreateOnDevice,
+                      subtitle: context.tr.walletSetupGenerateBip39,
                       icon: PhosphorIcons.key(PhosphorIconsStyle.regular),
                       enabled: true,
                       onTap: () => _createOnDevice(context),
                     ),
                     _HubCard(
-                      title: 'Importar seed',
-                      subtitle: '12 ou 24 palavras',
+                      title: context.tr.walletSetupImportSeed,
+                      subtitle: context.tr.walletSetupImportSeedHint,
                       icon: PhosphorIcons.scroll(PhosphorIconsStyle.regular),
                       enabled: true,
                       onTap: () => _importSeed(context, ref),
                     ),
                     _HubCard(
-                      title: 'Somente observar',
-                      subtitle: 'Em breve · xpub',
+                      title: context.tr.walletSetupWatchOnly,
+                      subtitle: context.tr.walletSetupXpubSoon,
                       icon: PhosphorIcons.eye(PhosphorIconsStyle.regular),
                       enabled: false,
                       onTap: () {},
                     ),
                     _HubCard(
-                      title: 'Multisig',
-                      subtitle: 'Em breve',
+                      title: context.tr.walletSetupMultisig,
+                      subtitle: context.tr.walletSetupSoon,
                       icon: PhosphorIcons.vault(PhosphorIconsStyle.regular),
                       enabled: false,
                       onTap: () {},
@@ -137,8 +138,8 @@ class WalletSetupHubScreen extends ConsumerWidget {
     AppNotice.show(
       context,
       type: AppNoticeType.info,
-      title: 'Registrando',
-      message: 'Derivando chaves e enviando ao Kerosene…',
+      title: context.tr.walletSetupRegistering,
+      message: context.tr.walletSetupDerivingKeys,
     );
 
     try {
@@ -174,7 +175,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
       if (!context.mounted) return;
       AppNotice.showError(
         context,
-        title: 'Falha ao importar',
+        title: context.tr.walletSetupImportFail,
         message: coldWalletRegisterErrorMessage(e),
       );
     }
@@ -207,7 +208,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
         return AlertDialog(
           backgroundColor: KeroseneBrandTokens.surface,
           title: Text(
-            'Nome da carteira',
+            context.tr.coldCreateWalletName,
             style: AppTypography.inter(
               color: KeroseneBrandTokens.textPrimary,
               fontWeight: FontWeight.w700,
@@ -218,7 +219,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
             autofocus: true,
             style: AppTypography.inter(color: KeroseneBrandTokens.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Ex.: Cold principal',
+              hintText: context.tr.walletSetupNameExample,
               hintStyle:
                   AppTypography.inter(color: KeroseneBrandTokens.textMuted),
             ),
@@ -226,12 +227,12 @@ class WalletSetupHubScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
+              child: Text(context.tr.cancel),
             ),
             TextButton(
               onPressed: () =>
                   Navigator.pop(dialogContext, controller.text.trim()),
-              child: const Text('Continuar'),
+              child: Text(context.tr.walletSetupContinue),
             ),
           ],
         );

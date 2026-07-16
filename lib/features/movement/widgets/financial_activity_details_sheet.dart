@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/api_display_text.dart';
-import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
 import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
@@ -82,17 +81,17 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
       es: 'Contexto',
     );
     final statusMeta = paymentLink != null
-        ? FinancialStatusBadge.paymentLink(paymentLink!.displayStatus)
-        : FinancialStatusBadge.transaction(transaction!.status);
+        ? FinancialStatusBadge.paymentLink(context, paymentLink!.displayStatus)
+        : FinancialStatusBadge.transaction(context, transaction!.status);
     final amountBtc = paymentLink?.amountBtc ?? transaction!.signedAmountBTC;
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
+    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final primaryAmount = transaction != null
-        ? MoneyDisplay.formatFrozenAmountFromBtc(
+        ? money.formatFrozenAmountFromBtc(
             btcAmount: amountBtc,
-            currency: selectedCurrency,
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
@@ -104,16 +103,15 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
             displayBtcBrl: transaction!.displayBtcBrl,
             signed: true,
           )
-        : MoneyDisplay.formatAmountFromBtc(
+        : money.formatAmountFromBtc(
             btcAmount: amountBtc,
-            currency: selectedCurrency,
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
           );
     final secondaryAmount = selectedCurrency == Currency.btc
         ? null
-        : MoneyDisplay.formatAmountFromBtc(
+        : money.formatAmountFromBtc(
             btcAmount: amountBtc,
             currency: Currency.btc,
             btcUsd: btcUsd,
@@ -171,12 +169,15 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                   if (createdAt != null)
                     _ReceiptRow(
                       label: dateTitle,
-                      value: DateFormat('dd/MM/yyyy • HH:mm').format(createdAt),
+                      value: AppDateTime.formatRelativeWithClock(
+                        context,
+                        createdAt,
+                      ),
                     ),
                   if (transaction != null) ...[
                     _ReceiptRow(
                       label: _financialCopy(context, pt: 'Valor base', en: 'Base amount', es: 'Monto base'),
-                      value: MoneyDisplay.formatAmountFromBtc(
+                      value: money.formatAmountFromBtc(
                         btcAmount: transaction!.amountBTC,
                         currency: Currency.btc,
                         btcUsd: btcUsd,
@@ -186,28 +187,47 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                       ),
                       isTechnical: true,
                     ),
-                    _ReceiptRow(
-                      label: _financialCopy(context, pt: 'Taxa de rede', en: 'Network fee', es: 'Tarifa de red'),
-                      value: transaction!.isInternal || transaction!.feeSatoshis == 0 
-                        ? _financialCopy(context, pt: 'Isenta', en: 'Free', es: 'Gratis')
-                        : MoneyDisplay.formatAmountFromBtc(
-                            btcAmount: transaction!.feeBTC,
-                            currency: Currency.btc,
-                            btcUsd: btcUsd,
-                            btcEur: btcEur,
-                            btcBrl: btcBrl,
-                            signed: false,
-                          ),
-                      isTechnical: transaction!.feeSatoshis > 0,
-                    ),
+                    if (transaction!.showsNetworkFee)
+                      _ReceiptRow(
+                        label: _financialCopy(context, pt: context.tr.sendReviewNetworkFee, en: 'Network fee', es: 'Tarifa de red'),
+                        value: money.formatAmountFromBtc(
+                          btcAmount: transaction!.feeBTC,
+                          currency: Currency.btc,
+                          btcUsd: btcUsd,
+                          btcEur: btcEur,
+                          btcBrl: btcBrl,
+                          signed: false,
+                        ),
+                        isTechnical: true,
+                      ),
+                    if (transaction!.showsServiceFee)
+                      _ReceiptRow(
+                        label: _financialCopy(context, pt: 'Taxa de serviço', en: 'Service fee', es: 'Tarifa de servicio'),
+                        value: money.formatAmountFromBtc(
+                          btcAmount: transaction!.serviceFeeBTC,
+                          currency: Currency.btc,
+                          btcUsd: btcUsd,
+                          btcEur: btcEur,
+                          btcBrl: btcBrl,
+                          signed: false,
+                        ),
+                        isTechnical: true,
+                      ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider(color: monoBorderStrongColor, height: 1),
                     ),
                     _ReceiptRow(
                       label: _financialCopy(context, pt: 'Valor total', en: 'Total amount', es: 'Monto total'),
-                      value: MoneyDisplay.formatAmountFromBtc(
-                        btcAmount: (transaction!.amountSatoshis + transaction!.feeSatoshis) / 100000000.0,
+                      value: money.formatAmountFromBtc(
+                        btcAmount: (transaction!.amountSatoshis +
+                                (transaction!.showsNetworkFee
+                                    ? transaction!.feeSatoshis
+                                    : 0) +
+                                (transaction!.showsServiceFee
+                                    ? transaction!.serviceFeeSatoshis
+                                    : 0)) /
+                            100000000.0,
                         currency: Currency.btc,
                         btcUsd: btcUsd,
                         btcEur: btcEur,
@@ -220,23 +240,31 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                   ],
                 ],
               ),
-              if (transaction != null && !transaction!.isInternal) ...[
+              if (transaction != null &&
+                  (transaction!.showsOnchainConfirmations ||
+                      transaction!.isLightning)) ...[
                 const SizedBox(height: 12),
                 _ReceiptSection(
                   children: [
                     _ReceiptRow(
                       label: _financialCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
-                      value: transaction!.isLightning ? 'Lightning Network' : 'Bitcoin On-chain',
+                      value: transaction!.isLightning
+                          ? 'Lightning Network'
+                          : 'Bitcoin On-chain',
                     ),
-                    if (!transaction!.isLightning)
+                    if (transaction!.showsOnchainConfirmations)
                       _ReceiptRow(
                         label: _financialCopy(context, pt: 'Confirmações', en: 'Confirmations', es: 'Confirmaciones'),
-                        value: transaction!.confirmations >= 6 
-                          ? '6+ (Seguro)'
-                          : '${transaction!.confirmations}/6',
+                        value: transaction!.confirmations <= 0
+                            ? 'Na mempool (0/6)'
+                            : transaction!.confirmations >= 6
+                                ? '6+ (Seguro)'
+                                : '${transaction!.confirmations}/6',
                         isHighlight: transaction!.confirmations >= 6,
                       ),
-                    if (transaction!.blockHeight != null && transaction!.blockHeight! > 0)
+                    if (transaction!.showsOnchainConfirmations &&
+                        transaction!.blockHeight != null &&
+                        transaction!.blockHeight! > 0)
                       _ReceiptRow(
                         label: _financialCopy(context, pt: 'Bloco', en: 'Block', es: 'Bloque'),
                         value: '#${transaction!.blockHeight}',
@@ -479,6 +507,8 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
         return 'Esta movimentação foi cancelada ou expirou e não alterou o saldo.';
       case TransactionStatus.failed:
         return 'Não foi possível concluir esta movimentação. Revise os detalhes antes de tentar novamente.';
+      case TransactionStatus.reconciling:
+        return 'Esta movimentação precisa de revisão. O saldo pode ainda não refletir o resultado final.';
     }
   }
 }
@@ -704,7 +734,7 @@ class _SummaryHero extends StatelessWidget {
           if (createdAt != null) ...[
             const SizedBox(height: 10),
             Text(
-              DateFormat('dd/MM/yyyy • HH:mm').format(createdAt!),
+              AppDateTime.formatRelativeWithClock(context, createdAt!),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: monoMutedTextColor,
                     fontWeight: FontWeight.w600,

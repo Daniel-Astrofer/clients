@@ -471,6 +471,7 @@ class FocusedAccountCard extends StatelessWidget {
         : userDisplayName.trim();
     final networkLabel = bitcoinAccountCardNetworkLabel(account);
     final balanceLabel = formatSats(bitcoinAccountVisibleBalance(account));
+    final chainObservedLabel = bitcoinAccountChainObservedLabel(account);
     final colors = BitcoinAccountsColors.of(context);
     final cardPalette = _accountCardPalette(account);
 
@@ -676,6 +677,20 @@ class FocusedAccountCard extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                                if (chainObservedLabel != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    chainObservedLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.inter(
+                                      color: colors.mutedText,
+                                      fontSize: 11,
+                                      letterSpacing: 0,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -716,7 +731,7 @@ class FocusedAccountCard extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 InlineCopyButton(
                                   value: displayIdentifier,
-                                  semanticLabel: 'Copiar endereço da carteira',
+                                  semanticLabel: context.tr.btcAccountsCopyAddress,
                                 ),
                               ],
                             ),
@@ -761,8 +776,8 @@ class InlineCopyButton extends StatelessWidget {
               : () => copyText(
                     context,
                     value,
-                    title: 'Copiado',
-                    message: 'Dado disponível na área de transferência.',
+                    title: context.tr.btcAccountsCopied,
+                    message: context.tr.btcAccountsCopiedClipboard,
                   ),
           child: SizedBox(
             width: 38,
@@ -1000,7 +1015,7 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AccountExpansionItem(
-          title: 'STATUS DA CARTEIRA',
+          title: context.tr.btcAccountsStatus,
           expanded: expandedKey == 'status',
           onTap: () => toggle('status'),
           child: Column(
@@ -1024,7 +1039,7 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
           ),
         ),
         AccountExpansionItem(
-          title: 'ENDEREÇO DE RECEBIMENTO',
+          title: context.tr.btcAccountsReceiveAddress,
           expanded: expandedKey == 'receive',
           onTap: () => toggle('receive'),
           child: ReceiveMaterialDetails(
@@ -1038,7 +1053,7 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
           ),
         ),
         AccountExpansionItem(
-          title: 'NOME DA CARTEIRA',
+          title: context.tr.btcAccountsWalletName,
           expanded: expandedKey == 'name',
           onTap: () => toggle('name'),
           child: Column(
@@ -1065,7 +1080,7 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
               ),
               const SizedBox(height: 12),
               AccountOptionActionButton(
-                label: 'Trocar nome',
+                label: context.tr.btcAccountsRename,
                 icon: KeroseneIcons.edit,
                 busy: busyAction == 'rename',
                 onPressed: () => renameWallet(account),
@@ -1075,7 +1090,7 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
         ),
         if (hasPublicMaterial)
           AccountExpansionItem(
-            title: 'MATERIAL PÚBLICO',
+            title: context.tr.btcAccountsPublicMaterial,
             expanded: expandedKey == 'public',
             onTap: () => toggle('public'),
             child: AccountDetailRows(
@@ -1130,15 +1145,15 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
       if (!mounted) return;
       AppNotice.showSuccess(
         context,
-        title: 'Endereço rotacionado',
+        title: context.tr.btcAccountsAddressRotated,
         message: bitcoinAccountDisplayValue(rotated.address),
       );
     } catch (_) {
       if (!mounted) return;
       AppNotice.showError(
         context,
-        title: 'Endereço não rotacionado',
-        message: 'A Kerosene não conseguiu gerar um novo endereço agora.',
+        title: context.tr.btcAccountsAddressNotRotated,
+        message: context.tr.btcAccountsRotateFail,
       );
     } finally {
       if (mounted) {
@@ -1159,15 +1174,15 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
       if (!mounted) return;
       AppNotice.showSuccess(
         context,
-        title: 'Nome atualizado',
+        title: context.tr.btcAccountsNameUpdated,
         message: nextLabel,
       );
     } catch (_) {
       if (!mounted) return;
       AppNotice.showError(
         context,
-        title: 'Nome não atualizado',
-        message: 'Revise o nome da carteira e tente novamente.',
+        title: context.tr.btcAccountsNameNotUpdated,
+        message: context.tr.btcAccountsNameReview,
       );
     } finally {
       if (mounted) {
@@ -1198,8 +1213,8 @@ class FocusedAccountOptionsState extends ConsumerState<FocusedAccountOptions> {
       if (!mounted) return;
       AppNotice.showError(
         context,
-        title: 'Ação não concluída',
-        message: 'A carteira não pode ser alterada neste momento.',
+        title: context.tr.btcAccountsActionFailed,
+        message: context.tr.btcAccountsCannotChange,
       );
     } finally {
       if (mounted) {
@@ -1267,7 +1282,7 @@ class ColdWalletBackendOptions extends ConsumerWidget {
           ),
         ),
         AccountExpansionItem(
-          title: 'UTXOS MONITORADOS',
+          title: context.tr.btcAccountsUtxos,
           expanded: expandedKey == 'utxos',
           onTap: () => onToggle('utxos'),
           child: utxosAsync.when(
@@ -1279,7 +1294,7 @@ class ColdWalletBackendOptions extends ConsumerWidget {
           ),
         ),
         AccountExpansionItem(
-          title: 'PSBT WORKFLOWS',
+          title: context.tr.btcAccountsPsbt,
           expanded: expandedKey == 'psbts',
           onTap: () => onToggle('psbts'),
           child: psbtsAsync.when(

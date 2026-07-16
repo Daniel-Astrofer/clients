@@ -1,7 +1,6 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/icons.dart';
 
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/monochrome_theme.dart';
@@ -18,6 +17,7 @@ class PinEntryScaffold extends StatefulWidget {
   final VoidCallback? onConfirm;
   final String? confirmLabel;
   final Widget? footer;
+  final VoidCallback? onCancel;
 
   const PinEntryScaffold({
     super.key,
@@ -32,6 +32,7 @@ class PinEntryScaffold extends StatefulWidget {
     this.confirmLabel,
     this.footer,
     this.enabled = true,
+    this.onCancel,
   });
 
   @override
@@ -39,190 +40,231 @@ class PinEntryScaffold extends StatefulWidget {
 }
 
 class _PinEntryScaffoldState extends State<PinEntryScaffold> {
-  bool _showPad = false;
+  late final TextEditingController _textController;
+  late final FocusNode _focusNode;
+  bool _isUpdatingController = false;
 
-  void _openPad() {
-    if (!widget.enabled || widget.busy) {
-      return;
-    }
-    if (_showPad) {
-      return;
-    }
-    setState(() {
-      _showPad = true;
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController();
+    _focusNode = FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final size = MediaQuery.sizeOf(context);
-    final availableHeight = size.height - 12 - (20 + bottomInset);
-    final compactWidth = size.width < 380;
-    final compactHeight = size.height < 720;
-    final horizontalPadding = compactWidth ? 20.0 : 24.0;
-    final maxWidth = compactWidth ? 360.0 : 420.0;
-    final topSpacing = compactHeight ? 18.0 : 38.0;
-    final instructionFontSize = compactWidth ? 31.0 : 36.0;
-    final dotSize = compactWidth ? 8.0 : 9.0;
-    final padKeySize = compactHeight ? 66.0 : 74.0;
-    final digitFontSize = compactWidth ? 28.0 : 31.0;
-    final contentGap = compactHeight ? 24.0 : 30.0;
-    const tapToEnterLabel = 'Toque para digitar';
+  void didUpdateWidget(covariant PinEntryScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-    return ColoredBox(
-      color: Colors.black,
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, _) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                12,
-                horizontalPadding,
-                20 + bottomInset,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: availableHeight > 0 ? availableHeight : 0,
+    if (widget.valueLength != oldWidget.valueLength) {
+      _isUpdatingController = true;
+      if (widget.valueLength == 0) {
+        _textController.clear();
+      } else if (widget.valueLength < _textController.text.length) {
+        _textController.text =
+            _textController.text.substring(0, widget.valueLength);
+      }
+      _isUpdatingController = false;
+    }
+
+    if (widget.busy && !oldWidget.busy) {
+      _focusNode.unfocus();
+    }
+
+    if (!widget.busy && oldWidget.busy) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.enabled) {
+          _focusNode.requestFocus();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleTextChanged(String text) {
+    if (!widget.enabled || widget.busy) {
+      _isUpdatingController = true;
+      _textController.text = text.substring(0, widget.valueLength);
+      _isUpdatingController = false;
+      return;
+    }
+
+    if (_isUpdatingController) return;
+
+    if (text.length > widget.valueLength) {
+      for (int i = widget.valueLength; i < text.length; i++) {
+        widget.onDigit(text[i]);
+      }
+      if (text.length == widget.maxLength) {
+        _focusNode.unfocus();
+      }
+    } else if (text.length < widget.valueLength) {
+      final diff = widget.valueLength - text.length;
+      for (int i = 0; i < diff; i++) {
+        widget.onDelete();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final compactWidth = size.width < 380;
+    final instructionFontSize = compactWidth ? 31.0 : 36.0;
+
+    // System back must match the cancel button so payment auth returns
+    // rejectedOutcome consistently (no orphaned dialog / ugly error path).
+    return PopScope(
+      canPop: widget.onCancel == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final cancel = widget.onCancel;
+        if (cancel != null) {
+          cancel();
+        }
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (!_focusNode.hasFocus && widget.enabled && !widget.busy) {
+            _focusNode.requestFocus();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Opacity(
+                  opacity: 0,
+                  child: SizedBox(
+                    width: 1,
+                    height: 1,
+                    child: TextField(
+                      focusNode: _focusNode,
+                      controller: _textController,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: false,
+                        signed: false,
+                      ),
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      obscureText: true,
+                      showCursor: false,
+                      enableInteractiveSelection: false,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        counterText: '',
+                      ),
+                      style: const TextStyle(color: Colors.transparent),
+                      onChanged: _handleTextChanged,
                     ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SizedBox(height: topSpacing),
-                          const Spacer(flex: 1),
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _openPad,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.instruction,
-                                  textAlign: TextAlign.left,
-                                  style: AppTypography.newsreader(
-                                    color: monoTextColor,
-                                    fontSize: instructionFontSize,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.04,
-                                    letterSpacing: -0.35,
-                                    decoration: TextDecoration.none,
-                                  ),
+                  ),
+                ),
+                if (widget.onCancel != null)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: monoTextColor,
+                        size: 28,
+                      ),
+                      onPressed: widget.onCancel,
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Center(
+                    child: SingleChildScrollView(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final availableWidth = constraints.maxWidth;
+                          double dotSize = 48.0;
+                          final maxDotWidth = dotSize * 1.5;
+                          final spacing = dotSize * 0.25;
+                          final padding = dotSize * 0.8;
+                          final requiredWidth =
+                              widget.maxLength * maxDotWidth + (widget.maxLength - 1) * spacing + padding + 4.0;
+                          if (requiredWidth > availableWidth) {
+                            // Solves the equation: availableWidth = dotSize * (maxLength * 1.75 + 0.55) + 4.0
+                            dotSize = (availableWidth - 4.0) / (widget.maxLength * 1.75 + 0.55);
+                            if (dotSize < 16) dotSize = 16;
+                          }
+
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 60),
+                              Text(
+                                widget.instruction,
+                                textAlign: TextAlign.center,
+                                style: AppTypography.newsreader(
+                                  color: monoTextColor,
+                                  fontSize: instructionFontSize,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.15,
+                                  letterSpacing: -0.35,
+                                  decoration: TextDecoration.none,
                                 ),
-                                SizedBox(height: contentGap),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: PinEntryDots(
-                                    length: widget.valueLength,
-                                    maxLength: widget.maxLength,
-                                    dotSize: dotSize,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                SizedBox(
-                                  height: 42,
-                                  child: AnimatedSwitcher(
-                                    duration: KeroseneMotion.short,
-                                    child: widget.error == null
-                                        ? const SizedBox.shrink()
-                                        : Text(
-                                            widget.error!,
-                                            key: ValueKey(widget.error),
-                                            textAlign: TextAlign.left,
-                                            style:
-                                                AppTypography.caption.copyWith(
-                                              color: monoMutedTextColor,
-                                              height: 1.28,
-                                              letterSpacing: 0,
-                                              fontSize: 12.5,
-                                              decoration: TextDecoration.none,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                if (!_showPad) ...[
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    tapToEnterLabel,
-                                    textAlign: TextAlign.left,
-                                    style: AppTypography.caption.copyWith(
-                                      color: monoFaintTextColor,
-                                      height: 1.2,
-                                      letterSpacing: 0,
-                                      decoration: TextDecoration.none,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const Spacer(flex: 2),
-                          AnimatedSwitcher(
-                            duration: KeroseneMotion.short,
-                            child: _showPad
-                                ? PinNumericPad(
-                                    key: const ValueKey('pin_pad_visible'),
-                                    enabled: widget.enabled && !widget.busy,
-                                    onDigit: widget.onDigit,
-                                    onDelete: widget.onDelete,
-                                    keySize: padKeySize,
-                                    digitFontSize: digitFontSize,
-                                  )
-                                : const SizedBox.shrink(
-                                    key: ValueKey('pin_pad_hidden'),
-                                  ),
-                          ),
-                          if (widget.confirmLabel != null) ...[
-                            const SizedBox(height: 18),
-                            SizedBox(
-                              height: 52,
-                              child: FilledButton(
-                                onPressed: widget.enabled && !widget.busy
-                                    ? widget.onConfirm
-                                    : null,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: monoTextColor,
-                                  foregroundColor: Colors.black,
-                                  disabledBackgroundColor:
-                                      monoTextColor.withValues(alpha: 0.20),
-                                  disabledForegroundColor:
-                                      monoTextColor.withValues(alpha: 0.42),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(26),
-                                  ),
-                                  textStyle: AppTypography.buttonText.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0,
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                                child: widget.busy
-                                    ? const CupertinoActivityIndicator(
-                                        radius: 9,
-                                        color: Colors.black,
-                                      )
-                                    : Text(widget.confirmLabel!),
                               ),
-                            ),
-                          ],
-                          if (widget.footer != null) ...[
-                            const SizedBox(height: 12),
-                            Center(child: widget.footer!),
-                          ],
-                          const Spacer(flex: 1),
-                        ],
+                              const SizedBox(height: 48),
+                              LoadingErrorBorderWrapper(
+                                busy: widget.busy,
+                                hasError: widget.error != null,
+                                child: PinEntryDots(
+                                  length: widget.valueLength,
+                                  maxLength: widget.maxLength,
+                                  dotSize: dotSize,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                height: 48,
+                                child: AnimatedSwitcher(
+                                  duration: KeroseneMotion.short,
+                                  child: widget.error == null
+                                      ? const SizedBox.shrink()
+                                      : Text(
+                                          widget.error!,
+                                          key: ValueKey(widget.error),
+                                          textAlign: TextAlign.center,
+                                          style:
+                                              AppTypography.caption.copyWith(
+                                            color: Colors.red.shade400,
+                                            height: 1.28,
+                                            letterSpacing: 0,
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                            decoration: TextDecoration.none,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 60),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -244,16 +286,19 @@ class PinEntryDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = maxLength.clamp(4, 8);
+    final spacing = dotSize * 0.25;
     return Semantics(
       label: '$length de $total dígitos preenchidos',
       child: AnimatedContainer(
         duration: KeroseneMotion.short,
         curve: KeroseneMotion.standard,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: EdgeInsets.symmetric(
+          horizontal: dotSize * 0.4,
+          vertical: dotSize * 0.3,
+        ),
         decoration: BoxDecoration(
           color: monoSurfaceAltColor,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: monoBorderStrongColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -262,8 +307,8 @@ class PinEntryDots extends StatelessWidget {
             return AnimatedContainer(
               duration: KeroseneMotion.short,
               curve: KeroseneMotion.standard,
-              margin: EdgeInsets.only(right: index == total - 1 ? 0 : 8),
-              width: filled ? dotSize * 2.55 : dotSize,
+              margin: EdgeInsets.only(right: index == total - 1 ? 0 : spacing),
+              width: filled ? dotSize * 1.5 : dotSize,
               height: dotSize,
               decoration: BoxDecoration(
                 color: filled
@@ -279,157 +324,136 @@ class PinEntryDots extends StatelessWidget {
   }
 }
 
-class _PinPadKey extends StatefulWidget {
-  final String value;
-  final bool isSpecial;
-  final bool enabled;
-  final double keySize;
-  final double digitFontSize;
-  final VoidCallback onTap;
+class LoadingErrorBorderWrapper extends StatefulWidget {
+  final Widget child;
+  final bool busy;
+  final bool hasError;
 
-  const _PinPadKey({
-    required this.value,
-    required this.isSpecial,
-    required this.enabled,
-    required this.keySize,
-    required this.digitFontSize,
-    required this.onTap,
-  });
-
-  @override
-  State<_PinPadKey> createState() => _PinPadKeyState();
-}
-
-class _PinPadKeyState extends State<_PinPadKey> {
-  bool _pressed = false;
-
-  void _setPressed(bool value) {
-    if (_pressed == value || !widget.enabled) {
-      return;
-    }
-    setState(() => _pressed = value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = widget.enabled ? monoTextColor : monoFaintTextColor;
-
-    return Listener(
-      onPointerDown: (_) => _setPressed(true),
-      onPointerUp: (_) => _setPressed(false),
-      onPointerCancel: (_) => _setPressed(false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.94 : 1,
-        duration: KeroseneMotion.fast,
-        curve: KeroseneMotion.standard,
-        child: AnimatedContainer(
-          duration: KeroseneMotion.short,
-          curve: KeroseneMotion.standard,
-          height: widget.keySize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _pressed
-                ? monoSurfaceAltColor.withValues(alpha: 0.88)
-                : Colors.transparent,
-            border: Border.all(
-              color: _pressed ? monoBorderStrongColor : Colors.transparent,
-            ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkResponse(
-              enableFeedback: true,
-              onTap: widget.enabled ? widget.onTap : null,
-              containedInkWell: true,
-              customBorder: const CircleBorder(),
-              child: Center(
-                child: widget.isSpecial
-                    ? Icon(
-                        KeroseneIcons.backspace,
-                        size: widget.keySize * 0.34,
-                        color: widget.enabled
-                            ? monoMutedTextColor
-                            : monoFaintTextColor,
-                      )
-                    : Text(
-                        widget.value,
-                        style: AppTypography.financial(
-                          color: foreground,
-                          fontWeight: FontWeight.w500,
-                          fontSize: widget.digitFontSize,
-                          height: 1,
-                          letterSpacing: 0,
-                        ),
-                      ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class PinNumericPad extends StatelessWidget {
-  final bool enabled;
-  final ValueChanged<String> onDigit;
-  final VoidCallback onDelete;
-  final double keySize;
-  final double digitFontSize;
-
-  const PinNumericPad({
+  const LoadingErrorBorderWrapper({
     super.key,
-    required this.enabled,
-    required this.onDigit,
-    required this.onDelete,
-    this.keySize = 76,
-    this.digitFontSize = 32,
+    required this.child,
+    required this.busy,
+    required this.hasError,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final rows = const [
-      ['1', '2', '3'],
-      ['4', '5', '6'],
-      ['7', '8', '9'],
-      ['', '0', '<'],
-    ];
+  State<LoadingErrorBorderWrapper> createState() =>
+      _LoadingErrorBorderWrapperState();
+}
 
-    return Column(
-      children: rows.map((row) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            children: row.map((key) {
-              final isSpecial = key == '<';
-              if (key.isEmpty) {
-                return Expanded(child: SizedBox(height: keySize));
-              }
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: _PinPadKey(
-                    value: key,
-                    isSpecial: isSpecial,
-                    enabled: enabled,
-                    keySize: keySize,
-                    digitFontSize: digitFontSize,
-                    onTap: () {
-                      if (isSpecial) {
-                        onDelete();
-                        return;
-                      }
-                      onDigit(key);
-                    },
-                  ),
-                ),
-              );
-            }).toList(),
+class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    if (widget.busy) {
+      _rotationController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LoadingErrorBorderWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.busy && !oldWidget.busy) {
+      _rotationController.repeat();
+    } else if (!widget.busy && oldWidget.busy) {
+      _rotationController.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _rotationController,
+      child: widget.child,
+      builder: (context, childWidget) {
+        return CustomPaint(
+          painter: widget.busy
+              ? SpinningBorderPainter(
+                  animationValue: _rotationController.value,
+                  color1: Colors.white,
+                  color2: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: 999,
+                  strokeWidth: 2,
+                )
+              : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: widget.busy
+                  ? Border.all(color: Colors.transparent, width: 2)
+                  : Border.all(
+                      color: widget.hasError
+                          ? Colors.red.shade800
+                          : monoBorderStrongColor,
+                      width: 2,
+                    ),
+            ),
+            child: childWidget,
           ),
         );
-      }).toList(),
+      },
     );
+  }
+}
+
+class SpinningBorderPainter extends CustomPainter {
+  final double animationValue;
+  final Color color1;
+  final Color color2;
+  final double strokeWidth;
+  final double borderRadius;
+
+  SpinningBorderPainter({
+    required this.animationValue,
+    required this.color1,
+    required this.color2,
+    this.strokeWidth = 2.0,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    final gradient = SweepGradient(
+      center: Alignment.center,
+      transform: GradientRotation(animationValue * 2 * 3.141592653589793),
+      colors: [
+        color1,
+        color2,
+        color1,
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    );
+
+    paint.shader = gradient.createShader(rect);
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant SpinningBorderPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue ||
+        oldDelegate.color1 != color1 ||
+        oldDelegate.color2 != color2 ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }

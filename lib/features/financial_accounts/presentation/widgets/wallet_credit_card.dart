@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/presentation/widgets/app_notice.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/utils/money_display.dart';
@@ -126,7 +126,8 @@ class _PhysicalCreditCardFace extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
+    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
@@ -190,6 +191,7 @@ class _PhysicalCreditCardFace extends ConsumerWidget {
                         btcUsd,
                         btcEur,
                         btcBrl,
+                        appLocale: money.locale,
                       ),
                       palette: palette,
                     ),
@@ -263,8 +265,9 @@ class _PhysicalCreditCardFace extends ConsumerWidget {
     Currency currency,
     double? btcUsd,
     double? btcEur,
-    double? btcBrl,
-  ) {
+    double? btcBrl, {
+    Locale? appLocale,
+  }) {
     if (settings.isHidden) {
       return '${MoneyDisplay.tickerSymbolFor(currency)} ********';
     }
@@ -276,6 +279,7 @@ class _PhysicalCreditCardFace extends ConsumerWidget {
       btcEur: btcEur,
       btcBrl: btcBrl,
       decimalPlaces: currency == Currency.btc ? settings.decimalPlaces : null,
+      appLocale: appLocale,
     );
   }
 

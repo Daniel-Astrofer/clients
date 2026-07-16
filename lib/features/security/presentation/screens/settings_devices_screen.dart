@@ -58,7 +58,7 @@ class SettingsDevicesScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: AppSpacing.xxl),
                           Text(
-                            'Dispositivos autorizados',
+                            context.tr.settingsDevicesTitle,
                             style: AppTypography.newsreader(
                               color: KeroseneBrandTokens.textPrimary,
                               fontSize: 32,
@@ -100,21 +100,21 @@ class SettingsDevicesScreen extends ConsumerWidget {
                                     if (result.isSuccess) {
                                       AppNotice.showInfo(
                                         context,
-                                        title: 'Passkey cadastrada',
+                                        title: context.tr.settingsDevicesPasskeyRegistered,
                                         message:
                                             'Este aparelho foi vinculado. A lista foi atualizada.',
                                       );
                                     } else if (result.isDeviceConflict) {
                                       AppNotice.showInfo(
                                         context,
-                                        title: 'Dispositivo em uso',
+                                        title: context.tr.settingsDevicesInUse,
                                         message:
                                             'Confirme a desvinculação em Configurações → Biometria se precisar reatribuir.',
                                       );
                                     } else if (result.isFailure) {
                                       AppNotice.showError(
                                         context,
-                                        title: 'Não foi possível registrar',
+                                        title: context.tr.settingsDevicesRegisterFail,
                                         message: ErrorTranslator.translate(
                                           context.tr,
                                           result.message,
@@ -123,8 +123,8 @@ class SettingsDevicesScreen extends ConsumerWidget {
                                     }
                                   },
                                   icon: const Icon(KeroseneIcons.biometric),
-                                  label: const Text(
-                                    'Registrar passkey neste aparelho',
+                                  label: Text(
+                                    context.tr.settingsDevicesRegisterPasskey,
                                   ),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: Colors.white,
@@ -148,7 +148,7 @@ class SettingsDevicesScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
-                                    'Não foi possível carregar os dispositivos',
+                                    context.tr.settingsDevicesLoadError,
                                     style: AppTypography.inter(
                                       color: KeroseneBrandTokens.textPrimary,
                                       fontSize: 16,
@@ -172,7 +172,7 @@ class SettingsDevicesScreen extends ConsumerWidget {
                                     onPressed: () => ref.invalidate(
                                       accountSecurityProfileProvider,
                                     ),
-                                    child: const Text('Tentar novamente'),
+                                    child: Text(context.tr.settingsDevicesRetry),
                                   ),
                                 ],
                               ),

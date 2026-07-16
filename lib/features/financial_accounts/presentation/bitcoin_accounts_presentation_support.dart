@@ -6,7 +6,7 @@ import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
-
+import 'package:kerosene/features/ledger/domain/balance_display.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 const kKeroseneBrandLabel = 'Kerosene';
@@ -59,17 +59,43 @@ String bitcoinAccountTypeLabel(BuildContext context, BitcoinAccount account) {
 }
 
 int bitcoinAccountVisibleBalance(BitcoinAccount account) {
-  // Cold: chain only. Custodial/internal: ledger spendable (available+pending+locked).
-  if (account.isWatchOnly) return account.observedBalanceSats;
-  return account.totalSats;
+  // Hero = spendable available (or cold observed). Holds never inflate primary.
+  if (account.isWatchOnly) {
+    return BalanceDisplayRules.primarySats(
+      kind: 'WATCH_ONLY',
+      availableSats: account.balanceAvailableSats,
+      observedSats: account.observedBalanceSats,
+    );
+  }
+  if (account.isCustodialOnchain) {
+    return BalanceDisplayRules.primarySats(
+      kind: 'CUSTODIAL_ONCHAIN',
+      availableSats: account.balanceAvailableSats,
+      observedSats: account.observedBalanceSats,
+    );
+  }
+  return BalanceDisplayRules.primarySats(
+    kind: 'INTERNAL',
+    availableSats: account.balanceAvailableSats,
+    observedSats: account.observedBalanceSats,
+  );
 }
 
 /// Optional secondary line for custodial on-chain (ledger vs chain).
 String? bitcoinAccountChainObservedLabel(BitcoinAccount account) {
   if (!account.isCustodialOnchain) return null;
-  final chain = account.observedBalanceSats;
-  if (chain <= 0) return null;
-  return 'On-chain: $chain sats';
+  if (!BalanceDisplayRules.showObservedAsSubtitle(
+    kind: 'CUSTODIAL_ONCHAIN',
+    availableSats: account.balanceAvailableSats,
+    observedSats: account.observedBalanceSats,
+  )) {
+    return null;
+  }
+  final btc = (account.observedBalanceSats / 100000000.0).toStringAsFixed(8);
+  final trimmed = btc
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
+  return 'Na rede: $trimmed BTC';
 }
 
 ReceivingRequestView? firstBitcoinReceiveRequest(
@@ -133,7 +159,8 @@ String bitcoinAccountTransactionStatusLabel(
     TransactionStatus.confirmed => context.tr.bitcoinReceiveStatusPaid,
     TransactionStatus.cancelled =>
       context.tr.financialStatementFilterCancelled,
-    TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
+    TransactionStatus.reconciling => 'Em análise',
+      TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
   };
 }
 

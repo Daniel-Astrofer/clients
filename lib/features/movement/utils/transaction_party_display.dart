@@ -1,9 +1,25 @@
 import 'package:flutter/widgets.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
+
+/// Platform network / rail for statement organization.
+///
+/// Separates funds movement so the user always knows whether money moved on
+/// the internal ledger, hot on-chain, cold observe/spend, Lightning, or a
+/// payment-link product rail.
+enum TransactionNetwork {
+  internal,
+  cold,
+  onchain,
+  lightning,
+  paymentLinkInternal,
+  paymentLinkOnchain,
+  unknown,
+}
 
 /// Presentation helpers for compact + full transaction detail UIs.
 bool looksLikeOnchainAddress(String? raw) {
@@ -74,7 +90,17 @@ String resolveWalletDisplayName(
   String? key, {
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
+  String? apiLabel,
 }) {
+  // Prefer server-resolved label when present (survives offline after merge).
+  final fromApi = apiLabel?.trim() ?? '';
+  if (fromApi.isNotEmpty &&
+      !_isGenericWalletPlaceholder(fromApi) &&
+      !_looksLikeUuid(fromApi) &&
+      !looksLikeOnchainAddress(fromApi)) {
+    return fromApi;
+  }
+
   final id = key?.trim() ?? '';
   if (id.isEmpty || looksLikeOnchainAddress(id)) return '';
 
@@ -134,15 +160,153 @@ String _primaryUserWalletName({
   return 'Carteira global';
 }
 
+bool isColdWalletKey(
+  String? key, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  final id = key?.trim() ?? '';
+  if (id.isEmpty) return false;
+  for (final wallet in wallets) {
+    if ((wallet.id == id || wallet.name == id) && wallet.isColdWallet) {
+      return true;
+    }
+  }
+  for (final account in accounts) {
+    final coldId = (account.coldWalletId ?? '').trim();
+    if (coldId.isNotEmpty && coldId == id) return true;
+    if (account.id == id && coldId.isNotEmpty) return true;
+    if ((account.label == id || account.id == id) && account.isWatchOnly) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Classify which platform network produced this ledger row.
+TransactionNetwork resolveTransactionNetwork(
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  if (tx.isPaymentLinkInternal) return TransactionNetwork.paymentLinkInternal;
+  if (tx.isPaymentLinkOnchain) return TransactionNetwork.paymentLinkOnchain;
+  if (tx.isPaymentLink) {
+    return tx.isInternal
+        ? TransactionNetwork.paymentLinkInternal
+        : TransactionNetwork.paymentLinkOnchain;
+  }
+  if (tx.isLightning) return TransactionNetwork.lightning;
+  if (tx.isInternal) return TransactionNetwork.internal;
+
+  if (tx.isColdProvider) return TransactionNetwork.cold;
+
+  final involved = <String?>[
+    tx.walletId,
+    tx.sourceWalletId,
+    tx.destinationWalletId,
+  ];
+  for (final key in involved) {
+    if (isColdWalletKey(key, wallets: wallets, accounts: accounts)) {
+      return TransactionNetwork.cold;
+    }
+  }
+
+  if (tx.isOnChain) return TransactionNetwork.onchain;
+  return TransactionNetwork.unknown;
+}
+
+/// Own wallet label for this row (the user's side of the movement).
+String resolveOwnWalletLabel(
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  final apiOwn = tx.isCredit
+      ? (tx.destinationWalletLabel ?? tx.walletLabel)
+      : (tx.sourceWalletLabel ?? tx.walletLabel);
+  final fromApi = resolveWalletDisplayName(
+    null,
+    apiLabel: apiOwn,
+  );
+  if (fromApi.isNotEmpty) return fromApi;
+
+  final keys = tx.isCredit
+      ? <String?>[tx.destinationWalletId, tx.walletId, tx.sourceWalletId]
+      : <String?>[tx.sourceWalletId, tx.walletId, tx.destinationWalletId];
+  for (final key in keys) {
+    final label = resolveWalletDisplayName(
+      key,
+      wallets: wallets,
+      accounts: accounts,
+    );
+    if (label.isNotEmpty) return label;
+  }
+  return _primaryUserWalletName(wallets: wallets, accounts: accounts);
+}
+
 /// "De" — real wallet name used, never a mock "Minha carteira" / never a hash.
 String resolveTransactionFromParty(
   Transaction tx, {
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
 }) {
+  final network = resolveTransactionNetwork(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
+
+  // Credit (receive): counterparty is external network / peer, not our receive address.
+  if (tx.isCredit) {
+    final apiCp = (tx.counterpartyLabel ?? '').trim();
+    if (apiCp.isNotEmpty &&
+        !_isGenericWalletPlaceholder(apiCp) &&
+        !_looksLikeUuid(apiCp)) {
+      return apiCp;
+    }
+    final senderName = tx.senderDisplayName?.trim() ?? '';
+    if (senderName.isNotEmpty &&
+        looksLikeUsername(senderName) &&
+        !_isGenericWalletPlaceholder(senderName)) {
+      return senderName;
+    }
+
+    // Internal peer wallet if resolvable.
+    if (network == TransactionNetwork.internal ||
+        network == TransactionNetwork.paymentLinkInternal) {
+      final peer = resolveWalletDisplayName(
+        tx.sourceWalletId,
+        wallets: wallets,
+        accounts: accounts,
+        apiLabel: tx.sourceWalletLabel,
+      );
+      if (peer.isNotEmpty) return peer;
+      if (network == TransactionNetwork.paymentLinkInternal) {
+        return 'Pagador (link interno)';
+      }
+      return 'Kerosene (interno)';
+    }
+
+    if (network == TransactionNetwork.lightning) return 'Lightning';
+    if (network == TransactionNetwork.paymentLinkOnchain) {
+      return 'Pagador (link on-chain)';
+    }
+    if (network == TransactionNetwork.cold) return 'Rede Bitcoin (cold)';
+    return 'Rede Bitcoin (on-chain)';
+  }
+
+  // Debit (send): our source wallet — prefer named cold/custodial account.
+  final own = resolveWalletDisplayName(
+    tx.sourceWalletId ?? tx.walletId,
+    wallets: wallets,
+    accounts: accounts,
+    apiLabel: tx.sourceWalletLabel ?? tx.walletLabel,
+  );
+  if (own.isNotEmpty) return own;
   final candidates = <String?>[
     tx.sourceWalletId,
-    tx.isDebit ? tx.walletId : null,
+    tx.walletId,
   ];
   for (final key in candidates) {
     final label = resolveWalletDisplayName(
@@ -169,16 +333,7 @@ String resolveTransactionFromParty(
     return from;
   }
 
-  // Own wallet side of the movement.
-  if (tx.isDebit) {
-    return _primaryUserWalletName(wallets: wallets, accounts: accounts);
-  }
-
-  if (tx.isLightning) return 'Lightning';
-  if (tx.isInternal) {
-    return _primaryUserWalletName(wallets: wallets, accounts: accounts);
-  }
-  return 'Rede Bitcoin';
+  return resolveOwnWalletLabel(tx, wallets: wallets, accounts: accounts);
 }
 
 /// "Para" — username when available; on-chain address shown as hash.
@@ -188,6 +343,35 @@ String resolveTransactionToParty(
   List<BitcoinAccount> accounts = const [],
   bool compactHash = true,
 }) {
+  final network = resolveTransactionNetwork(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
+
+  // Credit (receive): our destination wallet.
+  if (tx.isCredit) {
+    final own = resolveWalletDisplayName(
+      tx.destinationWalletId ?? tx.walletId,
+      wallets: wallets,
+      accounts: accounts,
+      apiLabel: tx.destinationWalletLabel ?? tx.walletLabel,
+    );
+    if (own.isNotEmpty) return own;
+    return resolveOwnWalletLabel(tx, wallets: wallets, accounts: accounts);
+  }
+
+  // Debit (send): external peer / on-chain address / internal destination.
+  final apiCp = (tx.counterpartyLabel ?? '').trim();
+  if (apiCp.isNotEmpty &&
+      !_isGenericWalletPlaceholder(apiCp) &&
+      !_looksLikeUuid(apiCp)) {
+    if (looksLikeOnchainAddress(apiCp)) {
+      return compactHash ? shortenHash(apiCp) : apiCp;
+    }
+    return apiCp;
+  }
+
   final receiverName = tx.receiverDisplayName?.trim() ?? '';
   if (receiverName.isNotEmpty && looksLikeUsername(receiverName)) {
     return receiverName;
@@ -197,22 +381,24 @@ String resolveTransactionToParty(
     tx.destinationWalletId,
     wallets: wallets,
     accounts: accounts,
+    apiLabel: tx.destinationWalletLabel,
   );
   if (toWallet.isNotEmpty) return toWallet;
 
-  if (tx.isCredit) {
-    final own = resolveWalletDisplayName(
-      tx.walletId,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    if (own.isNotEmpty) return own;
-    return _primaryUserWalletName(wallets: wallets, accounts: accounts);
+  if (network == TransactionNetwork.paymentLinkInternal) {
+    return 'Destinatário (link interno)';
+  }
+  if (network == TransactionNetwork.paymentLinkOnchain) {
+    final addr = (tx.externalReference ?? tx.toAddress).trim();
+    if (addr.isNotEmpty && looksLikeOnchainAddress(addr)) {
+      return compactHash ? shortenHash(addr) : addr;
+    }
+    return 'Endereço do link on-chain';
   }
 
   final candidates = <String?>[
-    tx.toAddress,
     tx.externalReference,
+    tx.toAddress,
     receiverName,
     resolveTransactionRecipient(tx),
   ];
@@ -228,7 +414,7 @@ String resolveTransactionToParty(
     }
   }
 
-  if (tx.isLightning) {
+  if (network == TransactionNetwork.lightning || tx.isLightning) {
     final invoice = tx.lightningInvoice?.trim() ?? '';
     if (invoice.isNotEmpty) {
       return compactHash ? shortenHash(invoice, head: 12, tail: 8) : invoice;
@@ -236,34 +422,93 @@ String resolveTransactionToParty(
     return 'Invoice Lightning';
   }
 
-  return 'Destino';
+  if (network == TransactionNetwork.internal) {
+    return 'Carteira Kerosene';
+  }
+
+  // Cold / Electrum spend without decoded destination — never show raw txid as "who".
+  final memo = (tx.description ?? '').toLowerCase();
+  final isColdExternal = memo.contains('electrum') ||
+      memo.contains('carteira fria') ||
+      memo.contains('detectado');
+  if (isColdExternal) {
+    return compactHash ? 'Envio off-app' : 'Envio on-chain (fora do app)';
+  }
+
+  final txid = tx.blockchainTxid?.trim() ?? '';
+  if (txid.isNotEmpty && txid.length >= 16) {
+    return compactHash
+        ? 'On-chain ${shortenHash(txid)}'
+        : 'On-chain · ${shortenHash(txid)}';
+  }
+
+  return 'Endereço externo';
 }
 
-String resolveTransactionNetworkLabel(Transaction tx) {
-  if (tx.isInternal) return 'Interna (Kerosene)';
-  if (tx.isLightning) return 'Lightning';
-  return 'Bitcoin on-chain';
+String resolveTransactionNetworkLabel(
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  final network = resolveTransactionNetwork(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  return switch (network) {
+    TransactionNetwork.internal => 'Interna (ledger Kerosene)',
+    TransactionNetwork.cold => 'Cold wallet (on-chain observada)',
+    TransactionNetwork.onchain => 'On-chain (carteira plataforma)',
+    TransactionNetwork.lightning => 'Lightning',
+    TransactionNetwork.paymentLinkInternal => 'Link de pagamento · interno',
+    TransactionNetwork.paymentLinkOnchain => 'Link de pagamento · on-chain',
+    TransactionNetwork.unknown => 'Rede desconhecida',
+  };
 }
 
-/// Card / detail title by **action** (Envio/Recebimento + rail).
+/// Compact route line: "Money → tb1q… · Cold" so origin/destination is obvious.
+String resolveTransactionRouteSummary(
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+  bool compactHash = true,
+}) {
+  final from = resolveTransactionFromParty(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  final to = resolveTransactionToParty(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+    compactHash: compactHash,
+  );
+  final network = resolveTransactionNetworkLabel(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  if (tx.isCredit) {
+    return 'De $from → $to · $network';
+  }
+  return 'De $from → $to · $network';
+}
+
+/// Card / detail title by **action** (Envio/Recebimento + rail/network).
 String resolveTransactionActionTitle(
   BuildContext context,
-  Transaction tx,
-) {
-  final lang = Localizations.localeOf(context).languageCode;
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  final tr = context.tr;
   final visual = TransactionVisualSpec.fromTransaction(tx);
-
-  // Keep specialized product rails (NFC/QR/link/fee/etc.) when available.
-  final specialized = visual.family != TransactionVisualFamily.onChain &&
-      visual.family != TransactionVisualFamily.internalTransfer &&
-      visual.family != TransactionVisualFamily.deposit &&
-      visual.family != TransactionVisualFamily.withdrawal &&
-      visual.family != TransactionVisualFamily.cancelled &&
-      visual.family != TransactionVisualFamily.failed;
-
-  if (specialized) {
-    return visual.localizedLabel(context);
-  }
+  final network = resolveTransactionNetwork(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
 
   if (tx.isCancelled || visual.family == TransactionVisualFamily.cancelled) {
     return visual.localizedLabel(context);
@@ -272,52 +517,50 @@ String resolveTransactionActionTitle(
       visual.family == TransactionVisualFamily.failed) {
     return visual.localizedLabel(context);
   }
+  if (tx.status == TransactionStatus.reconciling) {
+    return tr.txActionNeedsReview;
+  }
+
+  if (tx.isUnconfirmedExpired) {
+    return tr.txActionUnconfirmed;
+  }
 
   final isSend = tx.isDebit;
 
-  if (tx.isInternal) {
-    return switch (lang) {
-      'en' => isSend ? 'Internal send' : 'Internal receive',
-      'es' => isSend ? 'Envío interno' : 'Recepción interna',
-      _ => isSend ? 'Envio Interno' : 'Recebimento Interno',
-    };
+  // Payment link — always explicit about rail (on-chain vs internal).
+  if (network == TransactionNetwork.paymentLinkInternal) {
+    return isSend
+        ? tr.txActionPaymentLinkSendInternal
+        : tr.txActionPaymentLinkReceiveInternal;
   }
-  if (tx.isLightning) {
-    return switch (lang) {
-      'en' => isSend ? 'Lightning send' : 'Lightning receive',
-      'es' => isSend ? 'Envío Lightning' : 'Recepción Lightning',
-      _ => isSend ? 'Envio Lightning' : 'Recebimento Lightning',
-    };
+  if (network == TransactionNetwork.paymentLinkOnchain) {
+    return isSend
+        ? tr.txActionPaymentLinkSendOnchain
+        : tr.txActionPaymentLinkReceiveOnchain;
   }
 
-  // On-chain (default rail).
-  if (tx.type == TransactionType.deposit && !isSend) {
-    return switch (lang) {
-      'en' => 'Onchain deposit',
-      'es' => 'Depósito onchain',
-      _ => 'Depósito Onchain',
-    };
+  // Keep NFC/QR specialized product rails when not payment-link/cold/internal.
+  final specialized = visual.family == TransactionVisualFamily.nfc ||
+      visual.family == TransactionVisualFamily.qrCode ||
+      visual.family == TransactionVisualFamily.fee ||
+      visual.family == TransactionVisualFamily.refund ||
+      visual.family == TransactionVisualFamily.swap;
+  if (specialized) {
+    return visual.localizedLabel(context);
   }
-  if (tx.type == TransactionType.withdrawal ||
-      (tx.type == TransactionType.send && isSend)) {
-    return switch (lang) {
-      'en' => 'Onchain send',
-      'es' => 'Envío onchain',
-      _ => 'Envio Onchain',
-    };
+
+  if (network == TransactionNetwork.internal) {
+    return isSend ? tr.txActionInternalSend : tr.txActionInternalReceive;
   }
-  if (tx.type == TransactionType.receive || !isSend) {
-    return switch (lang) {
-      'en' => 'Onchain receive',
-      'es' => 'Recepción onchain',
-      _ => 'Recebimento Onchain',
-    };
+  if (network == TransactionNetwork.lightning) {
+    return isSend ? tr.txActionLightningSend : tr.txActionLightningReceive;
   }
-  return switch (lang) {
-    'en' => isSend ? 'Onchain send' : 'Onchain receive',
-    'es' => isSend ? 'Envío onchain' : 'Recepción onchain',
-    _ => isSend ? 'Envio Onchain' : 'Recebimento Onchain',
-  };
+  if (network == TransactionNetwork.cold) {
+    return isSend ? tr.txActionColdSend : tr.txActionColdReceive;
+  }
+
+  // Hot / platform on-chain (custodial). Never label as "Depósito".
+  return isSend ? tr.txActionOnchainSend : tr.txActionOnchainReceive;
 }
 
 String formatSatsAsBtc(int sats) {

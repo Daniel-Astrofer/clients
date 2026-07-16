@@ -10,7 +10,9 @@ import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/core/performance/kerosene_performance_boundary.dart';
+import 'package:kerosene/core/providers/locale_provider.dart';
 import 'package:kerosene/core/providers/session_invalidation_provider.dart';
+import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
@@ -290,6 +292,8 @@ class _AdminWebApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider).locale;
+    MoneyDisplay.bindAppLocale(locale);
     ref.listen<int>(sessionInvalidationProvider, (previous, next) {
       if (previous == next) {
         return;
@@ -303,8 +307,19 @@ class _AdminWebApp extends ConsumerWidget {
       theme: AdminTheme.themeData.copyWith(
         pageTransitionsTheme: kerosenePageTransitionsTheme,
       ),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        if (deviceLocale != null) {
+          for (final supported in supportedLocales) {
+            if (supported.languageCode == deviceLocale.languageCode) {
+              return supported;
+            }
+          }
+        }
+        return supportedLocales.first;
+      },
       scrollBehavior: const _WebScrollBehavior(),
       builder: (context, child) {
         return KeroseneResponsiveBoundary(

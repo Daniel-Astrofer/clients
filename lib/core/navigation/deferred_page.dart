@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/copy/kerosene_ui_copy.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
@@ -127,15 +127,15 @@ class _DeferredPageErrorView extends StatelessWidget {
                 size: 32,
               ),
               const SizedBox(height: 12),
-              const Text(
-                KeroseneUiCopy.deferredLoadFailure,
-                style: TextStyle(color: KeroseneBrandTokens.textPrimary),
+              Text(
+                context.tr.deferredLoadFailure,
+                style: const TextStyle(color: KeroseneBrandTokens.textPrimary),
                 textAlign: TextAlign.center,
               ),
               if (error != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  KeroseneUiCopy.deferredLoadDetails,
+                  context.tr.deferredLoadDetails,
                   style: const TextStyle(
                     color: KeroseneBrandTokens.textMuted,
                     fontSize: 12,

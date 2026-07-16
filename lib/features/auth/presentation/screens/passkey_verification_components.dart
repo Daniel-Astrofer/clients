@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
@@ -302,7 +303,7 @@ class PasskeyIssueView extends StatelessWidget {
           if (canRetry)
             ActionButton(
               text: copy(
-                pt: 'Tentar novamente',
+                pt: context.tr.settingsDevicesRetry,
                 en: 'Try again',
                 es: 'Intentar de nuevo',
               ).toUpperCase(),

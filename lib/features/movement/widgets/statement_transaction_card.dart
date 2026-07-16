@@ -7,10 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -18,7 +19,6 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
-import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
 import 'package:kerosene/features/movement/utils/transaction_party_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
@@ -92,7 +92,8 @@ class StatementTransactionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final visual = TransactionVisualSpec.fromTransaction(transaction);
-    final selectedCurrency = ref.watch(currencyProvider);
+    final money = ref.watch(moneyFormatConfigProvider);
+    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
@@ -103,18 +104,26 @@ class StatementTransactionCard extends ConsumerWidget {
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
+      appLocale: money.locale,
     );
     final wallets = _walletsFromRef(ref);
     final accounts = _accountsFromRef(ref);
-    final title = resolveTransactionActionTitle(context, transaction);
+    final title = resolveTransactionActionTitle(
+      context,
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+    );
     final counterparty = _counterparty(
       context,
       transaction,
       wallets: wallets,
       accounts: accounts,
     );
-    final date = transaction.timestamp.toLocal();
-    final timestampLabel = _timeFormat.format(date);
+    final timestampLabel = AppDateTime.formatRelative(
+      context,
+      transaction.timestamp,
+    );
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
     final cardPadding = compact ? 16.0 : 20.0;
     final iconSize = compact ? 42.0 : 48.0;
@@ -134,6 +143,7 @@ class StatementTransactionCard extends ConsumerWidget {
           btcEur: btcEur,
           btcBrl: btcBrl,
           signed: true,
+          appLocale: money.locale,
         ),
         expanded: expanded,
         onTap: onTap,
@@ -143,8 +153,18 @@ class StatementTransactionCard extends ConsumerWidget {
     }
 
     final motion = KeroseneMotion.duration(context, KeroseneMotion.medium);
+    final a11yLabel = [
+      title,
+      counterparty,
+      amountLabel,
+      timestampLabel,
+      if (expanded) 'expandido',
+    ].where((s) => s.trim().isNotEmpty).join('. ');
 
-    return Material(
+    return Semantics(
+      button: onTap != null,
+      label: a11yLabel,
+      child: Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -180,6 +200,8 @@ class StatementTransactionCard extends ConsumerWidget {
                       colors: colors,
                       iconSize: iconSize,
                       expanded: expanded,
+                      wallets: wallets,
+                      accounts: accounts,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -201,7 +223,7 @@ class StatementTransactionCard extends ConsumerWidget {
                           const SizedBox(height: AppSpacing.xs),
                           Text(
                             counterparty,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: colors.subtitle,
@@ -209,6 +231,7 @@ class StatementTransactionCard extends ConsumerWidget {
                               fontSize: counterpartyFontSize,
                               fontWeight: FontWeight.w400,
                               letterSpacing: 0,
+                              height: 1.25,
                             ),
                           ),
                         ],
@@ -229,6 +252,8 @@ class StatementTransactionCard extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
+                        // Bottom-right yellow confirmation ball removed —
+                        // confirmation progress lives only on the top-left ring.
                         Text(
                           timestampLabel,
                           textAlign: TextAlign.right,
@@ -268,6 +293,7 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
         ),
       ),
+    ),
     );
   }
 
@@ -280,21 +306,30 @@ class StatementTransactionCard extends ConsumerWidget {
     required double? btcUsd,
     required double? btcEur,
     required double? btcBrl,
+    Locale? appLocale,
   }) {
-    final signedAmount = transaction.signedAmountBTC;
+    // Debits show total leaving the wallet (amount + network + service fees).
+    final signedAmount = transaction.signedDisplayAmountBTC;
+    final includeFeesInDebit = transaction.isDebit &&
+        (transaction.showsNetworkFee || transaction.showsServiceFee);
     return MoneyDisplay.formatFrozenAmountFromBtc(
       btcAmount: signedAmount,
       currency: currency,
       btcUsd: btcUsd,
       btcEur: btcEur,
       btcBrl: btcBrl,
-      displayAmountUsd: transaction.displayAmountUsd,
-      displayAmountEur: transaction.displayAmountEur,
-      displayAmountBrl: transaction.displayAmountBrl,
+      // Frozen fiat is principal-only; when fees apply, recompute from sats.
+      displayAmountUsd:
+          includeFeesInDebit ? null : transaction.displayAmountUsd,
+      displayAmountEur:
+          includeFeesInDebit ? null : transaction.displayAmountEur,
+      displayAmountBrl:
+          includeFeesInDebit ? null : transaction.displayAmountBrl,
       displayBtcUsd: transaction.displayBtcUsd,
       displayBtcEur: transaction.displayBtcEur,
       displayBtcBrl: transaction.displayBtcBrl,
       signed: true,
+      appLocale: appLocale,
     );
   }
 
@@ -304,31 +339,42 @@ class StatementTransactionCard extends ConsumerWidget {
     List<Wallet> wallets = const [],
     List<BitcoinAccount> accounts = const [],
   }) {
-    final sent = tx.isDebit;
-    final label = sent ? 'Para' : 'De';
-    final value = sent
-        ? resolveTransactionToParty(
-            tx,
-            wallets: wallets,
-            accounts: accounts,
-            compactHash: true,
-          )
-        : resolveTransactionFromParty(
-            tx,
-            wallets: wallets,
-            accounts: accounts,
-          );
-    return '$label: $value';
+    // Full route so the user always sees origin, destination and network.
+    return resolveTransactionRouteSummary(
+      tx,
+      wallets: wallets,
+      accounts: accounts,
+      compactHash: true,
+    );
   }
 
-  static IconData _iconFor(Transaction tx, TransactionVisualSpec visual) {
-    if (tx.isInternal) return KeroseneIcons.group;
-    if (tx.isLightning) return KeroseneIcons.lightning;
-    if (tx.status == TransactionStatus.failed ||
-        tx.status == TransactionStatus.cancelled) {
+  /// Network-reactive icon (not direction/type).
+  /// cold → snowflake, onchain → chain link, internal → two people, LN → bolt.
+  static IconData _iconFor(
+    Transaction tx,
+    TransactionVisualSpec visual, {
+    List<Wallet> wallets = const [],
+    List<BitcoinAccount> accounts = const [],
+  }) {
+    final network = resolveTransactionNetwork(
+      tx,
+      wallets: wallets,
+      accounts: accounts,
+    );
+    if (tx.displayStatus == TransactionStatus.failed ||
+        tx.displayStatus == TransactionStatus.cancelled) {
       return KeroseneIcons.warning;
     }
-    return KeroseneIcons.archive;
+    return switch (network) {
+      TransactionNetwork.internal ||
+      TransactionNetwork.paymentLinkInternal =>
+        KeroseneIcons.group,
+      TransactionNetwork.lightning => KeroseneIcons.lightning,
+      TransactionNetwork.cold => KeroseneIcons.coldWallet,
+      TransactionNetwork.paymentLinkOnchain => KeroseneIcons.onchain,
+      TransactionNetwork.onchain || TransactionNetwork.unknown =>
+        KeroseneIcons.onchain,
+    };
   }
 
   static String _shorten(String value, {int head = 12, int tail = 6}) {
@@ -349,29 +395,53 @@ List<BitcoinAccount> _accountsFromRef(WidgetRef ref) {
       const <BitcoinAccount>[];
 }
 
-String _bankRailLabel(Transaction tx) {
-  if (tx.isInternal) return 'Transferência interna';
-  if (tx.isLightning) return 'Lightning';
-  if (tx.type == TransactionType.deposit) return 'Depósito on-chain';
-  if (tx.type == TransactionType.withdrawal) return 'Saque on-chain';
-  return 'On-chain';
+String _bankRailLabel(
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  return resolveTransactionNetworkLabel(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+  );
 }
 
 String _bankStatusLabel(Transaction tx) {
-  return switch (tx.status) {
+  if (tx.isUnconfirmedExpired) return 'Não confirmada';
+  if (tx.isOnChain &&
+      tx.confirmations <= 0 &&
+      tx.displayStatus != TransactionStatus.failed &&
+      tx.displayStatus != TransactionStatus.cancelled) {
+    return 'Na mempool';
+  }
+  if (tx.isOnChain && tx.confirmations > 0) {
+    if (tx.confirmations >= tx.onchainConfirmationTarget ||
+        tx.displayStatus == TransactionStatus.confirmed) {
+      return tx.confirmations >= 6
+          ? 'Confirmado (${tx.confirmations}+)'
+          : 'Confirmado (${tx.confirmations}/6)';
+    }
+    return '${tx.confirmations}/6 confirmações';
+  }
+  return switch (tx.displayStatus) {
     TransactionStatus.confirmed => 'Confirmado',
-    TransactionStatus.confirming => '${tx.confirmations} confirmações',
+    TransactionStatus.confirming => 'Em andamento',
     TransactionStatus.pending => 'Pendente',
     TransactionStatus.cancelled => 'Cancelada',
     TransactionStatus.failed => 'Falhou',
+    TransactionStatus.reconciling => 'Em análise',
   };
 }
 
-String _bankSubtitle(Transaction tx) {
-  final local = tx.timestamp.toLocal();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '$hour:$minute · ${_bankRailLabel(tx)} · ${_bankStatusLabel(tx)}';
+String _bankSubtitle(
+  BuildContext context,
+  Transaction tx, {
+  List<Wallet> wallets = const [],
+  List<BitcoinAccount> accounts = const [],
+}) {
+  final when = AppDateTime.formatRelative(context, tx.timestamp);
+  return '$when · ${_bankRailLabel(tx, wallets: wallets, accounts: accounts)} · ${_bankStatusLabel(tx)}';
 }
 
 String _bankCounterparty(
@@ -379,20 +449,12 @@ String _bankCounterparty(
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
 }) {
-  final label = tx.isDebit ? 'Para' : 'De';
-  final value = tx.isDebit
-      ? resolveTransactionToParty(
-          tx,
-          wallets: wallets,
-          accounts: accounts,
-          compactHash: true,
-        )
-      : resolveTransactionFromParty(
-          tx,
-          wallets: wallets,
-          accounts: accounts,
-        );
-  return '$label $value';
+  return resolveTransactionRouteSummary(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+    compactHash: true,
+  );
 }
 
 String _darkDetailValue(String value) {
@@ -422,13 +484,23 @@ class _BankStatementTransactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = resolveTransactionActionTitle(context, transaction);
+    final title = resolveTransactionActionTitle(
+      context,
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+    );
     final counterparty = _bankCounterparty(
       transaction,
       wallets: wallets,
       accounts: accounts,
     );
-    final subtitle = _bankSubtitle(transaction);
+    final subtitle = _bankSubtitle(
+      context,
+      transaction,
+      wallets: wallets,
+      accounts: accounts,
+    );
     final tone = TransactionPalette.toneFor(transaction);
     final amountColor =
         tone == TransactionStatusTone.failed ||
@@ -594,13 +666,18 @@ class _BankDirectionIcon extends StatelessWidget {
         transaction.isCancelled) {
       return KeroseneIcons.warning;
     }
-    if (transaction.isLightning) {
-      return KeroseneIcons.lightning;
-    }
-    if (transaction.isInternal) {
-      return KeroseneIcons.moveHorizontal;
-    }
-    return transaction.isCredit ? KeroseneIcons.receive : KeroseneIcons.send;
+    final network = resolveTransactionNetwork(transaction);
+    return switch (network) {
+      TransactionNetwork.lightning => KeroseneIcons.lightning,
+      TransactionNetwork.internal ||
+      TransactionNetwork.paymentLinkInternal =>
+        KeroseneIcons.moveHorizontal,
+      TransactionNetwork.cold => KeroseneIcons.coldWallet,
+      TransactionNetwork.paymentLinkOnchain ||
+      TransactionNetwork.onchain ||
+      TransactionNetwork.unknown =>
+        transaction.isCredit ? KeroseneIcons.receive : KeroseneIcons.send,
+    };
   }
 }
 
@@ -618,7 +695,8 @@ class _DarkStatusPill extends StatelessWidget {
       TransactionStatusTone.confirming => 'Confirmando',
       TransactionStatusTone.pending => 'Pendente',
       TransactionStatusTone.cancelled => 'Cancelada',
-      TransactionStatusTone.failed => 'Falhou',
+      TransactionStatusTone.failed =>
+        transaction.isUnconfirmedExpired ? 'Não confirmada' : 'Falhou',
     };
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -817,15 +895,35 @@ List<_TransactionDetailRow> _compactDetailRows(
     accounts: accounts,
     compactHash: true,
   );
-  final network = resolveTransactionNetworkLabel(transaction);
-  final networkFeeLabel = transaction.hasNetworkFee || transaction.feeSatoshis > 0
-      ? formatSatsAsBtc(transaction.feeSatoshis)
-      : '—';
-  final serviceFeeLabel = transaction.hasServiceFee
-      ? formatSatsAsBtc(transaction.serviceFeeSatoshis)
-      : '—';
-
-  return [
+  final ownWallet = resolveOwnWalletLabel(
+    transaction,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  final network = resolveTransactionNetworkLabel(
+    transaction,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  final rows = <_TransactionDetailRow>[
+    _TransactionDetailRow(
+      key: 'when',
+      label: _localizedCopy(context, pt: 'Quando', en: 'When', es: 'Cuándo'),
+      displayValue: AppDateTime.formatRelativeWithClock(
+        context,
+        transaction.timestamp,
+      ),
+    ),
+    _TransactionDetailRow(
+      key: 'wallet',
+      label: _localizedCopy(
+        context,
+        pt: 'Sua carteira',
+        en: 'Your wallet',
+        es: 'Tu billetera',
+      ),
+      displayValue: ownWallet,
+    ),
     _TransactionDetailRow(
       key: 'from',
       label: _localizedCopy(context, pt: 'De', en: 'From', es: 'De'),
@@ -837,32 +935,76 @@ List<_TransactionDetailRow> _compactDetailRows(
       displayValue: to,
       copyValue: looksLikeOnchainAddress(to) ? to : null,
     ),
-    _TransactionDetailRow(
-      key: 'network-fee',
-      label: _localizedCopy(
-        context,
-        pt: 'Taxa de transação',
-        en: 'Network fee',
-        es: 'Tarifa de red',
+  ];
+
+  // Network / miner fee only for external rails with a real fee.
+  if (transaction.showsNetworkFee) {
+    rows.add(
+      _TransactionDetailRow(
+        key: 'network-fee',
+        label: _localizedCopy(
+          context,
+          pt: context.tr.sendReviewNetworkFee,
+          en: 'Network fee',
+          es: 'Tarifa de red',
+        ),
+        displayValue: formatSatsAsBtc(transaction.feeSatoshis),
       ),
-      displayValue: networkFeeLabel,
-    ),
-    _TransactionDetailRow(
-      key: 'service-fee',
-      label: _localizedCopy(
-        context,
-        pt: 'Taxa de serviço',
-        en: 'Service fee',
-        es: 'Tarifa de servicio',
+    );
+  } else if (transaction.isLedgerInternal) {
+    // Explicit: internal ledger has no miner fee (don't show "—").
+  }
+
+  if (transaction.showsServiceFee) {
+    rows.add(
+      _TransactionDetailRow(
+        key: 'service-fee',
+        label: _localizedCopy(
+          context,
+          pt: 'Taxa de serviço',
+          en: 'Service fee',
+          es: 'Tarifa de servicio',
+        ),
+        displayValue: formatSatsAsBtc(transaction.serviceFeeSatoshis),
       ),
-      displayValue: serviceFeeLabel,
-    ),
+    );
+  }
+
+  rows.add(
     _TransactionDetailRow(
       key: 'network',
       label: _localizedCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
       displayValue: network,
     ),
-  ];
+  );
+
+  if (transaction.showsOnchainConfirmations) {
+    final confLabel = transaction.status == TransactionStatus.confirmed &&
+            transaction.confirmations <= 0
+        ? _localizedCopy(
+            context,
+            pt: 'Confirmada na rede',
+            en: 'Confirmed on-chain',
+            es: 'Confirmada en red',
+          )
+        : transaction.confirmations >= transaction.onchainConfirmationTarget
+            ? '${transaction.confirmations}+'
+            : '${transaction.confirmations}/${transaction.onchainConfirmationTarget}';
+    rows.add(
+      _TransactionDetailRow(
+        key: 'confirmations',
+        label: _localizedCopy(
+          context,
+          pt: 'Confirmações',
+          en: 'Confirmations',
+          es: 'Confirmaciones',
+        ),
+        displayValue: confLabel,
+      ),
+    );
+  }
+
+  return rows;
 }
 
 class _SeeDetailsLink extends StatelessWidget {
@@ -1106,332 +1248,14 @@ String _localizedCopy(
   };
 }
 
-/// Compact confirmation rings at the bottom-right of a statement card.
-///
-/// Visual language:
-/// - **Confirmed** — calm light green, static
-/// - **Pending** (waiting, 0 confs) — orange, static
-/// - **Confirming** (network progress) — orange with a soft pulse + sweep
-/// - **Cancelled / failed** — red, static
-///
-/// Tap expands a short confirmation count label from the circle.
-class _ConfirmationRingsIndicator extends StatefulWidget {
-  final Transaction transaction;
-
-  const _ConfirmationRingsIndicator({required this.transaction});
-
-  @override
-  State<_ConfirmationRingsIndicator> createState() =>
-      _ConfirmationRingsIndicatorState();
-}
-
-enum _ConfirmationRingPhase {
-  confirmed,
-  confirming,
-  pending,
-  cancelled,
-  failed,
-}
-
-class _ConfirmationRingsIndicatorState
-    extends State<_ConfirmationRingsIndicator>
-    with SingleTickerProviderStateMixin {
-  static const int _ringCount = 3;
-  static const int _targetConfirmations = 6;
-  static const double _circleSize = 19;
-
-  late final AnimationController _confirmingController;
-  bool _labelOpen = false;
-
-  Transaction get _tx => widget.transaction;
-
-  TransactionStatusTone get _tone => TransactionPalette.toneFor(_tx);
-
-  _ConfirmationRingPhase get _phase {
-    return switch (_tone) {
-      TransactionStatusTone.cancelled => _ConfirmationRingPhase.cancelled,
-      TransactionStatusTone.failed => _ConfirmationRingPhase.failed,
-      TransactionStatusTone.confirmed => _ConfirmationRingPhase.confirmed,
-      TransactionStatusTone.confirming => _ConfirmationRingPhase.confirming,
-      TransactionStatusTone.pending => _ConfirmationRingPhase.pending,
-    };
-  }
-
-  bool get _shouldAnimate => _phase == _ConfirmationRingPhase.confirming;
-
-  int get _filledRings {
-    switch (_phase) {
-      case _ConfirmationRingPhase.confirmed:
-        return _ringCount;
-      case _ConfirmationRingPhase.cancelled:
-      case _ConfirmationRingPhase.failed:
-      case _ConfirmationRingPhase.pending:
-        return 0;
-      case _ConfirmationRingPhase.confirming:
-        final conf = _tx.confirmations.clamp(0, _targetConfirmations);
-        if (conf <= 0) return 0;
-        return ((conf / _targetConfirmations) * _ringCount)
-            .ceil()
-            .clamp(1, _ringCount);
-    }
-  }
-
-  int get _displayCurrent {
-    if (_phase == _ConfirmationRingPhase.confirmed) {
-      return _targetConfirmations;
-    }
-    return _tx.confirmations.clamp(0, _targetConfirmations);
-  }
-
-  Color get _activeColor => TransactionPalette.statusStrong(_tone);
-
-  Color get _centerColor => TransactionPalette.statusSoft(_tone);
-
-  Color get _inactiveColor => TransactionPalette.statusTrack;
-
-  String get _labelText {
-    return switch (_phase) {
-      _ConfirmationRingPhase.cancelled => 'Cancelada',
-      _ConfirmationRingPhase.failed => 'Falhou',
-      _ConfirmationRingPhase.confirmed =>
-        '$_targetConfirmations de $_targetConfirmations confirmações',
-      _ConfirmationRingPhase.pending => 'Aguardando confirmações',
-      _ConfirmationRingPhase.confirming =>
-        '$_displayCurrent de $_targetConfirmations confirmações',
-    };
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _confirmingController = AnimationController(
-      vsync: this,
-      duration: KeroseneMotion.loop,
-    );
-    _syncAnimation();
-  }
-
-  @override
-  void didUpdateWidget(covariant _ConfirmationRingsIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.transaction.status != widget.transaction.status ||
-        oldWidget.transaction.confirmations !=
-            widget.transaction.confirmations ||
-        oldWidget.transaction.id != widget.transaction.id) {
-      _syncAnimation();
-    }
-  }
-
-  @override
-  void dispose() {
-    _confirmingController.dispose();
-    super.dispose();
-  }
-
-  void _syncAnimation() {
-    if (_shouldAnimate) {
-      if (!_confirmingController.isAnimating) {
-        _confirmingController.repeat(reverse: true);
-      }
-    } else {
-      _confirmingController
-        ..stop()
-        ..value = 0;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final motion = KeroseneMotion.duration(context, KeroseneMotion.short);
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        // Absorb the tap so the parent card does not expand/collapse.
-        HapticFeedback.selectionClick();
-        setState(() => _labelOpen = !_labelOpen);
-      },
-      child: AnimatedSize(
-        duration: motion,
-        curve: Curves.easeInOutCubic,
-        alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_labelOpen) ...[
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 148),
-                child: Text(
-                  _labelText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: _activeColor,
-                    fontFamily: AppTypography.bodyFontFamily,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-            ],
-            SizedBox(
-              width: _circleSize,
-              height: _circleSize,
-              child: AnimatedBuilder(
-                animation: _confirmingController,
-                builder: (context, _) {
-                  return CustomPaint(
-                    painter: _ConfirmationRingsPainter(
-                      filledRings: _filledRings,
-                      ringCount: _ringCount,
-                      activeColor: _activeColor,
-                      inactiveColor: _inactiveColor,
-                      centerColor: _centerColor,
-                      animating: _shouldAnimate,
-                      // 0→1→0 when reverse; used for pulse + soft sweep.
-                      animationValue: _confirmingController.value,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ConfirmationRingsPainter extends CustomPainter {
-  final int filledRings;
-  final int ringCount;
-  final Color activeColor;
-  final Color inactiveColor;
-  final Color centerColor;
-  final bool animating;
-  final double animationValue;
-
-  const _ConfirmationRingsPainter({
-    required this.filledRings,
-    required this.ringCount,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.centerColor,
-    this.animating = false,
-    this.animationValue = 0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final origin = Offset(size.width / 2, size.height / 2);
-    final outerRadius = math.min(size.width, size.height) / 2;
-    // Thin rings so the filled center can grow until it nearly meets them.
-    final strokeWidth = outerRadius * 0.13;
-    final ringRadius = outerRadius - strokeWidth / 2 - 0.4;
-    final ringInnerEdge = ringRadius - strokeWidth / 2;
-    // ~1.2 logical px air gap between disk and arcs.
-    final baseCenterRadius =
-        math.max(outerRadius * 0.52, ringInnerEdge - 1.2);
-    // Subtle breathing only while confirming (product: “network is working”).
-    final pulse = animating ? 1.0 + (0.06 * animationValue) : 1.0;
-    final centerRadius = baseCenterRadius * pulse;
-    final gapRadians = 0.32;
-    final sweep = (2 * math.pi / ringCount) - gapRadians;
-    final startOffset = -math.pi / 2 + gapRadians / 2;
-
-    final ringPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..isAntiAlias = true;
-
-    for (var i = 0; i < ringCount; i++) {
-      final filled = i < filledRings;
-      ringPaint.color = filled ? activeColor : inactiveColor;
-      if (animating && filled) {
-        // Filled arcs gently brighten with the pulse.
-        ringPaint.color = Color.lerp(
-              activeColor,
-              activeColor.withValues(alpha: 0.72),
-              animationValue,
-            ) ??
-            activeColor;
-      }
-      canvas.drawArc(
-        Rect.fromCircle(center: origin, radius: ringRadius),
-        startOffset + i * (2 * math.pi / ringCount),
-        sweep,
-        false,
-        ringPaint,
-      );
-    }
-
-    // Soft orange “next ring” highlight while confirming — draws attention to
-    // the segment still waiting, without spinning like a generic spinner.
-    if (animating && filledRings < ringCount) {
-      final nextIndex = filledRings;
-      final segmentStart =
-          startOffset + nextIndex * (2 * math.pi / ringCount);
-      final highlightSweep = sweep * (0.28 + 0.52 * animationValue);
-      final highlightPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth * 1.15
-        ..strokeCap = StrokeCap.round
-        ..isAntiAlias = true
-        ..color = activeColor.withValues(alpha: 0.35 + 0.45 * animationValue);
-      canvas.drawArc(
-        Rect.fromCircle(center: origin, radius: ringRadius),
-        segmentStart,
-        highlightSweep,
-        false,
-        highlightPaint,
-      );
-    }
-
-    // Soft outer glow while confirming — reads as “live” without dominating the card.
-    if (animating) {
-      canvas.drawCircle(
-        origin,
-        centerRadius * 1.18,
-        Paint()
-          ..style = PaintingStyle.fill
-          ..color = centerColor.withValues(alpha: 0.18 + 0.14 * animationValue)
-          ..isAntiAlias = true
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.2),
-      );
-    }
-
-    canvas.drawCircle(
-      origin,
-      centerRadius,
-      Paint()
-        ..style = PaintingStyle.fill
-        ..color = centerColor
-        ..isAntiAlias = true,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ConfirmationRingsPainter oldDelegate) {
-    return oldDelegate.filledRings != filledRings ||
-        oldDelegate.ringCount != ringCount ||
-        oldDelegate.activeColor != activeColor ||
-        oldDelegate.inactiveColor != inactiveColor ||
-        oldDelegate.centerColor != centerColor ||
-        oldDelegate.animating != animating ||
-        oldDelegate.animationValue != animationValue;
-  }
-}
-
 class _AnimatedRingIconWrapper extends StatefulWidget {
   final Transaction transaction;
   final TransactionVisualSpec visual;
   final TransactionCardColors colors;
   final double iconSize;
   final bool expanded;
+  final List<Wallet> wallets;
+  final List<BitcoinAccount> accounts;
 
   const _AnimatedRingIconWrapper({
     required this.transaction,
@@ -1439,24 +1263,39 @@ class _AnimatedRingIconWrapper extends StatefulWidget {
     required this.colors,
     required this.iconSize,
     required this.expanded,
+    this.wallets = const [],
+    this.accounts = const [],
   });
 
   @override
-  State<_AnimatedRingIconWrapper> createState() => _AnimatedRingIconWrapperState();
+  State<_AnimatedRingIconWrapper> createState() =>
+      _AnimatedRingIconWrapperState();
 }
 
 class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
+    with TickerProviderStateMixin {
+  /// Yellow full-ring spin at 0 backend confirmations.
+  late final AnimationController _spinController;
+
+  /// Green "loading" pulse on the next confirmation segment.
+  late final AnimationController _loadController;
+
+  static const Color _yellow = Color(0xFFE0A012);
+  static const Color _green = Color(0xFF34C759);
+  static const Color _red = Color(0xFFFF453A);
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _loadController = AnimationController(
       vsync: this,
       duration: KeroseneMotion.loop,
     );
-    _syncPulse();
+    _syncAnimations();
   }
 
   @override
@@ -1464,39 +1303,101 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.transaction.confirmations !=
             widget.transaction.confirmations ||
-        oldWidget.transaction.status != widget.transaction.status) {
-      _syncPulse();
+        oldWidget.transaction.status != widget.transaction.status ||
+        oldWidget.transaction.isUnconfirmedExpired !=
+            widget.transaction.isUnconfirmedExpired) {
+      _syncAnimations();
     }
   }
 
-  void _syncPulse() {
-    final conf = widget.transaction.confirmations.clamp(0, 6);
-    final needsPulse = conf < 6 &&
-        (widget.transaction.status == TransactionStatus.confirming ||
-            widget.transaction.status == TransactionStatus.pending);
-    if (needsPulse) {
-      if (!_pulseController.isAnimating) {
-        // Color pulse only — ring geometry stays fixed (no rotation).
-        _pulseController.repeat(reverse: true);
-      }
-    } else {
-      _pulseController
-        ..stop()
-        ..value = 0;
+  void _syncAnimations() {
+    final mode = _ringMode(widget.transaction);
+    switch (mode) {
+      case _RingMode.yellowSpin:
+        if (!_spinController.isAnimating) _spinController.repeat();
+        _loadController
+          ..stop()
+          ..value = 0;
+      case _RingMode.greenProgress:
+        _spinController
+          ..stop()
+          ..value = 0;
+        if (!_loadController.isAnimating) _loadController.repeat(reverse: true);
+      case _RingMode.settled:
+      case _RingMode.failed:
+        _spinController
+          ..stop()
+          ..value = 0;
+        _loadController
+          ..stop()
+          ..value = 0;
     }
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _spinController.dispose();
+    _loadController.dispose();
     super.dispose();
+  }
+
+  /// On-chain confs = **backend only**. Internal/LN: full ring when settled.
+  int _backendConfirmations(Transaction tx) {
+    if (tx.isUnconfirmedExpired ||
+        tx.displayStatus == TransactionStatus.failed ||
+        tx.displayStatus == TransactionStatus.cancelled ||
+        tx.displayStatus == TransactionStatus.reconciling) {
+      return 0;
+    }
+    if (!tx.showsOnchainConfirmations) {
+      return tx.displayStatus == TransactionStatus.confirmed
+          ? tx.onchainConfirmationTarget
+          : 0;
+    }
+    // Do not invent confs from status alone when payload is 0 and still open.
+    return tx.confirmations.clamp(0, tx.onchainConfirmationTarget);
+  }
+
+  _RingMode _ringMode(Transaction tx) {
+    if (tx.isUnconfirmedExpired ||
+        tx.displayStatus == TransactionStatus.failed ||
+        tx.displayStatus == TransactionStatus.cancelled) {
+      return _RingMode.failed;
+    }
+    if (tx.displayStatus == TransactionStatus.reconciling) {
+      return _RingMode.yellowSpin;
+    }
+    if (!tx.showsOnchainConfirmations) {
+      if (tx.displayStatus == TransactionStatus.confirmed) {
+        return _RingMode.settled;
+      }
+      if (tx.displayStatus == TransactionStatus.pending ||
+          tx.displayStatus == TransactionStatus.confirming) {
+        return _RingMode.yellowSpin;
+      }
+      return _RingMode.settled;
+    }
+    final conf = tx.confirmations;
+    final target = tx.onchainConfirmationTarget;
+    if (conf <= 0 &&
+        (tx.displayStatus == TransactionStatus.pending ||
+            tx.displayStatus == TransactionStatus.confirming)) {
+      return _RingMode.yellowSpin;
+    }
+    if (conf >= target || tx.displayStatus == TransactionStatus.confirmed) {
+      return _RingMode.settled;
+    }
+    if (conf > 0) return _RingMode.greenProgress;
+    return _RingMode.settled;
   }
 
   @override
   Widget build(BuildContext context) {
     final tx = widget.transaction;
-    final int conf = tx.confirmations.clamp(0, 6);
-    final bool isConfirmed = conf >= 6;
+    final mode = _ringMode(tx);
+    final conf = _backendConfirmations(tx);
+    final target = tx.onchainConfirmationTarget;
+    final isSettledVisual = mode == _RingMode.settled;
 
     return SizedBox(
       width: widget.iconSize,
@@ -1505,17 +1406,20 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
         alignment: Alignment.center,
         children: [
           AnimatedBuilder(
-            animation: _pulseController,
+            animation: Listenable.merge([_spinController, _loadController]),
             builder: (context, _) {
-              // Ring stays fixed; only unconfirmed segments pulse in color.
               return CustomPaint(
                 size: Size(widget.iconSize, widget.iconSize),
                 painter: _RingConfirmationPainter(
+                  mode: mode,
                   confirmations: conf,
-                  activeColor: const Color(0xFF34C759),
+                  target: target,
+                  yellowColor: _yellow,
+                  greenColor: _green,
+                  failedColor: _red,
                   inactiveColor: widget.colors.iconWellBorder,
-                  pulseValue: _pulseController.value,
-                  isPulsing: !isConfirmed,
+                  spinValue: _spinController.value,
+                  loadValue: _loadController.value,
                 ),
               );
             },
@@ -1537,12 +1441,18 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
                 StatementTransactionCard._iconFor(
                   widget.transaction,
                   widget.visual,
+                  wallets: widget.wallets,
+                  accounts: widget.accounts,
                 ),
                 color: widget.colors.icon,
                 size: widget.iconSize * 0.45,
               ),
               secondChild: Text(
-                '$conf/6',
+                isSettledVisual && conf <= 0
+                    ? 'OK'
+                    : tx.isUnconfirmedExpired
+                        ? '!'
+                        : '$conf/$target',
                 style: TextStyle(
                   color: widget.colors.icon,
                   fontFamily: AppTypography.bodyFontFamily,
@@ -1559,52 +1469,83 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
   }
 }
 
+enum _RingMode { yellowSpin, greenProgress, settled, failed }
+
 class _RingConfirmationPainter extends CustomPainter {
+  final _RingMode mode;
   final int confirmations;
-  final Color activeColor;
+  final int target;
+  final Color yellowColor;
+  final Color greenColor;
+  final Color failedColor;
   final Color inactiveColor;
-  final double pulseValue;
-  final bool isPulsing;
+  final double spinValue;
+  final double loadValue;
 
   _RingConfirmationPainter({
+    required this.mode,
     required this.confirmations,
-    required this.activeColor,
+    required this.target,
+    required this.yellowColor,
+    required this.greenColor,
+    required this.failedColor,
     required this.inactiveColor,
-    required this.pulseValue,
-    required this.isPulsing,
+    required this.spinValue,
+    required this.loadValue,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final origin = Offset(size.width / 2, size.height / 2);
     final radius = (math.min(size.width, size.height) / 2) - 1.5;
-    final strokeWidth = 2.5;
+    final strokeWidth = 2.6;
 
-    final ringPaint = Paint()
+    final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
 
-    const ringCount = 6;
-    const gapRadians = 0.20;
+    if (mode == _RingMode.yellowSpin) {
+      // Full yellow arc spinning around the icon (0 confirmations).
+      paint.color = yellowColor;
+      final start = -math.pi / 2 + spinValue * 2 * math.pi;
+      canvas.drawArc(
+        Rect.fromCircle(center: origin, radius: radius),
+        start,
+        math.pi * 1.35,
+        false,
+        paint,
+      );
+      paint.color = yellowColor.withValues(alpha: 0.22);
+      canvas.drawCircle(origin, radius, paint);
+      return;
+    }
+
+    final ringCount = target.clamp(3, 6);
+    const gapRadians = 0.18;
     final sweep = (2 * math.pi / ringCount) - gapRadians;
     final startOffset = -math.pi / 2 + gapRadians / 2;
+    final filled = confirmations.clamp(0, ringCount);
 
     for (var i = 0; i < ringCount; i++) {
-      final isFilled = i < confirmations;
-      // Fixed geometry: filled = confirmed color; current pending = color load pulse.
-      if (isFilled) {
-        ringPaint.color = activeColor;
-      } else if (isPulsing && i == confirmations) {
-        ringPaint.color = Color.lerp(
-              inactiveColor,
-              activeColor.withValues(alpha: 0.75),
-              pulseValue,
+      if (mode == _RingMode.failed) {
+        paint.color = i == 0 ? failedColor : inactiveColor;
+      } else if (mode == _RingMode.settled) {
+        paint.color = greenColor;
+      } else if (i < filled) {
+        // Confirmed slices — solid green.
+        paint.color = greenColor;
+      } else if (i == filled && mode == _RingMode.greenProgress) {
+        // Next confirmation — green loading pulse.
+        paint.color = Color.lerp(
+              greenColor.withValues(alpha: 0.25),
+              greenColor,
+              loadValue,
             ) ??
-            activeColor.withValues(alpha: 0.5);
+            greenColor.withValues(alpha: 0.6);
       } else {
-        ringPaint.color = inactiveColor;
+        paint.color = inactiveColor;
       }
 
       canvas.drawArc(
@@ -1612,15 +1553,18 @@ class _RingConfirmationPainter extends CustomPainter {
         startOffset + i * (2 * math.pi / ringCount),
         sweep,
         false,
-        ringPaint,
+        paint,
       );
     }
   }
 
   @override
   bool shouldRepaint(covariant _RingConfirmationPainter oldDelegate) {
-    return confirmations != oldDelegate.confirmations ||
-           pulseValue != oldDelegate.pulseValue;
+    return mode != oldDelegate.mode ||
+        confirmations != oldDelegate.confirmations ||
+        target != oldDelegate.target ||
+        spinValue != oldDelegate.spinValue ||
+        loadValue != oldDelegate.loadValue;
   }
 }
 

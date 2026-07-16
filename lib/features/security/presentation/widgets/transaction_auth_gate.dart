@@ -15,22 +15,38 @@ import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/features/security/presentation/widgets/transaction_pin_authorization.dart';
 
+/// Distinguishes intentional user abort from hard failures at the auth gate.
+enum TransactionAuthOutcome {
+  /// All required factors collected.
+  success,
+
+  /// User dismissed PIN / sheet / biometrics (back, cancel, OS prompt cancel).
+  cancelled,
+
+  /// Device cannot provide a required factor (e.g. biometrics unavailable).
+  unavailable,
+}
+
 class TransactionAuthResult {
-  final bool isAuthenticated;
+  final TransactionAuthOutcome outcome;
   final String? confirmationPassphrase;
   final String? totpCode;
   final String? passkeyAssertionJson;
   final String? appPin;
 
   const TransactionAuthResult._({
-    required this.isAuthenticated,
+    required this.outcome,
     this.confirmationPassphrase,
     this.totpCode,
     this.passkeyAssertionJson,
     this.appPin,
   });
 
-  const TransactionAuthResult.cancelled() : this._(isAuthenticated: false);
+  const TransactionAuthResult.cancelled()
+      : this._(outcome: TransactionAuthOutcome.cancelled);
+
+  const TransactionAuthResult.unavailable()
+      : this._(outcome: TransactionAuthOutcome.unavailable);
 
   const TransactionAuthResult.success({
     String? confirmationPassphrase,
@@ -38,12 +54,18 @@ class TransactionAuthResult {
     String? passkeyAssertionJson,
     String? appPin,
   }) : this._(
-          isAuthenticated: true,
+          outcome: TransactionAuthOutcome.success,
           confirmationPassphrase: confirmationPassphrase,
           totpCode: totpCode,
           passkeyAssertionJson: passkeyAssertionJson,
           appPin: appPin,
         );
+
+  bool get isAuthenticated => outcome == TransactionAuthOutcome.success;
+
+  bool get isCancelled => outcome == TransactionAuthOutcome.cancelled;
+
+  bool get isUnavailable => outcome == TransactionAuthOutcome.unavailable;
 }
 
 class TransactionAuthGate {
@@ -71,11 +93,17 @@ class TransactionAuthGate {
       context,
       effectiveProfile.appPin,
     );
-    if (appPinOutcome?.status == TransactionDeviceAuthStatus.rejected ||
-        appPinOutcome?.status == TransactionDeviceAuthStatus.unavailable ||
-        !context.mounted) {
+    if (!context.mounted) {
       onCancelled?.call();
       return const TransactionAuthResult.cancelled();
+    }
+    if (appPinOutcome?.status == TransactionDeviceAuthStatus.rejected) {
+      onCancelled?.call();
+      return const TransactionAuthResult.cancelled();
+    }
+    if (appPinOutcome?.status == TransactionDeviceAuthStatus.unavailable) {
+      onCancelled?.call();
+      return const TransactionAuthResult.unavailable();
     }
 
     if (effectiveProfile.requiresPasskey && !needsManualFactors) {
@@ -94,13 +122,16 @@ class TransactionAuthGate {
                   BiometricService(),
                 );
 
-      if (deviceAuthOutcome.status == TransactionDeviceAuthStatus.rejected ||
-          (deviceAuthOutcome.status ==
-                  TransactionDeviceAuthStatus.unavailable &&
-              !allowDeviceAuthUnavailable) ||
-          !context.mounted) {
+      if (!context.mounted ||
+          deviceAuthOutcome.status == TransactionDeviceAuthStatus.rejected) {
         onCancelled?.call();
         return const TransactionAuthResult.cancelled();
+      }
+      if (deviceAuthOutcome.status ==
+              TransactionDeviceAuthStatus.unavailable &&
+          !allowDeviceAuthUnavailable) {
+        onCancelled?.call();
+        return const TransactionAuthResult.unavailable();
       }
     }
 

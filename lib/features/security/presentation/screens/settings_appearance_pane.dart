@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/appearance_provider.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 
@@ -12,12 +13,13 @@ class SettingsAppearancePane extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appearance = ref.watch(appearanceProvider);
     final notifier = ref.read(appearanceProvider.notifier);
+    final tr = context.tr;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Aparência',
+          tr.settingsAppearanceTitle,
           style: AppTypography.newsreader(
             color: KeroseneBrandTokens.textPrimary,
             fontSize: 32,
@@ -28,7 +30,7 @@ class SettingsAppearancePane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Controle local do tema visual do aplicativo. A preferência não altera dados financeiros nem depende do backend.',
+          tr.settingsAppearanceSubtitle,
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textSecondary,
             fontSize: 16,
@@ -39,14 +41,14 @@ class SettingsAppearancePane extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         SettingsSection(
-          title: 'Tema',
+          title: tr.settingsAppearanceThemeSection,
           children: [
             SettingsSectionRow(
               icon: KeroseneIcons.contrast,
-              title: 'Modo escuro',
+              title: tr.settingsAppearanceDarkModeTitle,
               subtitle: appearance.darkModeEnabled
-                  ? 'Ativado para esta sessão.'
-                  : 'Desativado para esta sessão.',
+                  ? tr.settingsAppearanceDarkModeOn
+                  : tr.settingsAppearanceDarkModeOff,
               trailing: SettingsReadonlySwitch(
                 value: appearance.darkModeEnabled,
               ),

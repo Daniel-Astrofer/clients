@@ -1,14 +1,16 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:intl/intl.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 
-/// Displays a BTC balance with rolling digit animations.
+/// Balance amount with optional digit-roll (odometer) for **large value changes**.
 ///
-/// When [enableFlash] is true, the text briefly tints green (increase) or red (decrease).
-/// The widget always renders at a consistent height equal to fontSize * 1.4.
+/// Policies (home redesign):
+/// - [animateInitialValue]: short ceremony spin on first mount only (session).
+/// - [suppressRoll]: force static digits (e.g. while switching ledger tabs).
+/// - Updates roll only when `|Δ balance| >= [largeDeltaThreshold]`.
 class AnimatedBalanceDisplay extends StatefulWidget {
   final double balance;
   final TextStyle style;
@@ -22,7 +24,15 @@ class AnimatedBalanceDisplay extends StatefulWidget {
   final double digitWidthFactor;
   final double characterSpacing;
   final VoidCallback? onDecimalTap;
+
+  /// Short odometer spin when this widget first mounts (session ceremony).
   final bool animateInitialValue;
+
+  /// When true, never roll digits (view swipe / context change).
+  final bool suppressRoll;
+
+  /// Minimum absolute BTC change to trigger update odometer.
+  final double largeDeltaThreshold;
 
   const AnimatedBalanceDisplay({
     super.key,
@@ -38,7 +48,9 @@ class AnimatedBalanceDisplay extends StatefulWidget {
     this.digitWidthFactor = 0.64,
     this.characterSpacing = 0.8,
     this.onDecimalTap,
-    this.animateInitialValue = true,
+    this.animateInitialValue = false,
+    this.suppressRoll = false,
+    this.largeDeltaThreshold = 0.000001,
   });
 
   @override
@@ -53,33 +65,61 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
   late _BalanceCharacterLayout _characterLayout;
   Color _flashColor = Colors.green;
 
+  /// Generation bumps when we want digits to re-bind without rolling.
+  int _layoutGeneration = 0;
+  double _lastBalance = 0;
+  bool _allowRollOnThisUpdate = false;
+
   @override
   void initState() {
     super.initState();
+    _lastBalance = widget.balance;
+    _allowRollOnThisUpdate = widget.animateInitialValue && !widget.suppressRoll;
     _refreshCharacterLayout();
     _flashController = AnimationController(
       vsync: this,
       duration: KeroseneMotion.ceremonial,
       value: 1.0,
     );
-    _flashOpacity = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-        parent: _flashController, curve: KeroseneMotion.standard));
+    _flashOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _flashController, curve: KeroseneMotion.standard),
+    );
   }
 
   @override
   void didUpdateWidget(AnimatedBalanceDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_shouldRefreshCharacterLayout(oldWidget)) {
+
+    final balanceChanged = widget.balance != oldWidget.balance;
+    final formatChanged = widget.decimalPlaces != oldWidget.decimalPlaces ||
+        widget.prefix != oldWidget.prefix ||
+        widget.isHidden != oldWidget.isHidden ||
+        widget.locale != oldWidget.locale;
+
+    if (balanceChanged || formatChanged || widget.suppressRoll != oldWidget.suppressRoll) {
+      final delta = (widget.balance - _lastBalance).abs();
+      final largeDelta = delta >= widget.largeDeltaThreshold;
+      // Roll only on real large balance moves, never when suppressRoll (tab swipe).
+      _allowRollOnThisUpdate = !widget.suppressRoll &&
+          !widget.isHidden &&
+          balanceChanged &&
+          largeDelta &&
+          !formatChanged;
+
+      if (formatChanged || widget.suppressRoll) {
+        // Force digit widgets to accept new glyphs without animating from old.
+        _layoutGeneration++;
+      }
+
+      _lastBalance = widget.balance;
       _refreshCharacterLayout();
-    }
-    if (widget.enableFlash && widget.balance != oldWidget.balance) {
-      _flashColor = widget.balance > oldWidget.balance
-          ? AppColors.hexFF00FF94
-          : AppColors.hexFFFF0055;
-      _flashController.forward(from: 0.0);
+
+      if (widget.enableFlash && balanceChanged && largeDelta && !widget.isHidden) {
+        _flashColor = widget.balance > oldWidget.balance
+            ? AppColors.hexFF00FF94
+            : AppColors.hexFFFF0055;
+        _flashController.forward(from: 0.0);
+      }
     }
   }
 
@@ -87,6 +127,20 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
   void dispose() {
     _flashController.dispose();
     super.dispose();
+  }
+
+  void _refreshCharacterLayout() {
+    _visibleText = widget.isHidden
+        ? '${widget.prefix ?? ''}••••••••'
+        : '${widget.prefix ?? ''}${_formatBalance()}';
+    _characterLayout = _BalanceCharacterLayout.from(_visibleText);
+  }
+
+  String _formatBalance() {
+    final formatter = NumberFormat.decimalPattern(widget.locale)
+      ..minimumFractionDigits = widget.decimalPlaces
+      ..maximumFractionDigits = widget.decimalPlaces;
+    return formatter.format(widget.balance);
   }
 
   @override
@@ -113,28 +167,6 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
         return _buildRow(widget.style.copyWith(color: textColor));
       },
     );
-  }
-
-  bool _shouldRefreshCharacterLayout(AnimatedBalanceDisplay oldWidget) {
-    return widget.balance != oldWidget.balance ||
-        widget.decimalPlaces != oldWidget.decimalPlaces ||
-        widget.prefix != oldWidget.prefix ||
-        widget.isHidden != oldWidget.isHidden ||
-        widget.locale != oldWidget.locale;
-  }
-
-  void _refreshCharacterLayout() {
-    _visibleText = widget.isHidden
-        ? '${widget.prefix ?? ''}••••••••'
-        : '${widget.prefix ?? ''}${_formatBalance()}';
-    _characterLayout = _BalanceCharacterLayout.from(_visibleText);
-  }
-
-  String _formatBalance() {
-    final formatter = NumberFormat.decimalPattern(widget.locale)
-      ..minimumFractionDigits = widget.decimalPlaces
-      ..maximumFractionDigits = widget.decimalPlaces;
-    return formatter.format(widget.balance);
   }
 
   Widget _buildRow(TextStyle style) {
@@ -205,18 +237,23 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
                   color: style.color?.withValues(alpha: 0.5),
                 )
               : currentStyle,
-          key: ValueKey('static_${character.index}'),
+          key: ValueKey('static_${_layoutGeneration}_${character.index}'),
         );
       } else {
-        final delay = KeroseneMotion.stagger(character.index);
+        final delay = widget.animateInitialValue && _allowRollOnThisUpdate
+            ? KeroseneMotion.stagger(character.index)
+            : Duration.zero;
 
         child = _RollingDigit(
-          key: ValueKey('rolling_${_visibleText.length - character.index}'),
+          // Stable key by position so digit identity survives value changes.
+          key: ValueKey('rolling_${_layoutGeneration}_${character.index}'),
           digit: character.value,
           style: currentStyle,
           delay: delay,
           widthFactor: widget.digitWidthFactor,
-          animateInitialValue: widget.animateInitialValue,
+          animateInitialValue:
+              widget.animateInitialValue && _allowRollOnThisUpdate,
+          allowRollOnChange: _allowRollOnThisUpdate && !widget.suppressRoll,
         );
       }
 
@@ -238,35 +275,24 @@ class _BalanceCharacterLayout {
     required this.decimal,
   });
 
-  List<_BalanceCharacter> get all {
-    if (decimal.isEmpty) {
-      return leading;
+  List<_BalanceCharacter> get all => [...leading, ...decimal];
+
+  factory _BalanceCharacterLayout.from(String text) {
+    final separatorIndex = text.lastIndexOf(RegExp(r'[.,]'));
+    final all = <_BalanceCharacter>[
+      for (var i = 0; i < text.length; i++)
+        _BalanceCharacter(
+          index: i,
+          value: text[i],
+          separatorIndex: separatorIndex,
+        ),
+    ];
+    if (separatorIndex < 0) {
+      return _BalanceCharacterLayout(leading: all, decimal: const []);
     }
-    return [...leading, ...decimal];
-  }
-
-  factory _BalanceCharacterLayout.from(String value) {
-    final dotIndex = value.lastIndexOf('.');
-    final commaIndex = value.lastIndexOf(',');
-    final separatorIndex = dotIndex != -1 ? dotIndex : commaIndex;
-    final characters = List<_BalanceCharacter>.generate(value.length, (index) {
-      return _BalanceCharacter(
-        index: index,
-        value: value[index],
-        separatorIndex: separatorIndex,
-      );
-    }, growable: false);
-
-    if (separatorIndex == -1) {
-      return _BalanceCharacterLayout(
-        leading: characters,
-        decimal: const <_BalanceCharacter>[],
-      );
-    }
-
     return _BalanceCharacterLayout(
-      leading: characters.take(separatorIndex).toList(growable: false),
-      decimal: characters.skip(separatorIndex).toList(growable: false),
+      leading: all.sublist(0, separatorIndex + 1),
+      decimal: all.sublist(separatorIndex + 1),
     );
   }
 }
@@ -298,6 +324,7 @@ class _RollingDigit extends StatefulWidget {
   final Duration delay;
   final double widthFactor;
   final bool animateInitialValue;
+  final bool allowRollOnChange;
 
   const _RollingDigit({
     super.key,
@@ -305,7 +332,8 @@ class _RollingDigit extends StatefulWidget {
     required this.style,
     this.delay = Duration.zero,
     this.widthFactor = 0.64,
-    this.animateInitialValue = true,
+    this.animateInitialValue = false,
+    this.allowRollOnChange = false,
   });
 
   @override
@@ -317,8 +345,8 @@ class _RollingDigitState extends State<_RollingDigit>
   static const double _visibleExtent = 1.35;
   static const double _edgeOpacity = 0.16;
   static const double _edgeScale = 0.82;
-  static const double _maxTiltRadians = 0.78;
-  static const double _perspective = 0.0024;
+  static const double _maxTiltRadians = 0.55;
+  static const double _perspective = 0.002;
 
   late AnimationController _controller;
   late Animation<double> _animation;
@@ -332,27 +360,27 @@ class _RollingDigitState extends State<_RollingDigit>
     _targetDigit = int.tryParse(widget.digit) ?? 0;
     _previousDigit = _targetDigit;
 
+    // Ceremony: short spin (not 3s). Updates: calm odometer.
     _controller = AnimationController(
       vsync: this,
-      duration: KeroseneMotion.odometerInitial,
+      duration: widget.animateInitialValue
+          ? KeroseneMotion.odometerCeremony
+          : KeroseneMotion.odometerUpdate,
     );
 
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: KeroseneMotion.entrance, // Smoother deceleration for odometer
+      curve: KeroseneMotion.entrance,
     );
 
     if (widget.animateInitialValue) {
-      // Initial "spin up" effect.
       Future.delayed(widget.delay, () {
-        if (mounted) {
-          setState(() {
-            // Determine rotations only ONCE at start.
-            _rotations = 1;
-            _previousDigit = (_targetDigit + 7) % 10;
-          });
-          _controller.forward(from: 0.0);
-        }
+        if (!mounted) return;
+        setState(() {
+          _rotations = 1;
+          _previousDigit = (_targetDigit + 7) % 10;
+        });
+        _controller.forward(from: 0.0);
       });
     } else {
       _controller.value = 1.0;
@@ -363,15 +391,26 @@ class _RollingDigitState extends State<_RollingDigit>
   void didUpdateWidget(_RollingDigit oldWidget) {
     super.didUpdateWidget(oldWidget);
     final newDigit = int.tryParse(widget.digit) ?? 0;
-    if (newDigit != _targetDigit) {
+    if (newDigit == _targetDigit) return;
+
+    if (!widget.allowRollOnChange) {
+      // Instant snap — e.g. ledger tab change or small delta.
       setState(() {
-        _previousDigit = _targetDigit;
+        _previousDigit = newDigit;
         _targetDigit = newDigit;
-        _rotations = 0; // Simple transition for updates
+        _rotations = 0;
       });
-      _controller.duration = KeroseneMotion.odometerUpdate;
-      _controller.forward(from: 0.0);
+      _controller.value = 1.0;
+      return;
     }
+
+    setState(() {
+      _previousDigit = _targetDigit;
+      _targetDigit = newDigit;
+      _rotations = 0;
+    });
+    _controller.duration = KeroseneMotion.odometerUpdate;
+    _controller.forward(from: 0.0);
   }
 
   @override
@@ -404,6 +443,10 @@ class _RollingDigitState extends State<_RollingDigit>
             if (diff < 0) diff += 10;
 
             final totalSteps = (_rotations * 10) + diff;
+            if (totalSteps <= 0) {
+              return _StaticDigit(digit: widget.digit, style: widget.style);
+            }
+
             final baseColor =
                 widget.style.color ?? Theme.of(context).colorScheme.onPrimary;
             final visibleDigits = <({double distance, Widget child})>[];
@@ -452,9 +495,7 @@ class _RollingDigitState extends State<_RollingDigit>
               ));
             }
 
-            visibleDigits.sort(
-              (a, b) => b.distance.compareTo(a.distance),
-            );
+            visibleDigits.sort((a, b) => b.distance.compareTo(a.distance));
 
             return RepaintBoundary(
               child: ShaderMask(
@@ -499,10 +540,7 @@ class _StaticDigit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(
-        digit,
-        style: style,
-      ),
+      child: Text(digit, style: style),
     );
   }
 }

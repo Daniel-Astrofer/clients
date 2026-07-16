@@ -332,7 +332,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
       MovementReceiveActionKind.p2p => _ReceiveActionTile(
           icon: KeroseneIcons.internalTransfer,
           title: 'P2P',
-          subtitle: 'Receber por transferencia de usuario interno',
+          subtitle: context.tr.movementHubReceiveInternal,
           onTap: isLoading ? () {} : () => _openReceive(ReceiveAmountMethod.p2p),
           showDivider: showDivider,
           verticalPadding: 24,

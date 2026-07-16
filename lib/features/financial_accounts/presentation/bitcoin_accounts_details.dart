@@ -110,7 +110,7 @@ class ReceiveMaterialDetails extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             AccountOptionActionButton(
-              label: 'Rotacionar endereço',
+              label: context.tr.btcAccountsRotateAddress,
               icon: KeroseneIcons.refresh,
               busy: rotating,
               onPressed: onRotate,
@@ -226,7 +226,7 @@ class WalletNameDialogState extends State<WalletNameDialog> {
         autofocus: true,
         maxLength: 96,
         textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(labelText: 'Nome da carteira'),
+        decoration: InputDecoration(labelText: context.tr.coldCreateWalletName),
         onSubmitted: (_) => submit(),
       ),
       actions: [
@@ -367,15 +367,21 @@ class AccountExpansionItem extends StatelessWidget {
 }
 
 IconData accountOptionIcon(String title) {
-  return switch (title) {
-    'STATUS DA CARTEIRA' => KeroseneIcons.security,
-    'ENDEREÇO DE RECEBIMENTO' => KeroseneIcons.download,
-    'NOME DA CARTEIRA' => KeroseneIcons.user,
-    'MATERIAL PÚBLICO' => KeroseneIcons.settings,
-    'UTXOS MONITORADOS' => KeroseneIcons.database,
-    'PSBT WORKFLOWS' => KeroseneIcons.document,
-    _ => KeroseneIcons.settings,
-  };
+  // Match labels regardless of locale (compare against known ARB values).
+  final normalized = title.trim().toUpperCase();
+  if (normalized.contains('STATUS')) return KeroseneIcons.security;
+  if (normalized.contains('RECEB') || normalized.contains('RECEIVE') || normalized.contains('RECEPCI')) {
+    return KeroseneIcons.download;
+  }
+  if (normalized.contains('NOME') || normalized.contains('NAME') || normalized.contains('NOMBRE')) {
+    return KeroseneIcons.user;
+  }
+  if (normalized.contains('PÚBLICO') || normalized.contains('PUBLIC') || normalized.contains('MATERIAL')) {
+    return KeroseneIcons.settings;
+  }
+  if (normalized.contains('UTXO')) return KeroseneIcons.database;
+  if (normalized.contains('PSBT')) return KeroseneIcons.document;
+  return KeroseneIcons.settings;
 }
 
 class AccountDetail {
@@ -491,7 +497,7 @@ class InlineLoadingState extends StatelessWidget {
   }
 }
 
-class FocusedAccountHistory extends StatefulWidget {
+class FocusedAccountHistory extends ConsumerStatefulWidget {
   final BitcoinAccount account;
   final AsyncValue<List<Transaction>> transactionsAsync;
   final AsyncValue<List<ReceivingRequestView>> requestsAsync;
@@ -504,10 +510,11 @@ class FocusedAccountHistory extends StatefulWidget {
   });
 
   @override
-  State<FocusedAccountHistory> createState() => _FocusedAccountHistoryState();
+  ConsumerState<FocusedAccountHistory> createState() =>
+      _FocusedAccountHistoryState();
 }
 
-class _FocusedAccountHistoryState extends State<FocusedAccountHistory> {
+class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
   final Set<String> _expandedTransactionIds = <String>{};
 
   bool _isSameDay(DateTime a, DateTime b) {
@@ -591,15 +598,35 @@ class _FocusedAccountHistoryState extends State<FocusedAccountHistory> {
             text: context.tr.bitcoinAccountsErrorMessage,
           ),
           data: (transactions) {
+            var history = transactions;
+            // Cold: fill PSBT broadcasts that are not yet in KFE history.
+            if (widget.account.isWatchOnly) {
+              final coldId = (widget.account.coldWalletId ?? widget.account.id)
+                  .trim();
+              if (coldId.isNotEmpty) {
+                final psbts = ref
+                        .watch(bitcoinColdWalletPsbtsProvider(coldId))
+                        .asData
+                        ?.value ??
+                    const <PsbtWorkflowView>[];
+                history = mergeColdPsbtBroadcastsIntoHistory(
+                  transactions: history,
+                  workflows: psbts,
+                  coldWalletId: coldId,
+                );
+              }
+            }
             final rows = transactionsForAccount(
               account: widget.account,
-              transactions: transactions,
+              transactions: history,
               requests: requests,
             ).take(8).toList(growable: false);
 
             if (rows.isEmpty) {
-              return const BareHistoryMessage(
-                text: 'Sem transações neste cartão.',
+              return BareHistoryMessage(
+                text: widget.account.isWatchOnly
+                    ? 'Sem movimentos indexados nesta cold. O saldo observado vem da blockchain; UTXOs e envios PSBT aparecem quando detectados.'
+                    : 'Sem transações neste cartão.',
               );
             }
 

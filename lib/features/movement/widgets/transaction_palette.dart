@@ -92,13 +92,16 @@ abstract final class TransactionPalette {
 
   static TransactionStatusTone toneFor(Transaction tx) {
     if (tx.isCancelled) return TransactionStatusTone.cancelled;
-    if (tx.status == TransactionStatus.failed) {
+    // 24h with zero backend confs while still open → treat as not confirmed.
+    if (tx.isUnconfirmedExpired || tx.status == TransactionStatus.failed) {
       return TransactionStatusTone.failed;
     }
     if (tx.status == TransactionStatus.confirmed || tx.isConfirmed) {
       return TransactionStatusTone.confirmed;
     }
-    if (tx.status == TransactionStatus.confirming || tx.confirmations > 0) {
+    // Only treat block confs as "confirming" for real on-chain rails.
+    if (tx.status == TransactionStatus.confirming ||
+        (tx.showsOnchainConfirmations && tx.confirmations > 0)) {
       return TransactionStatusTone.confirming;
     }
     return TransactionStatusTone.pending;

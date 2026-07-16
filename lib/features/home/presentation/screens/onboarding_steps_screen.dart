@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,7 +56,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Jornada de Ativação'.toUpperCase(),
+                          context.tr.onboardingJourneyTitle.toUpperCase(),
                           style: AppTypography.caption.copyWith(
                             color: monoMutedTextColor,
                             letterSpacing: 1.8,
@@ -107,7 +108,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                         _buildStepItem(
                           context: context,
                           index: 1,
-                          title: 'Criar Carteira Custodial',
+                          title: context.tr.onboardingCreateCustodialWallet,
                           description: 'Crie uma carteira Kerosene oficial para habilitar saldos.',
                           isCompleted: progress.hasCustodialWallet,
                           onTapAction: () {
@@ -118,7 +119,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                         _buildStepItem(
                           context: context,
                           index: 2,
-                          title: 'Realizar um Depósito',
+                          title: context.tr.onboardingMakeDeposit,
                           description: 'Adicione saldo Bitcoin à sua carteira recém-criada.',
                           isCompleted: progress.hasDeposit,
                           enabled: progress.hasCustodialWallet,
@@ -130,7 +131,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                         _buildStepItem(
                           context: context,
                           index: 3,
-                          title: 'Transferência Interna',
+                          title: context.tr.onboardingInternalTransfer,
                           description: 'Faça uma transferência instantânea sem taxas dentro da rede.',
                           isCompleted: progress.hasInternalTransfer,
                           enabled: progress.hasDeposit,

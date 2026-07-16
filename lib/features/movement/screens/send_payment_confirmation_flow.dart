@@ -44,22 +44,28 @@ Future<dynamic> confirmSendPayment({
   required String? Function(String toAddress) resolveRecentDestinationLabel,
   required String Function(String toAddress) resolveRecentDestinationAddress,
   required bool Function() isMounted,
+
+  /// When true, first-send was already acknowledged on the review screen
+  /// (inline checkbox). Skips the legacy AlertDialog path.
+  bool firstSendAcknowledgedInReview = false,
 }) async {
   final l10n = context.tr;
 
   // Fail-closed network check for on-chain destinations.
   if (destination.isOnChain) {
-    final networkError = networkMismatchMessage(toAddress);
+    final networkError = networkMismatchMessage(toAddress, context: context);
     if (networkError != null) {
       SnackbarHelper.showError(networkError);
       return null;
     }
-    final ok = await confirmFirstTimeOnchainAddress(
-      context: confirmationContext,
-      address: toAddress,
-    );
-    if (!ok || !isMounted() || !confirmationContext.mounted) {
-      return null;
+    if (!firstSendAcknowledgedInReview) {
+      final ok = await confirmFirstTimeOnchainAddress(
+        context: confirmationContext,
+        address: toAddress,
+      );
+      if (!ok || !isMounted() || !confirmationContext.mounted) {
+        return null;
+      }
     }
   }
 
@@ -84,18 +90,24 @@ Future<dynamic> confirmSendPayment({
     allowDeviceAuthUnavailable: false,
   );
 
-  if (!authResult.isAuthenticated ||
-      !isMounted() ||
-      !confirmationContext.mounted) {
+  if (!isMounted() || !confirmationContext.mounted) return null;
+
+  // User back/cancel during PIN, biometrics, or factor sheets — stay on review.
+  if (authResult.isCancelled) {
+    return null;
+  }
+  if (authResult.isUnavailable) {
+    SnackbarHelper.showInfo(l10n.sendMoneyAuthFailed);
+    return null;
+  }
+  if (!authResult.isAuthenticated) {
     SnackbarHelper.showError(l10n.sendMoneyAuthFailed);
     return null;
   }
 
   if (pendingPaymentLinkId != null) {
     if (wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable) {
-      SnackbarHelper.showError(
-        'Carteira fria não paga link Kerosene. Use um endereço on-chain.',
-      );
+      SnackbarHelper.showError(SendMoneyCopy.coldNoPaymentLink(confirmationContext));
       return null;
     }
     return _confirmPaymentLink(
@@ -200,9 +212,10 @@ Future<dynamic> _confirmPaymentLink({
     return result;
   }
 
-  HapticFeedback.heavyImpact();
   final error = ref.read(paymentLinkNotifierProvider).error;
+  // Silent when user cancelled passkey/device-key (error cleared in notifier).
   if (error != null) {
+    HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
     SnackbarHelper.showError(
       ErrorTranslator.translate(confirmationContext.l10n, error),
@@ -232,7 +245,7 @@ Future<dynamic> _confirmColdSend({
 }) async {
   if (!destination.isOnChain) {
     SnackbarHelper.showError(
-      'Carteira fria envia apenas on-chain. Informe um endereço Bitcoin.',
+      SendMoneyCopy.coldOnlyOnchain(confirmationContext),
     );
     return null;
   }
@@ -374,9 +387,9 @@ Future<dynamic> _confirmExternalSend({
     return result;
   }
 
-  HapticFeedback.heavyImpact();
   final error = ref.read(withdrawProvider).error;
   if (error != null) {
+    HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
     SnackbarHelper.showError(
       ErrorTranslator.translate(confirmationContext.l10n, error),
@@ -441,9 +454,9 @@ Future<dynamic> _confirmInternalSend({
     return result;
   }
 
-  HapticFeedback.heavyImpact();
   final error = ref.read(sendTransactionProvider).error;
   if (error != null) {
+    HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
     SnackbarHelper.showError(
       ErrorTranslator.translate(confirmationContext.l10n, error),

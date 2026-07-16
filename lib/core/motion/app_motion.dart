@@ -44,8 +44,12 @@ class KeroseneMotion {
   static const Duration nfcSceneIntro = Duration(milliseconds: 1600);
   static const Duration nfcSceneReady = Duration(milliseconds: 3900);
   static const Duration interactionCooldown = Duration(milliseconds: 500);
+  /// Legacy long spin (avoid on home — use [odometerCeremony] instead).
   static const Duration odometerInitial = Duration(milliseconds: 3000);
-  static const Duration odometerUpdate = calm;
+  /// One short session ceremony when the home balance first appears.
+  static const Duration odometerCeremony = Duration(milliseconds: 1000);
+  /// Digit roll only on large real balance deltas (not tab swipe).
+  static const Duration odometerUpdate = Duration(milliseconds: 700);
   static const Duration microStagger = Duration(milliseconds: 50);
   static const Duration authStagger = Duration(milliseconds: 34);
   static const Duration listStagger = Duration(milliseconds: 60);

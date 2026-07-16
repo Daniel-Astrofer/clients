@@ -250,6 +250,10 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<void> clearAll() async {
     try {
+      // Auth session only. Intentionally does NOT delete:
+      // - tx_history_v1:* (local extrato / LocalLedgerSync)
+      // Logout must preserve on-device transaction history so the user still
+      // sees De/Para and network labels offline after signing back in.
       await removeToken();
       await removeUser();
       await removeTotpSecret();

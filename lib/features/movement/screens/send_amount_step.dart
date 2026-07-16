@@ -9,6 +9,7 @@ import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
 import 'package:kerosene/features/movement/widgets/transaction_value_entry_surface.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
+import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 
 class SendAmountStep extends StatelessWidget {
   final VoidCallback onBack;
@@ -54,10 +55,10 @@ class SendAmountStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
     return ValueListenableBuilder<String>(
       valueListenable: amount,
       builder: (context, amountValue, child) {
+        final appLocale = Localizations.localeOf(context);
         final amountBtc = resolveAmountBtc(amountValue);
         final amountLocked = hasPaymentLink || lockedAmountBtc > 0;
         final secondaryLabel = selectedCurrency == Currency.btc
@@ -66,11 +67,13 @@ class SendAmountStep extends StatelessWidget {
                 btcUsd: btcUsd,
                 btcEur: btcEur,
                 btcBrl: btcBrl,
+                appLocale: appLocale,
               )
             : '≈ ${MoneyDisplay.formatCompact(
                 amount: amountBtc,
                 currency: Currency.btc,
                 maxDecimalPlaces: 8,
+                appLocale: appLocale,
               )}';
         final totalDebitedBtc =
             destination.isExternal ? feeQuote.totalDebitedBtc : amountBtc;
@@ -87,30 +90,29 @@ class SendAmountStep extends StatelessWidget {
             !(destination.isLightning && feeQuote.isLoading) &&
             !insufficientBalance;
 
-        final feeLabel = _feeLabel(lang);
+        final feeLabel = _feeLabel(context);
         final warningLabel = insufficientBalance
-            ? 'Saldo insuficiente'
+            ? SendMoneyCopy.insufficientBalance(context)
             : (quoteExpired
-                ? switch (lang) {
-                    'en' => 'Fee quote expired — updating…',
-                    'es' => 'Cotización de tarifa expirada — actualizando…',
-                    _ => 'Cotação de taxa expirada — atualizando…',
-                  }
+                ? context.tr.sendFeeQuoteExpired
                 : null);
+
+        final recipientLabel = _stickyRecipientLabel();
+        final fromWallet = wallet?.name.trim() ?? '';
+        final configuration = _amountConfiguration(context);
 
         return TransactionValueEntrySurface(
           onBack: onBack,
+          // Bank sticky party: keep "To / From" visible while entering amount.
+          title: SendMoneyCopy.amountToTitle(context, recipientLabel),
+          subtitle: fromWallet.isEmpty
+              ? null
+              : SendMoneyCopy.amountFromSubtitle(context, fromWallet),
           amountInput: amountValue,
           unitLabel: MoneyDisplay.tickerSymbolFor(selectedCurrency),
           currency: selectedCurrency,
           fiatReference: secondaryLabel,
-          configuration: destination.isOnChain && onFeeTierChanged != null
-              ? _FeeTierBar(
-                  selected: feeTier,
-                  onSelected: onFeeTierChanged!,
-                  languageCode: lang,
-                )
-              : null,
+          configuration: configuration,
           showKeypad: !amountLocked,
           onKeyTap: amountLocked
               ? null
@@ -130,6 +132,7 @@ class SendAmountStep extends StatelessWidget {
                   amount: wallet!.balance,
                   currency: Currency.btc,
                   maxDecimalPlaces: 8,
+                  appLocale: appLocale,
                 ),
           feeLabel: feeLabel,
           warningLabel: warningLabel,
@@ -160,32 +163,47 @@ class SendAmountStep extends StatelessWidget {
     );
   }
 
-  String? _feeLabel(String lang) {
+  Widget? _amountConfiguration(BuildContext context) {
+    final railChip = _NetworkRailChip(
+      label: SendMoneyCopy.networkLabel(
+        context,
+        isPaymentLink: destination.isPaymentLink,
+        isLightning: destination.isLightning,
+        isOnChain: destination.isOnChain,
+      ),
+    );
+    final showFeeTiers =
+        destination.isOnChain && onFeeTierChanged != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        railChip,
+        if (showFeeTiers) ...[
+          const SizedBox(height: 14),
+          _FeeTierBar(
+            selected: feeTier,
+            onSelected: onFeeTierChanged!,
+          ),
+        ],
+      ],
+    );
+  }
+
+  String? _feeLabel(BuildContext context) {
     if (destination.isLightning) {
       if (feeQuote.networkFeeCertainty ==
           NetworkFeeCertainty.unknownUntilPay) {
-        return switch (lang) {
-          'en' => 'Network fee estimated at payment',
-          'es' => 'Tarifa de red estimada al pagar',
-          _ => 'Taxa de rede estimada no pagamento',
-        };
+        return context.tr.sendFeeEstimatedAtPayment;
       }
     }
     if (!destination.isOnChain) return null;
     if (feeQuote.isLoading ||
         feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading) {
-      return switch (lang) {
-        'en' => 'Calculating fee…',
-        'es' => 'Calculando tarifa…',
-        _ => 'Calculando taxa…',
-      };
+      return context.tr.sendFeeCalculating;
     }
     if (!feeQuote.isReady && feeQuote.error != null) {
-      return switch (lang) {
-        'en' => 'Fee unavailable',
-        'es' => 'Tarifa no disponible',
-        _ => 'Taxa indisponível',
-      };
+      return context.tr.sendFeeUnavailable;
     }
     if (feeQuote.networkFeeCertainty != NetworkFeeCertainty.known) {
       return null;
@@ -197,10 +215,35 @@ class SendAmountStep extends StatelessWidget {
     );
     final eta = FeeTierSelection.formatEta(
       feeQuote.estimatedSettlementSeconds,
-      lang,
+      context.tr,
     );
     if (eta.isEmpty) return fee;
     return '$fee · $eta';
+  }
+
+  /// Human label for sticky header — prefers contact/username over raw address.
+  String _stickyRecipientLabel() {
+    final labeled = destination.label?.trim() ?? '';
+    if (labeled.isNotEmpty) {
+      if (destination.isInternal) {
+        final bare = labeled.startsWith('@') ? labeled.substring(1) : labeled;
+        return bare.length <= 28 ? '@$bare' : '@${bare.substring(0, 24)}…';
+      }
+      return labeled.length <= 28 ? labeled : '${labeled.substring(0, 24)}…';
+    }
+    final raw = destination.normalizedValue.trim();
+    if (raw.isEmpty) return '';
+    if (destination.isInternal) {
+      final bare = raw.startsWith('@') ? raw.substring(1) : raw;
+      return bare.length <= 28 ? '@$bare' : '@${bare.substring(0, 24)}…';
+    }
+    if (destination.isPaymentLink) {
+      return raw.length <= 22
+          ? raw
+          : '${raw.substring(0, 10)}…${raw.substring(raw.length - 6)}';
+    }
+    if (raw.length <= 18) return raw;
+    return '${raw.substring(0, 8)}…${raw.substring(raw.length - 6)}';
   }
 
   void _applyQuickPercent({
@@ -248,15 +291,41 @@ class SendAmountStep extends StatelessWidget {
   }
 }
 
+class _NetworkRailChip extends StatelessWidget {
+  final String label;
+
+  const _NetworkRailChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: KeroseneBrandTokens.surfaceHigh,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: KeroseneBrandTokens.border),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FeeTierBar extends StatelessWidget {
   final NetworkFeeTier selected;
   final ValueChanged<NetworkFeeTier> onSelected;
-  final String languageCode;
 
   const _FeeTierBar({
     required this.selected,
     required this.onSelected,
-    required this.languageCode,
   });
 
   @override
@@ -279,7 +348,7 @@ class _FeeTierBar extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Text(
-                      FeeTierSelection.tierLabel(tier, languageCode),
+                      FeeTierSelection.tierLabel(tier, context.tr),
                       textAlign: TextAlign.center,
                       style: AppTypography.inter(
                         color: selected == tier

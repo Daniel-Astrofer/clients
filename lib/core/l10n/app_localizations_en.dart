@@ -502,7 +502,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep your device close to the reader or another smartphone to process.';
 
   @override
-  String get cancelOperation => 'CANCEL OPERATION';
+  String get cancelOperation => 'Cancel operation';
 
   @override
   String get confirming => 'Confirming';
@@ -7497,4 +7497,1457 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletSelectorAvailableBalance => 'Available balance';
+
+  @override
+  String get settingsNavTitle => 'Tune your account';
+
+  @override
+  String get settingsNavDescription =>
+      'Manage security, privacy, and preferences for your banking experience.';
+
+  @override
+  String get settingsNavPreferencesSection => 'Preferences';
+
+  @override
+  String get settingsNavBack => 'Back';
+
+  @override
+  String get settingsNavProfileTitle => 'Profile';
+
+  @override
+  String get settingsNavProfileSubtitle =>
+      'Personal data and account information';
+
+  @override
+  String get settingsNavSecurityTitle => 'Security';
+
+  @override
+  String get settingsNavSecuritySubtitle =>
+      'Password, biometrics, and two-factor authentication';
+
+  @override
+  String get settingsNavNotificationsTitle => 'Notifications';
+
+  @override
+  String get settingsNavNotificationsSubtitle =>
+      'Transaction alerts and communications';
+
+  @override
+  String get settingsNavAppearanceTitle => 'Appearance';
+
+  @override
+  String get settingsNavAppearanceSubtitle => 'Theme and local display scale';
+
+  @override
+  String get settingsNavDisplayTitle => 'Language and currency';
+
+  @override
+  String get settingsNavDisplaySubtitle =>
+      'Global language, currency, and time zone';
+
+  @override
+  String get settingsNavWalletsTitle => 'Wallets';
+
+  @override
+  String get settingsNavWalletsSubtitle => 'Custody and KFE cycle';
+
+  @override
+  String get settingsDisplayTitle => 'Language, currency & time';
+
+  @override
+  String get settingsDisplaySubtitle =>
+      'Global app preferences. Language and time zone are sent to the backend for news and education. Local statement is encrypted — the server only keeps ~24h of history.';
+
+  @override
+  String get settingsDisplayLanguageSection => 'Language';
+
+  @override
+  String get settingsDisplayCurrencySection => 'Primary currency';
+
+  @override
+  String get settingsDisplayTimezoneSection => 'Time zone';
+
+  @override
+  String get settingsDisplayFollowDeviceTimezone => 'Follow device time zone';
+
+  @override
+  String get settingsDisplayPinnedTimezone => 'Time zone used in app';
+
+  @override
+  String get settingsDisplayPickTimezone => 'Choose a time zone';
+
+  @override
+  String get settingsDisplayLanguageEn => 'English';
+
+  @override
+  String get settingsDisplayLanguagePt => 'Português';
+
+  @override
+  String get settingsDisplayLanguageEs => 'Español';
+
+  @override
+  String get settingsDisplayLanguageEnSubtitle =>
+      'Interface and feed in English';
+
+  @override
+  String get settingsDisplayLanguagePtSubtitle =>
+      'Interface and feed in Portuguese';
+
+  @override
+  String get settingsDisplayLanguageEsSubtitle =>
+      'Interface and feed in Spanish';
+
+  @override
+  String get settingsDisplayCurrencyBtcSubtitle =>
+      'Show amounts directly in Bitcoin';
+
+  @override
+  String get settingsDisplayCurrencyUsdSubtitle =>
+      'US dollar as display currency';
+
+  @override
+  String get settingsDisplayCurrencyEurSubtitle => 'Euro as display currency';
+
+  @override
+  String get settingsDisplayCurrencyBrlSubtitle =>
+      'Brazilian real as display currency';
+
+  @override
+  String get settingsAppearanceTitle => 'Appearance';
+
+  @override
+  String get settingsAppearanceSubtitle =>
+      'Local control of the app visual theme. This preference does not change financial data and does not depend on the backend.';
+
+  @override
+  String get settingsAppearanceThemeSection => 'Theme';
+
+  @override
+  String get settingsAppearanceDarkModeTitle => 'Dark mode';
+
+  @override
+  String get settingsAppearanceDarkModeOn => 'Enabled for this session.';
+
+  @override
+  String get settingsAppearanceDarkModeOff => 'Disabled for this session.';
+
+  @override
+  String get cancelAuthentication => 'Cancel authentication';
+
+  @override
+  String get secureConnectionLoading => 'Establishing secure connection...';
+
+  @override
+  String get deferredLoadFailure => 'We could not open this screen right now.';
+
+  @override
+  String get deferredLoadDetails =>
+      'Try again in a moment or go back to the previous area.';
+
+  @override
+  String get nfcScannerTitle => 'NFC scan';
+
+  @override
+  String get nfcReadyToScan => 'Ready to scan';
+
+  @override
+  String get nfcUnavailableDevice => 'NFC is not available on this device.';
+
+  @override
+  String get nfcHoldNearTag => 'Hold your device near the NFC tag.';
+
+  @override
+  String get nfcPaymentRequestRead => 'Payment request read.';
+
+  @override
+  String get nfcTagDetected => 'Tag detected.';
+
+  @override
+  String get offlineTitle => 'No connection';
+
+  @override
+  String get offlineSubtitle =>
+      'We could not confirm the connection right now.';
+
+  @override
+  String get offlineTryNow => 'Try now';
+
+  @override
+  String get pinIncorrect => 'We could not confirm that PIN. Try again.';
+
+  @override
+  String get pinSetupTitle => 'Create your security PIN';
+
+  @override
+  String get pinEnterTitle => 'Confirm your security PIN';
+
+  @override
+  String get pinSetupSubtitle => 'Choose six digits to protect this access.';
+
+  @override
+  String get pinEnterSubtitle =>
+      'This local PIN protects trust on this device.';
+
+  @override
+  String get settingsAccountTitle => 'Profile';
+
+  @override
+  String get settingsAccountSubtitle =>
+      'Authenticated account data, session identity, and secure local sign-out.';
+
+  @override
+  String get settingsAccountIdentitySection => 'Identity';
+
+  @override
+  String get settingsAccountUsernameTitle => 'Username';
+
+  @override
+  String get settingsAccountSessionSection => 'Session';
+
+  @override
+  String get settingsAccountCreatedAtTitle => 'Created at';
+
+  @override
+  String get settingsAccountLastAccessTitle => 'Last access';
+
+  @override
+  String get settingsAccountLogoutTitle => 'Sign out of this account';
+
+  @override
+  String get settingsAccountLogoutSubtitle =>
+      'Ends the current session and returns to the app entry.';
+
+  @override
+  String get settingsNotifTitle => 'Notifications';
+
+  @override
+  String get settingsNotifSubtitle =>
+      'Local control of financial alerts, security events, and devices authorized for push notifications.';
+
+  @override
+  String get settingsNotifAlertsSection => 'Alerts';
+
+  @override
+  String get settingsNotifBackgroundTitle => 'Background mode';
+
+  @override
+  String get settingsNotifBackgroundOn =>
+      'Monitors sends and receives while the app is closed.';
+
+  @override
+  String get settingsNotifBackgroundOff =>
+      'Off — open the app to see financial alerts.';
+
+  @override
+  String get settingsNotifFinancialTitle => 'Financial events';
+
+  @override
+  String get settingsNotifFinancialSubtitle =>
+      'Transactions, receives, and payment requests.';
+
+  @override
+  String get settingsNotifSecurityEventsTitle => 'Security events';
+
+  @override
+  String get settingsNotifSecurityEventsSubtitle =>
+      'Login, recovery, and sensitive access attempts.';
+
+  @override
+  String get settingsNotifMarketTitle => 'Bitcoin market';
+
+  @override
+  String get settingsNotifMarketOn => 'Real 24h move alerts enabled.';
+
+  @override
+  String get settingsNotifMarketOff =>
+      'Off by default. No mock and no fallback.';
+
+  @override
+  String get settingsNotifDevicesSection => 'Devices';
+
+  @override
+  String get settingsNotifDevicesLoading => 'Loading authorized devices.';
+
+  @override
+  String get settingsNotifDevicesUnavailableTitle => 'Devices unavailable';
+
+  @override
+  String get settingsNotifDevicesUnavailableSubtitle =>
+      'We could not query registered tokens right now.';
+
+  @override
+  String get settingsNotifNoDevicesTitle => 'No registered devices';
+
+  @override
+  String get settingsNotifNoDevicesSubtitle =>
+      'When you allow push notifications, the backend will show the device here.';
+
+  @override
+  String get settingsNotifDeviceFallback => 'Device';
+
+  @override
+  String get settingsNotifRevoke => 'Revoke';
+
+  @override
+  String get settingsNotifPermissionTitle => 'Permission required';
+
+  @override
+  String get settingsNotifPermissionMessage =>
+      'Allow notifications on Android to receive alerts.';
+
+  @override
+  String get settingsNotifRevokeFailedTitle => 'We could not revoke';
+
+  @override
+  String get settingsNotifRevokedTitle => 'Device revoked';
+
+  @override
+  String get settingsNotifRevokedMessage =>
+      'This token will not receive new notifications.';
+
+  @override
+  String get settingsNotifBackgroundDialogTitle => 'Enable background alerts?';
+
+  @override
+  String get settingsNotifBackgroundDialogBody =>
+      'Kerosene can keep a discreet Android service to notify you about transactions, deposits, and critical events as soon as they arrive.';
+
+  @override
+  String get settingsNotifBackgroundDialogConfirm => 'Enable now';
+
+  @override
+  String get settingsSecurityTitle => 'Security';
+
+  @override
+  String get settingsSecuritySubtitle =>
+      'Protect your account with authentication, local access, and recovery controls.';
+
+  @override
+  String get settingsSecurityLoading => 'Loading security profile';
+
+  @override
+  String get settingsSecurityLoadErrorTitle => 'We could not load security';
+
+  @override
+  String get settingsSecurityLoadErrorBody =>
+      'Check your connection and try again.';
+
+  @override
+  String get settingsSecurityAccessSection => 'Access protection';
+
+  @override
+  String get settingsSecurityChangePinTitle => 'Change PIN';
+
+  @override
+  String get settingsSecurityChangePinEnabled => 'Update your 4-digit code';
+
+  @override
+  String get settingsSecurityChangePinDisabled => 'Set a 4-digit code';
+
+  @override
+  String get settingsSecurityBiometricsTitle => 'Biometrics';
+
+  @override
+  String get settingsSecurityBiometricsOn => 'Use fingerprint to open the app';
+
+  @override
+  String get settingsSecurityBiometricsOff =>
+      'Register a passkey on this device';
+
+  @override
+  String get settingsSecurityTotpTitle => 'Two-factor authentication';
+
+  @override
+  String settingsSecurityTotpOn(String mode) {
+    return 'On in $mode mode';
+  }
+
+  @override
+  String get settingsSecurityTotpOff =>
+      'Validate TOTP and enable extra protection';
+
+  @override
+  String get settingsSecurityDevicesSection => 'Devices and access';
+
+  @override
+  String get settingsSecurityAuthorizedDevicesTitle => 'Authorized devices';
+
+  @override
+  String get settingsSecurityNoPasskeyDevice => 'No device with passkey';
+
+  @override
+  String settingsSecurityOneDeviceManage(String name) {
+    return '$name · manage';
+  }
+
+  @override
+  String settingsSecurityNDevicesManage(int count) {
+    return '$count devices · manage';
+  }
+
+  @override
+  String get settingsSecuritySessionsTitle => 'Sessions and devices';
+
+  @override
+  String get settingsSecuritySessionsNone =>
+      'Access tied to passkeys on this device';
+
+  @override
+  String settingsSecuritySessionsCount(int count) {
+    return '$count access(es) with registered key';
+  }
+
+  @override
+  String get settingsSecurityRecoverySection => 'Recovery';
+
+  @override
+  String get settingsSecurityAccountRecoveryTitle => 'Account recovery';
+
+  @override
+  String get settingsSecurityAccountRecoveryPassphrase =>
+      'Phrase, shares, and emergency';
+
+  @override
+  String get settingsSecurityAccountRecoveryCodes =>
+      'Backup codes and emergency recovery';
+
+  @override
+  String get settingsSecurityBackupTitle => 'Security backup';
+
+  @override
+  String get settingsSecurityBackupSubtitle => 'Recovery codes (2FA)';
+
+  @override
+  String settingsSecurityAppPinLabel(String detail) {
+    return 'App PIN: $detail';
+  }
+
+  @override
+  String get settingsSecurityPasskeyOkTitle => 'Passkey registered';
+
+  @override
+  String get settingsSecurityPasskeyOkMessage =>
+      'This device was linked to your account. Biometrics unlocked for login and confirmations.';
+
+  @override
+  String get settingsSecurityPasskeyFailTitle =>
+      'Could not register the passkey';
+
+  @override
+  String get settingsSecurityLocalDataSection => 'Data on this device';
+
+  @override
+  String get settingsSecurityWipeLedgerTitle => 'Erase local statement';
+
+  @override
+  String get settingsSecurityWipeLedgerSubtitle =>
+      'Removes history stored on this device. Logout does not erase the statement — only this action. On next login, the app pulls remote data.';
+
+  @override
+  String get settingsSecurityWipeConfirmTitle => 'Erase local statement?';
+
+  @override
+  String get settingsSecurityWipeConfirmBody =>
+      'This deletes up to 500 entries saved on this device. It does not cancel network transactions. Continue?';
+
+  @override
+  String get settingsSecurityWipeConfirmAction => 'Erase';
+
+  @override
+  String get settingsSecurityWipeSessionMissingTitle => 'Session unavailable';
+
+  @override
+  String get settingsSecurityWipeSessionMissingMessage =>
+      'Sign in again to erase the statement on this device.';
+
+  @override
+  String get settingsSecurityWipeOkTitle => 'Local statement erased';
+
+  @override
+  String get settingsSecurityWipeOkMessage =>
+      'History on this device was removed. Pull to sync again.';
+
+  @override
+  String get settingsSecurityWipeFailTitle => 'Could not erase';
+
+  @override
+  String get settingsWalletsTitle => 'Wallets';
+
+  @override
+  String get settingsWalletsSubtitle =>
+      'Rename or archive wallets in this session. Actions use the same API as the Bitcoin accounts screen.';
+
+  @override
+  String get settingsWalletsSection => 'Wallets';
+
+  @override
+  String get settingsWalletsEmptyTitle => 'No active wallets';
+
+  @override
+  String get settingsWalletsEmptySubtitle =>
+      'Open Bitcoin Accounts to create or import.';
+
+  @override
+  String get settingsWalletsYoursSection => 'Your wallets';
+
+  @override
+  String get settingsWalletsOpenFull => 'Open full account management';
+
+  @override
+  String get settingsWalletsLoadErrorTitle => 'Could not load';
+
+  @override
+  String get settingsWalletsLoadErrorSubtitle => 'Tap to open full management.';
+
+  @override
+  String get settingsWalletsWatchOnly => 'Watch-only / cold';
+
+  @override
+  String get settingsWalletsCustodialOnchain => 'Custodial on-chain';
+
+  @override
+  String get settingsWalletsInternal => 'Secured account (internal)';
+
+  @override
+  String get settingsWalletsProcessing => 'Processing…';
+
+  @override
+  String get settingsWalletsRename => 'Rename';
+
+  @override
+  String get settingsWalletsArchiveWatch => 'Archive watch';
+
+  @override
+  String get settingsWalletsArchive => 'Archive / lock wallet';
+
+  @override
+  String get settingsWalletsRenameOk => 'Name updated';
+
+  @override
+  String get settingsWalletsRenameFailTitle => 'Name not updated';
+
+  @override
+  String get settingsWalletsRenameFailMessage =>
+      'Review the name and try again.';
+
+  @override
+  String get settingsWalletsArchiveOkWatch => 'Watch archived';
+
+  @override
+  String get settingsWalletsArchiveOk => 'Wallet archived';
+
+  @override
+  String get settingsWalletsArchiveFailTitle => 'Could not archive';
+
+  @override
+  String get settingsWalletsArchiveFailMessage => 'Try again in a moment.';
+
+  @override
+  String get settingsNotifBackgroundDialogDismiss => 'Not now';
+
+  @override
+  String get flowSignupCreateAccountTitle => 'Create account';
+
+  @override
+  String get flowSignupUsernameSubtitle =>
+      'Please choose a username.\nIt will be your unique identity\nin Kerosene.';
+
+  @override
+  String get flowSignupUsernameHint => 'Enter your username';
+
+  @override
+  String get flowSignupUsernameCharsetRule =>
+      'Only lowercase letters, numbers, or underscore';
+
+  @override
+  String get flowSignupPassphraseTitle => 'Create a strong password';
+
+  @override
+  String get flowSignupPassphraseSubtitle =>
+      'It protects your account and assets with maximum security. Nobody at Kerosene has access to your key.';
+
+  @override
+  String get flowSignupPassphraseLabel => 'Your passphrase';
+
+  @override
+  String get flowSignupPassphraseHint => 'Enter your chosen password';
+
+  @override
+  String get flowSignupProceedAction => 'Proceed';
+
+  @override
+  String get flowSignupConfirmTitle => 'Confirm your password';
+
+  @override
+  String get flowSignupConfirmSubtitle =>
+      'Please enter your passphrase again to continue.';
+
+  @override
+  String get flowSignupConfirmHint => 'Confirm your passphrase';
+
+  @override
+  String get flowSignupFinishCreateAccountAction => 'Finish account creation';
+
+  @override
+  String get flowSignupCreatingAlmostReadyTitle => 'Almost ready';
+
+  @override
+  String get flowSignupCreatingAlmostReadySubtitle =>
+      'We are configuring the final details with maximum security.';
+
+  @override
+  String get flowSignupCreatingSecurityProgress => 'Securing your account...';
+
+  @override
+  String get flowSignupTotpTitle => 'Protect your account even more (optional)';
+
+  @override
+  String get flowSignupTotpSubtitle =>
+      'We recommend enabling two-factor authentication for an extra protection layer.';
+
+  @override
+  String get flowSignupRecoveryCodesTitle => 'Recovery codes';
+
+  @override
+  String get flowSignupTotpCodeInstruction => 'Enter the 6-digit code';
+
+  @override
+  String get flowSignupRecoveryCodesCopiedMessage => 'Recovery codes copied.';
+
+  @override
+  String get flowSignupRecoveryCodesUnavailableTitle => 'Codes unavailable';
+
+  @override
+  String get flowSignupRecoveryCodesUnavailableMessage =>
+      'Wait for account creation to finish and try again.';
+
+  @override
+  String get flowSignupSkipAction => 'Skip';
+
+  @override
+  String get flowSignupConfirmAction => 'Confirm';
+
+  @override
+  String get flowSignupPasskeyTitle => 'Authorize this device.';
+
+  @override
+  String get flowSignupPasskeySubtitle =>
+      'Registration is essential to ensure exclusive and protected access to your account.';
+
+  @override
+  String get flowSignupAuthorizeDeviceAction => 'Authorize device';
+
+  @override
+  String get flowSignupSuccessBody =>
+      'You are now a Kerosene user. You can start moving funds.';
+
+  @override
+  String get flowSignupStartAction => 'Start';
+
+  @override
+  String get feeTierFast => 'Fast';
+
+  @override
+  String get feeTierStandard => 'Normal';
+
+  @override
+  String get feeTierSlow => 'Economy';
+
+  @override
+  String feeEtaMinutes(int minutes) {
+    return '~$minutes min';
+  }
+
+  @override
+  String feeEtaHours(int hours) {
+    return '~$hours h';
+  }
+
+  @override
+  String get txActionNeedsReview => 'Needs review';
+
+  @override
+  String get txActionUnconfirmed => 'Unconfirmed';
+
+  @override
+  String get txActionPaymentLinkSendInternal => 'Payment link send (internal)';
+
+  @override
+  String get txActionPaymentLinkReceiveInternal =>
+      'Payment link received (internal)';
+
+  @override
+  String get txActionPaymentLinkSendOnchain => 'Payment link send (on-chain)';
+
+  @override
+  String get txActionPaymentLinkReceiveOnchain =>
+      'Payment link received (on-chain)';
+
+  @override
+  String get txActionInternalSend => 'Internal send';
+
+  @override
+  String get txActionInternalReceive => 'Internal receive';
+
+  @override
+  String get txActionLightningSend => 'Lightning send';
+
+  @override
+  String get txActionLightningReceive => 'Lightning receive';
+
+  @override
+  String get txActionColdSend => 'Cold wallet send';
+
+  @override
+  String get txActionColdReceive => 'Cold wallet receive';
+
+  @override
+  String get txActionOnchainSend => 'On-chain send';
+
+  @override
+  String get txActionOnchainReceive => 'On-chain receive';
+
+  @override
+  String get firstSendConfirmTitle => 'Confirm address';
+
+  @override
+  String firstSendConfirmBody(String preview) {
+    return 'First time sending to this address. Check the first and last characters carefully:\n\n$preview';
+  }
+
+  @override
+  String get firstSendConfirmAction => 'Looks correct';
+
+  @override
+  String get appEntryPinCreateInstruction =>
+      'Create a PIN to access your account';
+
+  @override
+  String get appEntryPinConfirmInstruction => 'Confirm the PIN';
+
+  @override
+  String get appEntryPinUnlockInstruction =>
+      'Enter your PIN to access your account';
+
+  @override
+  String get appEntryPinTorWarming =>
+      'Secure network is still connecting. Your PIN is saved — try again in a moment.';
+
+  @override
+  String get notifBannerNow => 'Now';
+
+  @override
+  String get notifBannerOpen => 'Open';
+
+  @override
+  String get notifBannerFallbackTitle => 'Notification';
+
+  @override
+  String get notifCategorySecurity => 'Security';
+
+  @override
+  String get notifCategoryRecovery => 'Recovery';
+
+  @override
+  String get notifCategoryAccount => 'Account';
+
+  @override
+  String get notifCategoryReceived => 'Received';
+
+  @override
+  String get notifCategorySent => 'Sent';
+
+  @override
+  String get notifCategoryPaymentLink => 'Payment link';
+
+  @override
+  String get notifCategoryMarket => 'Market';
+
+  @override
+  String get notifCategorySystem => 'System';
+
+  @override
+  String get flowSignupCopyRecoveryCodesAction => 'Copy recovery codes';
+
+  @override
+  String get transactionPinInstruction =>
+      'Enter this device PIN to authorize the transaction.';
+
+  @override
+  String get emergencyRecoveryEyebrow => 'EMERGENCY RECOVERY';
+
+  @override
+  String get emergencyRecoveryUnableContinue => 'Unable to continue';
+
+  @override
+  String get emergencyRecoveryTitleStart => 'Rotate account access';
+
+  @override
+  String get emergencyRecoveryTitleVerify => 'Set up the new authenticator';
+
+  @override
+  String get emergencyRecoveryTitleComplete => 'Recovery complete';
+
+  @override
+  String get emergencyRecoveryBodyStart =>
+      'Use offline recovery codes to create a new password, new TOTP and new passkey on this device.';
+
+  @override
+  String get emergencyRecoveryBodyVerify =>
+      'Scan the QR in your authenticator, enter the 6-digit code and confirm the new local passkey.';
+
+  @override
+  String get emergencyRecoveryBodyComplete =>
+      'Store the new codes offline before signing in again. They should not live in notes, email or cloud storage.';
+
+  @override
+  String get emergencyRecoveryNewPassword => 'New account password';
+
+  @override
+  String get emergencyRecoveryConfirmPassword => 'Confirm new password';
+
+  @override
+  String get emergencyRecoveryCodesLabel => 'Recovery codes';
+
+  @override
+  String emergencyRecoveryCodeN(int n) {
+    return 'Code $n';
+  }
+
+  @override
+  String get emergencyRecoveryAddCode => 'Add code';
+
+  @override
+  String get emergencyRecoveryStartAction => 'Start recovery';
+
+  @override
+  String get emergencyRecoveryTempSession => 'Temporary session';
+
+  @override
+  String emergencyRecoveryFinishWithin(int minutes) {
+    return 'Finish within $minutes minutes to avoid restarting the flow.';
+  }
+
+  @override
+  String get emergencyRecoveryConfirmPasskey => 'Confirm new passkey';
+
+  @override
+  String get emergencyRecoveryGoBackReview => 'Go back and review data';
+
+  @override
+  String get emergencyRecoveryCredentialsRotated => 'Credentials rotated';
+
+  @override
+  String get emergencyRecoveryCopyNewCodes => 'Copy new codes';
+
+  @override
+  String get emergencyRecoverySignInAgain => 'Sign in again';
+
+  @override
+  String get emergencyRecoveryTotpInstruction =>
+      'Enter the 6-digit TOTP from the new authenticator.';
+
+  @override
+  String get emergencyRecoveryPasswordMin =>
+      'Use a new password with at least 12 characters.';
+
+  @override
+  String get emergencyRecoveryPasswordMismatch =>
+      'The confirmation must match the new password.';
+
+  @override
+  String get emergencyRecoveryNeedThreeCodes =>
+      'Enter at least 3 distinct recovery codes.';
+
+  @override
+  String get emergencyRecoveryCodesDistinct =>
+      'Recovery codes must be distinct.';
+
+  @override
+  String get emergencyRecoveryCodeEightDigits =>
+      'Each recovery code must have 8 digits.';
+
+  @override
+  String get emergencyRecoveryCopied => 'Copied.';
+
+  @override
+  String get passkeyVerifyEnterSixDigits => 'Enter all 6 digits.';
+
+  @override
+  String get passkeyVerifyLinkNew => 'Link a new passkey';
+
+  @override
+  String get passkeyVerifyAccessApproved => 'Access approved';
+
+  @override
+  String get passkeyVerifyAuthentication => 'Authentication';
+
+  @override
+  String get passkeyVerifyTouchSensor => 'Touch the sensor to continue';
+
+  @override
+  String get notifCenterTitle => 'Notifications';
+
+  @override
+  String get notifCenterSettingsTooltip => 'Settings';
+
+  @override
+  String get notifCenterFilterAll => 'All';
+
+  @override
+  String get notifCenterFilterAlerts => 'Alerts';
+
+  @override
+  String get notifCenterFilterSecurity => 'Security';
+
+  @override
+  String get notifCenterZero => '0 notifications';
+
+  @override
+  String notifCenterUnread(int count) {
+    return '$count unread';
+  }
+
+  @override
+  String get notifCenterReadAll => 'Read all';
+
+  @override
+  String get notifCenterClear => 'Clear';
+
+  @override
+  String get notifCenterEmptyAll => 'No notifications';
+
+  @override
+  String get notifCenterEmptyAlerts => 'No alerts';
+
+  @override
+  String get notifCenterEmptySecurity => 'No security alerts';
+
+  @override
+  String get notifCenterEmptyHint =>
+      'When something important happens, it appears here.';
+
+  @override
+  String get notifCenterToday => 'Today';
+
+  @override
+  String get notifCenterYesterday => 'Yesterday';
+
+  @override
+  String get notifSidebarTitle => 'Push notifications';
+
+  @override
+  String get notifSidebarSubtitle => 'Recent session alerts.';
+
+  @override
+  String get notifSidebarEmptyHint =>
+      'When something important happens, the notification appears here.';
+
+  @override
+  String get sendFeeEstimatedAtPayment => 'Network fee estimated at payment';
+
+  @override
+  String get sendFeeCalculating => 'Calculating fee…';
+
+  @override
+  String get sendFeeUnavailable => 'Fee unavailable';
+
+  @override
+  String get sendFeeQuoteExpired => 'Fee quote expired — updating…';
+
+  @override
+  String emergencyRecoveryAccountRotatedBody(String username) {
+    return 'Account $username now uses the new password, new TOTP and this device passkey.';
+  }
+
+  @override
+  String get notifSidebarUnreadSingular => 'unread';
+
+  @override
+  String get notifSidebarUnreadPlural => 'unread';
+
+  @override
+  String get settingsDevicesTitle => 'Authorized devices';
+
+  @override
+  String get settingsDevicesSubtitle =>
+      'Passkeys and device keys linked to your account. Block or remove access when needed.';
+
+  @override
+  String get settingsDevicesPasskeyRegistered => 'Passkey registered';
+
+  @override
+  String get settingsDevicesInUse => 'Device in use';
+
+  @override
+  String get settingsDevicesRegisterPasskey =>
+      'Register passkey on this device';
+
+  @override
+  String get settingsDevicesLoadError => 'We could not load devices';
+
+  @override
+  String get settingsDevicesRetry => 'Try again';
+
+  @override
+  String get settingsDevicesRegisterFail => 'Could not register';
+
+  @override
+  String get settingsBackupTitle => 'Security backup';
+
+  @override
+  String get settingsBackupSubtitle =>
+      'One-time recovery codes. Require active 2FA (TOTP) and replace previous codes when regenerated.';
+
+  @override
+  String get settingsBackupEnableTotpFirst =>
+      'Enable two-factor authentication';
+
+  @override
+  String get settingsBackupCopyAll => 'Copy all';
+
+  @override
+  String get settingsBackupCopiedTitle => 'Codes copied';
+
+  @override
+  String get settingsBackupCopiedMessage =>
+      'Store them offline in a safe place.';
+
+  @override
+  String get settingsRecoveryHubTitle => 'Account recovery';
+
+  @override
+  String get settingsRecoveryHubSubtitle =>
+      'Real recovery paths available for this account security mode.';
+
+  @override
+  String get settingsRecoveryStatus => 'Status';
+
+  @override
+  String get settingsRecoverySecurityMode => 'Security mode';
+
+  @override
+  String get settingsRecoveryCodesRemaining => 'Codes remaining';
+
+  @override
+  String settingsRecoveryCodesRemainingCount(int count) {
+    return '$count backup code(s)';
+  }
+
+  @override
+  String get settingsRecoveryBackupSecurity => 'Security backup';
+
+  @override
+  String get settingsRecoveryEmergency => 'Emergency recovery';
+
+  @override
+  String get settingsSecurityLedgerDiagTitle => 'Statement diagnostics';
+
+  @override
+  String get settingsSecurityLedgerDiagLoading => 'Loading counters…';
+
+  @override
+  String get settingsSecurityLedgerDiagUnavailable => 'Unavailable';
+
+  @override
+  String get settingsSecurityBlockCaptures => 'Block screenshots on statement';
+
+  @override
+  String get homeChartUnavailable => 'Market unavailable';
+
+  @override
+  String get homeChartRetry => 'Tap to try again';
+
+  @override
+  String get homeChartCustomPeriod => 'Custom period';
+
+  @override
+  String homeChartLastNDays(int days) {
+    return 'Last $days days';
+  }
+
+  @override
+  String get homeChartApply => 'Apply';
+
+  @override
+  String get homeChartCustom => 'Custom';
+
+  @override
+  String get onboardingJourneyTitle => 'Activation journey';
+
+  @override
+  String onboardingProgressCount(int completed) {
+    return '$completed of 3 completed';
+  }
+
+  @override
+  String get onboardingCreateCustodialWallet => 'Create custodial wallet';
+
+  @override
+  String get onboardingMakeDeposit => 'Make a deposit';
+
+  @override
+  String get onboardingInternalTransfer => 'Internal transfer';
+
+  @override
+  String get sendReviewQuote => 'Quote';
+
+  @override
+  String get sendReviewDestination => 'Destination';
+
+  @override
+  String get sendReviewNetworkFee => 'Network fee';
+
+  @override
+  String get sendReviewKeroseneFee => 'Kerosene fee';
+
+  @override
+  String get sendReviewEstimatedTime => 'Estimated time';
+
+  @override
+  String get sendReviewYouPay => 'You pay';
+
+  @override
+  String get sendReviewSender => 'Sender';
+
+  @override
+  String get sendReviewWallet => 'Wallet';
+
+  @override
+  String get sendReviewRecipientGets => 'Recipient receives';
+
+  @override
+  String get sendReviewTotalDebited => 'Total debited';
+
+  @override
+  String get sendReviewStatus => 'Status';
+
+  @override
+  String get sendReviewTxId => 'Transaction ID';
+
+  @override
+  String get walletTxLoadingTitle => 'Loading transactions';
+
+  @override
+  String get walletTxLoadingBody => 'Syncing your recent history.';
+
+  @override
+  String get walletTxLoadErrorTitle => 'Could not load';
+
+  @override
+  String get walletTxEmptyTitle => 'No transactions yet';
+
+  @override
+  String get walletTxEmptyBody =>
+      'When you send, receive, or move balance, history appears here.';
+
+  @override
+  String get walletSetupCreateOnDevice => 'Create on device';
+
+  @override
+  String get walletSetupGenerateBip39 => 'Generate BIP39 seed';
+
+  @override
+  String get walletSetupImportSeed => 'Import seed';
+
+  @override
+  String get walletSetupImportSeedHint => '12 or 24 words';
+
+  @override
+  String get walletSetupWatchOnly => 'Watch only';
+
+  @override
+  String get walletSetupXpubSoon => 'Coming soon · xpub';
+
+  @override
+  String get walletSetupMultisig => 'Multisig';
+
+  @override
+  String get walletSetupSoon => 'Coming soon';
+
+  @override
+  String get walletSetupRegistering => 'Registering';
+
+  @override
+  String get walletSetupDerivingKeys =>
+      'Deriving keys and sending to Kerosene…';
+
+  @override
+  String get walletSetupImportFail => 'Import failed';
+
+  @override
+  String get walletSetupNameExample => 'e.g. Main cold';
+
+  @override
+  String get walletSetupContinue => 'Continue';
+
+  @override
+  String get seedInvalid => 'Invalid seed';
+
+  @override
+  String get seedValidateContinue => 'Validate and continue';
+
+  @override
+  String get seedImportWallet => 'Import wallet';
+
+  @override
+  String seedFixLastWord(String word) {
+    return 'Fix last word to “$word”';
+  }
+
+  @override
+  String seedUseLastWordChecksumOk(String word) {
+    return 'Use last word “$word” (checksum OK)';
+  }
+
+  @override
+  String get seedImportLiteralInvalidChecksum =>
+      'Import literal phrase (invalid checksum)';
+
+  @override
+  String get seedImportAnyway => 'Import anyway (literal phrase)';
+
+  @override
+  String get seedUndoPrevious => 'Undo previous';
+
+  @override
+  String get coldSendTitle => 'Send from cold';
+
+  @override
+  String get coldSendDestination => 'Destination';
+
+  @override
+  String get coldSendDestinationHint =>
+      'Enter an on-chain address or choose a Kerosene wallet.';
+
+  @override
+  String get coldSendNoAddress => 'No address';
+
+  @override
+  String get coldSendOnchainDestination => 'On-chain destination';
+
+  @override
+  String get coldSendPayKeroseneWallet =>
+      'Pay Kerosene wallet (INTERNAL / on-chain)';
+
+  @override
+  String get coldSendSignBroadcast => 'Sign and broadcast';
+
+  @override
+  String get coldSendMissingSeed => 'Local seed missing';
+
+  @override
+  String get coldSendNetworkMismatch => 'Incompatible network';
+
+  @override
+  String get coldSendAuth => 'Authorization';
+
+  @override
+  String get coldSendSuccess => 'Transaction sent';
+
+  @override
+  String get coldSendFailed => 'Cold send failed';
+
+  @override
+  String get coldCreateUnavailable => 'Cold wallet unavailable';
+
+  @override
+  String get coldCreateMaxTwo => 'You can create at most two cold wallets.';
+
+  @override
+  String get coldCreateNamePrompt =>
+      'Enter the name this cold wallet should have.';
+
+  @override
+  String get coldCreateWalletName => 'Wallet name';
+
+  @override
+  String coldCreateWordN(int n) {
+    return 'word $n';
+  }
+
+  @override
+  String get internalSelectCustody => 'Select custody';
+
+  @override
+  String get internalSelectCustodyBody =>
+      'Choose how this wallet will be custodied before continuing.';
+
+  @override
+  String get internalCustodyUnavailable => 'Custody unavailable';
+
+  @override
+  String get internalCustodyAlreadyActive =>
+      'This custody already has an active wallet.';
+
+  @override
+  String get internalNamePrompt => 'Enter the name this wallet should have.';
+
+  @override
+  String get internalCreatedSuccess => 'Wallet created successfully.';
+
+  @override
+  String get internalWalletName => 'Wallet name';
+
+  @override
+  String get btcAccountsCopyAddress => 'Copy wallet address';
+
+  @override
+  String get btcAccountsCopied => 'Copied';
+
+  @override
+  String get btcAccountsCopiedClipboard => 'Available on the clipboard.';
+
+  @override
+  String get btcAccountsStatus => 'WALLET STATUS';
+
+  @override
+  String get btcAccountsReceiveAddress => 'RECEIVE ADDRESS';
+
+  @override
+  String get btcAccountsWalletName => 'WALLET NAME';
+
+  @override
+  String get btcAccountsRename => 'Rename';
+
+  @override
+  String get btcAccountsPublicMaterial => 'PUBLIC MATERIAL';
+
+  @override
+  String get btcAccountsAddressRotated => 'Address rotated';
+
+  @override
+  String get btcAccountsAddressNotRotated => 'Address not rotated';
+
+  @override
+  String get btcAccountsRotateFail =>
+      'Kerosene could not generate a new address right now.';
+
+  @override
+  String get btcAccountsNameUpdated => 'Name updated';
+
+  @override
+  String get btcAccountsNameNotUpdated => 'Name not updated';
+
+  @override
+  String get btcAccountsNameReview => 'Review the wallet name and try again.';
+
+  @override
+  String get btcAccountsActionFailed => 'Action not completed';
+
+  @override
+  String get btcAccountsCannotChange =>
+      'The wallet cannot be changed right now.';
+
+  @override
+  String get btcAccountsUtxos => 'MONITORED UTXOS';
+
+  @override
+  String get btcAccountsPsbt => 'PSBT WORKFLOWS';
+
+  @override
+  String get finStatusPaid => 'Paid';
+
+  @override
+  String get finStatusCompleted => 'Completed';
+
+  @override
+  String get finStatusExpired => 'Expired';
+
+  @override
+  String get finStatusCancelled => 'Cancelled';
+
+  @override
+  String get finStatusValidating => 'Validating';
+
+  @override
+  String get finStatusNeedsReview => 'Needs review';
+
+  @override
+  String get finStatusActionNeeded => 'Action needed';
+
+  @override
+  String get finStatusDetected => 'Detected';
+
+  @override
+  String get finStatusPending => 'Pending';
+
+  @override
+  String get finStatusConfirming => 'Confirming';
+
+  @override
+  String get finStatusFailed => 'Failed';
+
+  @override
+  String get statementInsightNet => 'Net';
+
+  @override
+  String get statementInsightInternalTransfers => 'Internal transfers';
+
+  @override
+  String get statementInsightPartialHistory =>
+      'Partial history — the selected period may exceed what is loaded.';
+
+  @override
+  String get coldSuccessSeedWarning =>
+      'Important: without the seed on this device, cold send will not work. Keep it safe.';
+
+  @override
+  String get receiveNfcWriteRequest => 'Write request';
+
+  @override
+  String get receiveKeroseneTitle => 'Kerosene receive';
+
+  @override
+  String get statementExportLongAddressesNote =>
+      'Long addresses are shortened. CSV is better for reconciliation.';
+
+  @override
+  String get statementExportShareLimit =>
+      'Up to 200 lines · readable for sharing';
+
+  @override
+  String get statementEmptyOnDevice => 'The statement is empty on this device.';
+
+  @override
+  String get movementHubReceiveInternal => 'Receive via internal user transfer';
+
+  @override
+  String get notifCloseNotification => 'Close notification';
+
+  @override
+  String get btcAccountsRotateAddress => 'Rotate address';
+
+  @override
+  String get btcAccountsAvailableBalance => 'Available balance';
+
+  @override
+  String get btcAccountsReceiveAddressLabel => 'Receive address';
+
+  @override
+  String get seedPassphrase25th => 'Passphrase / 25th word (not the 12)';
+
+  @override
+  String get coldSendAuthIncompleteTitle => 'Incomplete authorization';
+
+  @override
+  String get coldSendAuthIncompleteBody =>
+      'Authenticator code (TOTP) is required to build the PSBT.';
+
+  @override
+  String get coldSendAddressHint => 'tb1… / bc1… or Kerosene wallet';
+
+  @override
+  String get settingsDevicesUnlinkHint =>
+      'Confirm unlinking in Settings → Biometrics if prompted.';
+
+  @override
+  String get settingsRecoveryEmergencyBody =>
+      'Rotates password, TOTP and passkey with offline codes. Ends the current session.';
+
+  @override
+  String get securityTotpValidating => 'Validating account security';
+
+  @override
+  String get homeFeedCardsTitle => 'Kerosene cards';
 }

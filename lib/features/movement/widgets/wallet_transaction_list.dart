@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/features/movement/widgets/transaction_list_item.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
@@ -35,24 +36,24 @@ class TransactionList extends StatelessWidget {
     if (isLoading && transactions.isEmpty) {
       child = _StateContainer(
         icon: KeroseneIcons.receipt,
-        title: 'Carregando transações',
-        message: 'Sincronizando seu histórico recente.',
+        title: context.tr.walletTxLoadingTitle,
+        message: context.tr.walletTxLoadingBody,
         trailing: const CupertinoActivityIndicator(radius: 11),
       );
     } else if ((errorMessage ?? '').trim().isNotEmpty && transactions.isEmpty) {
       child = _StateContainer(
         icon: KeroseneIcons.warning,
-        title: 'Não foi possível carregar',
+        title: context.tr.walletTxLoadErrorTitle,
         message: errorMessage!.trim(),
-        actionLabel: onRetry == null ? null : 'Tentar novamente',
+        actionLabel: onRetry == null ? null : context.tr.settingsDevicesRetry,
         onActionPressed: onRetry,
       );
     } else if (transactions.isEmpty) {
-      child = const _StateContainer(
+      child = _StateContainer(
         icon: KeroseneIcons.history,
-        title: 'Sem transações ainda',
+        title: context.tr.walletTxEmptyTitle,
         message:
-            'Quando você enviar, receber ou movimentar saldo, o histórico aparece aqui.',
+            context.tr.walletTxEmptyBody,
       );
     } else {
       child = ListView.separated(
@@ -94,7 +95,7 @@ class _StateContainer extends StatelessWidget {
   final VoidCallback? onActionPressed;
   final Widget? trailing;
 
-  const _StateContainer({
+  _StateContainer({
     required this.icon,
     required this.title,
     required this.message,

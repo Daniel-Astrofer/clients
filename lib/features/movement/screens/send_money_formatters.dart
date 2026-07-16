@@ -1,6 +1,8 @@
+import 'package:flutter/widgets.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 
 String sendShortHash(String value) {
@@ -63,8 +65,20 @@ String? _stripLeadingAt(String? value) {
   return trimmed;
 }
 
-String _recentInternalDestinationKindLabel(
-    RecentTransactionDestinationKind kind) {
+String recentDestinationKindLabel(
+  RecentTransactionDestinationKind kind, {
+  BuildContext? context,
+}) {
+  if (context != null) {
+    return switch (kind) {
+      RecentTransactionDestinationKind.internal =>
+        SendMoneyCopy.destinationKindInternal(context),
+      RecentTransactionDestinationKind.onChain =>
+        SendMoneyCopy.destinationKindOnchain(context),
+      RecentTransactionDestinationKind.lightning =>
+        SendMoneyCopy.destinationKindLightning(context),
+    };
+  }
   return switch (kind) {
     RecentTransactionDestinationKind.internal => 'Transferência interna',
     RecentTransactionDestinationKind.onChain => 'Endereço on-chain',
@@ -72,17 +86,35 @@ String _recentInternalDestinationKindLabel(
   };
 }
 
-String formatBtcValue(double value, {int decimalPlaces = 8}) {
+String _recentInternalDestinationKindLabel(
+    RecentTransactionDestinationKind kind) {
+  return recentDestinationKindLabel(kind);
+}
+
+String formatBtcValue(double value, {int decimalPlaces = 8, Locale? appLocale}) {
   return MoneyDisplay.format(
     amount: value,
     currency: Currency.btc,
     withSymbol: false,
     decimalPlaces: decimalPlaces,
+    appLocale: appLocale,
   );
 }
 
 String walletBalanceLabel(double value) {
   return '${formatBtcValue(value, decimalPlaces: 6)} BTC';
+}
+
+/// Secondary fiat line next to a BTC amount.
+///
+/// Defaults fiat from [appLocale] when [fiatCurrency] is omitted
+/// (pt→BRL, es→EUR, else USD) so send review is not stuck on BRL for EN users.
+Currency preferredFiatForLocale(Locale? locale) {
+  return switch (locale?.languageCode) {
+    'pt' => Currency.brl,
+    'es' => Currency.eur,
+    _ => Currency.usd,
+  };
 }
 
 String formatFiatReference({
@@ -91,13 +123,17 @@ String formatFiatReference({
   required double? btcEur,
   required double? btcBrl,
   bool includeApproxPrefix = true,
+  Currency? fiatCurrency,
+  Locale? appLocale,
 }) {
+  final currency = fiatCurrency ?? preferredFiatForLocale(appLocale);
   final value = MoneyDisplay.formatAmountFromBtc(
     btcAmount: btcAmount,
-    currency: Currency.brl,
+    currency: currency,
     btcUsd: btcUsd,
     btcEur: btcEur,
     btcBrl: btcBrl,
+    appLocale: appLocale,
   );
   return includeApproxPrefix ? '≈ $value' : value;
 }

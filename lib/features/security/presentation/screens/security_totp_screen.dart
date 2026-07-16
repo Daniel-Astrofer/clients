@@ -506,7 +506,7 @@ class _TotpBusyCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'Validando segurança da conta',
+              context.tr.securityTotpValidating,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: monoMutedTextColor,
                     height: 1.35,

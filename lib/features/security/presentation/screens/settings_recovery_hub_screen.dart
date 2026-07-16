@@ -54,7 +54,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.xxl),
                         Text(
-                          'Recuperação da conta',
+                          context.tr.settingsRecoveryHubTitle,
                           style: AppTypography.newsreader(
                             color: KeroseneBrandTokens.textPrimary,
                             fontSize: 32,
@@ -65,7 +65,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'Caminhos reais de recuperação disponíveis para o modo de segurança desta conta.',
+                          context.tr.settingsRecoveryHubSubtitle,
                           style: AppTypography.inter(
                             color: KeroseneBrandTokens.textSecondary,
                             fontSize: 16,
@@ -90,11 +90,11 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 SettingsSection(
-                                  title: 'Status',
+                                  title: context.tr.sendReviewStatus,
                                   children: [
                                     SettingsSectionRow(
                                       icon: KeroseneIcons.security,
-                                      title: 'Modo de segurança',
+                                      title: context.tr.settingsRecoverySecurityMode,
                                       subtitle: modeLabel,
                                       onTap: null,
                                     ),
@@ -109,7 +109,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                     if (remaining != null)
                                       SettingsSectionRow(
                                         icon: KeroseneIcons.download,
-                                        title: 'Códigos restantes',
+                                        title: context.tr.settingsRecoveryCodesRemaining,
                                         subtitle: '$remaining código(s) de backup',
                                         onTap: null,
                                       ),
@@ -121,7 +121,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                   children: [
                                     SettingsSectionRow(
                                       icon: KeroseneIcons.download,
-                                      title: 'Backup de segurança',
+                                      title: context.tr.settingsBackupTitle,
                                       subtitle: totpOn
                                           ? 'Ver status e regenerar códigos'
                                           : 'Requer 2FA — abra para configurar',
@@ -135,9 +135,9 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                     ),
                                     SettingsSectionRow(
                                       icon: KeroseneIcons.inbox,
-                                      title: 'Recuperação de emergência',
+                                      title: context.tr.settingsRecoveryEmergency,
                                       subtitle:
-                                          'Rotaciona senha, TOTP e passkey com códigos offline. Encerra a sessão atual.',
+                                          context.tr.settingsRecoveryEmergencyBody,
                                       onTap: () {
                                         HapticFeedback.selectionClick();
                                         Navigator.of(context).push(

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/providers/currency_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kerosene/core/presentation/widgets/glass_container.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/expense_category.dart';
 
 /// Lista de categorias de despesas - Refatorada
@@ -34,10 +33,9 @@ class ExpenseCategoriesList extends ConsumerWidget {
     int index,
     WidgetRef ref,
   ) {
-    final selectedCurrency = ref.watch(currencyProvider);
-    final amountLabel = MoneyDisplay.formatAmountFromBtc(
+    final money = ref.watch(moneyFormatConfigProvider);
+    final amountLabel = money.formatAmountFromBtc(
       btcAmount: category.amountBTC,
-      currency: selectedCurrency,
       btcUsd: ref.watch(latestBtcPriceProvider),
       btcEur: ref.watch(btcEurPriceProvider),
       btcBrl: ref.watch(btcBrlPriceProvider),

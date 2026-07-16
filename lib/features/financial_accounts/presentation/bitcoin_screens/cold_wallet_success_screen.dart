@@ -9,6 +9,10 @@ import 'package:kerosene/features/financial_accounts/domain/services/register_co
 ///
 /// Pops a [ColdWalletFlowOutcome] so the hub can close itself and open send
 /// without leaving a stale setup stack under the wizard.
+///
+/// If the local seed vault failed ([RegisterColdWalletResult.seedStored] is
+/// false), this is a **warning** success: watch-only only — user must restore
+/// the seed before spending.
 class ColdWalletSuccessScreen extends StatelessWidget {
   final RegisterColdWalletResult result;
   final String walletLabel;
@@ -31,9 +35,16 @@ class ColdWalletSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seedNote = result.seedStored
+    final seedOk = result.seedStored;
+    final title = seedOk
+        ? 'Carteira fria pronta'
+        : 'Cold wallet só observação';
+    final seedNote = seedOk
         ? 'A semente ficou só neste aparelho. A Kerosene só observa saldo on-chain.'
-        : 'Modo observação: sem semente neste aparelho — você não pode gastar por aqui.';
+        : 'A semente NÃO foi salva neste aparelho. Você vê o saldo, mas não pode gastar daqui até restaurar a seed.';
+    final iconColor =
+        seedOk ? KeroseneBrandTokens.success : KeroseneBrandTokens.warning;
+    final icon = seedOk ? KeroseneIcons.success : KeroseneIcons.warning;
 
     return Scaffold(
       backgroundColor: KeroseneBrandTokens.background,
@@ -44,14 +55,10 @@ class ColdWalletSuccessScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              Icon(
-                KeroseneIcons.success,
-                size: 56,
-                color: KeroseneBrandTokens.success,
-              ),
+              Icon(icon, size: 56, color: iconColor),
               const SizedBox(height: 20),
               Text(
-                'Carteira fria pronta',
+                title,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
                   color: KeroseneBrandTokens.textPrimary,
@@ -70,6 +77,29 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              if (!seedOk) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: KeroseneBrandTokens.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: KeroseneBrandTokens.warning.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    'Importante: sem a seed neste aparelho, o envio cold não funciona. Guarde a frase e restaure-a antes de tentar gastar.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.inter(
+                      color: KeroseneBrandTokens.textPrimary,
+                      fontSize: 13,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               Text(
                 seedNote,
                 textAlign: TextAlign.center,
@@ -80,7 +110,7 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (result.seedStored) ...[
+              if (seedOk) ...[
                 FilledButton.icon(
                   onPressed: () => _finish(context, openSend: true),
                   icon: const Icon(KeroseneIcons.send, size: 18),
@@ -113,7 +143,7 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  result.seedStored ? 'Concluir' : 'Concluir (somente observar)',
+                  seedOk ? 'Concluir' : 'Entendi — só observar por agora',
                   style: AppTypography.inter(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,

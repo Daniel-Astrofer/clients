@@ -255,8 +255,16 @@ class _WalletList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wallets = walletState.wallets;
-    if (wallets.isEmpty) {
+    final walletsList = walletState.wallets.toList();
+    if (walletsList.length == 3) {
+      final insuredIndex = walletsList.indexWhere((w) => w.isInternalCustody);
+      if (insuredIndex != -1 && insuredIndex != 1) {
+        final insuredWallet = walletsList.removeAt(insuredIndex);
+        walletsList.insert(1, insuredWallet);
+      }
+    }
+
+    if (walletsList.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -276,9 +284,9 @@ class _WalletList extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
-        final compact = width < 380 || height < 720 || wallets.length >= 3;
+        final compact = width < 380 || height < 720 || walletsList.length >= 3;
         final maxWidth = width;
-        final canFitWithoutScrolling = wallets.length <= 3;
+        final canFitWithoutScrolling = walletsList.length <= 3;
         final gap = canFitWithoutScrolling
             ? 0.0
             : compact
@@ -308,12 +316,12 @@ class _WalletList extends StatelessWidget {
           return SizedBox.expand(
             child: Column(
               children: [
-                for (var index = 0; index < wallets.length; index++) ...[
+                for (var index = 0; index < walletsList.length; index++) ...[
                   Expanded(
-                    flex: selectedWallet?.id == wallets[index].id ? 2 : 1,
-                    child: itemBuilder(wallets[index], fill: true),
+                    flex: selectedWallet?.id == walletsList[index].id ? 2 : 1,
+                    child: itemBuilder(walletsList[index], fill: true),
                   ),
-                  if (gap > 0 && index < wallets.length - 1)
+                  if (gap > 0 && index < walletsList.length - 1)
                     SizedBox(height: gap),
                 ],
               ],
@@ -331,10 +339,10 @@ class _WalletList extends StatelessWidget {
             0,
             28,
           ),
-          itemCount: wallets.length,
+          itemCount: walletsList.length,
           separatorBuilder: (_, __) => SizedBox(height: gap),
           itemBuilder: (context, index) =>
-              itemBuilder(wallets[index], fill: false),
+              itemBuilder(walletsList[index], fill: false),
         );
       },
     );

@@ -231,25 +231,52 @@ class PaymentLink extends Equatable {
 
   /// Converte PaymentLink para Transaction para exibição no histórico unificado
   Transaction toTransaction() {
-    final isOnchain = paymentRail.toUpperCase().contains('ONCHAIN') ||
-        (depositAddress.trim().isNotEmpty && !isInternalPaymentRequest);
+    final railUpper = paymentRail.toUpperCase();
+    final isInternalRail =
+        railUpper.contains('INTERNAL') || isInternalPaymentRequest;
+    final isLightningRail = railUpper.contains('LIGHTNING');
+    final isOnchain = !isInternalRail &&
+        !isLightningRail &&
+        (railUpper.contains('ONCHAIN') ||
+            depositAddress.trim().isNotEmpty ||
+            railUpper.isEmpty);
     final bool isCompleted = status == 'completed' ||
         terminal ||
+        (isInternalRail && status == 'paid') ||
         (!isOnchain && status == 'paid') ||
         (isOnchain && status == 'paid' && confirmations >= 3);
     final bool cancelledOrExpired = isCancelled || isExpired;
+    final railLabel = isInternalRail
+        ? 'interno'
+        : isLightningRail
+            ? 'Lightning'
+            : 'on-chain';
     final transactionDescription = cancelledOrExpired
         ? (isExpired && !isCancelled
-            ? 'Link de pagamento expirado'
-            : 'Link de pagamento cancelado')
-        : (description.isNotEmpty ? description : 'Link de Pagamento');
-    final hasObservedOnchainPayment =
-        txid != null && txid!.trim().isNotEmpty && !cancelledOrExpired && !isCompleted;
+            ? 'Link de pagamento expirado ($railLabel)'
+            : 'Link de pagamento cancelado ($railLabel)')
+        : description.isNotEmpty
+            ? description
+            : 'Link de pagamento ($railLabel)';
+    final hasObservedOnchainPayment = isOnchain &&
+        txid != null &&
+        txid!.trim().isNotEmpty &&
+        !cancelledOrExpired &&
+        !isCompleted;
+    final resolvedRail = isInternalRail
+        ? 'INTERNAL'
+        : isLightningRail
+            ? 'LIGHTNING'
+            : 'ONCHAIN';
 
     return Transaction(
       id: "pl_$id",
-      fromAddress: 'Rede Bitcoin',
-      toAddress: depositAddress,
+      fromAddress: isInternalRail ? 'Kerosene' : 'Rede Bitcoin',
+      toAddress: depositAddress.isNotEmpty
+          ? depositAddress
+          : (referenceLabel?.trim().isNotEmpty == true
+              ? referenceLabel!.trim()
+              : 'Carteira receptora'),
       amountSatoshis: (amountBtc * 100000000).round(),
       feeSatoshis: 0,
       status: isCompleted
@@ -264,9 +291,14 @@ class PaymentLink extends Equatable {
           isCompleted ? (confirmations > 0 ? confirmations : 3) : confirmations,
       timestamp: createdAt ?? DateTime.now(),
       description: transactionDescription,
-      isInternal: false,
+      isInternal: isInternalRail,
+      isLightning: isLightningRail,
+      rail: resolvedRail,
+      provider: 'PAYMENT_LINK',
       blockchainTxid:
           txid == null || txid!.trim().isEmpty ? null : txid!.trim(),
+      externalReference:
+          depositAddress.isNotEmpty ? depositAddress : settlementReference,
     );
   }
 

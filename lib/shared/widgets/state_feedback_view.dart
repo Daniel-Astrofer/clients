@@ -58,7 +58,7 @@ class StateFeedbackView extends StatelessWidget {
   factory StateFeedbackView.error({
     String title = 'Algo correu mal',
     String description = 'Não conseguimos concluir agora. Tenta novamente.',
-    String? actionLabel = 'Tentar novamente',
+    String? actionLabel,
     VoidCallback? onAction,
   }) =>
       StateFeedbackView(

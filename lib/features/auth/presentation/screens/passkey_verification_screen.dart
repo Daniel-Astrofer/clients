@@ -198,11 +198,7 @@ class _PasskeyVerificationScreenState
       HapticFeedback.lightImpact();
       setState(() {
         _totpHasError = true;
-        _totpErrorMessage = _copy(
-          pt: 'Informe os 6 dígitos.',
-          en: 'Enter all 6 digits.',
-          es: 'Ingresa los 6 dígitos.',
-        );
+        _totpErrorMessage = context.tr.passkeyVerifyEnterSixDigits;
         _issuePulseKey += 1;
       });
       return;
@@ -244,15 +240,13 @@ class _PasskeyVerificationScreenState
     );
   }
 
+  /// Locale triple for child views that still take a copy callback.
   String _copy({required String pt, required String en, required String es}) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return en;
-      case 'es':
-        return es;
-      default:
-        return pt;
-    }
+    return switch (Localizations.localeOf(context).languageCode) {
+      'en' => en,
+      'es' => es,
+      _ => pt,
+    };
   }
 
   PasskeyIssueInfo _issueFromError(AuthError error) {
@@ -319,11 +313,7 @@ class _PasskeyVerificationScreenState
     if (code == 'AUTH_014' || code == 'AUTH_016' || code == 'AUTH_017') {
       return PasskeyIssueInfo(
         icon: KeroseneIcons.linkUnavailable,
-        title: _copy(
-          pt: 'Vincule uma nova passkey',
-          en: 'Link a new passkey',
-          es: 'Vincula una nueva passkey',
-        ),
+        title: context.tr.passkeyVerifyLinkNew,
         message: translated,
         allowRetry: false,
         allowTotpFallback: actionRequired?.totpFallbackAvailable ?? true,
@@ -363,17 +353,9 @@ class _PasskeyVerificationScreenState
 
   String _authTitle() {
     if (_phase == _PasskeyPhase.success) {
-      return _copy(
-        pt: 'Acesso aprovado',
-        en: 'Access approved',
-        es: 'Acceso aprobado',
-      );
+      return context.tr.passkeyVerifyAccessApproved;
     }
-    return _copy(
-      pt: 'Autenticação',
-      en: 'Authentication',
-      es: 'Autenticación',
-    );
+    return context.tr.passkeyVerifyAuthentication;
   }
 
   String _authSubtitle() {
@@ -383,11 +365,7 @@ class _PasskeyVerificationScreenState
       case _PasskeyPhase.sending:
         return context.tr.passkeyVerificationBodySending;
       case _PasskeyPhase.prompt:
-        return _copy(
-          pt: 'Toque no sensor para continuar',
-          en: 'Touch the sensor to continue',
-          es: 'Toca el sensor para continuar',
-        );
+        return context.tr.passkeyVerifyTouchSensor;
       case _PasskeyPhase.success:
         return context.tr.passkeyVerificationBodySuccess;
       case _PasskeyPhase.totp:

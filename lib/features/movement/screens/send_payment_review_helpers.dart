@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
 import 'package:kerosene/features/movement/screens/send_money_screen_review.dart';
@@ -9,7 +13,21 @@ String sendReviewNote(
   SendDestinationAnalysis destination, {
   required bool isPaymentLink,
   bool coldSource = false,
+  BuildContext? context,
 }) {
+  if (context != null) {
+    if (isPaymentLink) return SendMoneyCopy.reviewNotePaymentLink(context);
+    if (destination.isLightning) {
+      return SendMoneyCopy.reviewNoteLightning(context);
+    }
+    if (destination.isOnChain) {
+      return coldSource
+          ? SendMoneyCopy.reviewNoteOnchainCold(context)
+          : SendMoneyCopy.reviewNoteOnchain(context);
+    }
+    return SendMoneyCopy.reviewNoteInternal(context);
+  }
+  // Fallback for pure unit tests without BuildContext.
   if (isPaymentLink) return 'Pagamento por link interno';
   if (destination.isLightning) return 'Pagamento Lightning';
   if (destination.isOnChain) {
@@ -32,22 +50,30 @@ Future<dynamic> openSendPaymentReview({
   required double? btcEur,
   required double? btcBrl,
   required bool isPaymentLink,
-  required Future<dynamic> Function(BuildContext confirmationContext) onConfirm,
-}) {
+  required Future<dynamic> Function(
+    BuildContext confirmationContext, {
+    required bool firstSendAcknowledgedInReview,
+  }) onConfirm,
+}) async {
   final coldSource =
       wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable;
   final btcAmountLabel = formatBtcValue(requestedAmount);
+  // Uses bound app locale + language-default fiat (pt BRL / es EUR / en USD).
   final fiatAmountLabel = formatFiatReference(
     btcAmount: requestedAmount,
     btcUsd: btcUsd,
     btcEur: btcEur,
     btcBrl: btcBrl,
+    appLocale: MoneyDisplay.boundAppLocale,
   );
   final networkLabel = _sendNetworkLabel(
+    context,
     destination,
     isPaymentLink: isPaymentLink,
   );
+  final partyLabel = _displayParty(recipientLabel, toAddress);
   final reviewRows = _buildReviewRows(
+    context: context,
     wallet: wallet,
     destination: destination,
     requestedAmount: requestedAmount,
@@ -59,17 +85,51 @@ Future<dynamic> openSendPaymentReview({
     coldSource: coldSource,
   );
 
+  // First-send lives on the review surface (checkbox), not a post-CTA dialog.
+  final requiresFirstSendAck = destination.isOnChain &&
+      !(await isKnownOnchainSendAddress(toAddress));
+  if (!context.mounted) return null;
+
+  final authNextStep = coldSource
+      ? SendMoneyCopy.authNextPinAndTotp(context)
+      : SendMoneyCopy.authNextDevicePin(context);
+  final reviewTitle = SendMoneyCopy.reviewTitle(context);
+  final confirmLabel = SendMoneyCopy.authorizeAction(context);
+  final submittingLabel = SendMoneyCopy.authorizingAction(context);
+  final firstSendPreview =
+      requiresFirstSendAck ? firstSendAddressPreview(toAddress) : null;
+
   return Navigator.of(context).push<dynamic>(
     MaterialPageRoute(
-      builder: (_) => InternalTransferReviewScreen<dynamic>(
+      builder: (reviewContext) => InternalTransferReviewScreen<dynamic>(
+        title: reviewTitle,
         amountBtcLabel: btcAmountLabel,
         fiatAmountLabel: _displayFiatLabel(fiatAmountLabel),
-        confirmLabel: 'Autorizar',
+        confirmLabel: confirmLabel,
+        submittingLabel: submittingLabel,
+        destinationLabel: partyLabel,
+        networkLabel: networkLabel,
+        fromWalletLabel: wallet.name,
         rows: reviewRows,
-        onConfirm: onConfirm,
+        requiresFirstSendAck: requiresFirstSendAck,
+        firstSendAddressPreview: firstSendPreview,
+        firstSendAddress: requiresFirstSendAck ? toAddress : null,
+        authNextStepLabel: authNextStep,
+        onConfirm: (confirmationContext) async {
+          if (requiresFirstSendAck) {
+            await markOnchainSendAddressKnown(toAddress);
+          }
+          if (!confirmationContext.mounted) return null;
+          return onConfirm(
+            confirmationContext,
+            // Review path always owns first-send for on-chain.
+            firstSendAcknowledgedInReview: destination.isOnChain,
+          );
+        },
         receiptBuilder: (result) {
           if (result is! TxStatus) return null;
           return _buildReceiptData(
+            context: reviewContext,
             status: result,
             wallet: wallet,
             destination: destination,
@@ -86,6 +146,7 @@ Future<dynamic> openSendPaymentReview({
 }
 
 List<SendPaymentReviewRowData> _buildReviewRows({
+  required BuildContext context,
   required Wallet wallet,
   required SendDestinationAnalysis destination,
   required double requestedAmount,
@@ -96,71 +157,84 @@ List<SendPaymentReviewRowData> _buildReviewRows({
   required String fiatAmountLabel,
   bool coldSource = false,
 }) {
+  final receiverGets = destination.isExternal
+      ? feeQuote.receiverAmountBtc
+      : requestedAmount;
+  final youPay = destination.isExternal
+      ? feeQuote.totalDebitedBtc
+      : requestedAmount;
+
+  // Primary (always visible): destination, ETA, you pay.
+  // Detail (collapsible): network, wallet, fees, cold signature, recipient gets.
   final rows = <SendPaymentReviewRowData>[
     SendPaymentReviewRowData(
-      label: 'Cotação',
-      value: _displayFiatLabel(fiatAmountLabel),
-      numeric: true,
-    ),
-    SendPaymentReviewRowData(
-      label: 'Destino',
+      label: context.tr.sendReviewDestination,
       value: _displayParty(recipientLabel, toAddress),
       technical: recipientLabel.trim().isEmpty,
     ),
-    SendPaymentReviewRowData(label: 'Rede', value: networkLabel),
-    SendPaymentReviewRowData(label: 'Carteira', value: wallet.name),
+    SendPaymentReviewRowData(
+      label: SendMoneyCopy.networkRowLabel(context),
+      value: networkLabel,
+      detail: true,
+    ),
+    SendPaymentReviewRowData(
+      label: context.tr.sendReviewWallet,
+      value: wallet.name,
+      detail: true,
+    ),
     if (coldSource)
-      const SendPaymentReviewRowData(
-        label: 'Assinatura',
-        value: 'No aparelho · seed local',
+      SendPaymentReviewRowData(
+        label: SendMoneyCopy.signatureRowLabel(context),
+        value: SendMoneyCopy.signatureOnDevice(context),
+        detail: true,
       ),
     SendPaymentReviewRowData(
-      label: 'Taxa de rede',
-      value: _networkFeeLabel(destination, feeQuote),
+      label: context.tr.sendReviewRecipientGets,
+      value: '${formatBtcValue(receiverGets)} BTC',
+      numeric: true,
+      detail: true,
+    ),
+    SendPaymentReviewRowData(
+      label: context.tr.sendReviewNetworkFee,
+      value: _networkFeeLabel(context, destination, feeQuote),
       numeric: destination.isExternal,
+      detail: true,
     ),
   ];
 
   if (feeQuote.platformFeeBtc > 0) {
     rows.add(
       SendPaymentReviewRowData(
-        label: 'Taxa Kerosene',
+        label: context.tr.sendReviewKeroseneFee,
         value: '${formatBtcValue(feeQuote.platformFeeBtc)} BTC',
         numeric: true,
+        detail: true,
       ),
     );
   }
 
   rows.addAll([
     SendPaymentReviewRowData(
-      label: 'Tempo estimado',
+      label: context.tr.sendReviewEstimatedTime,
       value: estimatedSendTime(
         destination,
         estimatedSeconds: feeQuote.estimatedSettlementSeconds,
       ),
     ),
+    // Bank-style total last — always visible so user sees full debit.
     SendPaymentReviewRowData(
-      label: 'Valor de envio',
-      value: '${formatBtcValue(requestedAmount)} BTC',
+      label: context.tr.sendReviewYouPay,
+      value: '${formatBtcValue(youPay)} BTC',
       numeric: true,
+      emphasize: true,
     ),
   ]);
-
-  if (destination.isExternal &&
-      (feeQuote.totalDebitedBtc - requestedAmount).abs() > 0.000000009) {
-    rows.add(
-      SendPaymentReviewRowData(
-        label: 'Total debitado',
-        value: '${formatBtcValue(feeQuote.totalDebitedBtc)} BTC',
-        numeric: true,
-      ),
-    );
-  }
 
   return rows;
 }
 
 SendPaymentReceiptData _buildReceiptData({
+  required BuildContext context,
   required TxStatus status,
   required Wallet wallet,
   required SendDestinationAnalysis destination,
@@ -190,14 +264,20 @@ SendPaymentReceiptData _buildReceiptData({
 
   final rows = <SendPaymentReceiptRowData>[
     SendPaymentReceiptRowData(
-      label: 'Remetente',
+      label: context.tr.sendReviewSender,
       value: compactSendReceiptValue(sender, head: 14, tail: 8),
       technical: sender.length > 24,
     ),
-    SendPaymentReceiptRowData(label: 'Carteira', value: wallet.name),
-    SendPaymentReceiptRowData(label: 'Rede', value: networkLabel),
     SendPaymentReceiptRowData(
-      label: 'Destino',
+      label: context.tr.sendReviewWallet,
+      value: wallet.name,
+    ),
+    SendPaymentReceiptRowData(
+      label: SendMoneyCopy.networkRowLabel(context),
+      value: networkLabel,
+    ),
+    SendPaymentReceiptRowData(
+      label: context.tr.sendReviewDestination,
       value: compactSendReceiptValue(receiver, head: 14, tail: 8),
       technical: receiver.length > 24,
     ),
@@ -206,7 +286,7 @@ SendPaymentReceiptData _buildReceiptData({
   if (networkFee > 0) {
     rows.add(
       SendPaymentReceiptRowData(
-        label: 'Taxa de rede',
+        label: context.tr.sendReviewNetworkFee,
         value: '${formatBtcValue(networkFee)} BTC',
         numeric: true,
       ),
@@ -216,7 +296,7 @@ SendPaymentReceiptData _buildReceiptData({
   if (platformFee > 0) {
     rows.add(
       SendPaymentReceiptRowData(
-        label: 'Taxa Kerosene',
+        label: context.tr.sendReviewKeroseneFee,
         value: '${formatBtcValue(platformFee)} BTC',
         numeric: true,
       ),
@@ -226,7 +306,7 @@ SendPaymentReceiptData _buildReceiptData({
   if (totalDebited > 0 && (totalDebited - amountFallback).abs() > 0.000000009) {
     rows.add(
       SendPaymentReceiptRowData(
-        label: 'Total debitado',
+        label: context.tr.sendReviewTotalDebited,
         value: '${formatBtcValue(totalDebited)} BTC',
         numeric: true,
       ),
@@ -236,7 +316,7 @@ SendPaymentReceiptData _buildReceiptData({
   if (status.status.trim().isNotEmpty) {
     rows.add(
       SendPaymentReceiptRowData(
-        label: 'Status',
+        label: context.tr.sendReviewStatus,
         value: _statusLabel(status.status),
       ),
     );
@@ -245,7 +325,7 @@ SendPaymentReceiptData _buildReceiptData({
   if (status.txid.trim().isNotEmpty) {
     rows.add(
       SendPaymentReceiptRowData(
-        label: 'ID da transação',
+        label: context.tr.sendReviewTxId,
         value: compactSendReceiptValue(status.txid, head: 10, tail: 8),
         numeric: true,
         technical: true,
@@ -253,15 +333,21 @@ SendPaymentReceiptData _buildReceiptData({
     );
   }
 
-  final title =
-      status.isConfirmed ? 'Transação Confirmada' : 'Transação Enviada';
+  final title = status.isConfirmed
+      ? SendMoneyCopy.receiptTitleConfirmed(context)
+      : SendMoneyCopy.receiptTitleSubmitted(context);
+  final subtitle = status.isConfirmed
+      ? SendMoneyCopy.receiptSubtitleConfirmed(context)
+      : SendMoneyCopy.receiptSubtitlePending(context);
 
   return SendPaymentReceiptData(
     title: title,
+    subtitle: subtitle,
     amountLabel: amountLabel,
     occurredAt: occurredAt,
     rows: rows,
     shareText: _receiptShareText(
+      context: context,
       title: title,
       amountLabel: amountLabel,
       occurredAt: occurredAt,
@@ -271,32 +357,36 @@ SendPaymentReceiptData _buildReceiptData({
 }
 
 String _sendNetworkLabel(
+  BuildContext context,
   SendDestinationAnalysis destination, {
   required bool isPaymentLink,
 }) {
-  if (isPaymentLink || destination.isPaymentLink) return 'Link interno';
-  if (destination.isLightning) return 'Lightning';
-  if (destination.isOnChain) return 'On-chain';
-  return 'Kerosene';
+  return SendMoneyCopy.networkLabel(
+    context,
+    isPaymentLink: isPaymentLink || destination.isPaymentLink,
+    isLightning: destination.isLightning,
+    isOnChain: destination.isOnChain,
+  );
 }
 
 String _networkFeeLabel(
+  BuildContext context,
   SendDestinationAnalysis destination,
   SendFeeQuote feeQuote,
 ) {
-  if (!destination.isExternal) return 'Grátis';
+  if (!destination.isExternal) return SendMoneyCopy.feeFree(context);
   if (feeQuote.networkFeeCertainty == NetworkFeeCertainty.unknownUntilPay) {
-    return 'Estimada no pagamento';
+    return SendMoneyCopy.feeEstimatedAtPayment(context);
   }
   if (feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading) {
-    return 'Calculando…';
+    return SendMoneyCopy.feeCalculating(context);
   }
   final fee = '${formatBtcValue(feeQuote.networkFeeBtc)} BTC';
   if (feeQuote.feeTier != NetworkFeeTier.standard && destination.isOnChain) {
     final tier = switch (feeQuote.feeTier) {
-      NetworkFeeTier.fast => 'Rápido',
-      NetworkFeeTier.slow => 'Econômico',
-      NetworkFeeTier.standard => 'Normal',
+      NetworkFeeTier.fast => SendMoneyCopy.feeTierFast(context),
+      NetworkFeeTier.slow => SendMoneyCopy.feeTierSlow(context),
+      NetworkFeeTier.standard => SendMoneyCopy.feeTierStandard(context),
     };
     return '$fee · $tier';
   }
@@ -329,6 +419,7 @@ String _statusLabel(String value) {
 }
 
 String _receiptShareText({
+  required BuildContext context,
   required String title,
   required String amountLabel,
   required DateTime occurredAt,
@@ -336,8 +427,8 @@ String _receiptShareText({
 }) {
   final lines = <String>[
     title,
-    'Valor: $amountLabel BTC',
-    'Data: ${_shareDate(occurredAt)}',
+    '${SendMoneyCopy.receiptShareAmount(context)}: $amountLabel BTC',
+    '${SendMoneyCopy.receiptDateLabel(context)}: ${_shareDate(occurredAt)}',
     for (final row in rows) '${row.label}: ${row.value}',
   ];
   return lines.join('\n');
