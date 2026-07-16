@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
+import 'package:kerosene/core/security/device_credential_error_ux.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -217,8 +218,9 @@ Future<dynamic> _confirmPaymentLink({
   if (error != null) {
     HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
-    SnackbarHelper.showError(
-      ErrorTranslator.translate(confirmationContext.l10n, error),
+    DeviceCredentialErrorUx.showNoticeIfDeviceCredential(
+      error,
+      l10n: confirmationContext.l10n,
     );
   }
   ref.read(paymentLinkNotifierProvider.notifier).reset();
@@ -391,8 +393,9 @@ Future<dynamic> _confirmExternalSend({
   if (error != null) {
     HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
-    SnackbarHelper.showError(
-      ErrorTranslator.translate(confirmationContext.l10n, error),
+    DeviceCredentialErrorUx.showNoticeIfDeviceCredential(
+      error,
+      l10n: confirmationContext.l10n,
     );
   }
   ref.read(withdrawProvider.notifier).reset();
@@ -458,8 +461,9 @@ Future<dynamic> _confirmInternalSend({
   if (error != null) {
     HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
-    SnackbarHelper.showError(
-      ErrorTranslator.translate(confirmationContext.l10n, error),
+    DeviceCredentialErrorUx.showNoticeIfDeviceCredential(
+      error,
+      l10n: confirmationContext.l10n,
     );
   }
   ref.read(sendTransactionProvider.notifier).reset();
