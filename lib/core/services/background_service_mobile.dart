@@ -1,14 +1,27 @@
 import 'dart:async';
-import 'dart:ui';
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io' show Platform;
+import 'dart:ui';
+
 import 'package:dio/dio.dart';
-import 'balance_websocket_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+
 import '../config/app_config.dart';
 import '../security/secure_storage_service.dart';
+import 'balance_websocket_service.dart';
+import 'native_notification_presenter.dart';
 import 'notification_service.dart';
+
+/// flutter_background_service only supports Android / iOS.
+bool get _supportsBackgroundService {
+  if (kIsWeb) return false;
+  try {
+    return Platform.isAndroid || Platform.isIOS;
+  } catch (_) {
+    return false;
+  }
+}
 
 bool _usesOnionBackend() {
   final host = Uri.tryParse(AppConfig.onionBaseUrl)?.host.toLowerCase();
@@ -16,32 +29,18 @@ bool _usesOnionBackend() {
 }
 
 Future<void> initializeBackgroundService() async {
+  if (!_supportsBackgroundService) {
+    debugPrint(
+      'BackgroundService: skipped (supported on Android/iOS only; '
+      'desktop uses foreground Tor + REST).',
+    );
+    return;
+  }
+
   final service = FlutterBackgroundService();
 
-  // Persistent channel for the foreground service (required while app is closed).
-  const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'kerosene_foreground',
-    'Kerosene em segundo plano',
-    description: 'Monitora saldo e notificações com o app fechado.',
-    importance: Importance.low,
-  );
-
-  // High-importance channel for transaction alerts from background isolate.
-  const AndroidNotificationChannel txChannel = AndroidNotificationChannel(
-    'kerosene_transactions',
-    'Kerosene transactions',
-    description: 'Alertas de envios e recebimentos.',
-    importance: Importance.max,
-  );
-
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  final androidPlugin = flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-  await androidPlugin?.createNotificationChannel(channel);
-  await androidPlugin?.createNotificationChannel(txChannel);
+  // Channels are owned by NotificationService (pt-BR names + importance).
+  await NotificationService().init();
 
   await service.configure(
     androidConfiguration: AndroidConfiguration(
@@ -67,6 +66,7 @@ Future<void> initializeBackgroundService() async {
 }
 
 Future<void> startBackgroundService() async {
+  if (!_supportsBackgroundService) return;
   final service = FlutterBackgroundService();
   final running = await service.isRunning();
   if (!running) {
@@ -75,6 +75,7 @@ Future<void> startBackgroundService() async {
 }
 
 Future<void> stopBackgroundService() async {
+  if (!_supportsBackgroundService) return;
   final service = FlutterBackgroundService();
   if (await service.isRunning()) {
     service.invoke('stopService');
@@ -128,31 +129,25 @@ void onStart(ServiceInstance service) async {
   // First successful poll only seeds IDs so we don't re-alert historical items.
   var seededNotificationHistory = false;
 
-  bool _isFinancialKind(String kind) {
-    final k = kind.toLowerCase();
-    return k.contains('deposit') ||
-        k.contains('transfer') ||
-        k.contains('payment') ||
-        k.contains('outbound') ||
-        k.contains('cold') ||
-        k == 'payment_sent' ||
-        k == 'transfer_sent' ||
-        k == 'transfer_received';
-  }
-
-  bool _isIncomingKind(String kind) {
-    final k = kind.toLowerCase();
-    return k.contains('deposit') ||
-        k.contains('received') ||
-        k.contains('inbound');
-  }
-
-  void _rememberId(String id) {
+  void rememberId(String id) {
     if (id.isEmpty || seenNotificationIds.contains(id)) return;
     seenNotificationIds.add(id);
     if (seenNotificationIds.length > 300) {
       seenNotificationIds.remove(seenNotificationIds.first);
     }
+  }
+
+  Map<String, String> metadataFrom(Object? raw) {
+    if (raw is! Map) return const {};
+    final out = <String, String>{};
+    raw.forEach((key, value) {
+      final k = key?.toString();
+      final v = value?.toString();
+      if (k != null && k.isNotEmpty && v != null && v.isNotEmpty) {
+        out[k] = v;
+      }
+    });
+    return out;
   }
 
   Future<void> pollNotifications() async {
@@ -192,7 +187,7 @@ void onStart(ServiceInstance service) async {
         final map = Map<String, dynamic>.from(raw);
         final id = map['id']?.toString() ?? '';
         if (id.isEmpty || seenNotificationIds.contains(id)) continue;
-        _rememberId(id);
+        rememberId(id);
 
         // Seed history silently on first successful list fetch.
         if (isSeedPass) continue;
@@ -200,15 +195,19 @@ void onStart(ServiceInstance service) async {
         final kind = map['kind']?.toString() ?? '';
         final title = map['title']?.toString() ?? 'Kerosene';
         final body = map['body']?.toString() ?? '';
-        if (!_isFinancialKind(kind) || body.isEmpty) continue;
+        if (!NativeNotificationPresenter.isNativeAlertKind(kind)) continue;
+        if (title.isEmpty && body.isEmpty) continue;
 
-        await NotificationService().showTransactionNotification(
-          id: id.hashCode & 0x7fffffff,
+        await NotificationService().showFromBackendEvent(
+          id: id,
+          kind: kind,
           title: title,
           body: body,
-          summary: 'Kerosene',
-          incoming: _isIncomingKind(kind),
-          dedupeKey: 'bg|$id',
+          metadata: metadataFrom(map['metadata']),
+          deeplink: map['deeplink']?.toString(),
+          entityType: map['entityType']?.toString(),
+          entityId: map['entityId']?.toString(),
+          severity: map['severity']?.toString(),
         );
       }
       seededNotificationHistory = true;
@@ -235,16 +234,19 @@ void onStart(ServiceInstance service) async {
       onNotification: (event) async {
         final id = event.id;
         if (id.isEmpty || seenNotificationIds.contains(id)) return;
-        _rememberId(id);
+        rememberId(id);
         final kind = event.kind;
-        if (!_isFinancialKind(kind)) return;
-        await NotificationService().showTransactionNotification(
-          id: id.hashCode & 0x7fffffff,
+        if (!NativeNotificationPresenter.isNativeAlertKind(kind)) return;
+        await NotificationService().showFromBackendEvent(
+          id: id,
+          kind: kind,
           title: event.title,
           body: event.body,
-          summary: 'Kerosene',
-          incoming: _isIncomingKind(kind),
-          dedupeKey: 'bg-ws|$id',
+          metadata: event.metadata,
+          deeplink: event.deeplink,
+          entityType: event.entityType,
+          entityId: event.entityId,
+          severity: event.severity,
         );
       },
     );
