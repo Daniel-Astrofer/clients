@@ -453,10 +453,11 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
-    final contentMaxWidth =
-        responsive.isCompact ? responsive.mobileContentMaxWidth : homeSize(448);
-    final pageHorizontalPadding =
-        responsive.isTinyPhone ? homeSize(18) : homeSize(24);
+    // Grow with the window — avoid phone-width column + black side bars on desktop.
+    final contentMaxWidth = responsive.appColumnMaxWidth;
+    final pageHorizontalPadding = responsive.isTinyPhone
+        ? homeSize(18)
+        : (responsive.isCompact ? homeSize(24) : responsive.horizontalPadding);
     final navigationClearance =
         MediaQuery.viewPaddingOf(context).bottom + homeSize(32);
 

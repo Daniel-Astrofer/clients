@@ -58,32 +58,65 @@ class KeroseneResponsiveMetrics {
     };
   }
 
+  /// Usable width after horizontal page padding.
+  double get usableWidth {
+    return math.max(0.0, size.width - (horizontalPadding * 2));
+  }
+
+  /// Wide reading column (landing, long-form). Fills the window up to a soft cap.
   double get maxReadableWidth {
+    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => 640,
-      KeroseneWindowClass.expanded => 920,
-      KeroseneWindowClass.wide => 1120,
+      KeroseneWindowClass.medium => math.min(usable, 760),
+      KeroseneWindowClass.expanded => math.min(usable, 1040),
+      KeroseneWindowClass.wide => math.min(usable, 1280),
     };
   }
 
+  /// Primary app column (home, settings, statements, accounts).
+  ///
+  /// Grows with the window so large desktops no longer show phone-width
+  /// content floating on black side bars.
   double get mobileContentMaxWidth {
+    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => 560,
-      KeroseneWindowClass.expanded => 640,
-      KeroseneWindowClass.wide => 720,
+      KeroseneWindowClass.medium => math.min(usable, 720),
+      KeroseneWindowClass.expanded => math.min(usable, 960),
+      KeroseneWindowClass.wide => math.min(usable, 1200),
+    };
+  }
+
+  /// Alias used by screens that want the main app column width.
+  double get appColumnMaxWidth => mobileContentMaxWidth;
+
+  /// Auth / form surfaces: wider than a phone, still readable as a form.
+  double get formMaxWidth {
+    final usable = usableWidth;
+    return switch (windowClass) {
+      KeroseneWindowClass.compact => size.width,
+      KeroseneWindowClass.medium => math.min(usable, 520),
+      KeroseneWindowClass.expanded => math.min(usable, 560),
+      KeroseneWindowClass.wide => math.min(usable, 600),
     };
   }
 
   double get sheetMaxWidth {
+    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => 560,
-      KeroseneWindowClass.expanded => 640,
-      KeroseneWindowClass.wide => 720,
+      KeroseneWindowClass.medium => math.min(usable, 560),
+      KeroseneWindowClass.expanded => math.min(usable, 640),
+      KeroseneWindowClass.wide => math.min(usable, 720),
     };
   }
+
+  BoxConstraints get appColumnConstraints =>
+      BoxConstraints(maxWidth: appColumnMaxWidth);
+
+  BoxConstraints get formConstraints =>
+      BoxConstraints(maxWidth: formMaxWidth);
 
   double compactFontSize({
     required double compact,

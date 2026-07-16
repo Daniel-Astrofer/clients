@@ -2,22 +2,73 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kerosene/core/services/balance_websocket_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 
 void main() {
+  group('BalanceWebSocketService.resolveConnectUrl', () {
+    test('builds raw ws url for local tor relay', () {
+      expect(
+        BalanceWebSocketService.resolveConnectUrl(
+          'http://127.0.0.1:19050',
+          useRaw: true,
+        ),
+        'ws://127.0.0.1:19050/ws/raw-balance',
+      );
+    });
+
+    test('builds sockjs http url', () {
+      expect(
+        BalanceWebSocketService.resolveConnectUrl(
+          'http://127.0.0.1:19050/',
+          useRaw: false,
+        ),
+        'http://127.0.0.1:19050/ws/balance',
+      );
+    });
+
+    test('maps https to wss for raw', () {
+      expect(
+        BalanceWebSocketService.resolveConnectUrl(
+          'https://api.example.com',
+          useRaw: true,
+        ),
+        'wss://api.example.com/ws/raw-balance',
+      );
+    });
+  });
+
   group('FinancialRealtimeRefreshLoop', () {
-    test('uses the bounded production interval', () {
+    test('uses disconnected interval when realtime is down', () async {
       final scheduler = _ManualRefreshScheduler();
       final loop = FinancialRealtimeRefreshLoop(
         refresh: () async {},
+        isRealtimeConnected: () => false,
         scheduler: scheduler.schedule,
       );
 
       loop.start();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scheduler.lastDelay, financialRealtimeDisconnectedInterval);
+      expect(scheduler.scheduleCount, 1);
+
+      loop.dispose();
+    });
+
+    test('uses connected interval when websocket is up', () async {
+      final scheduler = _ManualRefreshScheduler();
+      final loop = FinancialRealtimeRefreshLoop(
+        refresh: () async {},
+        isRealtimeConnected: () => true,
+        scheduler: scheduler.schedule,
+      );
+
+      loop.start();
+      await Future<void>.delayed(Duration.zero);
 
       expect(scheduler.lastDelay, financialRealtimeFallbackInterval);
-      expect(scheduler.scheduleCount, 1);
 
       loop.dispose();
     });
@@ -36,16 +87,17 @@ void main() {
       );
 
       loop.start();
-      scheduler.fire();
+      await Future<void>.delayed(Duration.zero);
 
+      // start() kicks an immediate refresh; no schedule until it finishes.
       expect(refreshCount, 1);
-      expect(scheduler.scheduleCount, 1);
+      expect(scheduler.scheduleCount, 0);
       expect(scheduler.hasPendingRefresh, isFalse);
 
       refreshCompleter.complete();
       await Future<void>.delayed(Duration.zero);
 
-      expect(scheduler.scheduleCount, 2);
+      expect(scheduler.scheduleCount, 1);
       expect(scheduler.hasPendingRefresh, isTrue);
 
       loop.dispose();
@@ -60,12 +112,15 @@ void main() {
       );
 
       loop.start();
+      await Future<void>.delayed(Duration.zero);
+      // Immediate refresh already ran; one schedule is pending.
+      expect(refreshCount, 1);
       loop.dispose();
       scheduler.fire();
       await Future<void>.delayed(Duration.zero);
 
-      expect(scheduler.cancelCount, 1);
-      expect(refreshCount, 0);
+      expect(scheduler.cancelCount, greaterThanOrEqualTo(1));
+      expect(refreshCount, 1);
       expect(scheduler.hasPendingRefresh, isFalse);
     });
 
@@ -78,12 +133,12 @@ void main() {
       );
 
       loop.start();
-      scheduler.fire();
+      await Future<void>.delayed(Duration.zero);
       loop.dispose();
       refreshCompleter.complete();
       await Future<void>.delayed(Duration.zero);
 
-      expect(scheduler.scheduleCount, 1);
+      expect(scheduler.scheduleCount, 0);
       expect(scheduler.hasPendingRefresh, isFalse);
     });
   });

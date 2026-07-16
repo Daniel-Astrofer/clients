@@ -27,7 +27,12 @@ export 'financial_refresh.dart';
 export 'financial_dirty_provider.dart';
 
 const double _balanceChangeEpsilon = 0.000000001;
-const financialRealtimeFallbackInterval = Duration(seconds: 30);
+
+/// Backup poll when realtime WS is healthy (should rarely be the UX path).
+const financialRealtimeFallbackInterval = Duration(seconds: 15);
+
+/// Aggressive poll while WS is down / reconnecting (Android Tor drops).
+const financialRealtimeDisconnectedInterval = Duration(seconds: 5);
 
 typedef FinancialRefreshCancel = void Function();
 typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
@@ -36,17 +41,22 @@ typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
 );
 
 /// Schedules financial refreshes serially so a slow request cannot overlap the
-/// next polling cycle.
+/// next polling cycle. Interval adapts to WebSocket connectivity.
 class FinancialRealtimeRefreshLoop {
   FinancialRealtimeRefreshLoop({
     required Future<void> Function() refresh,
-    this.interval = financialRealtimeFallbackInterval,
+    this.connectedInterval = financialRealtimeFallbackInterval,
+    this.disconnectedInterval = financialRealtimeDisconnectedInterval,
+    bool Function()? isRealtimeConnected,
     FinancialRefreshScheduler scheduler = _scheduleFinancialRefresh,
   })  : _refresh = refresh,
+        _isRealtimeConnected = isRealtimeConnected,
         _scheduler = scheduler;
 
   final Future<void> Function() _refresh;
-  final Duration interval;
+  final Duration connectedInterval;
+  final Duration disconnectedInterval;
+  final bool Function()? _isRealtimeConnected;
   final FinancialRefreshScheduler _scheduler;
 
   FinancialRefreshCancel? _cancelScheduledRefresh;
@@ -54,11 +64,25 @@ class FinancialRealtimeRefreshLoop {
   bool _refreshInFlight = false;
   bool _disposed = false;
 
+  Duration get _currentInterval {
+    final connected = _isRealtimeConnected?.call() ?? false;
+    return connected ? connectedInterval : disconnectedInterval;
+  }
+
   void start() {
     if (_started || _disposed) {
       return;
     }
     _started = true;
+    // Immediate consistency kick (do not wait a full interval after connect).
+    unawaited(_runRefresh());
+  }
+
+  /// Call when WS connects/disconnects so the next wait uses the right interval.
+  void onConnectivityChanged() {
+    if (_disposed || !_started || _refreshInFlight) return;
+    _cancelScheduledRefresh?.call();
+    _cancelScheduledRefresh = null;
     _scheduleNext();
   }
 
@@ -67,6 +91,7 @@ class FinancialRealtimeRefreshLoop {
       return;
     }
 
+    final interval = _currentInterval;
     _cancelScheduledRefresh = _scheduler(interval, () {
       _cancelScheduledRefresh = null;
       unawaited(_runRefresh());
@@ -115,11 +140,17 @@ final financialRefreshSchedulerProvider = Provider<FinancialRefreshScheduler>(
   (ref) => _scheduleFinancialRefresh,
 );
 
-/// Provider do serviço WebSocket para atualizações de saldo em tempo real
+/// Provider do serviço WebSocket para atualizações de saldo em tempo real.
+/// KeepAlive: autoDispose was tearing down the socket on brief unwatch/rebuilds
+/// (common on Android navigation), leaving only the 15–30s poll path.
 final balanceWebSocketServiceProvider =
-    FutureProvider.autoDispose<BalanceWebSocketService?>((
+    FutureProvider<BalanceWebSocketService?>((
   ref,
 ) async {
+  // Keep the provider alive for the authenticated session.
+  final link = ref.keepAlive();
+  ref.onDispose(link.close);
+
   final authState = ref.watch(authControllerProvider);
 
   if (authState is! AuthAuthenticated) {
@@ -317,16 +348,22 @@ final balanceWebSocketServiceProvider =
 
   // Core can keep this socket connected while KFE events travel through a
   // separate runtime. Polling remains active as a bounded consistency fallback.
+  // When WS is down, poll every 5s so Android does not sit ~15–30s laggy.
   final refreshLoop = FinancialRealtimeRefreshLoop(
     refresh: () => refreshFinancialProjection(ref),
+    isRealtimeConnected: () => service.isConnected,
     scheduler: ref.read(financialRefreshSchedulerProvider),
   )..start();
+
+  void onWsConnectivity(bool _) => refreshLoop.onConnectivityChanged();
+  service.addConnectionListener(onWsConnectivity);
 
   // Desconectar quando o provider for descartado
   ref.onDispose(() {
     if (kDebugMode) {
       debugPrint('BalanceWebSocket: disconnecting.');
     }
+    service.removeConnectionListener(onWsConnectivity);
     refreshLoop.dispose();
     service.disconnect();
   });

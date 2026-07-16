@@ -93,7 +93,7 @@ class PasskeyAuthView extends StatelessWidget {
             : 42.0;
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 430),
+      constraints: responsive.formConstraints,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

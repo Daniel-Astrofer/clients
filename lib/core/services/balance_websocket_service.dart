@@ -7,9 +7,10 @@ typedef BalanceStompClientFactory = StompClient Function(StompConfig config);
 
 class BalanceWebSocketReconnectPolicy {
   BalanceWebSocketReconnectPolicy({
-    this.maxAttempts = 5,
-    this.baseDelay = const Duration(seconds: 5),
-    this.maxDelay = const Duration(minutes: 1),
+    this.maxAttempts = 8,
+    // Snappy reconnect on mobile Tor drop (was 5s → felt like "15s lag").
+    this.baseDelay = const Duration(seconds: 1),
+    this.maxDelay = const Duration(seconds: 20),
   })  : assert(maxAttempts >= 0),
         assert(baseDelay >= Duration.zero),
         assert(maxDelay >= Duration.zero);
@@ -58,6 +59,12 @@ class BalanceWebSocketService {
   bool _manualDisconnect = false;
   bool _sessionInvalidated = false;
   bool _reconnectExhausted = false;
+  /// Prefer raw STOMP (`/ws/raw-balance`) on IO; SockJS as fallback.
+  bool _preferRawWebSocket = !kIsWeb;
+  bool _triedSockJsFallback = false;
+
+  final List<void Function(bool connected)> _connectionListeners =
+      <void Function(bool connected)>[];
 
   BalanceWebSocketService({
     required this.baseUrl,
@@ -76,6 +83,43 @@ class BalanceWebSocketService {
 
   bool get isConnected => _isConnected;
   bool get stoppedReconnecting => _sessionInvalidated || _reconnectExhausted;
+
+  void addConnectionListener(void Function(bool connected) listener) {
+    _connectionListeners.add(listener);
+  }
+
+  void removeConnectionListener(void Function(bool connected) listener) {
+    _connectionListeners.remove(listener);
+  }
+
+  void _notifyConnectionListeners() {
+    for (final listener in List<void Function(bool)>.from(_connectionListeners)) {
+      try {
+        listener(_isConnected);
+      } catch (_) {}
+    }
+  }
+
+  /// Builds a STOMP URL. Raw WS is much more reliable on Android over the local
+  /// Tor HTTP relay than SockJS (which needs extra HTTP info/handshake hops).
+  static String resolveConnectUrl(String baseUrl, {required bool useRaw}) {
+    final normalized = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    if (!useRaw) {
+      return '$normalized/ws/balance';
+    }
+    final uri = Uri.parse(normalized);
+    final scheme = switch (uri.scheme.toLowerCase()) {
+      'https' => 'wss',
+      'wss' => 'wss',
+      'ws' => 'ws',
+      _ => 'ws',
+    };
+    final host = uri.host.isEmpty ? '127.0.0.1' : uri.host;
+    final port = uri.hasPort ? ':${uri.port}' : '';
+    return '$scheme://$host$port/ws/raw-balance';
+  }
 
   /// Conecta ao WebSocket do backend via ponte local SOCKS5 (Tor)
   Future<void> connect() async {
@@ -110,68 +154,100 @@ class BalanceWebSocketService {
       return;
     }
 
-    final fullUrl = '$baseUrl/ws/balance';
+    final useRaw = _preferRawWebSocket;
+    final fullUrl = resolveConnectUrl(baseUrl, useRaw: useRaw);
 
     if (kDebugMode) {
-      debugPrint('BalanceWebSocketService: connecting.');
+      debugPrint(
+        'BalanceWebSocketService: connecting '
+        '(${useRaw ? "raw" : "sockjs"}) → $fullUrl',
+      );
     }
 
-    _stompClient = _stompClientFactory(
-      StompConfig.sockJS(
-          url: fullUrl,
-          onConnect: _onConnect,
-          onWebSocketError: _handleWebSocketError,
-          onStompError: _handleStompError,
-          onDisconnect: (_) {
-            if (kDebugMode) {
-              debugPrint('BalanceWebSocketService: disconnected.');
-            }
-            _handleConnectionClosed('stomp disconnect');
-          },
-          beforeConnect: () async {
-            if (kDebugMode) {
-              debugPrint('BalanceWebSocketService: starting handshake.');
-            }
-            if (kDebugMode) {
-              debugPrint(
-                'BalanceWebSocketService: session credential available.',
-              );
-            }
-          },
-          onWebSocketDone: () {
-            if (kDebugMode) {
-              debugPrint('BalanceWebSocketService: socket closed.');
-            }
-            _handleConnectionClosed('socket closed');
-          },
-          webSocketConnectHeaders: {
-            'Authorization': 'Bearer $token',
-            if (deviceHash != null) 'X-Device-Hash': deviceHash!,
-          },
-          stompConnectHeaders: {
-            'Authorization': 'Bearer $token',
-          },
-          reconnectDelay: Duration.zero,
-          heartbeatIncoming: const Duration(seconds: 10),
-          heartbeatOutgoing: const Duration(seconds: 10)),
-    );
+    final headers = <String, String>{
+      'Authorization': 'Bearer $token',
+      if (deviceHash != null) 'X-Device-Hash': deviceHash!,
+    };
 
+    final config = useRaw
+        ? StompConfig(
+            url: fullUrl,
+            onConnect: _onConnect,
+            onWebSocketError: _handleWebSocketError,
+            onStompError: _handleStompError,
+            onDisconnect: (_) {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: disconnected.');
+              }
+              _handleConnectionClosed('stomp disconnect');
+            },
+            beforeConnect: () async {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: starting handshake.');
+              }
+            },
+            onWebSocketDone: () {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: socket closed.');
+              }
+              _handleConnectionClosed('socket closed');
+            },
+            webSocketConnectHeaders: headers,
+            stompConnectHeaders: {
+              'Authorization': 'Bearer $token',
+            },
+            reconnectDelay: Duration.zero,
+            connectionTimeout: const Duration(seconds: 12),
+            heartbeatIncoming: const Duration(seconds: 10),
+            heartbeatOutgoing: const Duration(seconds: 10),
+          )
+        : StompConfig.sockJS(
+            url: fullUrl,
+            onConnect: _onConnect,
+            onWebSocketError: _handleWebSocketError,
+            onStompError: _handleStompError,
+            onDisconnect: (_) {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: disconnected.');
+              }
+              _handleConnectionClosed('stomp disconnect');
+            },
+            beforeConnect: () async {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: starting handshake.');
+              }
+            },
+            onWebSocketDone: () {
+              if (kDebugMode) {
+                debugPrint('BalanceWebSocketService: socket closed.');
+              }
+              _handleConnectionClosed('socket closed');
+            },
+            webSocketConnectHeaders: headers,
+            stompConnectHeaders: {
+              'Authorization': 'Bearer $token',
+            },
+            reconnectDelay: Duration.zero,
+            connectionTimeout: const Duration(seconds: 12),
+            heartbeatIncoming: const Duration(seconds: 10),
+            heartbeatOutgoing: const Duration(seconds: 10),
+          );
+
+    _stompClient = _stompClientFactory(config);
     _stompClient?.activate();
   }
 
   /// Callback quando conectado ao WebSocket
   void _onConnect(StompFrame frame) {
     _isConnected = true;
+    _triedSockJsFallback = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _reconnectPolicy.reset();
+    _notifyConnectionListeners();
     if (kDebugMode) {
-      if (kDebugMode) {
-        debugPrint('BalanceWebSocketService: connected.');
-      }
-      if (kDebugMode) {
-        debugPrint('BalanceWebSocketService: subscribing to balance feed.');
-      }
+      debugPrint('BalanceWebSocketService: connected.');
+      debugPrint('BalanceWebSocketService: subscribing to balance feed.');
     }
 
     _stompClient?.subscribe(
@@ -259,7 +335,10 @@ class BalanceWebSocketService {
     _reconnectPolicy.reset();
 
     if (_stompClient == null) {
-      _isConnected = false;
+      if (_isConnected) {
+        _isConnected = false;
+        _notifyConnectionListeners();
+      }
       return;
     }
 
@@ -268,28 +347,35 @@ class BalanceWebSocketService {
     }
     _stompClient?.deactivate();
     _stompClient = null;
-    _isConnected = false;
+    if (_isConnected) {
+      _isConnected = false;
+      _notifyConnectionListeners();
+    }
   }
 
   void _handleWebSocketError(dynamic error) {
     if (kDebugMode) {
       debugPrint('BalanceWebSocketService: socket error.');
     }
+    final wasConnected = _isConnected;
     _isConnected = false;
+    if (wasConnected) _notifyConnectionListeners();
 
     if (isSessionFailureSignal(error)) {
       _stopForInvalidSession('socket rejected session');
       return;
     }
 
-    _scheduleReconnect('socket error');
+    _handleConnectionClosed('socket error');
   }
 
   void _handleStompError(StompFrame frame) {
     if (kDebugMode) {
       debugPrint('BalanceWebSocketService: protocol error.');
     }
+    final wasConnected = _isConnected;
     _isConnected = false;
+    if (wasConnected) _notifyConnectionListeners();
 
     if (isSessionFailureSignal(frame.body) ||
         isSessionFailureSignal(frame.command) ||
@@ -298,11 +384,30 @@ class BalanceWebSocketService {
       return;
     }
 
-    _scheduleReconnect('protocol error');
+    _handleConnectionClosed('protocol error');
   }
 
   void _handleConnectionClosed(String reason) {
+    final wasConnected = _isConnected;
     _isConnected = false;
+    if (wasConnected) {
+      _notifyConnectionListeners();
+    }
+    // One-shot fallback: if raw WS fails on this network, try SockJS once.
+    if (_preferRawWebSocket && !_triedSockJsFallback) {
+      _triedSockJsFallback = true;
+      _preferRawWebSocket = false;
+      if (kDebugMode) {
+        debugPrint(
+          'BalanceWebSocketService: raw WS failed ($reason) — falling back to SockJS.',
+        );
+      }
+      _closeCurrentClient();
+      if (!_manualDisconnect && !_sessionInvalidated) {
+        unawaited(_connectOnce());
+      }
+      return;
+    }
     _scheduleReconnect(reason);
   }
 
@@ -344,6 +449,10 @@ class BalanceWebSocketService {
     _reconnectTimer = Timer(delay, () {
       _reconnectTimer = null;
       if (!_manualDisconnect && !_sessionInvalidated && !_reconnectExhausted) {
+        // After a few failures prefer raw again (mobile Tor may have recovered).
+        if (_reconnectPolicy.attemptCount >= 3) {
+          _preferRawWebSocket = !kIsWeb;
+        }
         unawaited(_connectOnce());
       }
     });

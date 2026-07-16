@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 
 import 'settings_account_pane.dart';
@@ -45,8 +46,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     final viewPadding = MediaQuery.viewPaddingOf(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final horizontalPadding = width <= 360 ? AppSpacing.lg : AppSpacing.xl2;
+    final responsive = context.responsive;
+    final horizontalPadding = responsive.isTinyPhone
+        ? AppSpacing.lg
+        : responsive.horizontalPadding;
     final bottomPadding = widget.showPrimaryNavigation
         ? AppPrimaryNavigationBar.scaffoldBottomClearance(context)
         : viewPadding.bottom + AppSpacing.xxl;
@@ -69,7 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   sliver: SliverToBoxAdapter(
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 430),
+                        constraints: responsive.appColumnConstraints,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -153,8 +156,10 @@ class _SettingsPaneDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewPadding = MediaQuery.viewPaddingOf(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final horizontalPadding = width <= 360 ? AppSpacing.lg : AppSpacing.xl2;
+    final responsive = context.responsive;
+    final horizontalPadding = responsive.isTinyPhone
+        ? AppSpacing.lg
+        : responsive.horizontalPadding;
     final bottomPadding = showPrimaryNavigation
         ? AppPrimaryNavigationBar.scaffoldBottomClearance(context)
         : viewPadding.bottom + AppSpacing.xxl;
@@ -177,7 +182,7 @@ class _SettingsPaneDetailScreen extends StatelessWidget {
                   sliver: SliverToBoxAdapter(
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 430),
+                        constraints: responsive.appColumnConstraints,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [

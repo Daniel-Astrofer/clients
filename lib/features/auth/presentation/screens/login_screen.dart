@@ -384,8 +384,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final responsive = context.responsive;
-                final horizontalPadding = responsive.isTinyPhone ? 20.0 : 24.0;
-                final maxWidth = responsive.isCompact ? 390.0 : 430.0;
+                final horizontalPadding = responsive.isTinyPhone
+                    ? 20.0
+                    : responsive.horizontalPadding;
+                final maxWidth = responsive.formMaxWidth;
                 final topSpacing = responsive.isTinyPhone ? 10.0 : 16.0;
                 final bottomPadding =
                     28 + MediaQuery.viewInsetsOf(context).bottom;
