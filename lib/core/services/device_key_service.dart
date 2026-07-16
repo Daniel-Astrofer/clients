@@ -46,7 +46,11 @@ class DeviceKeyService {
     FlutterSecureStorage? secureStorage,
     LocalAuthentication? localAuthentication,
     Ed25519? algorithm,
-  })  : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  })  : _secureStorage = secureStorage ??
+            const FlutterSecureStorage(
+              lOptions: LinuxOptions(),
+              wOptions: WindowsOptions(),
+            ),
         _localAuthentication = localAuthentication ?? LocalAuthentication(),
         _algorithm = algorithm ?? Ed25519();
 
@@ -75,6 +79,10 @@ class DeviceKeyService {
 
   /// Pre-namespace defaults used by earlier builds.
   AndroidOptions _legacyAndroidOptions() => const AndroidOptions();
+
+  LinuxOptions _linuxOptions() => const LinuxOptions();
+
+  WindowsOptions _windowsOptions() => const WindowsOptions();
 
   Future<Map<String, dynamic>> register({
     required DeviceKeyChallenge challenge,
@@ -291,18 +299,24 @@ class DeviceKeyService {
       value: base64.encode(privateKeySeed),
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     await _secureStorage.write(
       key: _storageKey(_publicKeyKey, username, credentialId),
       value: base64.encode(publicKey),
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     await _secureStorage.write(
       key: _activeCredentialStorageKey(username),
       value: credentialId,
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
   }
 
@@ -335,6 +349,8 @@ class DeviceKeyService {
       value: next.toString(),
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     return next;
   }
@@ -345,6 +361,8 @@ class DeviceKeyService {
       key: key,
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     if (current != null && current.trim().isNotEmpty) {
       return current;
@@ -354,6 +372,8 @@ class DeviceKeyService {
       key: key,
       iOptions: _iosOptions(),
       aOptions: _legacyAndroidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     if (legacy == null || legacy.trim().isEmpty) {
       return null;
@@ -364,11 +384,15 @@ class DeviceKeyService {
       value: legacy,
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     await _secureStorage.delete(
       key: key,
       iOptions: _iosOptions(),
       aOptions: _legacyAndroidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     return legacy;
   }

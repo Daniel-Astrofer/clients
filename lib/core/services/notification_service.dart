@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:kerosene/core/services/native_notification_presenter.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -17,7 +20,14 @@ class NotificationService {
   final Map<String, DateTime> _lastNativeNotificationShownAt =
       <String, DateTime>{};
 
+  final NativeNotificationPresenter _presenter =
+      const NativeNotificationPresenter();
+
+  bool _initialized = false;
+
   Future<void> init() async {
+    if (_initialized) return;
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/launcher_icon');
 
@@ -28,16 +38,87 @@ class NotificationService {
       requestAlertPermission: true,
     );
 
+    // Desktop platforms require explicit settings or initialize() throws.
+    const LinuxInitializationSettings initializationSettingsLinux =
+        LinuxInitializationSettings(
+      defaultActionName: 'Open notification',
+    );
+
+    const WindowsInitializationSettings initializationSettingsWindows =
+        WindowsInitializationSettings(
+      appName: 'Kerosene',
+      appUserModelId: 'Kerosene.App.Desktop',
+      // Stable GUID for toast activation callbacks (do not rotate).
+      guid: 'a3f1c8e2-7b54-4d91-9e6c-2f8d0b4a5c17',
+    );
+
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
+      macOS: initializationSettingsDarwin,
+      linux: initializationSettingsLinux,
+      windows: initializationSettingsWindows,
     );
 
     await flutterLocalNotificationsPlugin.initialize(
       settings: initializationSettings,
     );
+    await _ensureAndroidChannels();
     await requestPermissions();
+    _initialized = true;
+  }
+
+  Future<void> _ensureAndroidChannels() async {
+    final android = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return;
+
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        NativeNotificationChannels.transactions,
+        NativeNotificationChannels.transactionsName,
+        description: NativeNotificationChannels.transactionsDesc,
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        NativeNotificationChannels.security,
+        NativeNotificationChannels.securityName,
+        description: NativeNotificationChannels.securityDesc,
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        NativeNotificationChannels.system,
+        NativeNotificationChannels.systemName,
+        description: NativeNotificationChannels.systemDesc,
+        importance: Importance.defaultImportance,
+        playSound: true,
+        showBadge: true,
+      ),
+    );
+    // Foreground service sticky channel (low importance, no sound).
+    await android.createNotificationChannel(
+      const AndroidNotificationChannel(
+        NativeNotificationChannels.foreground,
+        NativeNotificationChannels.foregroundName,
+        description: NativeNotificationChannels.foregroundDesc,
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        showBadge: false,
+      ),
+    );
   }
 
   Future<bool> requestPermissions() async {
@@ -59,41 +140,53 @@ class NotificationService {
     return androidGranted ?? iosGranted ?? macosGranted ?? true;
   }
 
-  Future<void> showTransactionNotification({
-    required int id,
-    required String title,
-    required String body,
-    String? summary,
-    String? payload,
-    bool incoming = true,
-    String? dedupeKey,
-  }) async {
-    final nativeDedupeKey =
-        dedupeKey ?? _nativeDedupeKey(title: title, body: body);
-    if (_shouldSuppressNativeNotification(nativeDedupeKey)) {
+  /// Preferred entry: full structured presentation from backend fields.
+  Future<void> showPresented(NativeNotificationPresentation presentation) async {
+    if (!_initialized) {
+      await init();
+    }
+    if (_shouldSuppressNativeNotification(presentation.dedupeKey)) {
+      if (kDebugMode) {
+        debugPrint(
+          'NotificationService: suppressed dedupe=${presentation.dedupeKey}',
+        );
+      }
       return;
     }
 
-    final androidNotificationDetails = AndroidNotificationDetails(
-      'kerosene_transactions',
-      'Kerosene transactions',
-      channelDescription: 'Beautiful Android alerts for sends and receives.',
-      importance: Importance.max,
-      priority: Priority.high,
+    final color = presentation.accentColor;
+    final androidColor = AndroidNotificationDetails(
+      presentation.channelId,
+      _channelName(presentation.channelId),
+      channelDescription: _channelDescription(presentation.channelId),
+      importance: presentation.highPriority ? Importance.max : Importance.defaultImportance,
+      priority: presentation.highPriority ? Priority.high : Priority.defaultPriority,
       showWhen: true,
-      color:
-          incoming ? KeroseneBrandTokens.success : KeroseneBrandTokens.warning,
+      when: DateTime.now().millisecondsSinceEpoch,
+      color: color,
+      colorized: false,
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.status,
-      ticker: title,
-      subText: summary,
+      category: presentation.family == NativeNotificationFamily.security
+          ? AndroidNotificationCategory.alarm
+          : AndroidNotificationCategory.status,
+      ticker: presentation.title,
+      subText: presentation.summary,
       styleInformation: BigTextStyleInformation(
-        body,
-        contentTitle: title,
-        summaryText: summary,
+        presentation.body,
+        contentTitle: presentation.title,
+        summaryText: presentation.summary,
+        htmlFormatBigText: false,
+        htmlFormatContentTitle: false,
+        htmlFormatSummaryText: false,
       ),
       playSound: true,
       enableVibration: true,
+      // Group financial alerts under one app section when possible.
+      groupKey: presentation.channelId == NativeNotificationChannels.transactions
+          ? 'kerosene_tx_group'
+          : null,
+      autoCancel: true,
+      onlyAlertOnce: false,
     );
 
     const darwinNotificationDetails = DarwinNotificationDetails(
@@ -103,16 +196,132 @@ class NotificationService {
       interruptionLevel: InterruptionLevel.active,
     );
 
+    final id = _stableId(presentation.dedupeKey);
     await flutterLocalNotificationsPlugin.show(
       id: id,
-      title: title,
-      body: body,
+      title: presentation.title,
+      body: presentation.body,
       notificationDetails: NotificationDetails(
-        android: androidNotificationDetails,
+        android: androidColor,
         iOS: darwinNotificationDetails,
       ),
-      payload: payload,
+      payload: presentation.payload,
     );
+
+    if (kDebugMode) {
+      debugPrint(
+        'NotificationService: shown id=$id channel=${presentation.channelId} '
+        'title="${presentation.title}"',
+      );
+    }
+  }
+
+  /// Builds presentation from raw fields and shows it.
+  Future<void> showFromBackendEvent({
+    required String id,
+    required String kind,
+    required String title,
+    required String body,
+    Map<String, String> metadata = const {},
+    String? deeplink,
+    String? entityType,
+    String? entityId,
+    String? severity,
+  }) {
+    final presentation = _presenter.present(
+      id: id,
+      kind: kind,
+      title: title,
+      body: body,
+      metadata: metadata,
+      deeplink: deeplink,
+      entityType: entityType,
+      entityId: entityId,
+      severity: severity,
+    );
+    return showPresented(presentation);
+  }
+
+  Future<void> showSessionNotification(SessionNotificationItem item) {
+    return showPresented(_presenter.presentSession(item));
+  }
+
+  /// Legacy API — prefer [showFromBackendEvent] / [showSessionNotification].
+  Future<void> showTransactionNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? summary,
+    String? payload,
+    bool incoming = true,
+    String? dedupeKey,
+  }) {
+    final presentation = NativeNotificationPresentation(
+      title: title,
+      body: body,
+      summary: summary ?? (incoming ? 'Recebimento' : 'Envio'),
+      channelId: NativeNotificationChannels.transactions,
+      family: incoming
+          ? NativeNotificationFamily.transactionIncoming
+          : NativeNotificationFamily.transactionOutgoing,
+      highPriority: true,
+      accentColor: incoming
+          ? KeroseneBrandTokens.success
+          : KeroseneBrandTokens.warning,
+      payload: payload,
+      dedupeKey: dedupeKey ??
+          _nativeDedupeKey(title: title, body: body),
+    );
+    return showPresented(presentation);
+  }
+
+  Future<void> showSubtleNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) {
+    return showFromBackendEvent(
+      id: 'subtle-$id',
+      kind: SessionNotificationItem.kindSystemInfo,
+      title: title,
+      body: body,
+    );
+  }
+
+  String _channelName(String id) {
+    return switch (id) {
+      NativeNotificationChannels.security =>
+        NativeNotificationChannels.securityName,
+      NativeNotificationChannels.system => NativeNotificationChannels.systemName,
+      NativeNotificationChannels.foreground =>
+        NativeNotificationChannels.foregroundName,
+      _ => NativeNotificationChannels.transactionsName,
+    };
+  }
+
+  String _channelDescription(String id) {
+    return switch (id) {
+      NativeNotificationChannels.security =>
+        NativeNotificationChannels.securityDesc,
+      NativeNotificationChannels.system => NativeNotificationChannels.systemDesc,
+      NativeNotificationChannels.foreground =>
+        NativeNotificationChannels.foregroundDesc,
+      _ => NativeNotificationChannels.transactionsDesc,
+    };
+  }
+
+  int _stableId(String key) {
+    var hash = 0;
+    for (final codeUnit in key.codeUnits) {
+      hash = 0x1fffffff & (hash + codeUnit);
+      hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+      hash ^= hash >> 6;
+    }
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    hash ^= hash >> 11;
+    hash = 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+    final id = hash & 0x7fffffff;
+    return id == 0 ? DateTime.now().millisecondsSinceEpoch ~/ 1000 : id;
   }
 
   String _nativeDedupeKey({required String title, required String body}) {
@@ -145,18 +354,5 @@ class NotificationService {
 
     _lastNativeNotificationShownAt[key] = now;
     return false;
-  }
-
-  Future<void> showSubtleNotification({
-    required int id,
-    required String title,
-    required String body,
-  }) {
-    return showTransactionNotification(
-      id: id,
-      title: title,
-      body: body,
-      summary: 'Kerosene',
-    );
   }
 }

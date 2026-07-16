@@ -5,7 +5,11 @@ class SecureStorageService {
   final FlutterSecureStorage _storage;
 
   SecureStorageService({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              lOptions: LinuxOptions(),
+              wOptions: WindowsOptions(),
+            );
 
   IOSOptions _iosOptions() => const IOSOptions(
         accessibility: KeychainAccessibility.first_unlock_this_device,
@@ -21,6 +25,10 @@ class SecureStorageService {
 
   AndroidOptions _legacyAndroidOptions() => const AndroidOptions();
 
+  LinuxOptions _linuxOptions() => const LinuxOptions();
+
+  WindowsOptions _windowsOptions() => const WindowsOptions();
+
   /// Save a value securely
   Future<void> write({required String key, required String value}) async {
     try {
@@ -29,6 +37,8 @@ class SecureStorageService {
         value: value,
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -45,6 +55,8 @@ class SecureStorageService {
         key: key,
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       if (value != null) {
         return value;
@@ -65,11 +77,15 @@ class SecureStorageService {
         key: key,
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       await _storage.delete(
         key: key,
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -85,10 +101,14 @@ class SecureStorageService {
       await _storage.deleteAll(
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       await _storage.deleteAll(
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -104,6 +124,8 @@ class SecureStorageService {
         key: key,
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       if (value == null) {
         return null;
@@ -114,6 +136,8 @@ class SecureStorageService {
         key: key,
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       return value;
     } catch (e) {

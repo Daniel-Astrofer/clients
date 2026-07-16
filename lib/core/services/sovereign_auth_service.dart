@@ -82,7 +82,11 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
 
   SecureStorageSovereignKeyStore({
     FlutterSecureStorage? secureStorage,
-  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  }) : _secureStorage = secureStorage ??
+            const FlutterSecureStorage(
+              lOptions: LinuxOptions(),
+              wOptions: WindowsOptions(),
+            );
 
   IOSOptions _iosOptions() =>
       const IOSOptions(accessibility: KeychainAccessibility.first_unlock);
@@ -95,6 +99,10 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
 
   /// Pre-namespace defaults used by earlier builds.
   AndroidOptions _legacyAndroidOptions() => const AndroidOptions();
+
+  LinuxOptions _linuxOptions() => const LinuxOptions();
+
+  WindowsOptions _windowsOptions() => const WindowsOptions();
 
   @override
   Future<void> saveKeyMaterial({
@@ -109,12 +117,16 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
         value: base64Encode(privateKeySeed),
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       await _secureStorage.write(
         key: _storageKey(_publicKeyStorageKey, subject),
         value: base64Encode(publicKey),
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
       if (credentialId != null) {
         await _secureStorage.write(
@@ -122,6 +134,8 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
           value: base64Encode(credentialId),
           iOptions: _iosOptions(),
           aOptions: _androidOptions(),
+          lOptions: _linuxOptions(),
+          wOptions: _windowsOptions(),
         );
       }
       await _secureStorage.write(
@@ -129,6 +143,8 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
         value: '0',
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
     } catch (error) {
       throw SovereignAuthException(
@@ -189,6 +205,8 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
         value: counter.toString(),
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
       );
     } catch (error) {
       throw SovereignAuthException(
@@ -213,11 +231,15 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
           key: key,
           iOptions: _iosOptions(),
           aOptions: _androidOptions(),
+          lOptions: _linuxOptions(),
+          wOptions: _windowsOptions(),
         );
         await _secureStorage.delete(
           key: key,
           iOptions: _iosOptions(),
           aOptions: _legacyAndroidOptions(),
+          lOptions: _linuxOptions(),
+          wOptions: _windowsOptions(),
         );
       }
     } catch (error) {
@@ -258,6 +280,8 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
       key: key,
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     if (current != null && current.trim().isNotEmpty) {
       return current;
@@ -267,6 +291,8 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
       key: key,
       iOptions: _iosOptions(),
       aOptions: _legacyAndroidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     if (legacy == null || legacy.trim().isEmpty) {
       return null;
@@ -277,11 +303,15 @@ class SecureStorageSovereignKeyStore implements SovereignKeyStore {
       value: legacy,
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     await _secureStorage.delete(
       key: key,
       iOptions: _iosOptions(),
       aOptions: _legacyAndroidOptions(),
+      lOptions: _linuxOptions(),
+      wOptions: _windowsOptions(),
     );
     return legacy;
   }
