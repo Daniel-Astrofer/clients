@@ -144,7 +144,7 @@ class ErrorTranslator {
         return l10n.errPasskeyDeviceNotLinked;
       case 'AUTH_018':
       case 'ERR_AUTH_APP_PIN_NOT_CONFIGURED':
-        return l10n.appEntryPinUnavailableMessage;
+        return 'Este dispositivo ainda não tem PIN de entrada. Configure um PIN para continuar.';
       case 'AUTH_019':
       case 'ERR_AUTH_APP_PIN_INVALID':
         // Entry PIN only — never use login "invalid credentials" copy here.

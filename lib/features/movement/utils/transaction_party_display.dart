@@ -1,10 +1,20 @@
 import 'package:flutter/widgets.dart';
+import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/utils/transaction_address_display.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
+
+/// ARB lookup without [BuildContext] (party resolvers run from pure helpers too).
+AppLocalizations _partyL10n([String languageCode = 'pt']) {
+  final code = switch (languageCode) {
+    'en' || 'es' || 'pt' => languageCode,
+    _ => 'pt',
+  };
+  return lookupAppLocalizations(Locale(code));
+}
 
 /// Platform network / rail for statement organization.
 ///
@@ -133,6 +143,7 @@ String resolveWalletDisplayName(
 String _primaryUserWalletName({
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
+  String languageCode = 'pt',
 }) {
   final namedAccounts = accounts
       .where((a) => a.isActive && a.label.trim().isNotEmpty)
@@ -157,7 +168,7 @@ String _primaryUserWalletName({
   if (namedWallets.isNotEmpty) {
     return namedWallets.first.name.trim();
   }
-  return 'Carteira global';
+  return _partyL10n(languageCode).txListPartyGlobalWallet;
 }
 
 bool isColdWalletKey(
@@ -221,6 +232,7 @@ String resolveOwnWalletLabel(
   Transaction tx, {
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
+  String languageCode = 'pt',
 }) {
   final apiOwn = tx.isCredit
       ? (tx.destinationWalletLabel ?? tx.walletLabel)
@@ -242,7 +254,11 @@ String resolveOwnWalletLabel(
     );
     if (label.isNotEmpty) return label;
   }
-  return _primaryUserWalletName(wallets: wallets, accounts: accounts);
+  return _primaryUserWalletName(
+    wallets: wallets,
+    accounts: accounts,
+    languageCode: languageCode,
+  );
 }
 
 /// "De" — real wallet name used, never a mock "Minha carteira" / never a hash.
@@ -250,7 +266,9 @@ String resolveTransactionFromParty(
   Transaction tx, {
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
+  String languageCode = 'pt',
 }) {
+  final l10n = _partyL10n(languageCode);
   final network = resolveTransactionNetwork(
     tx,
     wallets: wallets,
@@ -283,17 +301,21 @@ String resolveTransactionFromParty(
       );
       if (peer.isNotEmpty) return peer;
       if (network == TransactionNetwork.paymentLinkInternal) {
-        return 'Pagador (link interno)';
+        return l10n.txListPartyInternalPayer;
       }
-      return 'Kerosene (interno)';
+      return l10n.txListPartyInternalKerosene;
     }
 
-    if (network == TransactionNetwork.lightning) return 'Lightning';
-    if (network == TransactionNetwork.paymentLinkOnchain) {
-      return 'Pagador (link on-chain)';
+    if (network == TransactionNetwork.lightning) {
+      return l10n.activityFilterLightning;
     }
-    if (network == TransactionNetwork.cold) return 'Rede Bitcoin (cold)';
-    return 'Rede Bitcoin (on-chain)';
+    if (network == TransactionNetwork.paymentLinkOnchain) {
+      return l10n.txListPartyOnchainPayer;
+    }
+    if (network == TransactionNetwork.cold) {
+      return l10n.txListPartyColdNetwork;
+    }
+    return l10n.txListPartyOnchainNetwork;
   }
 
   // Debit (send): our source wallet — prefer named cold/custodial account.
@@ -333,7 +355,12 @@ String resolveTransactionFromParty(
     return from;
   }
 
-  return resolveOwnWalletLabel(tx, wallets: wallets, accounts: accounts);
+  return resolveOwnWalletLabel(
+    tx,
+    wallets: wallets,
+    accounts: accounts,
+    languageCode: languageCode,
+  );
 }
 
 /// "Para" — username when available; on-chain address shown as hash.
@@ -342,7 +369,9 @@ String resolveTransactionToParty(
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
   bool compactHash = true,
+  String languageCode = 'pt',
 }) {
+  final l10n = _partyL10n(languageCode);
   final network = resolveTransactionNetwork(
     tx,
     wallets: wallets,
@@ -358,7 +387,12 @@ String resolveTransactionToParty(
       apiLabel: tx.destinationWalletLabel ?? tx.walletLabel,
     );
     if (own.isNotEmpty) return own;
-    return resolveOwnWalletLabel(tx, wallets: wallets, accounts: accounts);
+    return resolveOwnWalletLabel(
+      tx,
+      wallets: wallets,
+      accounts: accounts,
+      languageCode: languageCode,
+    );
   }
 
   // Debit (send): external peer / on-chain address / internal destination.
@@ -386,14 +420,14 @@ String resolveTransactionToParty(
   if (toWallet.isNotEmpty) return toWallet;
 
   if (network == TransactionNetwork.paymentLinkInternal) {
-    return 'Destinatário (link interno)';
+    return l10n.txListPartyLinkRecipient;
   }
   if (network == TransactionNetwork.paymentLinkOnchain) {
     final addr = (tx.externalReference ?? tx.toAddress).trim();
     if (addr.isNotEmpty && looksLikeOnchainAddress(addr)) {
       return compactHash ? shortenHash(addr) : addr;
     }
-    return 'Endereço do link on-chain';
+    return l10n.txListPartyLinkAddress;
   }
 
   final candidates = <String?>[
@@ -419,11 +453,11 @@ String resolveTransactionToParty(
     if (invoice.isNotEmpty) {
       return compactHash ? shortenHash(invoice, head: 12, tail: 8) : invoice;
     }
-    return 'Invoice Lightning';
+    return l10n.txListPartyLightningInvoice;
   }
 
   if (network == TransactionNetwork.internal) {
-    return 'Carteira Kerosene';
+    return l10n.txListPartyKeroseneWallet;
   }
 
   // Cold / Electrum spend without decoded destination — never show raw txid as "who".
@@ -432,37 +466,43 @@ String resolveTransactionToParty(
       memo.contains('carteira fria') ||
       memo.contains('detectado');
   if (isColdExternal) {
-    return compactHash ? 'Envio off-app' : 'Envio on-chain (fora do app)';
+    return compactHash
+        ? l10n.txListPartyOffApp
+        : l10n.txListPartyOnchainOffApp;
   }
 
   final txid = tx.blockchainTxid?.trim() ?? '';
   if (txid.isNotEmpty && txid.length >= 16) {
+    final short = shortenHash(txid);
     return compactHash
-        ? 'On-chain ${shortenHash(txid)}'
-        : 'On-chain · ${shortenHash(txid)}';
+        ? '${l10n.activityFilterOnchain} $short'
+        : '${l10n.activityFilterOnchain} · $short';
   }
 
-  return 'Endereço externo';
+  return l10n.txListPartyExternalAddress;
 }
 
 String resolveTransactionNetworkLabel(
   Transaction tx, {
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
+  String languageCode = 'pt',
 }) {
+  final l10n = _partyL10n(languageCode);
   final network = resolveTransactionNetwork(
     tx,
     wallets: wallets,
     accounts: accounts,
   );
+  // Short labels — long technical copy belongs in detail, not list rows.
   return switch (network) {
-    TransactionNetwork.internal => 'Interna (ledger Kerosene)',
-    TransactionNetwork.cold => 'Cold wallet (on-chain observada)',
-    TransactionNetwork.onchain => 'On-chain (carteira plataforma)',
-    TransactionNetwork.lightning => 'Lightning',
-    TransactionNetwork.paymentLinkInternal => 'Link de pagamento · interno',
-    TransactionNetwork.paymentLinkOnchain => 'Link de pagamento · on-chain',
-    TransactionNetwork.unknown => 'Rede desconhecida',
+    TransactionNetwork.internal => l10n.txListInstant,
+    TransactionNetwork.cold => l10n.activityFilterCold,
+    TransactionNetwork.onchain => l10n.activityFilterOnchain,
+    TransactionNetwork.lightning => l10n.activityFilterLightning,
+    TransactionNetwork.paymentLinkInternal => l10n.txListLink,
+    TransactionNetwork.paymentLinkOnchain => l10n.txListLink,
+    TransactionNetwork.unknown => '—',
   };
 }
 
@@ -472,27 +512,30 @@ String resolveTransactionRouteSummary(
   List<Wallet> wallets = const [],
   List<BitcoinAccount> accounts = const [],
   bool compactHash = true,
+  String languageCode = 'pt',
 }) {
+  final l10n = _partyL10n(languageCode);
   final from = resolveTransactionFromParty(
     tx,
     wallets: wallets,
     accounts: accounts,
+    languageCode: languageCode,
   );
   final to = resolveTransactionToParty(
     tx,
     wallets: wallets,
     accounts: accounts,
     compactHash: compactHash,
+    languageCode: languageCode,
   );
   final network = resolveTransactionNetworkLabel(
     tx,
     wallets: wallets,
     accounts: accounts,
+    languageCode: languageCode,
   );
-  if (tx.isCredit) {
-    return 'De $from → $to · $network';
-  }
-  return 'De $from → $to · $network';
+  // Credit and debit both show from → to · rail for route clarity.
+  return '${l10n.txListFrom} $from → $to · $network';
 }
 
 /// Card / detail title by **action** (Envio/Recebimento + rail/network).

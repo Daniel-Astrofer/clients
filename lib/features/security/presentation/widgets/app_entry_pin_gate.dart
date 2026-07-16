@@ -347,7 +347,7 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
   }
 
   void _applyVerifyFailure(dynamic failure) {
-    final code = failure.errorCode?.toString() ?? '';
+    final code = failure.errorCode?.toString().toUpperCase() ?? '';
     final msg = failure.message.toString().toLowerCase();
     final isWrongPin = code == 'AUTH_019' ||
         code == 'ERR_AUTH_APP_PIN_INVALID' ||
@@ -356,6 +356,25 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
         msg.contains('pin atual incorreto');
     final isLocked =
         code == 'AUTH_020' || code == 'ERR_AUTH_APP_PIN_LOCKED';
+    // Server has no PIN for this device hash (common on new Linux/desktop
+    // installs). Flip local hint to setup instead of the useless
+    // "atualize o estado" AUTH_018 copy.
+    final isNotConfigured = code == 'AUTH_018' ||
+        code == 'ERR_AUTH_APP_PIN_NOT_CONFIGURED' ||
+        msg.contains('ainda nao configurado') ||
+        msg.contains('ainda não configurado') ||
+        msg.contains('not configured');
+
+    if (isNotConfigured) {
+      _persistPinConfiguredHint(ref, configured: false);
+      bumpAppPinLocalState(ref);
+      setState(() {
+        _busy = false;
+        _pin = '';
+        _errorMessage = null;
+      });
+      return;
+    }
 
     final base = isLocked
         ? context.tr.appEntryLockedHelper
@@ -435,6 +454,8 @@ void _persistPinConfiguredHint(
   if (pinLength != null && pinLength >= 4 && pinLength <= 8) {
     prefs.setInt(appPinLengthPrefsKey(scope), pinLength);
   }
+  // Always bump so AppEntryPinGate switches setup ↔ unlock immediately.
+  bumpAppPinLocalState(ref);
 }
 
 class _TotpResetSheet extends ConsumerStatefulWidget {

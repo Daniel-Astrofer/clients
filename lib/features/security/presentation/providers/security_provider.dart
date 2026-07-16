@@ -20,6 +20,24 @@ String appPinConfiguredPrefsKey(String sessionScope) =>
 String appPinLengthPrefsKey(String sessionScope) =>
     'app_pin.length.$sessionScope';
 
+/// Bumped when local PIN hints change so [appPinGateStatusProvider] rebuilds
+/// (SharedPreferences writes alone do not notify Riverpod).
+class AppPinLocalStateEpochNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state = state + 1;
+}
+
+final appPinLocalStateEpochProvider =
+    NotifierProvider<AppPinLocalStateEpochNotifier, int>(
+  AppPinLocalStateEpochNotifier.new,
+);
+
+void bumpAppPinLocalState(WidgetRef ref) {
+  ref.read(appPinLocalStateEpochProvider.notifier).bump();
+}
+
 /// Optimistic PIN status used only before the server answers over Tor.
 /// Backend default is min 4 / max 8 (`security.app-pin.min-length:4`).
 const AppPinStatus kOptimisticAppPinStatus = AppPinStatus(
@@ -39,6 +57,7 @@ const AppPinStatus kOptimisticAppPinStatus = AppPinStatus(
 /// Digit count: use the length saved when the user configured the PIN;
 /// otherwise default to **4** (server minimum), not 6.
 final appPinGateStatusProvider = Provider<AppPinStatus>((ref) {
+  ref.watch(appPinLocalStateEpochProvider);
   final auth = ref.watch(authControllerProvider);
   if (auth is! AuthAuthenticated) {
     return const AppPinStatus();
@@ -53,6 +72,7 @@ final appPinGateStatusProvider = Provider<AppPinStatus>((ref) {
     final pinLen = (storedLen ?? 4).clamp(4, 8);
 
     if (configured == false) {
+      // Explicit local hint: this install has no PIN yet → setup.
       return AppPinStatus(
         enabled: false,
         configured: false,
@@ -62,10 +82,22 @@ final appPinGateStatusProvider = Provider<AppPinStatus>((ref) {
         maxPinLength: pinLen,
       );
     }
-    // configured == true or unknown (first launch after update): show unlock.
+    if (configured == true) {
+      return AppPinStatus(
+        enabled: true,
+        configured: true,
+        remainingAttempts: 5,
+        maxAttempts: 5,
+        minPinLength: pinLen,
+        maxPinLength: pinLen,
+      );
+    }
+    // Unknown (no local hint): do **not** assume unlock — first login on a new
+    // Linux/Windows install would hit AUTH_018. Prefer setup; if the server
+    // already has a PIN, setup configure will ask for current PIN/TOTP.
     return AppPinStatus(
-      enabled: true,
-      configured: true,
+      enabled: false,
+      configured: false,
       remainingAttempts: 5,
       maxAttempts: 5,
       minPinLength: pinLen,
