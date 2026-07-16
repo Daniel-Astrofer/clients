@@ -85,7 +85,7 @@ class SignupSuccessSceneState extends State<SignupSuccessScene>
                 padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 390),
+                    constraints: context.responsive.formConstraints,
                     child: Semantics(
                       label: widget.appTitle,
                       child: Column(

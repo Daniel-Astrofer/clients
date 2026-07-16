@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
@@ -51,7 +52,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
+                    constraints: context.responsive.appColumnConstraints,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [

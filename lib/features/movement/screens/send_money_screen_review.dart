@@ -161,7 +161,7 @@ class InternalTransferReviewScreenState<T>
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+              constraints: context.responsive.appColumnConstraints,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -285,7 +285,7 @@ class _SendPaymentReceiptScreenState<T>
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: context.responsive.appColumnConstraints,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

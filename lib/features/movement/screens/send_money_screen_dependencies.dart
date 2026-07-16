@@ -14,6 +14,7 @@ export 'package:kerosene/core/utils/error_translator.dart';
 export 'package:kerosene/core/services/notification_service.dart';
 export 'package:kerosene/features/home/presentation/screens/qr_scanner_screen.dart';
 export 'package:kerosene/core/l10n/l10n_extension.dart';
+export 'package:kerosene/core/responsive/kerosene_responsive.dart';
 export 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 export 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 export 'package:kerosene/features/security/presentation/providers/security_provider.dart';

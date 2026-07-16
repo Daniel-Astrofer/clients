@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
+import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/icons.dart';
@@ -82,7 +83,7 @@ class SendDestinationStep extends StatelessWidget {
             ),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 448),
+                constraints: context.responsive.appColumnConstraints,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [

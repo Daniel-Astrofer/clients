@@ -4,6 +4,7 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
+import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_spacing.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -89,7 +90,7 @@ class TransactionValueEntrySurface extends StatelessWidget {
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight - 24,
-                        maxWidth: 448,
+                        maxWidth: context.responsive.appColumnMaxWidth,
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,

@@ -628,7 +628,7 @@ class CustodySelectionTile extends StatelessWidget {
                     ),
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 390),
+                        constraints: context.responsive.formConstraints,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [

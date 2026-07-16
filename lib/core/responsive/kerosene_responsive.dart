@@ -63,28 +63,26 @@ class KeroseneResponsiveMetrics {
     return math.max(0.0, size.width - (horizontalPadding * 2));
   }
 
-  /// Wide reading column (landing, long-form). Fills the window up to a soft cap.
+  /// Wide reading column (landing, long-form). Caps only — screens own padding.
   double get maxReadableWidth {
-    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => math.min(usable, 760),
-      KeroseneWindowClass.expanded => math.min(usable, 1040),
-      KeroseneWindowClass.wide => math.min(usable, 1280),
+      KeroseneWindowClass.medium => math.min(size.width, 760),
+      KeroseneWindowClass.expanded => math.min(size.width, 1040),
+      KeroseneWindowClass.wide => math.min(size.width, 1280),
     };
   }
 
   /// Primary app column (home, settings, statements, accounts).
   ///
   /// Grows with the window so large desktops no longer show phone-width
-  /// content floating on black side bars.
+  /// content floating on black side bars. Screens apply their own padding.
   double get mobileContentMaxWidth {
-    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => math.min(usable, 720),
-      KeroseneWindowClass.expanded => math.min(usable, 960),
-      KeroseneWindowClass.wide => math.min(usable, 1200),
+      KeroseneWindowClass.medium => math.min(size.width, 720),
+      KeroseneWindowClass.expanded => math.min(size.width, 960),
+      KeroseneWindowClass.wide => math.min(size.width, 1200),
     };
   }
 
@@ -93,22 +91,20 @@ class KeroseneResponsiveMetrics {
 
   /// Auth / form surfaces: wider than a phone, still readable as a form.
   double get formMaxWidth {
-    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => math.min(usable, 520),
-      KeroseneWindowClass.expanded => math.min(usable, 560),
-      KeroseneWindowClass.wide => math.min(usable, 600),
+      KeroseneWindowClass.medium => math.min(size.width, 520),
+      KeroseneWindowClass.expanded => math.min(size.width, 560),
+      KeroseneWindowClass.wide => math.min(size.width, 600),
     };
   }
 
   double get sheetMaxWidth {
-    final usable = usableWidth;
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => math.min(usable, 560),
-      KeroseneWindowClass.expanded => math.min(usable, 640),
-      KeroseneWindowClass.wide => math.min(usable, 720),
+      KeroseneWindowClass.medium => math.min(size.width, 560),
+      KeroseneWindowClass.expanded => math.min(size.width, 640),
+      KeroseneWindowClass.wide => math.min(size.width, 720),
     };
   }
 

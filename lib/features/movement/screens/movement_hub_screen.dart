@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
+import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
@@ -219,7 +220,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: context.responsive.appColumnConstraints,
             child: Column(
               children: [
                 _ReceiveTopBar(onBack: () => Navigator.maybePop(context)),
@@ -720,7 +721,7 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: context.responsive.appColumnConstraints,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

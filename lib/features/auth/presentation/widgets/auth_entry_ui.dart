@@ -75,7 +75,7 @@ class AuthEntryScaffold extends StatelessWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: responsive.isCompact ? 520 : 560,
+                    maxWidth: responsive.formMaxWidth,
                     minHeight: constraints.maxHeight > AppSpacing.xxl
                         ? constraints.maxHeight - AppSpacing.xxl
                         : 0,
