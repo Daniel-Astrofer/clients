@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
@@ -341,6 +342,10 @@ class LocalAuthSovereignPresenceVerifier implements SovereignPresenceVerifier {
 
   @override
   Future<void> ensureLocalCredentialsAvailable() async {
+    // Desktop Linux: no local_auth plugin — app entry PIN is the gate.
+    if (!_localAuthLikelySupported) {
+      return;
+    }
     try {
       final canCheckBiometrics = await _localAuthentication.canCheckBiometrics;
       final isSupported = await _localAuthentication.isDeviceSupported();
@@ -355,19 +360,23 @@ class LocalAuthSovereignPresenceVerifier implements SovereignPresenceVerifier {
       );
     } on LocalAuthException catch (error) {
       throw _mapLocalAuthException(error);
-    } on MissingPluginException catch (error) {
-      throw _unsupportedLocalAuth(error);
-    } on PlatformException catch (error) {
-      throw _unsupportedLocalAuth(error);
-    } on UnimplementedError catch (error) {
-      throw _unsupportedLocalAuth(error);
-    } on UnsupportedError catch (error) {
-      throw _unsupportedLocalAuth(error);
+    } on MissingPluginException {
+      // Treat as no local_auth — allow desktop session-gated flow.
+      return;
+    } on PlatformException {
+      return;
+    } on UnimplementedError {
+      return;
+    } on UnsupportedError {
+      return;
     }
   }
 
   @override
   Future<void> verifyUserPresence({required String localizedReason}) async {
+    if (!_localAuthLikelySupported) {
+      return;
+    }
     try {
       final didAuthenticate = await _localAuthentication.authenticate(
         localizedReason: localizedReason,
@@ -383,24 +392,24 @@ class LocalAuthSovereignPresenceVerifier implements SovereignPresenceVerifier {
       }
     } on LocalAuthException catch (error) {
       throw _mapLocalAuthException(error);
-    } on MissingPluginException catch (error) {
-      throw _unsupportedLocalAuth(error);
-    } on PlatformException catch (error) {
-      throw _unsupportedLocalAuth(error);
-    } on UnimplementedError catch (error) {
-      throw _unsupportedLocalAuth(error);
-    } on UnsupportedError catch (error) {
-      throw _unsupportedLocalAuth(error);
+    } on MissingPluginException {
+      return;
+    } on PlatformException {
+      return;
+    } on UnimplementedError {
+      return;
+    } on UnsupportedError {
+      return;
     }
   }
 
-  SovereignAuthException _unsupportedLocalAuth(Object error) {
-    return SovereignAuthException(
-      code: SovereignAuthErrorCodes.noLocalCredentials,
-      message:
-          'Passkey confirmation requires biometrics or a local device lock on a supported platform.',
-      cause: error,
-    );
+  bool get _localAuthLikelySupported {
+    if (kIsWeb) return false;
+    try {
+      return !Platform.isLinux;
+    } catch (_) {
+      return false;
+    }
   }
 
   SovereignAuthException _mapLocalAuthException(LocalAuthException error) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,16 +8,19 @@ import 'package:kerosene/app/network/api_client_provider.dart';
 import 'package:kerosene/core/config/app_config.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:kerosene/core/errors/failures.dart';
+import 'package:kerosene/core/security/device_credential_capabilities.dart';
+import 'package:kerosene/core/security/device_credential_enroll_policy.dart';
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/core/services/passkey_service.dart';
 import 'package:kerosene/core/services/sovereign_auth_service.dart';
-import 'package:kerosene/features/auth/controller/auth_controller.dart'
-    show authControllerProvider, sessionStorageScopeProvider;
-import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
-import 'package:kerosene/core/security/device_credential_enroll_policy.dart';
 import 'package:kerosene/core/telemetry/device_credential_telemetry.dart';
 import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show authControllerProvider, sessionStorageScopeProvider;
+import 'package:kerosene/features/auth/controller/auth_providers.dart'
+    show authRepositoryProvider;
+import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
@@ -1292,6 +1296,11 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
   }
 
   final deviceKey = DeviceKeyService.instance;
+  // Linux/desktop: auto-enroll Device Key on first custodial step-up when allowed
+  // (local_auth is missing; app entry PIN already gated the session).
+  if (!await deviceKey.hasRegisteredDeviceKey(username)) {
+    await _tryAutoEnrollDeviceKey(ref: ref, username: username);
+  }
   if (await deviceKey.hasRegisteredDeviceKey(username)) {
     final typed = actionRequired?.challengeFor('DEVICE_KEY');
     final DeviceKeyChallenge deviceChallenge;
@@ -1353,6 +1362,38 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
       );
     },
   );
+}
+
+/// Best-effort Device Key enroll so Linux can complete KFE step-up without
+/// local_auth. Failures are swallowed; caller falls through to other paths.
+Future<void> _tryAutoEnrollDeviceKey({
+  required Ref ref,
+  required String username,
+}) async {
+  try {
+    final caps =
+        await DeviceCredentialCapabilitiesResolver.instance.resolve();
+    if (!caps.canEnrollDeviceCredential) {
+      return;
+    }
+    final start = await ref.read(authRepositoryProvider).deviceKeyRegisterStart();
+    final challengeJson = start.fold((_) => null, (v) => v);
+    if (challengeJson == null) return;
+
+    final challenge = DeviceKeyChallenge.fromJson(challengeJson);
+    final credential = await DeviceKeyService.instance.register(
+      challenge: challenge,
+      username: username,
+      sessionId: '',
+    );
+    final finish =
+        await ref.read(authRepositoryProvider).deviceKeyRegisterFinish(credential);
+    finish.fold((_) {}, (_) {
+      // Bound locally for subsequent signs.
+    });
+  } catch (error) {
+    debugPrint('DeviceKey auto-enroll skipped: $error');
+  }
 }
 
 Future<DeviceKeyChallenge> _fetchDeviceKeyAuthChallenge({

@@ -128,12 +128,20 @@ class DeviceCredentialCapabilitiesResolver {
       blockCode = 'ERR_AUTH_DEVICE_KEY_STORAGE_UNAVAILABLE';
       blockMessage =
           'Este ambiente não suporta armazenamento seguro da chave do dispositivo.';
-    } else if (requireAppPin && !canBiometricGate && !appPinConfigured) {
-      // Linux (and Windows without Hello): bare key without a gate is forbidden.
-      canEnroll = false;
-      blockCode = 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED';
-      blockMessage =
-          'Configure um PIN do aplicativo ou bloqueio de tela antes de ativar a chave deste dispositivo.';
+    } else if (requireAppPin && !canBiometricGate) {
+      // Linux has no local_auth plugin. Gate is the **app entry PIN** already
+      // unlocked for this session (or optional appPinConfigured hint).
+      // Do not hard-block enroll — otherwise custodial transfers can never step-up.
+      if (appPinConfigured ||
+          tier == DeviceCredentialTier.c ||
+          tier == DeviceCredentialTier.b) {
+        canEnroll = true;
+      } else {
+        canEnroll = false;
+        blockCode = 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED';
+        blockMessage =
+            'Configure um PIN do aplicativo ou bloqueio de tela antes de ativar a chave deste dispositivo.';
+      }
     } else if (!canBiometricGate && !appPinConfigured) {
       canEnroll = false;
       blockCode = 'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS';

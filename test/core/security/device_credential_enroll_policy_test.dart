@@ -15,24 +15,15 @@ void main() {
       expect(caps.deviceKeyLoginPreferred, isTrue);
     });
 
-    test('tier C Linux enroll only with App PIN', () {
-      final blocked = DeviceCredentialCapabilitiesResolver.fromProbes(
+    test('tier C Linux can enroll without biometrics (session gate)', () {
+      final caps = DeviceCredentialCapabilitiesResolver.fromProbes(
         platformId: 'linux',
         canCheckBiometrics: false,
         isDeviceSupported: false,
         biometricsEnrolled: false,
       );
-      expect(blocked.canEnrollDeviceCredential, isFalse);
-
-      final withPin = DeviceCredentialCapabilitiesResolver.fromProbes(
-        platformId: 'linux',
-        canCheckBiometrics: false,
-        isDeviceSupported: false,
-        biometricsEnrolled: false,
-        appPinConfigured: true,
-      );
-      expect(withPin.canEnrollDeviceCredential, isTrue);
-      expect(withPin.deviceKeyLoginPreferred, isFalse);
+      expect(caps.canEnrollDeviceCredential, isTrue);
+      expect(caps.deviceKeyLoginPreferred, isFalse);
     });
   });
 }

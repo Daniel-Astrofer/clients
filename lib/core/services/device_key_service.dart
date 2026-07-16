@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -275,16 +278,48 @@ class DeviceKeyService {
   }
 
   Future<void> _verifyUserPresence() async {
-    final didAuthenticate = await _localAuthentication.authenticate(
-      localizedReason: AppCopy.authReasonSovereignKeyAccess.en,
-      biometricOnly: false,
-      persistAcrossBackgrounding: true,
-    );
-    if (!didAuthenticate) {
-      throw const DeviceKeyException(
-        'ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED',
-        'A confirmação do dispositivo foi cancelada.',
+    // Linux (and some desktops) have no local_auth implementation.
+    // App entry PIN already gated this session; signing proceeds without biometrics.
+    if (!_localAuthSupported) {
+      debugPrint(
+        'DeviceKey: presence gate skipped (local_auth unavailable on this platform).',
       );
+      return;
+    }
+    try {
+      final canCheck = await _localAuthentication.canCheckBiometrics;
+      final supported = await _localAuthentication.isDeviceSupported();
+      if (!canCheck && !supported) {
+        debugPrint(
+          'DeviceKey: presence gate skipped (no biometrics / device lock).',
+        );
+        return;
+      }
+      final didAuthenticate = await _localAuthentication.authenticate(
+        localizedReason: AppCopy.authReasonSovereignKeyAccess.en,
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
+      );
+      if (!didAuthenticate) {
+        throw const DeviceKeyException(
+          'ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED',
+          'A confirmação do dispositivo foi cancelada.',
+        );
+      }
+    } on MissingPluginException {
+      debugPrint('DeviceKey: local_auth plugin missing — skipping presence gate.');
+    } on PlatformException catch (error) {
+      debugPrint('DeviceKey: local_auth PlatformException: $error — skipping.');
+    }
+  }
+
+  bool get _localAuthSupported {
+    if (kIsWeb) return false;
+    try {
+      // Plugin ships for Android/iOS/macOS/Windows; Linux throws MissingPluginException.
+      return !Platform.isLinux;
+    } catch (_) {
+      return false;
     }
   }
 

@@ -20,7 +20,8 @@ void main() {
       expect(caps.canEnrollDeviceCredential, isTrue);
     });
 
-    test('Linux without gate cannot enroll (third-class)', () {
+    test('Linux without biometrics can still enroll (entry PIN gates session)',
+        () {
       final caps = DeviceCredentialCapabilitiesResolver.fromProbes(
         platformId: 'linux',
         canCheckBiometrics: false,
@@ -31,8 +32,8 @@ void main() {
       expect(caps.tier, DeviceCredentialTier.c);
       expect(caps.deviceKeyLoginPreferred, isFalse);
       expect(caps.requireAppPinWithDeviceKey, isTrue);
-      expect(caps.canEnrollDeviceCredential, isFalse);
-      expect(caps.enrollBlockReasonCode, 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED');
+      // Desktop: local_auth missing — enroll allowed; app entry PIN is the gate.
+      expect(caps.canEnrollDeviceCredential, isTrue);
     });
 
     test('Linux with App PIN can enroll', () {
