@@ -931,15 +931,16 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     if (needsSpin) {
       _spinController ??= AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 1200),
-      )..repeat();
-      if (!(_spinController?.isAnimating ?? false)) {
-        _spinController?.repeat();
+        duration: const Duration(milliseconds: 1100),
+      );
+      if (!(_spinController!.isAnimating)) {
+        _spinController!.repeat();
       }
     } else {
-      _spinController?.stop();
-      _spinController?.dispose();
+      final c = _spinController;
       _spinController = null;
+      c?.stop();
+      c?.dispose();
     }
   }
 
@@ -963,6 +964,12 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     return tx.confirmations.clamp(0, tx.onchainConfirmationTarget);
   }
 
+  bool _isInstantRail(Transaction tx) {
+    return tx.isLightningEffective ||
+        tx.isInternal ||
+        !tx.showsOnchainConfirmations;
+  }
+
   _RingMode _ringMode(Transaction tx) {
     if (tx.isCancelled ||
         tx.displayStatus == TransactionStatus.failed ||
@@ -972,18 +979,16 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     if (tx.displayStatus == TransactionStatus.reconciling) {
       return _RingMode.yellowSpin;
     }
-    // Internal / Lightning: no N/6 ring — settled = green ring, pending = soft spin.
-    if (tx.isLightningEffective ||
-        tx.isInternal ||
-        !tx.showsOnchainConfirmations) {
+    // Internal / Lightning: solid green when settled (not segmented 6-slice).
+    if (_isInstantRail(tx)) {
       if (tx.displayStatus == TransactionStatus.confirmed || tx.isConfirmed) {
-        return _RingMode.settled;
+        return _RingMode.settledSolid;
       }
       if (tx.displayStatus == TransactionStatus.pending ||
           tx.displayStatus == TransactionStatus.confirming) {
         return _RingMode.yellowSpin;
       }
-      return _RingMode.settled;
+      return _RingMode.settledSolid;
     }
     final conf = tx.confirmations;
     final target = tx.onchainConfirmationTarget;
@@ -1026,28 +1031,30 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     final target = tx.onchainConfirmationTarget;
     final spin = _spinController;
     final size = widget.iconSize * 0.36;
-    final onchain = tx.showsOnchainConfirmations &&
-        !tx.isInternal &&
-        !tx.isLightningEffective;
+    final onchain = !_isInstantRail(tx);
     final failed = mode == _RingMode.failed || tx.isCancelled;
-    final settled = mode == _RingMode.settled;
+    // Keep check on all confirmed (solid internal + segmented on-chain).
+    final settled =
+        mode == _RingMode.settled || mode == _RingMode.settledSolid;
     final fullOnchain =
-        settled && onchain && (conf >= target || tx.isConfirmed);
+        mode == _RingMode.settled && onchain && (conf >= target || tx.isConfirmed);
 
-    final ring = CustomPaint(
-      size: Size(widget.iconSize, widget.iconSize),
-      painter: _RingConfirmationPainter(
-        mode: mode,
-        confirmations: conf,
-        target: target,
-        yellowColor: _yellow,
-        greenColor: _green,
-        failedColor: _red,
-        inactiveColor: widget.colors.iconWellBorder,
-        spinValue: spin?.value ?? 0,
-        loadValue: spin?.value ?? 0,
-      ),
-    );
+    Widget buildRing({required double spinValue, required double loadValue}) {
+      return CustomPaint(
+        size: Size(widget.iconSize, widget.iconSize),
+        painter: _RingConfirmationPainter(
+          mode: mode,
+          confirmations: conf,
+          target: target,
+          yellowColor: _yellow,
+          greenColor: _green,
+          failedColor: _red,
+          inactiveColor: widget.colors.iconWellBorder,
+          spinValue: spinValue,
+          loadValue: loadValue,
+        ),
+      );
+    }
 
     return SizedBox(
       width: widget.iconSize,
@@ -1056,10 +1063,17 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
+          // Rebuild painter every tick — capturing spinValue once freezes the arc.
           if (spin != null)
-            AnimatedBuilder(animation: spin, builder: (_, __) => ring)
+            AnimatedBuilder(
+              animation: spin,
+              builder: (_, __) => buildRing(
+                spinValue: spin.value,
+                loadValue: spin.value,
+              ),
+            )
           else
-            ring,
+            buildRing(spinValue: 0, loadValue: 0),
           Container(
             width: widget.iconSize * 0.78,
             height: widget.iconSize * 0.78,
@@ -1081,7 +1095,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
               wellBorder: widget.colors.iconWellBorder,
             ),
           ),
-          // Status corner on parent icon (bottom-right).
+          // Status corner on parent icon (bottom-right) — check stays when expanded.
           if (failed)
             Positioned(
               right: -2,
@@ -1170,7 +1184,15 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
   }
 }
 
-enum _RingMode { yellowSpin, greenProgress, settled, failed }
+enum _RingMode {
+  yellowSpin,
+  greenProgress,
+  /// On-chain fully confirmed — segmented green ring (6 slices).
+  settled,
+  /// Internal / Lightning confirmed — continuous solid green ring.
+  settledSolid,
+  failed,
+}
 
 class _RingConfirmationPainter extends CustomPainter {
   final _RingMode mode;
@@ -1208,7 +1230,9 @@ class _RingConfirmationPainter extends CustomPainter {
       ..isAntiAlias = true;
 
     if (mode == _RingMode.yellowSpin) {
-      // Full yellow arc spinning around the icon (0 confirmations).
+      // Soft track + spinning arc (pending / 0 confs).
+      paint.color = yellowColor.withValues(alpha: 0.22);
+      canvas.drawCircle(origin, radius, paint);
       paint.color = yellowColor;
       final start = -math.pi / 2 + spinValue * 2 * math.pi;
       canvas.drawArc(
@@ -1218,8 +1242,27 @@ class _RingConfirmationPainter extends CustomPainter {
         false,
         paint,
       );
-      paint.color = yellowColor.withValues(alpha: 0.22);
+      return;
+    }
+
+    if (mode == _RingMode.settledSolid) {
+      // Instant rails: one continuous green ring (not 6 slices).
+      paint.color = greenColor;
       canvas.drawCircle(origin, radius, paint);
+      return;
+    }
+
+    if (mode == _RingMode.failed) {
+      paint.color = failedColor.withValues(alpha: 0.35);
+      canvas.drawCircle(origin, radius, paint);
+      paint.color = failedColor;
+      canvas.drawArc(
+        Rect.fromCircle(center: origin, radius: radius),
+        -math.pi / 2,
+        math.pi * 1.6,
+        false,
+        paint,
+      );
       return;
     }
 
@@ -1230,23 +1273,21 @@ class _RingConfirmationPainter extends CustomPainter {
     final filled = confirmations.clamp(0, ringCount);
 
     for (var i = 0; i < ringCount; i++) {
-      if (mode == _RingMode.failed) {
-        paint.color = i == 0 ? failedColor : inactiveColor;
-      } else if (mode == _RingMode.settled) {
+      if (mode == _RingMode.settled) {
         paint.color = greenColor;
       } else if (i < filled) {
-        // Confirmed slices — solid green.
         paint.color = greenColor;
       } else if (i == filled && mode == _RingMode.greenProgress) {
-        // Next confirmation — green loading pulse.
+        // Next confirmation segment pulses with the animation clock.
+        final t = (math.sin(loadValue * 2 * math.pi) + 1) / 2;
         paint.color = Color.lerp(
-              greenColor.withValues(alpha: 0.25),
+              greenColor.withValues(alpha: 0.28),
               greenColor,
-              loadValue,
+              t,
             ) ??
             greenColor.withValues(alpha: 0.6);
       } else {
-        paint.color = inactiveColor;
+        paint.color = inactiveColor.withValues(alpha: 0.55);
       }
 
       canvas.drawArc(

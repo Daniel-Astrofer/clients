@@ -553,21 +553,18 @@ final class TransactionPresentation {
 
     if (axes.product == TxProduct.fee) return copy.fee;
     if (axes.product == TxProduct.swap) return copy.swap;
-    if (axes.product == TxProduct.deposit) {
-      return '${copy.deposit} · ${copy.railShort(axes.rail)}';
-    }
-    if (axes.product == TxProduct.withdraw) {
-      return '${copy.withdraw} · ${copy.railShort(axes.rail)}';
-    }
-    if (axes.product == TxProduct.paymentLink) {
-      final action = axes.direction == TxDirection.incoming
-          ? copy.received
-          : copy.sent;
-      return '$action · ${copy.link}';
-    }
 
+    // Always Envio / Recebimento (never "Saque" / "Depósito" as list title).
     final action =
         axes.direction == TxDirection.incoming ? copy.received : copy.sent;
+
+    if (axes.product == TxProduct.paymentLink) {
+      return '$action · ${copy.link}';
+    }
+    if (axes.product == TxProduct.deposit || axes.product == TxProduct.withdraw) {
+      return '$action · ${copy.railShort(axes.rail)}';
+    }
+
     return '$action · ${copy.railShort(axes.rail)}';
   }
 
