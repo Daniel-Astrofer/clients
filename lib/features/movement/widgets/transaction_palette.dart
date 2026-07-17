@@ -228,27 +228,28 @@ class TransactionCardColors {
   }
 }
 
-/// Quiet paper fills for home activity list (by balance tab).
-/// Static colors only — no per-row animation (home performance).
+/// Paper fills for home activity list (by balance tab).
+/// Stronger chroma so wallet context is readable at a glance.
 abstract final class HomeActivityPaper {
-  /// Total / internal — soft warm grey paper.
-  static const Color total = Color(0xFFF3F3F4);
-  static const Color totalBorder = Color(0xFFDCDCE0);
+  /// Total / internal — cool grey paper with visible edge.
+  static const Color total = Color(0xFFE8EAED);
+  static const Color totalBorder = Color(0xFFB8BCC4);
 
-  /// On-chain tab — discreet orange wash.
-  static const Color onchain = Color(0xFFF8F1E8);
-  static const Color onchainBorder = Color(0xFFE2D4C4);
+  /// On-chain tab — warmer orange wash (still paper, not neon).
+  static const Color onchain = Color(0xFFFFE8D0);
+  static const Color onchainBorder = Color(0xFFE0A86A);
 
-  /// Cold tab — discreet blue wash.
-  static const Color cold = Color(0xFFEEF3F8);
-  static const Color coldBorder = Color(0xFFCBD8E4);
+  /// Cold tab — clearer blue wash.
+  static const Color cold = Color(0xFFD6E8F7);
+  static const Color coldBorder = Color(0xFF7EB0D6);
 
   /// [viewName] is `HomeLedgerBalanceView.name` (total|platform|onChain|cold).
   static (Color bg, Color border) forLedgerViewName(String viewName) {
     return switch (viewName) {
       'onChain' => (onchain, onchainBorder),
       'cold' => (cold, coldBorder),
-      _ => (total, totalBorder), // total + platform (internal)
+      'platform' => (total, totalBorder),
+      _ => (total, totalBorder), // total
     };
   }
 }

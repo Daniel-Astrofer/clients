@@ -55,6 +55,21 @@ final filteredHomeTransactionsProvider =
   );
 });
 
+/// Cancelled txs still in the global feed (not opened → not archived yet).
+final homeHasUnseenCancelledProvider = Provider.autoDispose<bool>((ref) {
+  final transactionsAsync = ref.watch(transactionHistoryProvider);
+  final lastHistory = ref.watch(lastTransactionHistoryProvider);
+  final txs = transactionsAsync.asData?.value ??
+      (lastHistory.isNotEmpty ? lastHistory : null);
+  if (txs == null || txs.isEmpty) return false;
+  final archived = ref.watch(activityArchiveProvider);
+  for (final tx in txs) {
+    if (!tx.isCancelled && !tx.isArchiveEligible) continue;
+    if (!archived.contains(tx.id.trim())) return true;
+  }
+  return false;
+});
+
 class HomeTransactionsList extends ConsumerStatefulWidget {
   final VoidCallback onCreateWallet;
   final ValueChanged<Wallet> onDepositWallet;
@@ -95,7 +110,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     // Keep previous projection while reloading so the feed does not flash empty.
     final txs = transactionsAsync.asData?.value ??
         (lastHistory.isNotEmpty ? lastHistory : null);
-    final isReloading = transactionsAsync.isLoading && txs != null;
     final hasError = transactionsAsync.hasError && txs == null;
 
     if (hasError) {
@@ -234,16 +248,27 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
       );
     }
 
+    // No "Sincronizando extrato" / last-sync chrome — list is enough.
+    // Offline still gets a minimal text-only notice (no icon).
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!isOnline || isReloading || lastSync != null)
-          _HomeHistoryStatusBar(
-            isOnline: isOnline,
-            isReloading: isReloading,
-            lastSync: lastSync,
-            count: filteredTxs.length,
+        if (!isOnline)
+          Padding(
+            padding: EdgeInsets.only(left: 4, right: 4, bottom: homeSize(10)),
+            child: Text(
+              lastSync != null
+                  ? context.tr.homeOfflineExtractDate(
+                      AppDateTime.formatRelative(context, lastSync),
+                    )
+                  : context.tr.homeOfflineExtract,
+              style: AppTypography.label.copyWith(
+                color: homeAmberColor,
+                fontSize: homeFontSize(11),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         body,
       ],
@@ -308,69 +333,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
   }
 }
 
-
-
-class _HomeHistoryStatusBar extends StatelessWidget {
-  final bool isOnline;
-  final bool isReloading;
-  final DateTime? lastSync;
-  final int count;
-
-  const _HomeHistoryStatusBar({
-    required this.isOnline,
-    required this.isReloading,
-    required this.lastSync,
-    required this.count,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final label = !isOnline
-        ? (lastSync != null
-            ? context.tr.homeOfflineExtractDate(AppDateTime.formatRelative(context, lastSync!))
-            : context.tr.homeOfflineExtract)
-        : isReloading
-            ? context.tr.homeSyncing
-            : lastSync != null
-                ? context.tr.homeUpdatedDate(count, AppDateTime.formatRelative(context, lastSync!))
-                : null;
-    if (label == null) return const SizedBox.shrink();
-
-    final tone = !isOnline ? homeAmberColor : homeMutedTextColor;
-    return Padding(
-      padding: EdgeInsets.only(left: 4, right: 4, bottom: homeSize(10)),
-      child: Row(
-        children: [
-          Icon(
-            !isOnline
-                ? KeroseneIcons.cloudOff
-                : isReloading
-                    ? KeroseneIcons.refresh
-                    : KeroseneIcons.history,
-            size: homeSize(14),
-            color: tone,
-          ).animate(
-            target: isReloading ? 1 : 0,
-            onPlay: (c) => isReloading ? c.repeat() : c.stop(),
-          ).rotate(duration: 1200.ms),
-          SizedBox(width: homeSize(6)),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.caption.copyWith(
-                color: tone,
-                fontSize: homeFontSize(11),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 /// Skeleton shimmer loading that mimics the real transaction feed layout.
 /// Uses [HomeSkeletonBox] with staggered fade-slide entrance for each row.

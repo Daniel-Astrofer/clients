@@ -275,7 +275,7 @@ class StatementTransactionCard extends ConsumerWidget {
         AnimatedSize(
           duration: KeroseneMotion.duration(
             context,
-            const Duration(milliseconds: 1200),
+            const Duration(milliseconds: 800),
           ),
           curve: Curves.easeInOutCubic,
           alignment: Alignment.topCenter,

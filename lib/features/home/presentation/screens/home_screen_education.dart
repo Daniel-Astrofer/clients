@@ -9,6 +9,7 @@ import 'package:kerosene/features/home/presentation/providers/home_surface_provi
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
+import 'home_screen_transactions.dart' show homeHasUnseenCancelledProvider;
 
 class HomeEducationCarousel extends ConsumerStatefulWidget {
   const HomeEducationCarousel();
@@ -704,19 +705,25 @@ class HomeActivityFilterChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedFilter = ref.watch(homeActivityFilterProvider);
+    // Home only: Todas · Recebido · Enviado · Canceladas.
     const filters = [
       HomeActivityFilter.all,
       HomeActivityFilter.incoming,
       HomeActivityFilter.outgoing,
-      HomeActivityFilter.internal,
-      HomeActivityFilter.onchain,
-      HomeActivityFilter.lightning,
-      HomeActivityFilter.cold,
-      HomeActivityFilter.pending,
-      HomeActivityFilter.failed,
       HomeActivityFilter.cancelled,
-      HomeActivityFilter.archived,
     ];
+
+    // Reset legacy filters (onchain, lightning, …) that no longer have a chip.
+    if (!filters.contains(selectedFilter)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (ref.read(homeActivityFilterProvider) != HomeActivityFilter.all) {
+          ref.read(homeActivityFilterProvider.notifier).state =
+              HomeActivityFilter.all;
+        }
+      });
+    }
+
+    final hasUnseenCancelled = ref.watch(homeHasUnseenCancelledProvider);
 
     void selectFilter(HomeActivityFilter filter) {
       HapticFeedback.selectionClick();
@@ -734,6 +741,8 @@ class HomeActivityFilterChips extends ConsumerWidget {
               label: homeFilterLabel(context, filters[index]),
               selected: selectedFilter == filters[index],
               onTap: () => selectFilter(filters[index]),
+              showUnseenDot: filters[index] == HomeActivityFilter.cancelled &&
+                  hasUnseenCancelled,
             ),
           ],
         ],
@@ -746,11 +755,14 @@ class HomeActivityFilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  /// Red circle when there are cancelled txs the user has not opened yet.
+  final bool showUnseenDot;
 
   const HomeActivityFilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.showUnseenDot = false,
   });
 
   @override
@@ -760,29 +772,48 @@ class HomeActivityFilterChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(homeSize(999)),
-        child: Ink(
-          padding: EdgeInsets.symmetric(
-            horizontal: homeSize(16),
-            vertical: homeSize(7),
-          ),
-          decoration: BoxDecoration(
-            color: selected ? Colors.white : homeCardColor,
-            borderRadius: BorderRadius.circular(homeSize(999)),
-            border: Border.all(
-              color: selected ? Colors.white : homePanelBorderColor,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Ink(
+              padding: EdgeInsets.symmetric(
+                horizontal: homeSize(16),
+                vertical: homeSize(7),
+              ),
+              decoration: BoxDecoration(
+                color: selected ? Colors.white : homeCardColor,
+                borderRadius: BorderRadius.circular(homeSize(999)),
+                border: Border.all(
+                  color: selected ? Colors.white : homePanelBorderColor,
+                ),
+              ),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.label.copyWith(
+                  color: selected ? Colors.black : homeMutedTextColor,
+                  fontSize: homeFontSize(12),
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 0,
+                ),
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.label.copyWith(
-              color: selected ? Colors.black : homeMutedTextColor,
-              fontSize: homeFontSize(12),
-              fontWeight: FontWeight.w300,
-              letterSpacing: 0,
-            ),
-          ),
+            if (showUnseenDot)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 1),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -865,10 +896,12 @@ class HomeSectionHeader extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: AppTypography.newsreader(
               color: Colors.white,
-              fontWeight: FontWeight.w300,
+              fontSize: homeFontSize(22),
+              fontWeight: FontWeight.w400,
               letterSpacing: 0,
+              height: 1.15,
             ),
           ),
         ),
