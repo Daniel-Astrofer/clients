@@ -43,10 +43,10 @@ class KeroseneIcons {
   static const IconData dirIn = receive;
   /// Direction badge: funds out.
   static const IconData dirOut = send;
-  /// Product: open payment link / invoice (not settled movement).
+  /// Product: payment link / invoice (QR) — never internal ↔ arrows.
   static const IconData productPaymentLink = qr;
-  /// Product pip on a settled payment-link movement.
-  static const IconData productLinkPip = onchain;
+  /// @Deprecated Prefer rail pip via ActivityGlyphSpec; kept for call-sites.
+  static const IconData productLinkPip = qr;
   static const IconData fee = PhosphorIconsRegular.percent;
   static const IconData creditCard = PhosphorIconsRegular.creditCard;
   static const IconData fiat = PhosphorIconsRegular.currencyDollar;

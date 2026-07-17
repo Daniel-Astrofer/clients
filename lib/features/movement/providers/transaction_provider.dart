@@ -102,18 +102,14 @@ List<Transaction> _mergeExternalHistory({
     remoteRows: kfeTransactions,
   );
 
-  // Payment links: settled movement + open/cancelled quotes so pending invoices
-  // appear in history and can be cancelled without hunting the receive QR.
+  // Only payment-links with real movement (not open quotes / expired shells).
   final linkRows = paymentLinks
       .where(
         (l) =>
             l.isPaid ||
             l.isCompleted ||
             l.hasObservedOnchainPayment ||
-            l.isValidatingSettlement ||
-            l.isPending ||
-            l.isCancelled ||
-            l.isExpired,
+            l.isValidatingSettlement,
       )
       .map((l) => l.toTransaction())
       .toList(growable: false);
@@ -997,6 +993,8 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     bool isLightning = false,
     double networkFeeBtc = 0,
     double maxRoutingFeeBtc = 0.000001,
+    int? feeRateSatPerVbyte,
+    int? feeTargetBlocks,
     String? description,
     String? confirmationPassphrase,
     String? passkeyAssertionJson,
@@ -1017,6 +1015,8 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
         isLightning: isLightning,
         networkFeeBtc: networkFeeBtc,
         maxRoutingFeeBtc: maxRoutingFeeBtc,
+        feeRateSatPerVbyte: feeRateSatPerVbyte,
+        feeTargetBlocks: feeTargetBlocks,
         description: description,
         confirmationPassphrase: confirmationPassphrase,
         passkeyAssertionJson: passkeyAssertionJson,
@@ -1043,6 +1043,8 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
             isLightning: isLightning,
             networkFeeBtc: networkFeeBtc,
             maxRoutingFeeBtc: maxRoutingFeeBtc,
+            feeRateSatPerVbyte: feeRateSatPerVbyte,
+            feeTargetBlocks: feeTargetBlocks,
             description: description,
             confirmationPassphrase: confirmationPassphrase,
             idempotencyKey: operationIdempotencyKey,
@@ -1071,6 +1073,8 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     bool isLightning = false,
     double networkFeeBtc = 0,
     double maxRoutingFeeBtc = 0.000001,
+    int? feeRateSatPerVbyte,
+    int? feeTargetBlocks,
     String? description,
     String? confirmationPassphrase,
     required String idempotencyKey,
@@ -1094,6 +1098,8 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
           isLightning: isLightning,
           networkFeeBtc: networkFeeBtc,
           maxRoutingFeeBtc: maxRoutingFeeBtc,
+          feeRateSatPerVbyte: feeRateSatPerVbyte,
+          feeTargetBlocks: feeTargetBlocks,
           description: description,
           confirmationPassphrase: confirmationPassphrase,
           passkeyAssertionJson: assertion.json,

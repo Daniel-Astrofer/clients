@@ -25,7 +25,7 @@ class ActivityGlyphSpec {
 
   /// Settled / in-flight movement from taxonomy axes.
   factory ActivityGlyphSpec.fromAxes(TransactionAxes axes) {
-    // Lifecycle never steals the primary rail icon (status is external).
+    // Lifecycle never steals the primary product/rail icon (status is external).
     if (axes.product == TxProduct.fee) {
       return const ActivityGlyphSpec(primary: KeroseneIcons.fee);
     }
@@ -33,17 +33,25 @@ class ActivityGlyphSpec {
       return const ActivityGlyphSpec(primary: KeroseneIcons.swap);
     }
 
+    // Payment link / invoice: QR is the product (not internal ↔ arrows).
+    // Rail (LN / on-chain / internal) sits as a small pip; direction is badge.
+    if (axes.product == TxProduct.paymentLink) {
+      return ActivityGlyphSpec(
+        primary: KeroseneIcons.productPaymentLink,
+        direction: _directionBadge(axes.direction),
+        productPip: _railPrimary(axes.rail),
+        emphasizeProduct: true,
+      );
+    }
+
     final primary = _railPrimary(axes.rail);
     final direction = _directionBadge(axes.direction);
-    final productPip = axes.product == TxProduct.paymentLink
-        ? KeroseneIcons.productLinkPip
-        : null;
 
     // Cancelled / failed still keep rail + direction (status is external).
     return ActivityGlyphSpec(
       primary: primary,
       direction: direction,
-      productPip: productPip,
+      productPip: null,
       emphasizeProduct: false,
     );
   }
@@ -53,7 +61,7 @@ class ActivityGlyphSpec {
     return ActivityGlyphSpec.fromAxes(axes);
   }
 
-  /// Open / unpaid payment request — product is primary, rail is a corner pip.
+  /// Open / unpaid payment request — QR primary, rail pip, receive direction.
   factory ActivityGlyphSpec.fromPaymentLink(PaymentLink link) {
     final rail = link.isLightningPaymentRequest
         ? TxRail.lightning
@@ -62,7 +70,8 @@ class ActivityGlyphSpec {
             : TxRail.onchain;
     return ActivityGlyphSpec(
       primary: KeroseneIcons.productPaymentLink,
-      direction: null,
+      // Open invoice is always a receive request from the merchant side.
+      direction: KeroseneIcons.dirIn,
       productPip: _railPrimary(rail),
       emphasizeProduct: true,
     );
