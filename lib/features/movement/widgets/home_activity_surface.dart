@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 /// Home activity list paper + ink for each ledger balance tab.
 ///
-/// Non-white tabs use stronger gradients and inverted (light) ink so titles,
-/// amounts and meta stay readable. White/total keeps dark ink.
+/// Colored tabs use stronger card gradients and high-contrast dark ink.
+/// Total (near-white) keeps standard dark ink — no invert needed.
 @immutable
 class HomeActivitySurfaceStyle {
   final Color gradientTop;
@@ -23,7 +23,6 @@ class HomeActivitySurfaceStyle {
   final Color detailValue;
   final Color action;
   final bool invertInk;
-  final Color washHighlight;
 
   const HomeActivitySurfaceStyle({
     required this.gradientTop,
@@ -41,16 +40,14 @@ class HomeActivitySurfaceStyle {
     required this.detailValue,
     required this.action,
     required this.invertInk,
-    required this.washHighlight,
   });
 
   /// [viewName] is `HomeLedgerBalanceView.name`.
   static HomeActivitySurfaceStyle forLedgerViewName(String viewName) {
     return switch (viewName) {
       'onChain' => const HomeActivitySurfaceStyle(
-          // Rich orange wash — visible from top of list downward.
-          gradientTop: Color(0xFFFFB04A),
-          gradientMid: Color(0xFFFF9A2E),
+          gradientTop: Color(0x66FFB04A),
+          gradientMid: Color(0x33FF9A2E),
           gradientBottom: Color(0x00FF9A2E),
           cardTop: Color(0xFFFFC878),
           cardBottom: Color(0xFFFFA940),
@@ -64,11 +61,10 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF100600),
           action: Color(0xFF1A0C02),
           invertInk: true,
-          washHighlight: Color(0x66FFE6B8),
         ),
       'cold' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0xFF6BB3E8),
-          gradientMid: Color(0xFF4A9AD4),
+          gradientTop: Color(0x666BB3E8),
+          gradientMid: Color(0x334A9AD4),
           gradientBottom: Color(0x004A9AD4),
           cardTop: Color(0xFF8EC8F0),
           cardBottom: Color(0xFF5AADD9),
@@ -82,12 +78,10 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF040C14),
           action: Color(0xFF061018),
           invertInk: true,
-          washHighlight: Color(0x66D0ECFF),
         ),
       'platform' => const HomeActivitySurfaceStyle(
-          // Internal / platform — cool slate, still light paper (no invert).
-          gradientTop: Color(0xFFD8DDE4),
-          gradientMid: Color(0xFFC8CED8),
+          gradientTop: Color(0x44D8DDE4),
+          gradientMid: Color(0x22C8CED8),
           gradientBottom: Color(0x00C8CED8),
           cardTop: Color(0xFFE8ECF2),
           cardBottom: Color(0xFFD2D8E2),
@@ -101,12 +95,11 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF0A0A0B),
           action: Color(0xFF0A0A0C),
           invertInk: false,
-          washHighlight: Color(0x55FFFFFF),
         ),
       _ => const HomeActivitySurfaceStyle(
-          // Total — near white primary, no invert.
-          gradientTop: Color(0xFFF0F0F2),
-          gradientMid: Color(0xFFE8E8EC),
+          // Total — near white, no invert.
+          gradientTop: Color(0x22F0F0F2),
+          gradientMid: Color(0x11E8E8EC),
           gradientBottom: Color(0x00E8E8EC),
           cardTop: Color(0xFFFAFAFB),
           cardBottom: Color(0xFFF0F0F3),
@@ -120,146 +113,50 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF0A0A0B),
           action: Color(0xFF0A0A0C),
           invertInk: false,
-          washHighlight: Color(0x66FFFFFF),
         ),
     };
   }
 }
 
-/// Soft ambient shimmer behind the activity list (NotebookLM-like, cheap).
+/// Soft static gradient behind the transaction list only.
 ///
-/// Single 12s ticker, low-alpha blobs — one repaint layer, no blur per card.
-class HomeActivityAmbientWash extends StatefulWidget {
+/// No sparkle circles, no looping blobs — just a vertical wash clipped to
+/// the list bounds so it never leaks into funds distribution or other home
+/// sections.
+class HomeActivityListWash extends StatelessWidget {
   final HomeActivitySurfaceStyle style;
   final Widget child;
 
-  const HomeActivityAmbientWash({
+  const HomeActivityListWash({
     super.key,
     required this.style,
     required this.child,
   });
 
   @override
-  State<HomeActivityAmbientWash> createState() =>
-      _HomeActivityAmbientWashState();
-}
-
-class _HomeActivityAmbientWashState extends State<HomeActivityAmbientWash>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _drift;
-
-  @override
-  void initState() {
-    super.initState();
-    _drift = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 14),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _drift.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final style = widget.style;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Base vertical gradient: strong at top of list, fades downward.
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  style.gradientTop.withValues(alpha: 0.55),
-                  style.gradientMid.withValues(alpha: 0.28),
-                  style.gradientBottom,
-                ],
-                stops: const [0.0, 0.42, 0.92],
-              ),
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              style.gradientTop,
+              style.gradientMid,
+              style.gradientBottom,
+            ],
+            stops: const [0.0, 0.38, 1.0],
           ),
         ),
-        // Gentle drifting highlights (not a hard horizontal band).
-        Positioned.fill(
-          child: IgnorePointer(
-            child: AnimatedBuilder(
-              animation: _drift,
-              builder: (context, _) {
-                return CustomPaint(
-                  painter: _AmbientSparklePainter(
-                    phase: _drift.value,
-                    highlight: style.washHighlight,
-                    accent: style.gradientTop.withValues(alpha: 0.22),
-                  ),
-                );
-              },
-            ),
-          ),
+        child: Padding(
+          // Slight inset so the wash reads as list backdrop, not full screen.
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+          child: child,
         ),
-        widget.child,
-      ],
-    );
-  }
-}
-
-class _AmbientSparklePainter extends CustomPainter {
-  final double phase;
-  final Color highlight;
-  final Color accent;
-
-  _AmbientSparklePainter({
-    required this.phase,
-    required this.highlight,
-    required this.accent,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final t = phase * 2 * math.pi;
-    // Soft ellipses drift slowly — cheap solid fills, no blur.
-    void blob(Offset c, double r, Color color) {
-      canvas.drawCircle(c, r, Paint()..color = color);
-    }
-
-    blob(
-      Offset(
-        size.width * (0.18 + 0.06 * math.sin(t)),
-        size.height * (0.12 + 0.04 * math.cos(t * 0.7)),
       ),
-      size.width * 0.38,
-      highlight,
     );
-    blob(
-      Offset(
-        size.width * (0.78 + 0.05 * math.cos(t * 0.9)),
-        size.height * (0.28 + 0.05 * math.sin(t * 0.6)),
-      ),
-      size.width * 0.32,
-      accent,
-    );
-    blob(
-      Offset(
-        size.width * (0.48 + 0.08 * math.sin(t * 0.5 + 1.2)),
-        size.height * (0.55 + 0.04 * math.cos(t * 0.8)),
-      ),
-      size.width * 0.28,
-      highlight.withValues(alpha: highlight.a * 0.55),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _AmbientSparklePainter oldDelegate) {
-    return phase != oldDelegate.phase ||
-        highlight != oldDelegate.highlight ||
-        accent != oldDelegate.accent;
   }
 }
 
