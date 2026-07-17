@@ -18,11 +18,13 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/core/security/financial_secure_scope.dart';
 import 'package:kerosene/features/movement/utils/blockchain_explorer.dart';
 import 'package:kerosene/features/movement/utils/transaction_display.dart';
+import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 
 /// Full-screen transaction dossier — black canvas, Newsreader title, staggered
@@ -79,6 +81,18 @@ class _TransactionDetailScreenState
       vsync: this,
       duration: const Duration(milliseconds: 720),
     )..forward();
+    // Cancelled items stay in the global feed until the user opens them;
+    // opening the dossier moves them to Arquivadas.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.transaction.isArchiveEligible) {
+        unawaited(
+          ref.read(activityArchiveProvider.notifier).markArchived(
+                widget.transaction.id,
+              ),
+        );
+      }
+    });
   }
 
   @override
@@ -345,14 +359,26 @@ class _TransactionDetailScreenState
                           curve:
                               const Interval(0, 0.35, curve: Curves.easeOut),
                         ),
-                        child: Text(
-                          actionTitle,
-                          style: AppTypography.newsreader(
-                            color: KeroseneBrandTokens.textPrimary,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w400,
-                            height: 1.15,
-                          ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ActivityGlyph.forAxes(
+                              presentation.axes,
+                              size: 56,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                actionTitle,
+                                style: AppTypography.newsreader(
+                                  color: KeroseneBrandTokens.textPrimary,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.15,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 16),

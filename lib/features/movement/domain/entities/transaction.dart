@@ -323,12 +323,21 @@ final class Transaction extends Equatable {
 
   /// Effective status for home/statement UI (applies 24h unconfirmed rule).
   /// Does **not** map reconciliation to failed — funds may still be reserved.
+  /// User-cancelled KFE txs use FAILED + failureCode USER_CANCELLED → cancelled.
   TransactionStatus get displayStatus {
+    if (_isUserCancelledFailure) {
+      return TransactionStatus.cancelled;
+    }
     if (status == TransactionStatus.reconciling) {
       return TransactionStatus.reconciling;
     }
     if (isUnconfirmedExpired) return TransactionStatus.failed;
     return status;
+  }
+
+  bool get _isUserCancelledFailure {
+    final code = (failureCode ?? '').trim().toUpperCase();
+    return code == 'USER_CANCELLED' || code == 'USER_CANCELED';
   }
 
   /// UI: miner / routing network fee row.
@@ -349,8 +358,13 @@ final class Transaction extends Equatable {
   /// Verifica se a transação está pendente
   bool get isPending => status == TransactionStatus.pending;
 
-  /// Cancelled or expired entries — hidden from the main home feed.
-  bool get isCancelled => status == TransactionStatus.cancelled;
+  /// Cancelled / user-dismissed (includes KFE USER_CANCELLED failures).
+  bool get isCancelled =>
+      status == TransactionStatus.cancelled ||
+      displayStatus == TransactionStatus.cancelled;
+
+  /// Eligible to move to Arquivadas after the user opens the detail.
+  bool get isArchiveEligible => isCancelled;
 
   Map<String, dynamic> toJson() {
     return {

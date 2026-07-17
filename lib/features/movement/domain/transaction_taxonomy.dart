@@ -140,6 +140,7 @@ final class TransactionAxes {
 
   static TxLifecycle _lifecycle(Transaction tx) {
     if (tx.isUnconfirmedExpired) return TxLifecycle.unconfirmedExpired;
+    // Prefer displayStatus so USER_CANCELLED (FAILED+code) classifies as cancelled.
     return switch (tx.displayStatus) {
       TransactionStatus.pending => TxLifecycle.pending,
       TransactionStatus.confirming => TxLifecycle.confirming,

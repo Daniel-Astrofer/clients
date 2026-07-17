@@ -715,6 +715,7 @@ class HomeActivityFilterChips extends ConsumerWidget {
       HomeActivityFilter.pending,
       HomeActivityFilter.failed,
       HomeActivityFilter.cancelled,
+      HomeActivityFilter.archived,
     ];
 
     void selectFilter(HomeActivityFilter filter) {
@@ -829,6 +830,8 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
     HomeActivityFilter.failed => context.tr.activityFilterProblems,
     HomeActivityFilter.cancelled =>
       context.tr.financialStatementFilterCancelled,
+    HomeActivityFilter.archived =>
+      context.tr.financialStatementFilterArchived,
   };
 }
 

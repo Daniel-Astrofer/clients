@@ -20,6 +20,7 @@ import 'package:kerosene/core/security/financial_secure_scope.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
 import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
@@ -48,6 +49,7 @@ enum _StatementFilter {
   pending,
   failed,
   cancelled,
+  archived,
 }
 
 ActivityFilter _mapStatementFilter(_StatementFilter filter) {
@@ -62,6 +64,7 @@ ActivityFilter _mapStatementFilter(_StatementFilter filter) {
     _StatementFilter.pending => ActivityFilter.inProgress,
     _StatementFilter.failed => ActivityFilter.problems,
     _StatementFilter.cancelled => ActivityFilter.cancelled,
+    _StatementFilter.archived => ActivityFilter.archived,
   };
 }
 
@@ -392,11 +395,13 @@ class _TransactionStatementScreenState
     final accounts =
         ref.read(bitcoinAccountsProvider).asData?.value ??
             const <BitcoinAccount>[];
+    final archivedIds = ref.watch(activityArchiveProvider);
     final byActivity = TransactionFilterEngine.apply(
       source: transactions,
       activity: _mapStatementFilter(_selectedFilter),
       wallets: walletList,
       accounts: accounts,
+      archivedIds: archivedIds,
     );
     final normalizedQuery = _query.toLowerCase();
     final filtered = normalizedQuery.isEmpty
@@ -959,6 +964,7 @@ String _filterLabel(BuildContext context, _StatementFilter filter) {
     _StatementFilter.pending => context.tr.activityFilterInProgress,
     _StatementFilter.failed => context.tr.activityFilterProblems,
     _StatementFilter.cancelled => context.tr.financialStatementFilterCancelled,
+    _StatementFilter.archived => context.tr.financialStatementFilterArchived,
   };
 }
 

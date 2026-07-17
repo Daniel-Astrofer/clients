@@ -14,7 +14,10 @@ enum ActivityFilter {
   cold,
   inProgress, // pending + confirming + reconciling
   problems, // failed + unconfirmedExpired
+  /// Cancelled but not yet archived (still visible in main flow until opened).
   cancelled,
+  /// Local archive after user opens a cancelled item.
+  archived,
 }
 
 /// Pure filter predicates over classified transactions.
@@ -24,35 +27,43 @@ abstract final class TransactionFilterEngine {
     ActivityFilter filter, {
     List<Wallet> wallets = const [],
     List<BitcoinAccount> accounts = const [],
+    Set<String> archivedIds = const {},
   }) {
     final axes = TransactionAxes.classify(
       tx,
       wallets: wallets,
       accounts: accounts,
     );
-    return matchesAxes(axes, filter);
+    final archived = archivedIds.contains(tx.id.trim());
+    return matchesAxes(
+      axes,
+      filter,
+      isArchived: archived,
+    );
   }
 
-  static bool matchesAxes(TransactionAxes axes, ActivityFilter filter) {
+  static bool matchesAxes(
+    TransactionAxes axes,
+    ActivityFilter filter, {
+    bool isArchived = false,
+  }) {
+    // Archive is a local bucket: only visible under [ActivityFilter.archived].
+    if (filter == ActivityFilter.archived) {
+      return isArchived;
+    }
+    if (isArchived) {
+      return false;
+    }
+
     return switch (filter) {
-      ActivityFilter.all => axes.lifecycle != TxLifecycle.cancelled,
-      ActivityFilter.incoming =>
-        axes.direction == TxDirection.incoming &&
-            axes.lifecycle != TxLifecycle.cancelled,
-      ActivityFilter.outgoing =>
-        axes.direction == TxDirection.outgoing &&
-            axes.lifecycle != TxLifecycle.cancelled,
-      ActivityFilter.instant =>
-        axes.rail == TxRail.internal &&
-            axes.lifecycle != TxLifecycle.cancelled,
-      ActivityFilter.onchain =>
-        axes.rail == TxRail.onchain &&
-            axes.lifecycle != TxLifecycle.cancelled,
-      ActivityFilter.lightning =>
-        axes.rail == TxRail.lightning &&
-            axes.lifecycle != TxLifecycle.cancelled,
-      ActivityFilter.cold =>
-        axes.rail == TxRail.cold && axes.lifecycle != TxLifecycle.cancelled,
+      // Cancelled stays in the global feed until the user opens it (then archive).
+      ActivityFilter.all => true,
+      ActivityFilter.incoming => axes.direction == TxDirection.incoming,
+      ActivityFilter.outgoing => axes.direction == TxDirection.outgoing,
+      ActivityFilter.instant => axes.rail == TxRail.internal,
+      ActivityFilter.onchain => axes.rail == TxRail.onchain,
+      ActivityFilter.lightning => axes.rail == TxRail.lightning,
+      ActivityFilter.cold => axes.rail == TxRail.cold,
       ActivityFilter.inProgress =>
         axes.lifecycle == TxLifecycle.pending ||
             axes.lifecycle == TxLifecycle.confirming ||
@@ -61,6 +72,7 @@ abstract final class TransactionFilterEngine {
         axes.lifecycle == TxLifecycle.failed ||
             axes.lifecycle == TxLifecycle.unconfirmedExpired,
       ActivityFilter.cancelled => axes.lifecycle == TxLifecycle.cancelled,
+      ActivityFilter.archived => isArchived,
     };
   }
 
@@ -110,6 +122,7 @@ abstract final class TransactionFilterEngine {
     Wallet? scopeWallet,
     List<Wallet> wallets = const [],
     List<BitcoinAccount> accounts = const [],
+    Set<String> archivedIds = const {},
   }) {
     Iterable<Transaction> rows = source;
     if (scopeWallet != null) {
@@ -128,6 +141,7 @@ abstract final class TransactionFilterEngine {
             activity,
             wallets: wallets,
             accounts: accounts,
+            archivedIds: archivedIds,
           ),
         )
         .toList(growable: false);

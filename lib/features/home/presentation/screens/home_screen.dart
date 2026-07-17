@@ -107,6 +107,8 @@ enum HomeActivityFilter {
   /// failed + unconfirmed expired.
   failed,
   cancelled,
+  /// Local archive after user opens a cancelled item.
+  archived,
 }
 
 final homeLedgerBalanceViewProvider = StateProvider<HomeLedgerBalanceView>((

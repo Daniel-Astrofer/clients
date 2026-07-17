@@ -4,6 +4,7 @@ import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
 
 import 'home_screen_dependencies.dart';
@@ -22,6 +23,7 @@ ActivityFilter _mapHomeActivityFilter(HomeActivityFilter filter) {
     HomeActivityFilter.pending => ActivityFilter.inProgress,
     HomeActivityFilter.failed => ActivityFilter.problems,
     HomeActivityFilter.cancelled => ActivityFilter.cancelled,
+    HomeActivityFilter.archived => ActivityFilter.archived,
   };
 }
 
@@ -41,12 +43,14 @@ final filteredHomeTransactionsProvider =
       : const <Wallet>[];
   final accounts = ref.watch(bitcoinAccountsProvider).asData?.value ??
       const <BitcoinAccount>[];
+  final archivedIds = ref.watch(activityArchiveProvider);
 
   return TransactionFilterEngine.apply(
     source: txs,
     activity: _mapHomeActivityFilter(filter),
     wallets: wallets,
     accounts: accounts,
+    archivedIds: archivedIds,
   );
 });
 

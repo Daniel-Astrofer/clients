@@ -11135,6 +11135,72 @@ abstract class AppLocalizations {
   /// **'Cancelled'**
   String get financialStatementFilterCancelled;
 
+  /// No description provided for @financialStatementFilterArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get financialStatementFilterArchived;
+
+  /// No description provided for @paymentLinkStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get paymentLinkStatusPending;
+
+  /// No description provided for @paymentLinkStatusReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get paymentLinkStatusReceived;
+
+  /// No description provided for @paymentLinkStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get paymentLinkStatusExpired;
+
+  /// No description provided for @paymentLinkAwaitingLightning.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Lightning payment…'**
+  String get paymentLinkAwaitingLightning;
+
+  /// No description provided for @paymentLinkAwaitingOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Bitcoin network payment…'**
+  String get paymentLinkAwaitingOnchain;
+
+  /// No description provided for @paymentLinkKindLightning.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning invoice'**
+  String get paymentLinkKindLightning;
+
+  /// No description provided for @paymentLinkKindOnchain.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link'**
+  String get paymentLinkKindOnchain;
+
+  /// No description provided for @paymentLinkPaidLightning.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid · Lightning'**
+  String get paymentLinkPaidLightning;
+
+  /// No description provided for @paymentLinkConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get paymentLinkConfirmed;
+
+  /// No description provided for @paymentLinkAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get paymentLinkAmountLabel;
+
   /// No description provided for @financialStatementNoResultsTitle.
   ///
   /// In en, this message translates to:

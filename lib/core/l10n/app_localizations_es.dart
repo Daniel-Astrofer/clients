@@ -6154,6 +6154,39 @@ class AppLocalizationsEs extends AppLocalizations {
   String get financialStatementFilterCancelled => 'Canceladas';
 
   @override
+  String get financialStatementFilterArchived => 'Archivadas';
+
+  @override
+  String get paymentLinkStatusPending => 'Pendiente';
+
+  @override
+  String get paymentLinkStatusReceived => 'Recibido';
+
+  @override
+  String get paymentLinkStatusExpired => 'Expirado';
+
+  @override
+  String get paymentLinkAwaitingLightning => 'Esperando pago Lightning…';
+
+  @override
+  String get paymentLinkAwaitingOnchain => 'Esperando pago en la red Bitcoin…';
+
+  @override
+  String get paymentLinkKindLightning => 'Factura Lightning';
+
+  @override
+  String get paymentLinkKindOnchain => 'Enlace de pago';
+
+  @override
+  String get paymentLinkPaidLightning => 'Pagado · Lightning';
+
+  @override
+  String get paymentLinkConfirmed => 'Confirmado';
+
+  @override
+  String get paymentLinkAmountLabel => 'Importe';
+
+  @override
   String get financialStatementNoResultsTitle =>
       'No se encontraron transacciones';
 
