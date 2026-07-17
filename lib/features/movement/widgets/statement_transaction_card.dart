@@ -271,11 +271,11 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
           ],
         ),
-        // 2s ease-in-out: slow start → fast middle → slow end (open & close).
+        // 1.2s ease-in-out: slow start → fast middle → slow end (open & close).
         AnimatedSize(
           duration: KeroseneMotion.duration(
             context,
-            const Duration(milliseconds: 2000),
+            const Duration(milliseconds: 1200),
           ),
           curve: Curves.easeInOutCubic,
           alignment: Alignment.topCenter,
@@ -1104,7 +1104,8 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
             widget.transaction.confirmations ||
         oldWidget.transaction.status != widget.transaction.status ||
         oldWidget.transaction.displayStatus !=
-            widget.transaction.displayStatus) {
+            widget.transaction.displayStatus ||
+        oldWidget.expanded != widget.expanded) {
       _syncAnimations();
     }
   }
@@ -1209,33 +1210,13 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     return _RingMode.settled;
   }
 
-  Widget _cornerBadge({
-    required double size,
-    required Color color,
-    required Widget child,
-  }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        border: Border.all(color: Colors.white, width: 1.2),
-      ),
-      alignment: Alignment.center,
-      child: child,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final tx = widget.transaction;
     final mode = _ringMode(tx);
     final conf = _backendConfirmations(tx);
-    final target = tx.onchainConfirmationTarget;
+    final target = tx.onchainConfirmationTarget.clamp(1, 6);
     final spin = _spinController;
-    // Larger badge when the card is open so ✓ is unmistakable.
-    final size = widget.iconSize * (widget.expanded ? 0.44 : 0.38);
     final onchain = !_isInstantRail(tx);
     final failed = mode == _RingMode.failed || tx.isCancelled;
     final settled = mode == _RingMode.settled ||
@@ -1246,6 +1227,9 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         (conf >= target ||
             tx.isConfirmed ||
             tx.displayStatus == TransactionStatus.confirmed);
+    final confirmingOnchain =
+        onchain && !failed && !settled && (mode == _RingMode.greenProgress ||
+            mode == _RingMode.yellowSpin);
 
     Widget buildRing({required double spinValue, required double loadValue}) {
       return CustomPaint(
@@ -1264,21 +1248,64 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
       );
     }
 
-    Widget statusBadge({
-      required Color color,
-      required Widget child,
-    }) {
-      return _cornerBadge(size: size, color: color, child: child);
+    // Center of the well: glyph when collapsed; status mark when expanded (or X always on error).
+    Widget centerChild;
+    if (failed) {
+      // Error/cancel: red X inside the icon (always, not only expanded).
+      centerChild = Icon(
+        Icons.close_rounded,
+        key: const ValueKey('icon-x'),
+        size: widget.iconSize * 0.42,
+        color: _red,
+      );
+    } else if (widget.expanded && settled) {
+      // Confirmed (internal / LN / on-chain): green check inside.
+      centerChild = Icon(
+        Icons.check_rounded,
+        key: ValueKey(fullOnchain ? 'icon-check-6' : 'icon-check'),
+        size: widget.iconSize * 0.44,
+        color: _green,
+      );
+    } else if (widget.expanded && confirmingOnchain) {
+      // On-chain in progress: show conf count (and target) inside.
+      centerChild = Text(
+        conf > 0 ? '$conf/$target' : '0/$target',
+        key: ValueKey('icon-conf-$conf'),
+        style: TextStyle(
+          color: conf > 0 ? _green : _yellow,
+          fontFamily: AppTypography.bodyFontFamily,
+          fontWeight: FontWeight.w800,
+          fontSize: widget.iconSize * 0.22,
+          height: 1,
+          letterSpacing: -0.2,
+        ),
+      );
+    } else {
+      centerChild = ActivityGlyph(
+        key: const ValueKey('icon-glyph'),
+        spec: widget.axes != null
+            ? ActivityGlyphSpec.fromAxes(widget.axes!)
+            : ActivityGlyphSpec.fromTransaction(tx),
+        size: widget.iconSize * 0.72,
+        showWell: false,
+        iconColor: widget.colors.icon,
+        badgeWellColor: widget.colors.iconWellBorder,
+        badgeIconColor: widget.colors.icon,
+        wellBorder: widget.colors.iconWellBorder,
+      );
     }
 
+    // On-chain fully confirmed + expanded: small "6" under the check inside well.
+    final showConfPip =
+        widget.expanded && fullOnchain && !failed;
+
     return SizedBox(
-      width: widget.iconSize + (widget.expanded ? 8 : 4),
-      height: widget.iconSize + (widget.expanded ? 10 : 4),
+      width: widget.iconSize,
+      height: widget.iconSize,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          // Rebuild painter every tick — capturing spinValue once freezes the arc.
           if (spin != null)
             AnimatedBuilder(
               animation: spin,
@@ -1297,104 +1324,34 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
               color: widget.colors.iconWell,
             ),
             alignment: Alignment.center,
-            child: ActivityGlyph(
-              spec: widget.axes != null
-                  ? ActivityGlyphSpec.fromAxes(widget.axes!)
-                  : ActivityGlyphSpec.fromTransaction(tx),
-              size: widget.iconSize * 0.72,
-              showWell: false,
-              iconColor: widget.colors.icon,
-              badgeWellColor: widget.colors.iconWellBorder,
-              badgeIconColor: widget.colors.icon,
-              wellBorder: widget.colors.iconWellBorder,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: showConfPip
+                  ? Column(
+                      key: const ValueKey('check-with-6'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_rounded,
+                          size: widget.iconSize * 0.36,
+                          color: _green,
+                        ),
+                        Text(
+                          '$target',
+                          style: TextStyle(
+                            color: _green,
+                            fontWeight: FontWeight.w800,
+                            fontSize: widget.iconSize * 0.16,
+                            height: 1,
+                          ),
+                        ),
+                      ],
+                    )
+                  : centerChild,
             ),
           ),
-          // ✓ / ✕ always painted on top — larger when card is expanded.
-          if (failed)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: statusBadge(
-                color: _red,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: size * 0.65,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else if (fullOnchain) ...[
-            Positioned(
-              right: 0,
-              bottom: widget.expanded ? 8 : 0,
-              child: statusBadge(
-                color: _green,
-                child: Icon(
-                  Icons.check_rounded,
-                  size: size * 0.65,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: _green,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.white, width: 1.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 2,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  '${target.clamp(1, 6)}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: size * 0.34,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-            ),
-          ] else if (settled)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: statusBadge(
-                color: _green,
-                child: Icon(
-                  Icons.check_rounded,
-                  size: size * 0.65,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else if (mode == _RingMode.greenProgress && onchain && conf > 0)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: statusBadge(
-                color: _green,
-                child: Text(
-                  '$conf',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: size * 0.42,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
