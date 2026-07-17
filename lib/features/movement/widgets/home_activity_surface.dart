@@ -3,12 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-/// Home activity list paper + ink for each ledger balance tab.
+/// Home activity card paper + ink for each ledger balance tab.
 @immutable
 class HomeActivitySurfaceStyle {
-  final Color gradientTop;
-  final Color gradientMid;
-  final Color gradientBottom;
   final Color cardTop;
   final Color cardBottom;
   final Color border;
@@ -21,13 +18,14 @@ class HomeActivitySurfaceStyle {
   final Color detailValue;
   final Color action;
   final bool invertInk;
-  /// Soft highlight tint for ambient glimmers (low-alpha in the painter).
-  final Color glimmer;
+  /// Primary glow tint (wallet-focused).
+  final Color glowPrimary;
+  /// Secondary glow tint (highlight / birlhos).
+  final Color glowSecondary;
+  /// Soft rim / depth tint.
+  final Color glowTertiary;
 
   const HomeActivitySurfaceStyle({
-    required this.gradientTop,
-    required this.gradientMid,
-    required this.gradientBottom,
     required this.cardTop,
     required this.cardBottom,
     required this.border,
@@ -40,16 +38,15 @@ class HomeActivitySurfaceStyle {
     required this.detailValue,
     required this.action,
     required this.invertInk,
-    required this.glimmer,
+    required this.glowPrimary,
+    required this.glowSecondary,
+    required this.glowTertiary,
   });
 
   /// [viewName] is `HomeLedgerBalanceView.name`.
   static HomeActivitySurfaceStyle forLedgerViewName(String viewName) {
     return switch (viewName) {
       'onChain' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x55FFB04A),
-          gradientMid: Color(0x28FF9A2E),
-          gradientBottom: Color(0x00FF9A2E),
           cardTop: Color(0xFFFFC878),
           cardBottom: Color(0xFFFFA940),
           border: Color(0xFFE08920),
@@ -62,12 +59,11 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF100600),
           action: Color(0xFF1A0C02),
           invertInk: true,
-          glimmer: Color(0xFFFFF0D0),
+          glowPrimary: Color(0xFFFFE8B0),
+          glowSecondary: Color(0xFFFFCC66),
+          glowTertiary: Color(0xFFFF8A1A),
         ),
       'cold' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x556BB3E8),
-          gradientMid: Color(0x284A9AD4),
-          gradientBottom: Color(0x004A9AD4),
           cardTop: Color(0xFF8EC8F0),
           cardBottom: Color(0xFF5AADD9),
           border: Color(0xFF2E7EB0),
@@ -80,12 +76,11 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF040C14),
           action: Color(0xFF061018),
           invertInk: true,
-          glimmer: Color(0xFFE8F6FF),
+          glowPrimary: Color(0xFFE8F6FF),
+          glowSecondary: Color(0xFF9FD0F5),
+          glowTertiary: Color(0xFF3D8FCB),
         ),
       'platform' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x40D8DDE4),
-          gradientMid: Color(0x20C8CED8),
-          gradientBottom: Color(0x00C8CED8),
           cardTop: Color(0xFFE8ECF2),
           cardBottom: Color(0xFFD2D8E2),
           border: Color(0xFF9AA3B0),
@@ -98,12 +93,12 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF0A0A0B),
           action: Color(0xFF0A0A0C),
           invertInk: false,
-          glimmer: Color(0xFFFFFFFF),
+          glowPrimary: Color(0xFFFFFFFF),
+          glowSecondary: Color(0xFFD0D8E8),
+          glowTertiary: Color(0xFFA8B4C8),
         ),
       _ => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x28F0F0F2),
-          gradientMid: Color(0x14E8E8EC),
-          gradientBottom: Color(0x00E8E8EC),
+          // Total — near white paper, soft neutral glow only inside cards.
           cardTop: Color(0xFFFAFAFB),
           cardBottom: Color(0xFFF0F0F3),
           border: Color(0xFFD0D0D6),
@@ -116,199 +111,156 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF0A0A0B),
           action: Color(0xFF0A0A0C),
           invertInk: false,
-          glimmer: Color(0xFFFFFFFF),
+          glowPrimary: Color(0xFFFFFFFF),
+          glowSecondary: Color(0xFFE8E8EE),
+          glowTertiary: Color(0xFFD0D0D8),
         ),
     };
   }
 }
 
-/// Vertical wash + soft continuous glimmers, **clipped to the transaction list**.
+/// Soft moving glow **inside** a transaction card (clipped to the card).
 ///
-/// Glimmers are soft radial fades (not hard circles), positions use sin/cos so
-/// the 0→1 loop is seamless (no jump when the ticker wraps).
-class HomeActivityListWash extends StatefulWidget {
+/// Not for the black gaps between cards. Motion is seamless (sin/cos).
+/// Intensity, radius and position vary gently; colors follow [style].
+class HomeActivityCardGlow extends StatelessWidget {
   final HomeActivitySurfaceStyle style;
-  final Widget child;
+  final Animation<double> phase;
+  /// Per-card seed so each popup drifts differently.
+  final int seed;
 
-  const HomeActivityListWash({
+  const HomeActivityCardGlow({
     super.key,
     required this.style,
-    required this.child,
+    required this.phase,
+    required this.seed,
   });
 
   @override
-  State<HomeActivityListWash> createState() => _HomeActivityListWashState();
-}
-
-class _HomeActivityListWashState extends State<HomeActivityListWash>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _phase;
-
-  @override
-  void initState() {
-    super.initState();
-    _phase = AnimationController(
-      vsync: this,
-      // Long period — motion is almost imperceptible, seamless loop.
-      duration: const Duration(seconds: 18),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _phase.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final style = widget.style;
     final reduce = MediaQuery.maybeOf(context)?.disableAnimations == true ||
         MediaQuery.maybeOf(context)?.accessibleNavigation == true;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.hardEdge,
-      child: Stack(
-        fit: StackFit.passthrough,
-        children: [
-          // Base wash: only paints where the list is, fades out downward.
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      style.gradientTop,
-                      style.gradientMid,
-                      style.gradientBottom,
-                    ],
-                    stops: const [0.0, 0.35, 1.0],
-                  ),
-                ),
-              ),
+    if (reduce) {
+      return const SizedBox.expand();
+    }
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: phase,
+        builder: (context, _) {
+          return CustomPaint(
+            painter: _InteriorCardGlowPainter(
+              phase: phase.value,
+              seed: seed,
+              primary: style.glowPrimary,
+              secondary: style.glowSecondary,
+              tertiary: style.glowTertiary,
             ),
-          ),
-          // Soft glimmers — seamless drift (no hard circle edges, no reset jump).
-          if (!reduce)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: RepaintBoundary(
-                  child: AnimatedBuilder(
-                    animation: _phase,
-                    builder: (context, _) {
-                      return CustomPaint(
-                        painter: _SoftGlimmerPainter(
-                          phase: _phase.value,
-                          color: style.glimmer,
-                          accent: style.gradientTop,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
-            child: widget.child,
-          ),
-        ],
+            size: Size.infinite,
+          );
+        },
       ),
     );
   }
 }
 
-/// Soft radial glimmers (NotebookLM-like). All motion is continuous via sin/cos.
-class _SoftGlimmerPainter extends CustomPainter {
+class _InteriorCardGlowPainter extends CustomPainter {
   final double phase;
-  final Color color;
-  final Color accent;
+  final int seed;
+  final Color primary;
+  final Color secondary;
+  final Color tertiary;
 
-  _SoftGlimmerPainter({
+  _InteriorCardGlowPainter({
     required this.phase,
-    required this.color,
-    required this.accent,
+    required this.seed,
+    required this.primary,
+    required this.secondary,
+    required this.tertiary,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    // Full cycle in sin/cos → seamless when phase wraps 0↔1.
     final t = phase * 2 * math.pi;
+    // Stable offsets from seed so cards don't all move in sync.
+    final s = (seed & 0x7fffffff) / 0x7fffffff;
+    final s2 = ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    final s3 = ((seed * 1664525 + 1013904223) & 0x7fffffff) / 0x7fffffff;
 
-    void softGlow({
-      required Offset center,
-      required double radius,
-      required Color c,
-      required double peakAlpha,
+    void glow({
+      required double nx,
+      required double ny,
+      required double baseR,
+      required Color color,
+      required double baseAlpha,
+      required double phaseOffset,
+      required double breathe,
     }) {
-      // Keep glows fully inside bounds so nothing “extrapolates” the list.
-      final r = radius.clamp(8.0, math.min(size.width, size.height) * 0.22);
-      final cx = center.dx.clamp(r, size.width - r);
-      final cy = center.dy.clamp(r, size.height - r);
-      final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+      // Seamless motion — no linear sweep that jumps on loop.
+      final driftX = 0.08 * math.sin(t + phaseOffset);
+      final driftY = 0.07 * math.cos(t * 0.85 + phaseOffset * 1.3);
+      final pulse = 0.55 +
+          0.45 * (0.5 + 0.5 * math.sin(t * breathe + phaseOffset));
+      final reach = 0.75 +
+          0.35 * (0.5 + 0.5 * math.cos(t * (breathe * 0.7) + phaseOffset));
+      final cx = size.width * (nx + driftX).clamp(0.08, 0.92);
+      final cy = size.height * (ny + driftY).clamp(0.08, 0.92);
+      final r = (math.min(size.width, size.height) * baseR * reach)
+          .clamp(12.0, math.min(size.width, size.height) * 0.55);
       final paint = Paint()
         ..shader = ui.Gradient.radial(
           Offset(cx, cy),
           r,
           [
-            c.withValues(alpha: peakAlpha),
-            c.withValues(alpha: peakAlpha * 0.35),
-            c.withValues(alpha: 0),
+            color.withValues(alpha: baseAlpha * pulse),
+            color.withValues(alpha: baseAlpha * pulse * 0.35),
+            color.withValues(alpha: 0),
           ],
-          const [0.0, 0.45, 1.0],
+          const [0.0, 0.42, 1.0],
         );
-      canvas.drawRect(rect, paint);
+      canvas.drawRect(
+        Rect.fromCircle(center: Offset(cx, cy), radius: r),
+        paint,
+      );
     }
 
-    // Small, soft, slow — not solid disks.
-    softGlow(
-      center: Offset(
-        size.width * (0.22 + 0.05 * math.sin(t)),
-        size.height * (0.14 + 0.04 * math.cos(t * 0.85)),
-      ),
-      radius: size.width * 0.18,
-      c: color,
-      peakAlpha: 0.14,
+    // Variable intensity / reach / color — soft interior only.
+    glow(
+      nx: 0.22 + 0.12 * s,
+      ny: 0.30 + 0.10 * s2,
+      baseR: 0.42,
+      color: primary,
+      baseAlpha: 0.22,
+      phaseOffset: s * 6.28,
+      breathe: 1.0,
     );
-    softGlow(
-      center: Offset(
-        size.width * (0.72 + 0.04 * math.cos(t * 0.9 + 0.8)),
-        size.height * (0.22 + 0.05 * math.sin(t * 0.7 + 0.4)),
-      ),
-      radius: size.width * 0.15,
-      c: accent,
-      peakAlpha: 0.10,
+    glow(
+      nx: 0.72 + 0.08 * s2,
+      ny: 0.55 + 0.12 * s3,
+      baseR: 0.34,
+      color: secondary,
+      baseAlpha: 0.16,
+      phaseOffset: s2 * 6.28 + 1.7,
+      breathe: 1.25,
     );
-    softGlow(
-      center: Offset(
-        size.width * (0.48 + 0.06 * math.sin(t * 0.55 + 1.6)),
-        size.height * (0.48 + 0.04 * math.cos(t * 0.65 + 0.3)),
-      ),
-      radius: size.width * 0.16,
-      c: color,
-      peakAlpha: 0.09,
-    );
-    softGlow(
-      center: Offset(
-        size.width * (0.30 + 0.04 * math.cos(t * 0.75 + 2.1)),
-        size.height * (0.72 + 0.03 * math.sin(t * 0.5 + 1.1)),
-      ),
-      radius: size.width * 0.12,
-      c: color,
-      peakAlpha: 0.07,
+    glow(
+      nx: 0.48 + 0.10 * s3,
+      ny: 0.18 + 0.08 * s,
+      baseR: 0.28,
+      color: tertiary,
+      baseAlpha: 0.11,
+      phaseOffset: s3 * 6.28 + 3.1,
+      breathe: 0.85,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _SoftGlimmerPainter oldDelegate) {
-    // Only repaint when phase changes enough to be visible (~1°).
+  bool shouldRepaint(covariant _InteriorCardGlowPainter oldDelegate) {
     return (phase - oldDelegate.phase).abs() > 0.002 ||
-        color != oldDelegate.color ||
-        accent != oldDelegate.accent;
+        seed != oldDelegate.seed ||
+        primary != oldDelegate.primary ||
+        secondary != oldDelegate.secondary ||
+        tertiary != oldDelegate.tertiary;
   }
 }
 

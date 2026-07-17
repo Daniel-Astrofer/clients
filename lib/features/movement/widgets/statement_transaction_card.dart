@@ -99,6 +99,9 @@ class StatementTransactionCard extends ConsumerWidget {
   /// Full home surface style (gradient card + inverted ink on colored tabs).
   final HomeActivitySurfaceStyle? homeSurface;
 
+  /// Shared slow phase for interior card glow (one ticker for the whole list).
+  final Animation<double>? interiorGlowPhase;
+
   const StatementTransactionCard({
     super.key,
     required this.transaction,
@@ -109,6 +112,7 @@ class StatementTransactionCard extends ConsumerWidget {
     this.paperBackground,
     this.paperBorder,
     this.homeSurface,
+    this.interiorGlowPhase,
   });
 
   @override
@@ -322,6 +326,15 @@ class StatementTransactionCard extends ConsumerWidget {
       ],
     );
 
+    final radius = BorderRadius.circular(isHome ? 20 : 28);
+    final glow = surface != null && interiorGlowPhase != null
+        ? HomeActivityCardGlow(
+            style: surface,
+            phase: interiorGlowPhase!,
+            seed: transaction.id.hashCode,
+          )
+        : null;
+
     return Semantics(
       button: onTap != null,
       label: a11yLabel,
@@ -329,13 +342,23 @@ class StatementTransactionCard extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(isHome ? 20 : 28),
-          // Allow check / conf badges to paint outside the icon box.
-          child: Container(
-            clipBehavior: Clip.none,
-            padding: EdgeInsets.all(cardPadding),
-            decoration: decoration,
-            child: body,
+          borderRadius: radius,
+          child: ClipRRect(
+            borderRadius: radius,
+            // Glow stays inside the card; black gaps between cards stay plain.
+            child: Stack(
+              children: [
+                // Base paper / gradient.
+                Positioned.fill(
+                  child: DecoratedBox(decoration: decoration),
+                ),
+                if (glow != null) Positioned.fill(child: glow),
+                Padding(
+                  padding: EdgeInsets.all(cardPadding),
+                  child: body,
+                ),
+              ],
+            ),
           ),
         ),
       ),

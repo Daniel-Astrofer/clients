@@ -85,7 +85,8 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
       _HomeTransactionsListState();
 }
 
-class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
+class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
+    with SingleTickerProviderStateMixin {
   /// Multiple cards may stay open; expansion only grows downward.
   final Set<String> _expandedTransactionIds = <String>{};
 
@@ -93,6 +94,24 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
   bool _armEntranceReveal = true;
   bool _playEntranceReveal = false;
   int _entranceRevealToken = 0;
+
+  /// One shared ticker drives interior glows on every card (cheap).
+  late final AnimationController _cardGlowPhase;
+
+  @override
+  void initState() {
+    super.initState();
+    _cardGlowPhase = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 16),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _cardGlowPhase.dispose();
+    super.dispose();
+  }
 
   void _scheduleEntranceReveal() {
     if (!_armEntranceReveal || _playEntranceReveal) return;
@@ -284,10 +303,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
       );
     }
 
-    final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    final surface = HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
-
-    // Soft static wash only around the transaction list (clipped — no blobs).
+    // Black gaps between cards stay plain — glow lives only inside each card.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -308,10 +324,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
               ),
             ),
           ),
-        HomeActivityListWash(
-          style: surface,
-          child: body,
-        ),
+        body,
       ],
     );
   }
@@ -358,6 +371,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
         mode: StatementTransactionCardMode.stacked,
         density: StatementTransactionCardDensity.home,
         homeSurface: surface,
+        interiorGlowPhase: _cardGlowPhase,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {
@@ -376,9 +390,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
 
 /// Skeleton for the home transaction feed.
 ///
-/// Exactly **3** rows (not 6). They cascade in like real txs appearing —
-/// first, then the one below, then a third — with a single shared shimmer
-/// controller (cheap: one ticker for the whole skeleton).
+/// Exactly **3** matte rows. Cascade in one-by-one (appear below each other).
+/// No metallic shimmer — flat muted fills only (cheap + subtle).
 class _TransactionsSkeletonLoading extends StatefulWidget {
   const _TransactionsSkeletonLoading();
 
@@ -389,41 +402,31 @@ class _TransactionsSkeletonLoading extends StatefulWidget {
 
 class _TransactionsSkeletonLoadingState
     extends State<_TransactionsSkeletonLoading>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   static const int _rowCount = 3;
 
-  /// Shared soft shimmer for all bones (one ticker, not one per box).
-  late final AnimationController _shimmer;
-
-  /// 0 → 1 drives sequential row appearance (cascade).
+  /// 0 → 1 drives sequential row appearance (cascade only — no shine ticker).
   late final AnimationController _cascade;
 
   @override
   void initState() {
     super.initState();
-    _shimmer = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
     _cascade = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 780),
     );
-    // Defer motion start to first frame so reduce-motion can be read.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (KeroseneMotion.reduceMotion(context)) {
         _cascade.value = 1;
         return;
       }
-      _shimmer.repeat();
       _cascade.forward();
     });
   }
 
   @override
   void dispose() {
-    _shimmer.dispose();
     _cascade.dispose();
     super.dispose();
   }
@@ -433,36 +436,33 @@ class _TransactionsSkeletonLoadingState
     final reduceMotion = KeroseneMotion.reduceMotion(context);
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_shimmer, _cascade]),
+      animation: _cascade,
       builder: (context, _) {
         final cascade = reduceMotion ? 1.0 : _cascade.value;
-        final shimmerT = reduceMotion ? 0.35 : _shimmer.value;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date header — appears first.
             _cascadeItem(
               progress: cascade,
               start: 0.0,
               end: 0.28,
               child: Padding(
-                padding: const EdgeInsets.only(left: 4.0, top: 12.0, bottom: 12.0),
+                padding:
+                    const EdgeInsets.only(left: 4.0, top: 12.0, bottom: 12.0),
                 child: _SkeletonBone(
                   width: homeSize(140),
                   height: homeSize(22),
                   borderRadius: homeSize(7),
-                  shimmerT: shimmerT,
                 ),
               ),
             ),
-            // Exactly 3 transaction-shaped rows, cascading top → bottom.
             for (var i = 0; i < _rowCount; i++)
               _cascadeItem(
                 progress: cascade,
                 start: 0.12 + i * 0.22,
                 end: 0.42 + i * 0.22,
-                child: _buildSkeletonRow(i, shimmerT),
+                child: _buildSkeletonRow(i),
               ),
           ],
         );
@@ -470,7 +470,6 @@ class _TransactionsSkeletonLoadingState
     );
   }
 
-  /// Fade + slight slide-up as [progress] crosses [start]→[end].
   Widget _cascadeItem({
     required double progress,
     required double start,
@@ -492,8 +491,7 @@ class _TransactionsSkeletonLoadingState
     );
   }
 
-  Widget _buildSkeletonRow(int index, double shimmerT) {
-    // Slight width variation so the three rows feel organic.
+  Widget _buildSkeletonRow(int index) {
     final titleWidths = [136.0, 152.0, 120.0];
     final subtitleWidths = [104.0, 88.0, 116.0];
     final amountWidths = [90.0, 78.0, 96.0];
@@ -505,7 +503,7 @@ class _TransactionsSkeletonLoadingState
       child: Container(
         padding: EdgeInsets.all(homeSize(16)),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.025),
+          color: Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(homeSize(22)),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.04),
@@ -517,7 +515,6 @@ class _TransactionsSkeletonLoadingState
               width: homeSize(42),
               height: homeSize(42),
               borderRadius: homeSize(999),
-              shimmerT: shimmerT,
             ),
             SizedBox(width: homeSize(12)),
             Expanded(
@@ -528,14 +525,12 @@ class _TransactionsSkeletonLoadingState
                     width: homeSize(titleWidths[i]),
                     height: homeSize(14),
                     borderRadius: homeSize(5),
-                    shimmerT: shimmerT,
                   ),
                   SizedBox(height: homeSize(AppSpacing.sm)),
                   _SkeletonBone(
                     width: homeSize(subtitleWidths[i]),
                     height: homeSize(11),
                     borderRadius: homeSize(5),
-                    shimmerT: shimmerT,
                   ),
                 ],
               ),
@@ -548,14 +543,12 @@ class _TransactionsSkeletonLoadingState
                   width: homeSize(amountWidths[i]),
                   height: homeSize(13),
                   borderRadius: homeSize(5),
-                  shimmerT: shimmerT,
                 ),
                 SizedBox(height: homeSize(AppSpacing.sm)),
                 _SkeletonBone(
                   width: homeSize(subAmountWidths[i]),
                   height: homeSize(11),
                   borderRadius: homeSize(5),
-                  shimmerT: shimmerT,
                 ),
               ],
             ),
@@ -566,38 +559,26 @@ class _TransactionsSkeletonLoadingState
   }
 }
 
-/// Lightweight bone painted with a shared [shimmerT] (no per-box ticker).
+/// Flat matte placeholder — solid fill only, no gradient / shimmer / chrome.
 class _SkeletonBone extends StatelessWidget {
   final double width;
   final double height;
   final double borderRadius;
-  final double shimmerT;
 
   const _SkeletonBone({
     required this.width,
     required this.height,
     required this.borderRadius,
-    required this.shimmerT,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Soft horizontal highlight slides with the shared shimmer phase.
-    final edge = HomeColors.surfaceDim;
-    final peak = HomeColors.surfaceBorder.withValues(alpha: 0.72);
-    final t = shimmerT;
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: HomeColors.surfaceBorder.withValues(alpha: 0.35)),
-        gradient: LinearGradient(
-          begin: Alignment(-1.2 + 2.4 * t, 0),
-          end: Alignment(-0.2 + 2.4 * t, 0),
-          colors: [edge, peak, edge],
-          stops: const [0.0, 0.5, 1.0],
-        ),
       ),
     );
   }
