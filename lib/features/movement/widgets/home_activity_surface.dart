@@ -17,11 +17,8 @@ class HomeActivitySurfaceStyle {
   final Color detailValue;
   final Color action;
   final bool invertInk;
-  /// Primary glow tint (wallet-focused).
   final Color glowPrimary;
-  /// Secondary glow tint (highlight / birlhos).
   final Color glowSecondary;
-  /// Soft rim / depth tint.
   final Color glowTertiary;
 
   const HomeActivitySurfaceStyle({
@@ -42,6 +39,25 @@ class HomeActivitySurfaceStyle {
     required this.glowTertiary,
   });
 
+  /// Near-white middle cards (no wallet tint).
+  static const HomeActivitySurfaceStyle middleWhite = HomeActivitySurfaceStyle(
+    cardTop: Color(0xFFFFFFFF),
+    cardBottom: Color(0xFFF7F7F9),
+    border: Color(0xFFE0E0E6),
+    title: Color(0xFF0A0A0C),
+    subtitle: Color(0xFF3A3A42),
+    meta: Color(0xFF5C5C66),
+    amount: Color(0xFF000000),
+    divider: Color(0xFFD0D0D4),
+    detailLabel: Color(0xFF1C1C1F),
+    detailValue: Color(0xFF0A0A0B),
+    action: Color(0xFF0A0A0C),
+    invertInk: false,
+    glowPrimary: Color(0xFFFFFFFF),
+    glowSecondary: Color(0xFFF0F0F4),
+    glowTertiary: Color(0xFFE4E4EA),
+  );
+
   /// [viewName] is `HomeLedgerBalanceView.name`.
   static HomeActivitySurfaceStyle forLedgerViewName(String viewName) {
     return switch (viewName) {
@@ -58,9 +74,9 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF100600),
           action: Color(0xFF1A0C02),
           invertInk: true,
-          glowPrimary: Color(0xFFFFE8B0),
-          glowSecondary: Color(0xFFFFCC66),
-          glowTertiary: Color(0xFFFF8A1A),
+          glowPrimary: Color(0xFFFFF3D6),
+          glowSecondary: Color(0xFFFFD080),
+          glowTertiary: Color(0xFFFF9A2E),
         ),
       'cold' => const HomeActivitySurfaceStyle(
           cardTop: Color(0xFF8EC8F0),
@@ -75,8 +91,8 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF040C14),
           action: Color(0xFF061018),
           invertInk: true,
-          glowPrimary: Color(0xFFE8F6FF),
-          glowSecondary: Color(0xFF9FD0F5),
+          glowPrimary: Color(0xFFF0F9FF),
+          glowSecondary: Color(0xFFA8D4F5),
           glowTertiary: Color(0xFF3D8FCB),
         ),
       'platform' => const HomeActivitySurfaceStyle(
@@ -96,32 +112,34 @@ class HomeActivitySurfaceStyle {
           glowSecondary: Color(0xFFD0D8E8),
           glowTertiary: Color(0xFFA8B4C8),
         ),
-      _ => const HomeActivitySurfaceStyle(
-          // Total — near white paper, soft neutral glow only inside cards.
-          cardTop: Color(0xFFFAFAFB),
-          cardBottom: Color(0xFFF0F0F3),
-          border: Color(0xFFD0D0D6),
-          title: Color(0xFF0A0A0C),
-          subtitle: Color(0xFF3A3A42),
-          meta: Color(0xFF5C5C66),
-          amount: Color(0xFF000000),
-          divider: Color(0xFFD0D0D4),
-          detailLabel: Color(0xFF1C1C1F),
-          detailValue: Color(0xFF0A0A0B),
-          action: Color(0xFF0A0A0C),
-          invertInk: false,
-          glowPrimary: Color(0xFFFFFFFF),
-          glowSecondary: Color(0xFFE8E8EE),
-          glowTertiary: Color(0xFFD0D0D8),
-        ),
+      _ => middleWhite,
     };
   }
 }
 
-/// Soft moving glow **inside** a transaction card only (must be under ClipRRect).
-///
-/// Uses real layout size + radial gradients that are strong enough to read on
-/// the card paper. Motion is seamless via sin/cos (no jump on loop).
+/// Where a row sits in the list — drives white middle vs glowing ends.
+enum HomeActivityListBand { top, middle, bottom }
+
+HomeActivityListBand homeActivityListBand(int index, int total) {
+  if (total <= 0) return HomeActivityListBand.middle;
+  if (total == 1) return HomeActivityListBand.top;
+  if (total == 2) {
+    return index == 0
+        ? HomeActivityListBand.top
+        : HomeActivityListBand.bottom;
+  }
+  if (total == 3) {
+    if (index == 0) return HomeActivityListBand.top;
+    if (index == 2) return HomeActivityListBand.bottom;
+    return HomeActivityListBand.middle;
+  }
+  final t = index / (total - 1);
+  if (t <= 0.30) return HomeActivityListBand.top;
+  if (t >= 0.70) return HomeActivityListBand.bottom;
+  return HomeActivityListBand.middle;
+}
+
+/// Moving glow **inside** top/bottom cards only (clipped by the card).
 class HomeActivityCardGlow extends StatelessWidget {
   final HomeActivitySurfaceStyle style;
   final Animation<double> phase;
@@ -146,14 +164,13 @@ class HomeActivityCardGlow extends StatelessWidget {
         if (w <= 0 || h <= 0) return const SizedBox.shrink();
 
         if (reduce) {
-          // Static soft wash so reduce-motion still shows a hint of depth.
           return DecoratedBox(
             decoration: BoxDecoration(
               gradient: RadialGradient(
-                center: const Alignment(-0.35, -0.4),
-                radius: 1.1,
+                center: const Alignment(-0.3, -0.45),
+                radius: 1.05,
                 colors: [
-                  style.glowPrimary.withValues(alpha: 0.35),
+                  style.glowPrimary.withValues(alpha: 0.4),
                   style.glowSecondary.withValues(alpha: 0.0),
                 ],
               ),
@@ -168,33 +185,29 @@ class HomeActivityCardGlow extends StatelessWidget {
             final s = (seed & 0x7fffffff) / 0x7fffffff;
             final s2 =
                 ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-            final s3 =
-                ((seed * 1664525 + 1013904223) & 0x7fffffff) / 0x7fffffff;
 
             Widget orb({
-              required double nx,
-              required double ny,
+              required double ax,
+              required double ay,
               required double sizeFactor,
               required Color color,
               required double peakAlpha,
               required double phaseOff,
-              required double breathe,
+              required double speed,
             }) {
-              final pulse = 0.55 +
-                  0.45 *
-                      (0.5 + 0.5 * math.sin(t * breathe + phaseOff));
-              final reach = 0.82 +
-                  0.28 *
-                      (0.5 +
-                          0.5 * math.cos(t * breathe * 0.75 + phaseOff));
-              final ax = (nx + 0.14 * math.sin(t + phaseOff)).clamp(-0.85, 0.85);
-              final ay =
-                  (ny + 0.12 * math.cos(t * 0.9 + phaseOff * 1.2))
-                      .clamp(-0.85, 0.85);
+              // Continuous loop — sin/cos never jumps.
+              final px = (ax + 0.22 * math.sin(t * speed + phaseOff))
+                  .clamp(-0.9, 0.9);
+              final py = (ay + 0.18 * math.cos(t * speed * 0.85 + phaseOff * 1.1))
+                  .clamp(-0.9, 0.9);
+              final pulse = 0.5 +
+                  0.5 * (0.5 + 0.5 * math.sin(t * speed * 1.1 + phaseOff));
+              final reach = 0.78 +
+                  0.32 * (0.5 + 0.5 * math.cos(t * speed * 0.7 + phaseOff));
               final dim = math.min(w, h) * sizeFactor * reach;
 
               return Align(
-                alignment: Alignment(ax, ay),
+                alignment: Alignment(px, py),
                 child: Container(
                   width: dim,
                   height: dim,
@@ -203,10 +216,10 @@ class HomeActivityCardGlow extends StatelessWidget {
                     gradient: RadialGradient(
                       colors: [
                         color.withValues(alpha: peakAlpha * pulse),
-                        color.withValues(alpha: peakAlpha * pulse * 0.4),
+                        color.withValues(alpha: peakAlpha * pulse * 0.35),
                         color.withValues(alpha: 0),
                       ],
-                      stops: const [0.0, 0.4, 1.0],
+                      stops: const [0.0, 0.38, 1.0],
                     ),
                   ),
                 ),
@@ -216,50 +229,49 @@ class HomeActivityCardGlow extends StatelessWidget {
             return Stack(
               fit: StackFit.expand,
               children: [
-                // Base soft lift so the card never looks flat.
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
                       center: Alignment(
-                        -0.2 + 0.08 * math.sin(t + s * 2),
-                        -0.55 + 0.06 * math.cos(t * 0.8),
+                        -0.25 + 0.1 * math.sin(t + s * 3),
+                        -0.5 + 0.08 * math.cos(t * 0.8),
                       ),
-                      radius: 1.15,
+                      radius: 1.2,
                       colors: [
-                        style.glowPrimary.withValues(alpha: 0.28),
-                        style.glowSecondary.withValues(alpha: 0.08),
-                        style.glowTertiary.withValues(alpha: 0.0),
+                        style.glowPrimary.withValues(alpha: 0.38),
+                        style.glowSecondary.withValues(alpha: 0.12),
+                        style.glowTertiary.withValues(alpha: 0),
                       ],
-                      stops: const [0.0, 0.45, 1.0],
+                      stops: const [0.0, 0.5, 1.0],
                     ),
                   ),
                 ),
                 orb(
-                  nx: -0.35 + 0.2 * s,
-                  ny: -0.25 + 0.15 * s2,
-                  sizeFactor: 0.95,
+                  ax: -0.4 + 0.15 * s,
+                  ay: -0.35 + 0.1 * s2,
+                  sizeFactor: 1.05,
                   color: style.glowPrimary,
-                  peakAlpha: 0.55,
+                  peakAlpha: 0.62,
                   phaseOff: s * 6.28,
-                  breathe: 1.0,
+                  speed: 1.0,
                 ),
                 orb(
-                  nx: 0.45 + 0.15 * s2,
-                  ny: 0.25 + 0.2 * s3,
-                  sizeFactor: 0.75,
+                  ax: 0.5 + 0.1 * s2,
+                  ay: 0.15 + 0.15 * s,
+                  sizeFactor: 0.85,
                   color: style.glowSecondary,
-                  peakAlpha: 0.42,
-                  phaseOff: s2 * 6.28 + 1.9,
-                  breathe: 1.2,
+                  peakAlpha: 0.48,
+                  phaseOff: s2 * 6.28 + 2.0,
+                  speed: 1.15,
                 ),
                 orb(
-                  nx: 0.05 + 0.18 * s3,
-                  ny: 0.55 + 0.12 * s,
-                  sizeFactor: 0.55,
+                  ax: 0.1 + 0.12 * s,
+                  ay: 0.55 + 0.1 * s2,
+                  sizeFactor: 0.65,
                   color: style.glowTertiary,
-                  peakAlpha: 0.30,
-                  phaseOff: s3 * 6.28 + 3.4,
-                  breathe: 0.9,
+                  peakAlpha: 0.34,
+                  phaseOff: (s + s2) * 3.14 + 1.1,
+                  speed: 0.9,
                 ),
               ],
             );

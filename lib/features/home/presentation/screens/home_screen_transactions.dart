@@ -270,6 +270,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           final tile = _buildTransactionTile(
             tx,
             expanded: _expandedTransactionIds.contains(tx.id),
+            band: homeActivityListBand(index, filteredTxs.length),
           );
 
           // First three rows: sequential L→R paint of colors/data after load.
@@ -354,12 +355,17 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   Widget _buildTransactionTile(
     Transaction tx, {
     required bool expanded,
+    required HomeActivityListBand band,
   }) {
     final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
     final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    final surface = HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
+    // Top + bottom: wallet-colored glow. Middle: plain white, no glow.
+    final surface = band == HomeActivityListBand.middle
+        ? HomeActivitySurfaceStyle.middleWhite
+        : HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
+    final useGlow = band != HomeActivityListBand.middle;
 
     return Semantics(
       label: semanticLabel,
@@ -371,7 +377,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         mode: StatementTransactionCardMode.stacked,
         density: StatementTransactionCardDensity.home,
         homeSurface: surface,
-        interiorGlowPhase: _cardGlowPhase,
+        interiorGlowPhase: useGlow ? _cardGlowPhase : null,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {
