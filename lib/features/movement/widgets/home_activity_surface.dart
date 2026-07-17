@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -119,14 +118,13 @@ class HomeActivitySurfaceStyle {
   }
 }
 
-/// Soft moving glow **inside** a transaction card (clipped to the card).
+/// Soft moving glow **inside** a transaction card only (must be under ClipRRect).
 ///
-/// Not for the black gaps between cards. Motion is seamless (sin/cos).
-/// Intensity, radius and position vary gently; colors follow [style].
+/// Uses real layout size + radial gradients that are strong enough to read on
+/// the card paper. Motion is seamless via sin/cos (no jump on loop).
 class HomeActivityCardGlow extends StatelessWidget {
   final HomeActivitySurfaceStyle style;
   final Animation<double> phase;
-  /// Per-card seed so each popup drifts differently.
   final int seed;
 
   const HomeActivityCardGlow({
@@ -140,127 +138,135 @@ class HomeActivityCardGlow extends StatelessWidget {
   Widget build(BuildContext context) {
     final reduce = MediaQuery.maybeOf(context)?.disableAnimations == true ||
         MediaQuery.maybeOf(context)?.accessibleNavigation == true;
-    if (reduce) {
-      return const SizedBox.expand();
-    }
-    return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: phase,
-        builder: (context, _) {
-          return CustomPaint(
-            painter: _InteriorCardGlowPainter(
-              phase: phase.value,
-              seed: seed,
-              primary: style.glowPrimary,
-              secondary: style.glowSecondary,
-              tertiary: style.glowTertiary,
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        if (w <= 0 || h <= 0) return const SizedBox.shrink();
+
+        if (reduce) {
+          // Static soft wash so reduce-motion still shows a hint of depth.
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(-0.35, -0.4),
+                radius: 1.1,
+                colors: [
+                  style.glowPrimary.withValues(alpha: 0.35),
+                  style.glowSecondary.withValues(alpha: 0.0),
+                ],
+              ),
             ),
-            size: Size.infinite,
           );
-        },
-      ),
-    );
-  }
-}
+        }
 
-class _InteriorCardGlowPainter extends CustomPainter {
-  final double phase;
-  final int seed;
-  final Color primary;
-  final Color secondary;
-  final Color tertiary;
+        return AnimatedBuilder(
+          animation: phase,
+          builder: (context, _) {
+            final t = phase.value * 2 * math.pi;
+            final s = (seed & 0x7fffffff) / 0x7fffffff;
+            final s2 =
+                ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+            final s3 =
+                ((seed * 1664525 + 1013904223) & 0x7fffffff) / 0x7fffffff;
 
-  _InteriorCardGlowPainter({
-    required this.phase,
-    required this.seed,
-    required this.primary,
-    required this.secondary,
-    required this.tertiary,
-  });
+            Widget orb({
+              required double nx,
+              required double ny,
+              required double sizeFactor,
+              required Color color,
+              required double peakAlpha,
+              required double phaseOff,
+              required double breathe,
+            }) {
+              final pulse = 0.55 +
+                  0.45 *
+                      (0.5 + 0.5 * math.sin(t * breathe + phaseOff));
+              final reach = 0.82 +
+                  0.28 *
+                      (0.5 +
+                          0.5 * math.cos(t * breathe * 0.75 + phaseOff));
+              final ax = (nx + 0.14 * math.sin(t + phaseOff)).clamp(-0.85, 0.85);
+              final ay =
+                  (ny + 0.12 * math.cos(t * 0.9 + phaseOff * 1.2))
+                      .clamp(-0.85, 0.85);
+              final dim = math.min(w, h) * sizeFactor * reach;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final t = phase * 2 * math.pi;
-    // Stable offsets from seed so cards don't all move in sync.
-    final s = (seed & 0x7fffffff) / 0x7fffffff;
-    final s2 = ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-    final s3 = ((seed * 1664525 + 1013904223) & 0x7fffffff) / 0x7fffffff;
+              return Align(
+                alignment: Alignment(ax, ay),
+                child: Container(
+                  width: dim,
+                  height: dim,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        color.withValues(alpha: peakAlpha * pulse),
+                        color.withValues(alpha: peakAlpha * pulse * 0.4),
+                        color.withValues(alpha: 0),
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
+                  ),
+                ),
+              );
+            }
 
-    void glow({
-      required double nx,
-      required double ny,
-      required double baseR,
-      required Color color,
-      required double baseAlpha,
-      required double phaseOffset,
-      required double breathe,
-    }) {
-      // Seamless motion — no linear sweep that jumps on loop.
-      final driftX = 0.08 * math.sin(t + phaseOffset);
-      final driftY = 0.07 * math.cos(t * 0.85 + phaseOffset * 1.3);
-      final pulse = 0.55 +
-          0.45 * (0.5 + 0.5 * math.sin(t * breathe + phaseOffset));
-      final reach = 0.75 +
-          0.35 * (0.5 + 0.5 * math.cos(t * (breathe * 0.7) + phaseOffset));
-      final cx = size.width * (nx + driftX).clamp(0.08, 0.92);
-      final cy = size.height * (ny + driftY).clamp(0.08, 0.92);
-      final r = (math.min(size.width, size.height) * baseR * reach)
-          .clamp(12.0, math.min(size.width, size.height) * 0.55);
-      final paint = Paint()
-        ..shader = ui.Gradient.radial(
-          Offset(cx, cy),
-          r,
-          [
-            color.withValues(alpha: baseAlpha * pulse),
-            color.withValues(alpha: baseAlpha * pulse * 0.35),
-            color.withValues(alpha: 0),
-          ],
-          const [0.0, 0.42, 1.0],
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Base soft lift so the card never looks flat.
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(
+                        -0.2 + 0.08 * math.sin(t + s * 2),
+                        -0.55 + 0.06 * math.cos(t * 0.8),
+                      ),
+                      radius: 1.15,
+                      colors: [
+                        style.glowPrimary.withValues(alpha: 0.28),
+                        style.glowSecondary.withValues(alpha: 0.08),
+                        style.glowTertiary.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.45, 1.0],
+                    ),
+                  ),
+                ),
+                orb(
+                  nx: -0.35 + 0.2 * s,
+                  ny: -0.25 + 0.15 * s2,
+                  sizeFactor: 0.95,
+                  color: style.glowPrimary,
+                  peakAlpha: 0.55,
+                  phaseOff: s * 6.28,
+                  breathe: 1.0,
+                ),
+                orb(
+                  nx: 0.45 + 0.15 * s2,
+                  ny: 0.25 + 0.2 * s3,
+                  sizeFactor: 0.75,
+                  color: style.glowSecondary,
+                  peakAlpha: 0.42,
+                  phaseOff: s2 * 6.28 + 1.9,
+                  breathe: 1.2,
+                ),
+                orb(
+                  nx: 0.05 + 0.18 * s3,
+                  ny: 0.55 + 0.12 * s,
+                  sizeFactor: 0.55,
+                  color: style.glowTertiary,
+                  peakAlpha: 0.30,
+                  phaseOff: s3 * 6.28 + 3.4,
+                  breathe: 0.9,
+                ),
+              ],
+            );
+          },
         );
-      canvas.drawRect(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r),
-        paint,
-      );
-    }
-
-    // Variable intensity / reach / color — soft interior only.
-    glow(
-      nx: 0.22 + 0.12 * s,
-      ny: 0.30 + 0.10 * s2,
-      baseR: 0.42,
-      color: primary,
-      baseAlpha: 0.22,
-      phaseOffset: s * 6.28,
-      breathe: 1.0,
+      },
     );
-    glow(
-      nx: 0.72 + 0.08 * s2,
-      ny: 0.55 + 0.12 * s3,
-      baseR: 0.34,
-      color: secondary,
-      baseAlpha: 0.16,
-      phaseOffset: s2 * 6.28 + 1.7,
-      breathe: 1.25,
-    );
-    glow(
-      nx: 0.48 + 0.10 * s3,
-      ny: 0.18 + 0.08 * s,
-      baseR: 0.28,
-      color: tertiary,
-      baseAlpha: 0.11,
-      phaseOffset: s3 * 6.28 + 3.1,
-      breathe: 0.85,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _InteriorCardGlowPainter oldDelegate) {
-    return (phase - oldDelegate.phase).abs() > 0.002 ||
-        seed != oldDelegate.seed ||
-        primary != oldDelegate.primary ||
-        secondary != oldDelegate.secondary ||
-        tertiary != oldDelegate.tertiary;
   }
 }
 
