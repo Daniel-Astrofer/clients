@@ -3,16 +3,22 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 /// Helper para gerenciar device hash e headers de segurança
 class DeviceHelper {
   static final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
-  static const String _deviceHashKey = 'device_hash_key'; // Hardcoded key
-  static const String _deviceInstallIdKey = 'device_install_id';
-  /// Last account username successfully bound to this install (local only).
-  static const String _deviceBoundUsernameKey = 'device_bound_username';
+
+  // Prefs keys are profile-scoped so primary/secondary Linux instances never
+  // share install id, device hash, or bound username on the same machine.
+  static String get _deviceHashKey =>
+      'device_hash_key_${keroseneProfileTag()}';
+  static String get _deviceInstallIdKey =>
+      'device_install_id_${keroseneProfileTag()}';
+  static String get _deviceBoundUsernameKey =>
+      'device_bound_username_${keroseneProfileTag()}';
 
   static Future<DeviceMetadata> getDeviceMetadata() async {
     final installId = await _getDeviceInstallId();
@@ -56,9 +62,12 @@ class DeviceHelper {
 
       final platform = Platform.operatingSystem;
       final hostname = Platform.localHostname;
+      final profile = keroseneProfileLabel();
+      final baseName = hostname.isNotEmpty ? hostname : 'Desktop Kerosene';
       return DeviceMetadata(
         deviceId: installId,
-        deviceName: hostname.isNotEmpty ? hostname : 'Desktop Kerosene',
+        // Distinct display name so two Linux profiles are obvious in the UI.
+        deviceName: '$baseName ($profile)',
         brand: platform,
         model: Platform.operatingSystemVersion,
         serialNumber: '',
@@ -105,10 +114,11 @@ class DeviceHelper {
         IosDeviceInfo iosInfo = await _deviceInfo.iosInfo;
         return '${iosInfo.identifierForVendor}_${iosInfo.model}_${iosInfo.systemVersion}';
       } else {
-        // Fallback estável para Windows/Desktop
-        // Usamos o hostname + um sufixo estático
+        // Desktop: hostname alone collides when two Linux profiles run on the
+        // same machine. Salt with the secure profile tag (primary_/secondary_).
         final computerName = Platform.localHostname;
-        return 'kerosene_desktop_v1_$computerName';
+        final tag = keroseneProfileTag();
+        return 'kerosene_desktop_v2_${computerName}_$tag';
       }
     } catch (e) {
       // Em caso de erro, gerar ID baseado em timestamp

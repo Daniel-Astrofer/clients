@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/core/theme/app_theme.dart';
 
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
@@ -56,6 +57,15 @@ import '../core/services/notification_delivery_bootstrap.dart';
 
 Future<void> bootstrapMobile() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Make dual Linux profiles obvious in logs (primary_ vs secondary_).
+  if (kDebugMode) {
+    debugPrint(
+      '[kero] profile=${keroseneProfileLabel()} '
+      'secure_prefix=${keroseneSecurePrefix()} '
+      'tag=${keroseneProfileTag()}',
+    );
+  }
 
   final sharedPreferences = await SharedPreferences.getInstance();
   final container = ProviderContainer(
@@ -394,13 +404,50 @@ class _PrivateMobileRoute extends ConsumerWidget {
   }
 }
 
-class _AppRealtimeBootstrap extends ConsumerWidget {
+class _AppRealtimeBootstrap extends ConsumerStatefulWidget {
   final Widget child;
 
   const _AppRealtimeBootstrap({required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AppRealtimeBootstrap> createState() =>
+      _AppRealtimeBootstrapState();
+}
+
+class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle =
+        WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+    _applyLifecycle(lifecycle);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _applyLifecycle(state);
+    if (state == AppLifecycleState.resumed) {
+      // Pull balance/extrato if WS marked dirty while backgrounded.
+      unawaited(refreshFinancialProjectionIfDirty(ref));
+    }
+  }
+
+  void _applyLifecycle(AppLifecycleState state) {
+    final foreground = state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive;
+    ref.read(appForegroundProvider.notifier).setForeground(foreground);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     // Use synchronous gate status — never wait on Tor/network for realtime boot.
     final gateStatus = ref.watch(appPinGateStatusProvider);
@@ -415,7 +462,7 @@ class _AppRealtimeBootstrap extends ConsumerWidget {
         ref.read(notificationDeliveryBootstrapProvider).ensureReady(),
       );
     }
-    return child;
+    return widget.child;
   }
 }
 
