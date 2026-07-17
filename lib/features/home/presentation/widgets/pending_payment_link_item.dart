@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
-
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
 
 class PendingPaymentLinkItem extends StatelessWidget {
   final PaymentLink paymentLink;
@@ -27,6 +25,8 @@ class PendingPaymentLinkItem extends StatelessWidget {
     final isExpired =
         timeLeft.isNegative && !paymentLink.isCompleted && !paymentLink.isPaid;
     final isCompleted = paymentLink.isCompleted || paymentLink.isPaid;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final error = Theme.of(context).colorScheme.error;
 
     return GestureDetector(
       onTap: onTap,
@@ -34,26 +34,18 @@ class PendingPaymentLinkItem extends StatelessWidget {
         duration: KeroseneMotion.medium,
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.all(16),
-        width: 280, // Fixed width for horizontal scroll
+        width: 280,
         decoration: BoxDecoration(
-          color:
-              Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.03),
+          color: onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(24),
+          // Distinct from settled transaction cards (link product, not movement).
           border: Border.all(
-            color: isCompleted
-                ? AppColors.hexFF00FF94.withValues(alpha: 0.2)
-                : AppColors.hexFFFFB800.withValues(alpha: 0.1),
+            color: isExpired
+                ? error.withValues(alpha: 0.35)
+                : onSurface.withValues(alpha: 0.20),
             width: 1.5,
+            strokeAlign: BorderSide.strokeAlignInside,
           ),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  (isCompleted ? AppColors.hexFF00FF94 : AppColors.hexFFFFB800)
-                      .withValues(alpha: 0.02),
-              blurRadius: 10,
-              spreadRadius: 0,
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,30 +53,9 @@ class PendingPaymentLinkItem extends StatelessWidget {
           children: [
             Row(
               children: [
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isCompleted
-                        ? AppColors.hexFF00FF94.withValues(alpha: 0.1)
-                        : AppColors.hexFFFFB800.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    isCompleted
-                        ? KeroseneIcons.success
-                        : (paymentLink.isLightningPaymentRequest
-                            ? KeroseneIcons.lightning
-                            : KeroseneIcons.pending),
-                    color: isCompleted
-                        ? AppColors.hexFF00FF94
-                        : AppColors.hexFFFFB800,
-                    size: 18,
-                  ),
-                ),
+                // QR primary + rail network pip (LN / on-chain / internal).
+                ActivityGlyph.forPaymentLink(paymentLink, size: 40),
                 const SizedBox(width: 12),
-
-                // Status & Time
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,11 +65,9 @@ class PendingPaymentLinkItem extends StatelessWidget {
                             ? 'RECEBIDO'
                             : (isExpired ? 'EXPIRADO' : 'PENDENTE'),
                         style: TextStyle(
-                          color: isCompleted
-                              ? AppColors.hexFF00FF94
-                              : (isExpired
-                                  ? Colors.redAccent
-                                  : AppColors.hexFFFFB800),
+                          color: isExpired
+                              ? error
+                              : onSurface.withValues(alpha: 0.85),
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.2,
@@ -108,10 +77,7 @@ class PendingPaymentLinkItem extends StatelessWidget {
                         Text(
                           _formatDuration(timeLeft),
                           style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimary
-                                .withValues(alpha: 0.7),
+                            color: onSurface.withValues(alpha: 0.7),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -119,18 +85,13 @@ class PendingPaymentLinkItem extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                // BTC Value
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       amountLabel,
                       style: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onPrimary
-                            .withValues(alpha: 0.24),
+                        color: onSurface.withValues(alpha: 0.24),
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
                       ),
@@ -138,7 +99,7 @@ class PendingPaymentLinkItem extends StatelessWidget {
                     Text(
                       paymentLink.amountBtc.toStringAsFixed(8),
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         fontFamily: AppTypography.financialFontFamily,
@@ -149,8 +110,6 @@ class PendingPaymentLinkItem extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Description
             Text(
               paymentLink.description.isNotEmpty
                   ? paymentLink.description
@@ -158,20 +117,14 @@ class PendingPaymentLinkItem extends StatelessWidget {
                       ? 'Aguardando pagamento Lightning (BOLT11)...'
                       : 'Aguardando pagamento via rede Bitcoin...'),
               style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimary
-                    .withValues(alpha: 0.5),
+                color: onSurface.withValues(alpha: 0.5),
                 fontSize: 13,
                 height: 1.4,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 12),
-
-            // Footer Info
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -184,10 +137,7 @@ class PendingPaymentLinkItem extends StatelessWidget {
                           ? 'Fatura Lightning'
                           : 'Link de Pagamento'),
                   style: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onPrimary
-                        .withValues(alpha: 0.2),
+                    color: onSurface.withValues(alpha: 0.2),
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
@@ -195,10 +145,7 @@ class PendingPaymentLinkItem extends StatelessWidget {
                 Icon(
                   KeroseneIcons.chevronRight,
                   size: 12,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onPrimary
-                      .withValues(alpha: 0.2),
+                  color: onSurface.withValues(alpha: 0.2),
                 ),
               ],
             ),

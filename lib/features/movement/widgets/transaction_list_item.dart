@@ -87,12 +87,16 @@ class TransactionListItem extends ConsumerWidget {
             child: Row(
               children: [
                 TransactionTypeIconBadge(
+                  transaction: transaction,
                   spec: visual,
                   size: 44,
                   iconSize: 20,
                   borderRadius: 14,
                   backgroundColor: AppColors.hexFF111720,
-                  borderColor: visual.iconColor.withValues(alpha: 0.24),
+                  borderColor: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.18),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(

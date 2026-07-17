@@ -29,6 +29,24 @@ class KeroseneIcons {
   /// Alias used by receive hub / Lightning notification visuals.
   static const IconData bolt = lightning;
   static const IconData bitcoin = PhosphorIconsRegular.currencyBtc;
+
+  // Activity glyph layers — rail (primary) + direction (badge) + product (pip)
+  /// Primary: Lightning Network.
+  static const IconData railLightning = lightning;
+  /// Primary: Bitcoin on-chain.
+  static const IconData railOnchain = onchain;
+  /// Primary: Kerosene internal ledger.
+  static const IconData railInternal = internalTransfer;
+  /// Primary: cold / watch-only observed.
+  static const IconData railCold = coldWallet;
+  /// Direction badge: funds in.
+  static const IconData dirIn = receive;
+  /// Direction badge: funds out.
+  static const IconData dirOut = send;
+  /// Product: open payment link / invoice (not settled movement).
+  static const IconData productPaymentLink = qr;
+  /// Product pip on a settled payment-link movement.
+  static const IconData productLinkPip = onchain;
   static const IconData fee = PhosphorIconsRegular.percent;
   static const IconData creditCard = PhosphorIconsRegular.creditCard;
   static const IconData fiat = PhosphorIconsRegular.currencyDollar;

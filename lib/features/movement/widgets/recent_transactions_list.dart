@@ -87,7 +87,8 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
   Widget build(BuildContext context) {
     final t = widget.transaction;
     final visual = TransactionVisualSpec.fromTransaction(t);
-    final statusColor = visual.amountColor;
+    // Amounts stay theme-neutral; status color only for subtle chrome if needed.
+    final statusColor = Theme.of(context).colorScheme.onSurface;
     final money = ref.watch(moneyFormatConfigProvider);
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
@@ -136,12 +137,16 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                   children: [
                     // Icon Block
                     TransactionTypeIconBadge(
+                      transaction: t,
                       spec: visual,
                       size: 44,
                       iconSize: 20,
                       borderRadius: AppSpacing.sm,
                       backgroundColor: AppColors.hexFF111720,
-                      borderColor: statusColor.withValues(alpha: 0.24),
+                      borderColor: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.18),
                     ),
                     const SizedBox(width: AppSpacing.md),
 

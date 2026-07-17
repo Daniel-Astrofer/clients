@@ -18,10 +18,10 @@ import 'package:kerosene/features/financial_accounts/presentation/state/wallet_s
 import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
+import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-
 import 'package:kerosene/core/theme/app_typography.dart';
 
 enum StatementTransactionCardMode { stacked, separated }
@@ -194,8 +194,8 @@ class StatementTransactionCard extends ConsumerWidget {
                       expanded: expanded,
                       wallets: wallets,
                       accounts: accounts,
-                      // Taxonomy icon (direction + rail), not network-only.
-                      iconOverride: presentation.icon,
+                      // Composite: rail primary + direction badge (status = ring).
+                      axes: presentation.axes,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -329,12 +329,8 @@ class _BankStatementTransactionRow extends StatelessWidget {
     final title = presentation.title;
     final counterparty = presentation.subtitle;
     final statusLine = presentation.statusLabel;
-    final tone = TransactionPalette.toneFor(transaction);
-    final amountColor =
-        tone == TransactionStatusTone.failed ||
-                tone == TransactionStatusTone.cancelled
-            ? TransactionPalette.statusStrong(tone)
-            : TransactionPalette.inkOnDark;
+    // Amounts stay neutral (white/ink); status lives in the pill, not the value.
+    final amountColor = TransactionPalette.inkOnDark;
 
     return Material(
       color: Colors.transparent,
@@ -358,9 +354,9 @@ class _BankStatementTransactionRow extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _BankDirectionIcon(
-                    transaction: transaction,
-                    icon: presentation.icon,
+                  ActivityGlyph.forAxes(
+                    presentation.axes,
+                    size: 40,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -463,39 +459,6 @@ class _BankStatementTransactionRow extends StatelessWidget {
   }
 }
 
-class _BankDirectionIcon extends StatelessWidget {
-  final Transaction transaction;
-  final IconData? icon;
-
-  const _BankDirectionIcon({
-    required this.transaction,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tone = TransactionPalette.toneFor(transaction);
-    final color = TransactionPalette.statusStrong(tone);
-
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: TransactionPalette.iconWell,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.hexFF2A2A2A),
-      ),
-      child: Icon(
-        icon ??
-            (transaction.isCredit
-                ? KeroseneIcons.down
-                : KeroseneIcons.up),
-        color: color,
-        size: 18,
-      ),
-    );
-  }
-}
 
 class _DarkStatusPill extends StatelessWidget {
   final Transaction transaction;
@@ -697,7 +660,7 @@ class _AnimatedRingIconWrapper extends StatefulWidget {
   final bool expanded;
   final List<Wallet> wallets;
   final List<BitcoinAccount> accounts;
-  final IconData? iconOverride;
+  final TransactionAxes? axes;
 
   const _AnimatedRingIconWrapper({
     required this.transaction,
@@ -707,7 +670,7 @@ class _AnimatedRingIconWrapper extends StatefulWidget {
     required this.expanded,
     this.wallets = const [],
     this.accounts = const [],
-    this.iconOverride,
+    this.axes,
   });
 
   @override
@@ -883,10 +846,16 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
               crossFadeState: widget.expanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
-              firstChild: Icon(
-                widget.iconOverride ?? KeroseneIcons.onchain,
-                color: widget.colors.icon,
-                size: widget.iconSize * 0.45,
+              firstChild: ActivityGlyph(
+                spec: widget.axes != null
+                    ? ActivityGlyphSpec.fromAxes(widget.axes!)
+                    : ActivityGlyphSpec.fromTransaction(tx),
+                size: widget.iconSize * 0.72,
+                showWell: false,
+                iconColor: widget.colors.icon,
+                badgeWellColor: widget.colors.iconWellBorder,
+                badgeIconColor: widget.colors.icon,
+                wellBorder: widget.colors.iconWellBorder,
               ),
               secondChild: Text(
                 // Never show N/6 for Lightning or internal.

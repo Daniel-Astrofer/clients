@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/design_system/icons.dart';
 
@@ -53,8 +54,6 @@ enum TransactionVisualLabel {
 }
 
 class TransactionVisualSpec {
-  static const Color _creditColor = TransactionPalette.amountCredit;
-  static const Color _debitColor = TransactionPalette.amountDebit;
   static const Color _neutralAmountColor = TransactionPalette.amountNeutral;
 
   final TransactionVisualFamily family;
@@ -118,14 +117,20 @@ class TransactionVisualSpec {
     final description = (transaction.description ?? '').toLowerCase();
 
     if (transaction.isCancelled || _looksCancelled(transaction)) {
-      return const TransactionVisualSpec(
+      // Status is external (chip/ring). Keep a rail-ish primary for legacy single-icon sites.
+      final railIcon = _looksLikeLightning(transaction)
+          ? KeroseneIcons.railLightning
+          : _looksLikeInternal(transaction)
+              ? KeroseneIcons.railInternal
+              : KeroseneIcons.railOnchain;
+      return TransactionVisualSpec(
         family: TransactionVisualFamily.cancelled,
         direction: TransactionVisualDirection.neutral,
         labelKey: TransactionVisualLabel.cancelled,
         prefix: '',
-        icon: KeroseneIcons.blocked,
+        icon: railIcon,
         iconColor: TransactionPalette.statusCancelled,
-        amountColor: TransactionPalette.statusCancelled,
+        amountColor: _neutralAmountColor,
       );
     }
 
@@ -141,14 +146,19 @@ class TransactionVisualSpec {
     }
 
     if (transaction.status == TransactionStatus.failed) {
-      return const TransactionVisualSpec(
+      final railIcon = _looksLikeLightning(transaction)
+          ? KeroseneIcons.railLightning
+          : _looksLikeInternal(transaction)
+              ? KeroseneIcons.railInternal
+              : KeroseneIcons.railOnchain;
+      return TransactionVisualSpec(
         family: TransactionVisualFamily.failed,
         direction: TransactionVisualDirection.neutral,
         labelKey: TransactionVisualLabel.failed,
         prefix: '',
-        icon: KeroseneIcons.error,
+        icon: railIcon,
         iconColor: TransactionPalette.statusFailed,
-        amountColor: TransactionPalette.statusFailed,
+        amountColor: _neutralAmountColor,
       );
     }
 
@@ -161,7 +171,7 @@ class TransactionVisualSpec {
           prefix: '',
           icon: KeroseneIcons.moveHorizontal,
           iconColor: AppColors.hexFF8FA7C2,
-          amountColor: _neutralAmountColor,
+          amountColor: TransactionPalette.amountNeutral,
         );
       case TransactionType.fee:
         return const TransactionVisualSpec(
@@ -171,7 +181,7 @@ class TransactionVisualSpec {
           prefix: '-',
           icon: KeroseneIcons.receipt,
           iconColor: AppColors.hexFF9AA3AE,
-          amountColor: _debitColor,
+          amountColor: TransactionPalette.amountNeutral,
         );
       case TransactionType.deposit:
         if (_looksLikeLightning(transaction)) {
@@ -293,7 +303,7 @@ class TransactionVisualSpec {
       isOutgoing: isOutgoing,
       incomingLabelKey: TransactionVisualLabel.onChainReceive,
       outgoingLabelKey: TransactionVisualLabel.onChainSend,
-      icon: KeroseneIcons.hub,
+      icon: KeroseneIcons.railOnchain,
       iconColor: AppColors.hexFF9CA8B4,
     );
   }
@@ -313,9 +323,11 @@ class TransactionVisualSpec {
           : TransactionVisualDirection.incoming,
       labelKey: isOutgoing ? outgoingLabelKey : incomingLabelKey,
       prefix: isOutgoing ? '-' : '+',
+      // Primary stays rail/product; direction is a separate badge in ActivityGlyph.
       icon: icon,
       iconColor: iconColor,
-      amountColor: isOutgoing ? _debitColor : _creditColor,
+      // Amounts stay neutral (theme primary / white) — no green/red amount tint.
+      amountColor: _neutralAmountColor,
     );
   }
 
@@ -415,7 +427,8 @@ class TransactionVisualSpec {
 }
 
 class TransactionTypeIconBadge extends StatelessWidget {
-  final TransactionVisualSpec spec;
+  final TransactionVisualSpec? spec;
+  final Transaction? transaction;
   final double size;
   final double iconSize;
   final double borderRadius;
@@ -424,16 +437,27 @@ class TransactionTypeIconBadge extends StatelessWidget {
 
   const TransactionTypeIconBadge({
     super.key,
-    required this.spec,
+    this.spec,
+    this.transaction,
     this.size = 34,
     this.iconSize = 18,
     this.borderRadius = 8,
     this.backgroundColor = AppColors.hexFF171B20,
     this.borderColor = AppColors.hexFF262B31,
-  });
+  }) : assert(spec != null || transaction != null);
 
   @override
   Widget build(BuildContext context) {
+    // Prefer composite glyph: rail primary + direction badge.
+    if (transaction != null) {
+      return ActivityGlyph.forTransaction(
+        transaction!,
+        size: size,
+        wellColor: backgroundColor,
+        wellBorder: borderColor,
+        iconColor: const Color(0xFFF2F2F3),
+      );
+    }
     return Container(
       width: size,
       height: size,
@@ -444,9 +468,9 @@ class TransactionTypeIconBadge extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: Icon(
-        spec.icon,
+        spec!.icon,
         size: iconSize,
-        color: spec.iconColor,
+        color: spec!.iconColor,
       ),
     );
   }

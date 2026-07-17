@@ -94,24 +94,30 @@ abstract final class TransactionVisualTokens {
     };
   }
 
-  /// Icon by taxonomy — direction + rail, not a single group icon for all internal.
+  /// Primary (rail) icon only — never direction-alone, never lifecycle steal.
+  ///
+  /// Prefer [ActivityGlyph] for list/detail; this remains for legacy single-icon call sites.
   static IconData iconFor(TransactionAxes axes) {
-    final life = axes.lifecycle;
-    if (life == TxLifecycle.cancelled) return KeroseneIcons.cancel;
-    if (life == TxLifecycle.failed ||
-        life == TxLifecycle.unconfirmedExpired) {
-      return KeroseneIcons.warning;
-    }
     if (axes.product == TxProduct.fee) return KeroseneIcons.fee;
     if (axes.product == TxProduct.swap) return KeroseneIcons.swap;
-
+    // Lifecycle (cancelled/failed) must not replace the rail — status is external.
     return switch (axes.rail) {
-      TxRail.internal => axes.direction == TxDirection.incoming
-          ? KeroseneIcons.down
-          : KeroseneIcons.up,
-      TxRail.onchain => KeroseneIcons.onchain,
-      TxRail.lightning => KeroseneIcons.lightning,
-      TxRail.cold => KeroseneIcons.coldWallet,
+      TxRail.internal => KeroseneIcons.railInternal,
+      TxRail.onchain => KeroseneIcons.railOnchain,
+      TxRail.lightning => KeroseneIcons.railLightning,
+      TxRail.cold => KeroseneIcons.railCold,
+    };
+  }
+
+  /// Direction badge icon, or null when neutral (fee/swap).
+  static IconData? directionIconFor(TransactionAxes axes) {
+    if (axes.product == TxProduct.fee || axes.product == TxProduct.swap) {
+      return null;
+    }
+    return switch (axes.direction) {
+      TxDirection.incoming => KeroseneIcons.dirIn,
+      TxDirection.outgoing => KeroseneIcons.dirOut,
+      TxDirection.neutral => null,
     };
   }
 
