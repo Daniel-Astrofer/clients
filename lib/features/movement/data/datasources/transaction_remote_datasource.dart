@@ -520,6 +520,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
           (item[field] as num?)?.toInt() ?? fallback;
       final selectedRate = (data['feeRateSatPerVbyte'] as num).toInt();
       final selectedEta = (data['estimatedSettlementSeconds'] as num).toInt();
+      final selectedBlocks =
+          (data['estimatedConfirmationBlocks'] as num?)?.toInt() ?? 3;
       return FeeEstimate(
         fastSatPerByte:
             tierInt(fast, 'feeRateSatPerVbyte', selectedRate).toDouble(),
@@ -540,12 +542,14 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
             (data['keroseneFeeSats'] as num).toDouble() / 100000000.0,
         totalFeeBtc: (data['totalFeeSats'] as num).toDouble() / 100000000.0,
         estimatedVbytes: (data['estimatedVbytes'] as num).toInt(),
-        estimatedConfirmationBlocks:
-            (data['estimatedConfirmationBlocks'] as num).toInt(),
+        estimatedConfirmationBlocks: selectedBlocks,
         fastEstimatedSeconds: tierInt(fast, 'estimatedSeconds', selectedEta),
         standardEstimatedSeconds:
             tierInt(standard, 'estimatedSeconds', selectedEta),
         slowEstimatedSeconds: tierInt(slow, 'estimatedSeconds', selectedEta),
+        fastTargetBlocks: tierInt(fast, 'targetBlocks', 2),
+        standardTargetBlocks: tierInt(standard, 'targetBlocks', 3),
+        slowTargetBlocks: tierInt(slow, 'targetBlocks', 6),
         feeSource: data['feeSource']?.toString(),
         quoteExpiresAt: DateTime.tryParse(
           data['quoteExpiresAt']?.toString() ?? '',
@@ -1057,6 +1061,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     bool isLightning = false,
     double networkFeeBtc = 0,
     double maxRoutingFeeBtc = 0.000001,
+    int? feeRateSatPerVbyte,
+    int? feeTargetBlocks,
     String? description,
     String? confirmationPassphrase,
     String? passkeyAssertionJson,
@@ -1079,6 +1085,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
           isLightning: isLightning,
           networkFeeBtc: networkFeeBtc,
           maxRoutingFeeBtc: maxRoutingFeeBtc,
+          feeRateSatPerVbyte: feeRateSatPerVbyte,
+          feeTargetBlocks: feeTargetBlocks,
           description: description,
           confirmationPassphrase: confirmationPassphrase,
           passkeyAssertionJson: passkeyAssertionJson,
@@ -1110,6 +1118,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     bool isLightning = false,
     double networkFeeBtc = 0,
     double maxRoutingFeeBtc = 0.000001,
+    int? feeRateSatPerVbyte,
+    int? feeTargetBlocks,
     String? description,
     String? confirmationPassphrase,
     String? passkeyAssertionJson,
@@ -1182,6 +1192,17 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'amountSats': (amount * 100000000).round(),
       'networkFeeSats': (feeBtc * 100000000).round(),
       if (!isInternal) 'externalReference': destination,
+      // On-chain fee tier: Core funds PSBT with fee_rate / conf_target.
+      if (!isInternal &&
+          !effectiveLightning &&
+          feeRateSatPerVbyte != null &&
+          feeRateSatPerVbyte > 0)
+        'feeRateSatPerVbyte': feeRateSatPerVbyte,
+      if (!isInternal &&
+          !effectiveLightning &&
+          feeTargetBlocks != null &&
+          feeTargetBlocks > 0)
+        'feeTargetBlocks': feeTargetBlocks,
       'memo': normalizedDescription ??
           (effectiveLightning
               ? 'Pagamento Lightning'

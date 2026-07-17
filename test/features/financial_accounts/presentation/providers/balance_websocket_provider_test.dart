@@ -45,6 +45,7 @@ void main() {
       final loop = FinancialRealtimeRefreshLoop(
         refresh: () async {},
         isRealtimeConnected: () => false,
+        isPollAllowed: () => true,
         scheduler: scheduler.schedule,
       );
 
@@ -62,6 +63,7 @@ void main() {
       final loop = FinancialRealtimeRefreshLoop(
         refresh: () async {},
         isRealtimeConnected: () => true,
+        isPollAllowed: () => true,
         scheduler: scheduler.schedule,
       );
 
@@ -69,6 +71,47 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(scheduler.lastDelay, financialRealtimeFallbackInterval);
+
+      loop.dispose();
+    });
+
+    test('skips network refresh when poll gate is closed', () async {
+      final scheduler = _ManualRefreshScheduler();
+      var refreshCount = 0;
+      final loop = FinancialRealtimeRefreshLoop(
+        refresh: () async => refreshCount += 1,
+        isPollAllowed: () => false,
+        scheduler: scheduler.schedule,
+      );
+
+      loop.start();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(refreshCount, 0);
+      expect(scheduler.lastDelay, financialRealtimeIdleGateInterval);
+      expect(scheduler.scheduleCount, 1);
+
+      loop.dispose();
+    });
+
+    test('onPollGateChanged runs refresh when gate opens', () async {
+      final scheduler = _ManualRefreshScheduler();
+      var allowed = false;
+      var refreshCount = 0;
+      final loop = FinancialRealtimeRefreshLoop(
+        refresh: () async => refreshCount += 1,
+        isPollAllowed: () => allowed,
+        scheduler: scheduler.schedule,
+      );
+
+      loop.start();
+      await Future<void>.delayed(Duration.zero);
+      expect(refreshCount, 0);
+
+      allowed = true;
+      loop.onPollGateChanged();
+      await Future<void>.delayed(Duration.zero);
+      expect(refreshCount, 1);
 
       loop.dispose();
     });
@@ -83,6 +126,7 @@ void main() {
           refreshCount += 1;
           return refreshCompleter.future;
         },
+        isPollAllowed: () => true,
         scheduler: scheduler.schedule,
       );
 
@@ -108,6 +152,7 @@ void main() {
       var refreshCount = 0;
       final loop = FinancialRealtimeRefreshLoop(
         refresh: () async => refreshCount += 1,
+        isPollAllowed: () => true,
         scheduler: scheduler.schedule,
       );
 
@@ -129,6 +174,7 @@ void main() {
       final refreshCompleter = Completer<void>();
       final loop = FinancialRealtimeRefreshLoop(
         refresh: () => refreshCompleter.future,
+        isPollAllowed: () => true,
         scheduler: scheduler.schedule,
       );
 

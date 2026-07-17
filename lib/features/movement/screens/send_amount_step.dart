@@ -5,7 +5,9 @@ import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
+import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
 import 'package:kerosene/features/movement/widgets/transaction_value_entry_surface.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
@@ -185,6 +187,8 @@ class SendAmountStep extends StatelessWidget {
     final eta = FeeTierSelection.formatEta(
       feeQuote.estimatedSettlementSeconds,
       context.tr,
+      testnetLike: expectedBitcoinNetwork != BitcoinNetworkKind.mainnet &&
+          expectedBitcoinNetwork != BitcoinNetworkKind.unknown,
     );
     if (eta.isEmpty) return fee;
     return '$fee · $eta';

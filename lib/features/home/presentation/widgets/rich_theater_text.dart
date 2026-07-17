@@ -5,6 +5,27 @@ import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/design/home_design_tokens.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
 
+/// Linux/desktop often lacks color-emoji in serif/sans faces (Newsreader/Inter).
+/// Without fallbacks, theater titles/bullets show tofu (□) or blank glyphs.
+const List<String> kTheaterEmojiFontFallback = <String>[
+  'Noto Color Emoji',
+  'Noto Emoji',
+  'Segoe UI Emoji',
+  'Apple Color Emoji',
+  'Twemoji Mozilla',
+  'EmojiOne Color',
+];
+
+TextStyle _theaterStyle(TextStyle base) {
+  final existing = base.fontFamilyFallback ?? const <String>[];
+  return base.copyWith(
+    fontFamilyFallback: <String>[
+      ...existing,
+      ...kTheaterEmojiFontFallback,
+    ],
+  );
+}
+
 /// Hierarchical theater copy: H1 / H2 / body / bullets / caption + bold spans.
 ///
 /// Emojis are decorative leading glyphs; [semanticsLabel] concatenates plain text.
@@ -50,53 +71,59 @@ class RichTheaterText extends StatelessWidget {
       regular: homeFontSize(12),
     );
 
-    final h1Style = AppTypography.newsreader(
+    final h1Style = _theaterStyle(AppTypography.newsreader(
       textStyle: theme.textTheme.titleLarge,
       color: Colors.white,
       fontSize: h1Size,
       fontWeight: FontWeight.w500,
       height: 1.25,
+    ));
+    final h2Style = _theaterStyle(
+      theme.textTheme.titleMedium?.copyWith(
+            color: Colors.white.withValues(alpha: 0.95),
+            fontSize: h2Size,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+          ) ??
+          TextStyle(
+            color: Colors.white.withValues(alpha: 0.95),
+            fontSize: h2Size,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+          ),
     );
-    final h2Style = theme.textTheme.titleMedium?.copyWith(
-          color: Colors.white.withValues(alpha: 0.95),
-          fontSize: h2Size,
-          fontWeight: FontWeight.w700,
-          height: 1.3,
-        ) ??
-        TextStyle(
-          color: Colors.white.withValues(alpha: 0.95),
-          fontSize: h2Size,
-          fontWeight: FontWeight.w700,
-          height: 1.3,
-        );
-    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
-          color: Colors.white.withValues(alpha: 0.88),
-          fontSize: bodySize,
-          fontWeight: FontWeight.w300,
-          height: 1.45,
-        ) ??
-        TextStyle(
-          color: Colors.white.withValues(alpha: 0.88),
-          fontSize: bodySize,
-          fontWeight: FontWeight.w300,
-          height: 1.45,
-        );
+    final bodyStyle = _theaterStyle(
+      theme.textTheme.bodyMedium?.copyWith(
+            color: Colors.white.withValues(alpha: 0.88),
+            fontSize: bodySize,
+            fontWeight: FontWeight.w300,
+            height: 1.45,
+          ) ??
+          TextStyle(
+            color: Colors.white.withValues(alpha: 0.88),
+            fontSize: bodySize,
+            fontWeight: FontWeight.w300,
+            height: 1.45,
+          ),
+    );
     final bulletStyle = bodyStyle.copyWith(
       fontWeight: FontWeight.w400,
       color: Colors.white.withValues(alpha: 0.90),
     );
-    final captionStyle = theme.textTheme.bodySmall?.copyWith(
-          color: Colors.white.withValues(alpha: 0.62),
-          fontSize: captionSize,
-          fontWeight: FontWeight.w300,
-          height: 1.35,
-        ) ??
-        TextStyle(
-          color: Colors.white.withValues(alpha: 0.62),
-          fontSize: captionSize,
-          fontWeight: FontWeight.w300,
-          height: 1.35,
-        );
+    final captionStyle = _theaterStyle(
+      theme.textTheme.bodySmall?.copyWith(
+            color: Colors.white.withValues(alpha: 0.62),
+            fontSize: captionSize,
+            fontWeight: FontWeight.w300,
+            height: 1.35,
+          ) ??
+          TextStyle(
+            color: Colors.white.withValues(alpha: 0.62),
+            fontSize: captionSize,
+            fontWeight: FontWeight.w300,
+            height: 1.35,
+          ),
+    );
 
     final children = <Widget>[];
     if (titleAsH1 && title.trim().isNotEmpty) {
@@ -211,7 +238,11 @@ class _BlockRow extends StatelessWidget {
             width: homeSize(emojiSize + 6),
             child: Text(
               emoji,
-              style: TextStyle(fontSize: emojiSize, height: 1.2),
+              style: TextStyle(
+                fontSize: emojiSize,
+                height: 1.2,
+                fontFamilyFallback: kTheaterEmojiFontFallback,
+              ),
             ),
           ),
         ),

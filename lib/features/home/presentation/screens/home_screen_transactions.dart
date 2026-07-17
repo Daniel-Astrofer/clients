@@ -6,8 +6,6 @@ import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_acc
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
-import 'package:kerosene/features/movement/widgets/home_activity_surface.dart';
-
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
@@ -85,8 +83,7 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
       _HomeTransactionsListState();
 }
 
-class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
-    with SingleTickerProviderStateMixin {
+class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
   /// Multiple cards may stay open; expansion only grows downward.
   final Set<String> _expandedTransactionIds = <String>{};
 
@@ -94,24 +91,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   bool _armEntranceReveal = true;
   bool _playEntranceReveal = false;
   int _entranceRevealToken = 0;
-
-  /// One shared ticker drives interior glows on every card (cheap).
-  late final AnimationController _cardGlowPhase;
-
-  @override
-  void initState() {
-    super.initState();
-    _cardGlowPhase = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 16),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _cardGlowPhase.dispose();
-    super.dispose();
-  }
 
   void _scheduleEntranceReveal() {
     if (!_armEntranceReveal || _playEntranceReveal) return;
@@ -303,7 +282,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       );
     }
 
-    // No glow on black list background — only inside each card.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -358,9 +336,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
-    final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    final surface =
-        HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
 
     return Semantics(
       label: semanticLabel,
@@ -371,9 +346,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         expanded: expanded,
         mode: StatementTransactionCardMode.stacked,
         density: StatementTransactionCardDensity.home,
-        homeSurface: surface,
-        // Same phase for all cards → one light; clip keeps black gaps clean.
-        interiorGlowPhase: _cardGlowPhase,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {

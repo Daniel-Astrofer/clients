@@ -210,12 +210,13 @@ HomeStage _educationTipStage(HomeEducationEvent event, String lang) {
 }
 
 HomeStage _totpStage(String lang) {
-  final title = switch (lang) {
+  final code = lang.trim().toLowerCase().split(RegExp(r'[_-]')).first;
+  final title = switch (code) {
     'en' => 'Protect your account with TOTP',
     'es' => 'Protege tu cuenta con TOTP',
     _ => 'Proteja sua conta com TOTP',
   };
-  final body = switch (lang) {
+  final body = switch (code) {
     'en' =>
       'TOTP is a code that changes every few seconds in an authenticator app. '
           'Even if someone steals your password, they still need your phone. '
@@ -229,6 +230,11 @@ HomeStage _totpStage(String lang) {
           'Mesmo que alguém descubra sua senha, ainda precisa do celular. '
           'Ative em Configurações → Segurança — leva cerca de um minuto.',
   };
+  final ctaLabel = switch (code) {
+    'en' => 'Enable TOTP',
+    'es' => 'Activar TOTP',
+    _ => 'Ativar TOTP',
+  };
 
   return HomeStage(
     id: 'local-totp-recommend',
@@ -239,8 +245,8 @@ HomeStage _totpStage(String lang) {
       title: title,
       body: body,
       textMode: HomeStageTextMode.typewriter,
-      cta: const HomeStageCta(
-        label: 'Ativar TOTP',
+      cta: HomeStageCta(
+        label: ctaLabel,
         action: 'NAVIGATE',
         target: '/settings/security',
       ),
@@ -282,21 +288,27 @@ HomeStage _totpStage(String lang) {
 }
 
 HomeStage _incomingStage(HomeEducationEvent event, String lang) {
+  final code = lang.trim().toLowerCase().split(RegExp(r'[_-]')).first;
   final amount = event.amountLabel ?? 'fundos';
   final wallet = event.walletName ?? 'Principal';
-  final network = event.networkLabel ?? 'Interna';
+  final network = event.networkLabel ??
+      (code == 'en'
+          ? 'Internal'
+          : code == 'es'
+              ? 'Interna'
+              : 'Interna');
 
-  final title = switch (lang) {
+  final title = switch (code) {
     'en' => 'You received $amount',
     'es' => 'Recibiste $amount',
     _ => 'Você recebeu $amount',
   };
-  final body = switch (lang) {
-    'en' => 'Wallet “$wallet” · $network'
+  final body = switch (code) {
+    'en' => 'Wallet "$wallet" · $network'
         '${event.subtitle != null && event.subtitle!.isNotEmpty ? '\n${event.subtitle}' : ''}',
-    'es' => 'Cartera “$wallet” · $network'
+    'es' => 'Cartera "$wallet" · $network'
         '${event.subtitle != null && event.subtitle!.isNotEmpty ? '\n${event.subtitle}' : ''}',
-    _ => 'Carteira “$wallet” · $network'
+    _ => 'Carteira "$wallet" · $network'
         '${event.subtitle != null && event.subtitle!.isNotEmpty ? '\n${event.subtitle}' : ''}',
   };
 

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
 import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
+import 'package:kerosene/features/home/presentation/widgets/education_tier_card_3d.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -46,7 +47,13 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
       view: view,
       remote: remote,
     );
-    final feedHeight = homeSize(surfaceFeed.resolvedHeight);
+    // Tier education needs a bit more height for the 3D card face.
+    final hasTierCards = cards.any(isEducationTierFeedItem);
+    final feedHeight = homeSize(
+      hasTierCards
+          ? math.max(surfaceFeed.resolvedHeight, 132)
+          : surfaceFeed.resolvedHeight,
+    );
     final cardPadding = homeSize(surfaceFeed.cardPadding);
     final gap = homeSize(surfaceFeed.gap);
 
@@ -102,6 +109,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                           _HomeFeedMediaThumb(
                             media: card.media,
                             kind: card.kind,
+                            feedItem: card,
                           ),
                           SizedBox(width: homeSize(16)),
                           Expanded(
@@ -202,14 +210,28 @@ void _openFeedCta(BuildContext context, HomeFeedCta cta) {
 class _HomeFeedMediaThumb extends StatelessWidget {
   final HomeFeedMedia media;
   final HomeFeedKind kind;
+  final HomeFeedItem? feedItem;
 
   const _HomeFeedMediaThumb({
     required this.media,
     required this.kind,
+    this.feedItem,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Platform tier education → live 3D card (never mock PNG).
+    final tier = feedItem != null ? educationTierFromFeedItem(feedItem!) : null;
+    if (tier != null) {
+      final w = homeSize(108);
+      final h = homeSize(68);
+      return SizedBox(
+        width: w,
+        height: h,
+        child: EducationTierCard3D(tier: tier, width: w, height: h),
+      );
+    }
+
     final accent = switch (kind) {
       HomeFeedKind.promo => homeAmberColor,
       HomeFeedKind.announcement => Colors.white70,
@@ -221,19 +243,22 @@ class _HomeFeedMediaThumb extends StatelessWidget {
     final url = media.url?.trim() ?? '';
     final poster = media.posterUrl?.trim() ?? '';
     final imageUrl = poster.isNotEmpty ? poster : url;
+    // Skip legacy mock product shots under assets/feed/cards/.
+    final isLegacyMockCard = imageUrl.contains('feed/cards/');
     final isAsset = imageUrl.startsWith('asset:');
     final assetPath =
         isAsset ? imageUrl.substring('asset:'.length) : imageUrl;
 
-    final isImageCard = media.type == HomeFeedMediaType.image ||
-        media.type == HomeFeedMediaType.video ||
-        media.type == HomeFeedMediaType.lottie;
-    // Card product shots need a wider thumb so they are recognizable.
-    final thumbW = isImageCard && imageUrl.isNotEmpty ? homeSize(72) : homeSize(56);
-    final thumbH = isImageCard && imageUrl.isNotEmpty ? homeSize(46) : homeSize(46);
-    final imgH = isImageCard && imageUrl.isNotEmpty ? homeSize(42) : homeSize(36);
+    final isImageCard = !isLegacyMockCard &&
+        (media.type == HomeFeedMediaType.image ||
+            media.type == HomeFeedMediaType.video ||
+            media.type == HomeFeedMediaType.lottie) &&
+        imageUrl.isNotEmpty;
+    final thumbW = isImageCard ? homeSize(72) : homeSize(56);
+    final thumbH = homeSize(46);
+    final imgH = isImageCard ? homeSize(42) : homeSize(36);
 
-    if (isImageCard && imageUrl.isNotEmpty) {
+    if (isImageCard) {
       final image = isAsset
           ? Image.asset(
               assetPath,
@@ -317,7 +342,11 @@ List<HomeEducationCardData> homeEducationCards(
       .toList(growable: false);
 }
 
-class HomeFundsDistributionSection extends ConsumerWidget {
+/// Same duration/curve as activity card expand/collapse.
+const Duration _kHomeDistributionRevealDuration = Duration(milliseconds: 800);
+const Curve _kHomeDistributionRevealCurve = Curves.easeInOutCubic;
+
+class HomeFundsDistributionSection extends ConsumerStatefulWidget {
   final WalletState walletState;
   final VoidCallback onViewStatement;
 
@@ -327,10 +356,75 @@ class HomeFundsDistributionSection extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeFundsDistributionSection> createState() =>
+      _HomeFundsDistributionSectionState();
+}
+
+class _HomeFundsDistributionSectionState
+    extends ConsumerState<HomeFundsDistributionSection>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _reveal;
+  late final Animation<double> _progress;
+  ScrollPosition? _scrollPosition;
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reveal = AnimationController(
+      vsync: this,
+      duration: _kHomeDistributionRevealDuration,
+    );
+    _progress = CurvedAnimation(
+      parent: _reveal,
+      curve: _kHomeDistributionRevealCurve,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final position = Scrollable.maybeOf(context)?.position;
+    if (!identical(position, _scrollPosition)) {
+      _scrollPosition?.removeListener(_checkVisibility);
+      _scrollPosition = position;
+      _scrollPosition?.addListener(_checkVisibility);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkVisibility();
+    });
+  }
+
+  void _checkVisibility() {
+    if (!mounted || _started) return;
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final topLeft = box.localToGlobal(Offset.zero);
+    final bottom = topLeft.dy + box.size.height;
+    final screenH = MediaQuery.sizeOf(context).height;
+    // Fire when the section enters the lower/mid viewport while scrolling.
+    final visible = bottom > screenH * 0.1 && topLeft.dy < screenH * 0.92;
+    if (!visible) return;
+    _started = true;
+    if (KeroseneMotion.reduceMotion(context)) {
+      _reveal.value = 1;
+    } else {
+      unawaited(_reveal.forward());
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollPosition?.removeListener(_checkVisibility);
+    _reveal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final wallets = walletState is WalletLoaded
-        ? (walletState as WalletLoaded).wallets
+    final wallets = widget.walletState is WalletLoaded
+        ? (widget.walletState as WalletLoaded).wallets
         : const <Wallet>[];
     final displayWallets = _sortedWallets(wallets);
     final totalBalance = displayWallets.fold<double>(
@@ -360,13 +454,15 @@ class HomeFundsDistributionSection extends ConsumerWidget {
                 ? a
                 : b;
           });
+    final dominantId = dominantEntry?.wallet.id;
+
     return HomeGlassPanel(
       borderRadius: BorderRadius.circular(homeSize(16)),
       padding: EdgeInsets.fromLTRB(
-        homeSize(20),
         homeSize(18),
-        homeSize(20),
+        homeSize(16),
         homeSize(18),
+        homeSize(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,19 +481,20 @@ class HomeFundsDistributionSection extends ConsumerWidget {
                 ),
               ),
               TextButton(
-                onPressed: onViewStatement,
+                onPressed: widget.onViewStatement,
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white.withValues(alpha: 0.72),
+                  foregroundColor: Colors.white.withValues(alpha: 0.78),
                   padding: EdgeInsets.symmetric(horizontal: homeSize(8)),
                   minimumSize: Size(0, homeSize(32)),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   textStyle: theme.textTheme.labelSmall?.copyWith(
                     fontSize: homeFontSize(12),
-                    fontWeight: FontWeight.w300,
+                    fontWeight: FontWeight.w400,
                     letterSpacing: 0,
                   ),
                 ),
-                child: Text(homeViewStatementShortLabel(context)),
+                // Extrato already lives on Insights — use "Ver detalhes" here.
+                child: Text(context.tr.txListViewDetails),
               ),
             ],
           ),
@@ -405,68 +502,85 @@ class HomeFundsDistributionSection extends ConsumerWidget {
           if (entries.isEmpty)
             const HomeDistributionEmptyState()
           else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: homeSize(142),
-                  height: homeSize(142),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CustomPaint(
-                        size: Size.square(homeSize(142)),
-                        painter: HomeDistributionChartPainter(entries: entries),
-                      ),
-                      SizedBox(
-                        width: homeSize(84),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              dominantEntry?.wallet.name ?? '',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.84),
-                                fontSize: homeFontSize(10),
-                                fontWeight: FontWeight.w600,
-                                height: 1.15,
-                                letterSpacing: 0,
+            AnimatedBuilder(
+              animation: _progress,
+              builder: (context, _) {
+                final t = _progress.value;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: homeSize(142),
+                      height: homeSize(142),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CustomPaint(
+                            size: Size.square(homeSize(142)),
+                            painter: HomeDistributionChartPainter(
+                              entries: entries,
+                              progress: t,
+                            ),
+                          ),
+                          Opacity(
+                            opacity: t.clamp(0.0, 1.0),
+                            child: SizedBox(
+                              width: homeSize(84),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    dominantEntry?.wallet.name ?? '',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.84),
+                                      fontSize: homeFontSize(10),
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.15,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                  SizedBox(height: homeSize(4)),
+                                  Text(
+                                    _homeDistributionPercentLabel(
+                                      (dominantEntry?.share ?? 0) * 100,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: homeFontSize(17),
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(height: homeSize(4)),
-                            Text(
-                              _homeDistributionPercentLabel(
-                                (dominantEntry?.share ?? 0) * 100,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: Colors.white,
-                                fontSize: homeFontSize(17),
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: homeSize(18)),
-                Expanded(
-                  child: Column(
-                    children: [
-                      for (final entry in entries.take(4))
-                        HomeDistributionLegendItem(entry: entry),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                    SizedBox(width: homeSize(16)),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          for (final entry in entries.take(4))
+                            HomeDistributionLegendItem(
+                              entry: entry,
+                              progress: t,
+                              isDominant: entry.wallet.id == dominantId,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
         ],
       ),
@@ -552,14 +666,25 @@ class HomeDistributionEmptyState extends StatelessWidget {
 
 class HomeDistributionLegendItem extends StatelessWidget {
   final HomeWalletDistributionEntry entry;
+  final double progress;
+  final bool isDominant;
 
-  const HomeDistributionLegendItem({required this.entry});
+  const HomeDistributionLegendItem({
+    required this.entry,
+    required this.progress,
+    required this.isDominant,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = progress.clamp(0.0, 1.0);
+    final share = entry.share.clamp(0.0, 1.0);
+    // Dominant wallet keeps the largest bar; others scale relative to share.
+    final barHeight = isDominant ? homeSize(7) : homeSize(5);
+
     return Padding(
-      padding: EdgeInsets.only(bottom: homeSize(10)),
+      padding: EdgeInsets.only(bottom: homeSize(12)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -571,7 +696,9 @@ class HomeDistributionLegendItem extends StatelessWidget {
             child: SizedBox.square(dimension: homeSize(8)),
           ),
           SizedBox(width: homeSize(8)),
+          // Wallet name — leave typography untouched.
           Expanded(
+            flex: 5,
             child: Text(
               entry.wallet.name,
               maxLines: 1,
@@ -586,17 +713,64 @@ class HomeDistributionLegendItem extends StatelessWidget {
             ),
           ),
           SizedBox(width: homeSize(8)),
-          Text(
-            _homeDistributionPercentLabel(entry.share * 100),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white,
-              fontSize: homeFontSize(12),
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0,
+          // White horizontal bar grows right → left on the wallet line only.
+          Expanded(
+            flex: 4,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxW = constraints.maxWidth;
+                final width = maxW * share * t;
+                return Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    width: width,
+                    height: barHeight,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(homeSize(99)),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
+          SizedBox(width: homeSize(8)),
+          // Dominant share: black % on white chip (readable on dark panel).
+          // Others: light % — wallet name styles stay untouched above.
+          if (isDominant)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: homeSize(6),
+                vertical: homeSize(2),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(homeSize(6)),
+              ),
+              child: Text(
+                _homeDistributionPercentLabel(entry.share * 100),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: Colors.black,
+                  fontSize: homeFontSize(12),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+            )
+          else
+            Text(
+              _homeDistributionPercentLabel(entry.share * 100),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.white,
+                fontSize: homeFontSize(12),
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0,
+              ),
+            ),
         ],
       ),
     );
@@ -605,16 +779,22 @@ class HomeDistributionLegendItem extends StatelessWidget {
 
 class HomeDistributionChartPainter extends CustomPainter {
   final List<HomeWalletDistributionEntry> entries;
+  /// 0 → 1 reveal; arcs ease into their final positions.
+  final double progress;
 
-  const HomeDistributionChartPainter({required this.entries});
+  const HomeDistributionChartPainter({
+    required this.entries,
+    this.progress = 1,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final t = progress.clamp(0.0, 1.0);
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2 - homeSize(12);
     final strokeWidth = homeSize(16);
     final basePaint = Paint()
-      ..color = homePanelBorderColor.withValues(alpha: 0.72)
+      ..color = homePanelBorderColor.withValues(alpha: 0.72 * (0.35 + 0.65 * t))
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.butt;
@@ -622,7 +802,7 @@ class HomeDistributionChartPainter extends CustomPainter {
 
     final totalShare =
         entries.fold<double>(0, (sum, entry) => sum + entry.share);
-    if (totalShare <= 0) return;
+    if (totalShare <= 0 || t <= 0) return;
 
     final segmentPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -634,9 +814,12 @@ class HomeDistributionChartPainter extends CustomPainter {
 
     for (final entry in entries) {
       final normalizedShare = entry.share / totalShare;
-      final sweep = (math.pi * 2) * normalizedShare;
+      // Sweep grows with reveal so slices “take” their seats.
+      final sweep = (math.pi * 2) * normalizedShare * t;
       if (sweep <= 0) continue;
-      segmentPaint.color = entry.color;
+      segmentPaint.color = entry.color.withValues(
+        alpha: (entry.color.a * (0.55 + 0.45 * t)).clamp(0.0, 1.0),
+      );
       canvas.drawArc(
         rect,
         start + gap,
@@ -650,6 +833,7 @@ class HomeDistributionChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant HomeDistributionChartPainter oldDelegate) {
+    if (oldDelegate.progress != progress) return true;
     if (oldDelegate.entries.length != entries.length) return true;
     for (var index = 0; index < entries.length; index++) {
       final old = oldDelegate.entries[index];
@@ -870,10 +1054,13 @@ class HomeSectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback onAction;
 
-  /// Optional legacy text action; when null, shows open-statement icon (white).
+  /// Text action (e.g. “Veja seu extrato”); when null, falls back to icon.
   final String? actionLabel;
   final IconData actionIcon;
   final String? actionTooltip;
+
+  /// Trailing chevron after [actionLabel] (→ at end of the phrase).
+  final bool actionTrailingChevron;
 
   const HomeSectionHeader({
     required this.title,
@@ -881,6 +1068,7 @@ class HomeSectionHeader extends StatelessWidget {
     this.actionLabel,
     this.actionIcon = KeroseneIcons.history,
     this.actionTooltip,
+    this.actionTrailingChevron = false,
   });
 
   @override
@@ -909,16 +1097,30 @@ class HomeSectionHeader extends StatelessWidget {
           TextButton(
             onPressed: onAction,
             style: TextButton.styleFrom(
-              foregroundColor: homeAmberColor,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              foregroundColor: Colors.white.withValues(alpha: 0.88),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               minimumSize: const Size(0, 36),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w300,
+                fontWeight: FontWeight.w400,
+                fontSize: homeFontSize(13),
                 letterSpacing: 0,
               ),
             ),
-            child: Text(actionLabel!),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(actionLabel!),
+                if (actionTrailingChevron) ...[
+                  SizedBox(width: homeSize(2)),
+                  Icon(
+                    KeroseneIcons.chevronRight,
+                    size: homeSize(16),
+                    color: Colors.white.withValues(alpha: 0.88),
+                  ),
+                ],
+              ],
+            ),
           )
         else
           IconButton(
@@ -936,4 +1138,14 @@ class HomeSectionHeader extends StatelessWidget {
       ],
     );
   }
+}
+
+/// CTA under Atividades: “Veja seu extrato” + chevron.
+String homeSeeYourStatementLabel(BuildContext context) {
+  return _distributionCopy(
+    context,
+    pt: 'Veja seu extrato',
+    en: 'See your statement',
+    es: 'Vea su extracto',
+  );
 }

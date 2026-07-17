@@ -92,17 +92,6 @@ class StatementTransactionCard extends ConsumerWidget {
   final StatementTransactionCardMode mode;
   final StatementTransactionCardDensity density;
 
-  /// Optional paper override (home ledger tab: onchain/cold/total).
-  final Color? paperBackground;
-  final Color? paperBorder;
-
-  /// Full home surface style (gradient card + ink).
-  final HomeActivitySurfaceStyle? homeSurface;
-
-  /// Shared list phase — same for every card so the light feels like one glow.
-  /// Painted only inside the card clip; never on black gaps.
-  final Animation<double>? interiorGlowPhase;
-
   const StatementTransactionCard({
     super.key,
     required this.transaction,
@@ -110,10 +99,6 @@ class StatementTransactionCard extends ConsumerWidget {
     this.onTap,
     this.mode = StatementTransactionCardMode.stacked,
     this.density = StatementTransactionCardDensity.full,
-    this.paperBackground,
-    this.paperBorder,
-    this.homeSurface,
-    this.interiorGlowPhase,
   });
 
   @override
@@ -127,13 +112,10 @@ class StatementTransactionCard extends ConsumerWidget {
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final wallets = _walletsFromRef(ref);
     final accounts = _accountsFromRef(ref);
-    final surface = homeSurface;
     final colors = TransactionCardColors.resolve(
       transaction,
       wallets: wallets,
       accounts: accounts,
-      paperBackground: surface?.cardTop ?? paperBackground,
-      paperBorder: surface?.border ?? paperBorder,
     );
     final presentation = TransactionPresentation.fromTransaction(
       context,
@@ -156,11 +138,10 @@ class StatementTransactionCard extends ConsumerWidget {
     final iconSize = isHome ? 40.0 : (compact ? 42.0 : 48.0);
     final titleFontSize = isHome ? 14.5 : (compact ? 15.0 : 17.0);
     final counterpartyFontSize = isHome ? 11.5 : (compact ? 12.0 : 13.0);
-    // Colored ledger tabs: ink follows surface style for contrast.
-    final titleColor = surface?.title ?? colors.title;
-    final subtitleColor = surface?.subtitle ?? colors.subtitle;
-    final metaColor = surface?.meta ?? colors.meta;
-    final amountColor = surface?.amount ?? colors.title;
+    final titleColor = colors.title;
+    final subtitleColor = colors.subtitle;
+    final metaColor = colors.meta;
+    final amountColor = colors.title;
 
     if (mode == StatementTransactionCardMode.separated) {
       return _BankStatementTransactionRow(
@@ -191,22 +172,11 @@ class StatementTransactionCard extends ConsumerWidget {
       if (expanded) 'expandido',
     ].where((s) => s.trim().isNotEmpty).join('. ');
 
-    // Opaque card paper only — never transparent (would show black list behind).
     final radius = BorderRadius.circular(isHome ? 20 : 28);
     final decoration = BoxDecoration(
-      gradient: surface != null
-          ? LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [surface.cardTop, surface.cardBottom],
-            )
-          : null,
-      color: surface == null ? colors.background : null,
+      color: colors.background,
       borderRadius: radius,
-      border: Border.all(
-        color: surface?.border ?? colors.border,
-        width: surface != null && surface.invertInk ? 1.4 : 1,
-      ),
+      border: Border.all(color: colors.border, width: 1),
       boxShadow: isHome
           ? null
           : [
@@ -315,7 +285,6 @@ class StatementTransactionCard extends ConsumerWidget {
                           transaction: transaction,
                           presentation: presentation,
                           colors: colors,
-                          surface: surface,
                         )
                       : _TransactionDetailsTable(
                           transaction: transaction,
@@ -328,40 +297,18 @@ class StatementTransactionCard extends ConsumerWidget {
       ],
     );
 
-    final showGlow =
-        isHome && surface != null && interiorGlowPhase != null;
-
-    // Critical: Container.decoration is the opaque card body.
-    // clipBehavior clips the glow to that shape — black list gaps get no paint.
     return Semantics(
       button: onTap != null,
       label: a11yLabel,
       child: Material(
         color: Colors.transparent,
-        clipBehavior: Clip.none,
         child: InkWell(
           onTap: onTap,
           borderRadius: radius,
           child: Container(
             decoration: decoration,
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.passthrough,
-              children: [
-                // Glow is a child of the opaque decorated container → can't leave the card.
-                if (showGlow)
-                  Positioned.fill(
-                    child: HomeActivityCardGlow(
-                      style: surface,
-                      phase: interiorGlowPhase!,
-                    ),
-                  ),
-                Padding(
-                  padding: EdgeInsets.all(cardPadding),
-                  child: body,
-                ),
-              ],
-            ),
+            padding: EdgeInsets.all(cardPadding),
+            child: body,
           ),
         ),
       ),
@@ -633,22 +580,19 @@ class _HomeQuickExpand extends StatelessWidget {
   final Transaction transaction;
   final TransactionPresentation presentation;
   final TransactionCardColors colors;
-  final HomeActivitySurfaceStyle? surface;
 
   const _HomeQuickExpand({
     required this.transaction,
     required this.presentation,
     required this.colors,
-    this.surface,
   });
 
   @override
   Widget build(BuildContext context) {
     final rows = presentation.listExpandFields;
-    final labelColor = surface?.detailLabel ?? const Color(0xFF1C1C1F);
-    final valueColor = surface?.detailValue ?? const Color(0xFF0A0A0B);
-    final lineColor = surface?.divider ?? const Color(0xFFD0D0D4);
-    final actionColor = surface?.action ?? Colors.black;
+    const labelColor = Color(0xFF1C1C1F);
+    const valueColor = Color(0xFF0A0A0B);
+    const lineColor = Color(0xFFD0D0D4);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -672,11 +616,7 @@ class _HomeQuickExpand extends StatelessWidget {
         ],
         _ActivityExpandedActions(transaction: transaction, dark: false),
         const SizedBox(height: 4),
-        _SeeDetailsLink(
-          transaction: transaction,
-          dark: false,
-          foreground: actionColor,
-        ),
+        _SeeDetailsLink(transaction: transaction, dark: false),
       ],
     );
   }
@@ -1080,19 +1020,16 @@ class _GreyLoadingTrackPainter extends CustomPainter {
 class _SeeDetailsLink extends StatelessWidget {
   final Transaction transaction;
   final bool dark;
-  final Color? foreground;
 
   const _SeeDetailsLink({
     required this.transaction,
     this.dark = false,
-    this.foreground,
   });
 
   @override
   Widget build(BuildContext context) {
     final label = TransactionPresentationCopy.of(context).viewDetails;
-    final color = foreground ??
-        (dark ? TransactionPalette.inkOnDark : Colors.black);
+    final color = dark ? TransactionPalette.inkOnDark : Colors.black;
     return Center(
       child: TextButton(
         onPressed: () {

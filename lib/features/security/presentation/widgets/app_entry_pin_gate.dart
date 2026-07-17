@@ -16,28 +16,75 @@ import 'package:kerosene/features/security/presentation/providers/security_provi
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'pin_entry_scaffold.dart';
 
-/// App entry PIN.
+/// App entry PIN (authenticated / token session).
 ///
-/// Exact product flow:
-/// 1. Kerosene K loading (~3s) — outside this widget
-/// 2. PIN pad — user types fully (no network, no Tor wait)
-/// 3. After complete PIN → loading dots, PIN held in memory
-/// 4. Wait Tor up on dots
-/// 5. Send verify request
-/// 6. Unlock → child (HomeLoading)
-class AppEntryPinGate extends ConsumerWidget {
+/// Parent shell keeps the K logo until Tor is settled, then mounts this gate
+/// **once** — so the user is never asked for PIN pre-Tor and again post-Tor.
+///
+/// Flow:
+/// 1. K logo (splash + Tor) — outside this widget
+/// 2. PIN pad once → verify (Tor already ready)
+/// 3. Unlock → child
+class AppEntryPinGate extends ConsumerStatefulWidget {
   final Widget child;
 
   const AppEntryPinGate({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unlocked = ref.watch(appEntryPinUnlockedProvider);
+  ConsumerState<AppEntryPinGate> createState() => _AppEntryPinGateState();
+}
+
+class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
+  bool _statusSyncKicked = false;
+
+  void _kickServerStatusSyncOnce() {
+    if (_statusSyncKicked) return;
+    if (!ref.read(torSettledProvider)) return;
+    if (ref.read(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked) {
+      return;
+    }
+    _statusSyncKicked = true;
+    // Fire-and-forget — never watch AsyncValue (would rebuild the pad).
+    unawaited(ref.read(appPinGateServerSyncProvider.future));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unlocked = ref.watch(appEntryPinUnlockedProvider) ||
+        AppEntryPinSession.unlocked;
     if (unlocked) {
-      return child;
+      if (!ref.read(appEntryPinUnlockedProvider) &&
+          AppEntryPinSession.unlocked) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (AppEntryPinSession.unlocked) {
+            ref.read(appEntryPinUnlockedProvider.notifier).unlock();
+          }
+        });
+      }
+      return widget.child;
     }
 
-    // Synchronous local status only — never AsyncLoading / Tor wait here.
+    // Safety net: if this gate is mounted before Tor (e.g. named route), hold
+    // dots instead of showing a pad that will be remounted when Tor settles.
+    final torSettled = ref.watch(torSettledProvider);
+    if (!torSettled) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: TorLoadingDots(
+            dotSize: 7,
+            spacing: 10,
+            travel: 12,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    // Tor is up — optional one-shot status sync (no watch).
+    _kickServerStatusSyncOnce();
+
     final status = ref.watch(appPinGateStatusProvider);
 
     if (status.requiresSetup) {
@@ -47,7 +94,7 @@ class AppEntryPinGate extends ConsumerWidget {
       );
     }
     if (!status.requiresVerification) {
-      return child;
+      return widget.child;
     }
     return _AppEntryPinLockScreen(
       key: const ValueKey('app-entry-pin-lock'),
@@ -70,11 +117,17 @@ class _AppEntryPinSetupScreenState
     extends ConsumerState<_AppEntryPinSetupScreen> {
   bool _busy = false;
   bool _confirming = false;
+  bool _handoffApplied = false;
   String _pin = '';
   String _confirmation = '';
   String? _error;
+  int? _handoffLength;
 
-  int get _pinLength => widget.status.minPinLength.clamp(4, 8);
+  int get _pinLength {
+    final handoff = _handoffLength;
+    if (handoff != null) return handoff.clamp(4, 8);
+    return widget.status.minPinLength.clamp(4, 8);
+  }
 
   String get _currentInput => _confirming ? _confirmation : _pin;
 
@@ -83,6 +136,21 @@ class _AppEntryPinSetupScreenState
       _confirmation = value;
     } else {
       _pin = value;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_handoffApplied) return;
+    _handoffApplied = true;
+    // AUTH_018 path: user already typed a PIN on the unlock pad — only confirm.
+    final handoff = AppPinSetupHandoff.take();
+    if (handoff != null && handoff.length >= 4) {
+      _pin = handoff;
+      _handoffLength = handoff.length;
+      _confirming = true;
+      _confirmation = '';
     }
   }
 
@@ -140,11 +208,16 @@ class _AppEntryPinSetupScreenState
       _busy = true;
       _error = null;
     });
+    AppEntryPinSession.pinRequestInFlight = true;
 
     final torReady =
         await ref.read(appColdStartProvider.notifier).waitUntilTorReadyForApi();
-    if (!mounted) return;
+    if (!mounted) {
+      AppEntryPinSession.pinRequestInFlight = false;
+      return;
+    }
     if (!torReady) {
+      AppEntryPinSession.pinRequestInFlight = false;
       setState(() {
         _busy = false;
         _error = _torStillWarmingMessage(context);
@@ -157,6 +230,7 @@ class _AppEntryPinSetupScreenState
           pin: pinToConfigure,
         );
 
+    AppEntryPinSession.pinRequestInFlight = false;
     if (!mounted) return;
     result.fold(
       (failure) {
@@ -166,12 +240,13 @@ class _AppEntryPinSetupScreenState
         });
       },
       (status) {
+        // Unlock first so a prefs/epoch bump cannot re-show the pad.
+        ref.read(appEntryPinUnlockedProvider.notifier).unlock();
         _persistPinConfiguredHint(
           ref,
-          configured: status.configured && status.enabled,
+          configured: true,
           pinLength: pinToConfigure.length,
         );
-        ref.read(appEntryPinUnlockedProvider.notifier).unlock();
       },
     );
 
@@ -221,8 +296,11 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
 
   bool _busy = false;
   /// Captured at first frame — never changes mid-entry (no provider watch).
-  late final int _pinTargetLength =
-      widget.status.minPinLength.clamp(4, 8);
+  late final int _minPinLength = widget.status.minPinLength.clamp(4, 8);
+  late final int _maxPinLength = widget.status.maxPinLength.clamp(4, 8);
+  /// When min==max we know the length → auto-submit. Otherwise wait for confirm.
+  late final bool _fixedLength = _minPinLength == _maxPinLength;
+  late final int _pinTargetLength = _fixedLength ? _minPinLength : _maxPinLength;
 
   @override
   void dispose() {
@@ -236,7 +314,9 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
     HapticFeedback.selectionClick();
     _pin += digit;
     _errorMessage = null;
-    if (_pin.length == _pinTargetLength) {
+    // Auto-submit only when we know the exact length (avoids submitting a
+    // 4-digit prefix of a longer PIN and forcing a second try).
+    if (_fixedLength && _pin.length == _pinTargetLength) {
       unawaited(_submit());
     }
   }
@@ -250,10 +330,10 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
 
   Future<void> _submit() async {
     if (_busy || widget.status.locked) return;
-    if (_pin.length != _pinTargetLength) {
+    if (_pin.length < _minPinLength || _pin.length > _maxPinLength) {
       _errorMessage = context.tr.appEntryPinLengthError(
-        _pinTargetLength,
-        _pinTargetLength,
+        _minPinLength,
+        _maxPinLength,
       );
       return;
     }
@@ -264,12 +344,18 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
       _busy = true;
       _errorMessage = null;
     });
+    // Block GET /app-pin sync from remounting the pad while verify runs.
+    AppEntryPinSession.pinRequestInFlight = true;
 
     final torReady =
         await ref.read(appColdStartProvider.notifier).waitUntilTorReadyForApi();
-    if (!mounted) return;
+    if (!mounted) {
+      AppEntryPinSession.pinRequestInFlight = false;
+      return;
+    }
 
     if (!torReady) {
+      AppEntryPinSession.pinRequestInFlight = false;
       setState(() {
         _busy = false;
         _errorMessage = _torStillWarmingMessage(context);
@@ -280,7 +366,10 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
     final result = await ref
         .read(securityRepositoryProvider)
         .verifyAppPin(pin: pinToVerify);
-    if (!mounted) return;
+    if (!mounted) {
+      AppEntryPinSession.pinRequestInFlight = false;
+      return;
+    }
 
     result.fold(
       (failure) {
@@ -293,10 +382,12 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
           return;
         }
 
+        AppEntryPinSession.pinRequestInFlight = false;
         _applyVerifyFailure(failure);
         setState(() => _busy = false);
       },
       (status) {
+        AppEntryPinSession.pinRequestInFlight = false;
         _applyVerifySuccess(status, pinLength: pinToVerify.length);
       },
     );
@@ -310,9 +401,13 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
     final ready = await ref
         .read(appColdStartProvider.notifier)
         .waitUntilTorReadyForApi(timeout: const Duration(seconds: 30));
-    if (!mounted) return;
+    if (!mounted) {
+      AppEntryPinSession.pinRequestInFlight = false;
+      return;
+    }
 
     if (!ready) {
+      AppEntryPinSession.pinRequestInFlight = false;
       setState(() {
         _busy = false;
         _errorMessage = _torStillWarmingMessage(context);
@@ -323,8 +418,12 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
     final retry = await ref
         .read(securityRepositoryProvider)
         .verifyAppPin(pin: pinToVerify);
-    if (!mounted) return;
+    if (!mounted) {
+      AppEntryPinSession.pinRequestInFlight = false;
+      return;
+    }
 
+    AppEntryPinSession.pinRequestInFlight = false;
     retry.fold(
       (failure) {
         _applyVerifyFailure(failure);
@@ -337,13 +436,15 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
   }
 
   void _applyVerifySuccess(AppPinStatus status, {required int pinLength}) {
+    // Unlock **before** local-hint writes / epoch bumps so the gate cannot
+    // rebuild into the pad again for one frame (double PIN).
+    ref.read(appEntryPinUnlockedProvider.notifier).unlock();
+    _pin = '';
     _persistPinConfiguredHint(
       ref,
-      configured: status.configured && status.enabled,
+      configured: true,
       pinLength: pinLength,
     );
-    _pin = '';
-    ref.read(appEntryPinUnlockedProvider.notifier).unlock();
   }
 
   void _applyVerifyFailure(dynamic failure) {
@@ -357,8 +458,8 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
     final isLocked =
         code == 'AUTH_020' || code == 'ERR_AUTH_APP_PIN_LOCKED';
     // Server has no PIN for this device hash (common on new Linux/desktop
-    // installs). Flip local hint to setup instead of the useless
-    // "atualize o estado" AUTH_018 copy.
+    // installs). Flip local hint to setup — keep the digits already typed so
+    // the user only confirms once (no full re-create after unlock attempt).
     final isNotConfigured = code == 'AUTH_018' ||
         code == 'ERR_AUTH_APP_PIN_NOT_CONFIGURED' ||
         msg.contains('ainda nao configurado') ||
@@ -366,8 +467,15 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
         msg.contains('not configured');
 
     if (isNotConfigured) {
-      _persistPinConfiguredHint(ref, configured: false);
-      bumpAppPinLocalState(ref);
+      final typed = _pin;
+      if (typed.length >= 4) {
+        AppPinSetupHandoff.offer(typed);
+      }
+      _persistPinConfiguredHint(
+        ref,
+        configured: false,
+        pinLength: typed.length >= 4 ? typed.length : null,
+      );
       setState(() {
         _busy = false;
         _pin = '';
@@ -409,7 +517,13 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
           enabled: !widget.status.locked && !_busy,
           onDigit: _appendDigit,
           onDelete: _deleteDigit,
-          onConfirm: widget.status.locked || _busy ? null : _submit,
+          // Confirm always available when length is flexible; with fixed length
+          // auto-submit covers most cases but confirm still works as fallback.
+          onConfirm: widget.status.locked ||
+                  _busy ||
+                  _pin.length < _minPinLength
+              ? null
+              : _submit,
           onCancel: () async {
             await ref.read(authControllerProvider.notifier).logout();
           },

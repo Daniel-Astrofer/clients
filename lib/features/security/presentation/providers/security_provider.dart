@@ -56,6 +56,18 @@ const AppPinStatus kOptimisticAppPinStatus = AppPinStatus(
 ///
 /// Digit count: use the length saved when the user configured the PIN;
 /// otherwise default to **4** (server minimum), not 6.
+///
+/// Mode rules:
+/// - `configured == true`  → single-entry unlock (verify)
+/// - `configured == false` → create + confirm setup (only true first create)
+/// - unknown (null hint)   → optimistic unlock (single verify). If the server
+///   has no device PIN, verify returns AUTH_018 and the gate flips to setup.
+///
+/// Pin length:
+/// - When we know the length (prefs after configure/verify), min==max so the
+///   pad auto-submits at that length.
+/// - When unknown, min=4 max=8 so the pad does **not** auto-submit at 4 and
+///   force a second attempt for 5–8 digit PINs.
 final appPinGateStatusProvider = Provider<AppPinStatus>((ref) {
   ref.watch(appPinLocalStateEpochProvider);
   final auth = ref.watch(authControllerProvider);
@@ -69,44 +81,109 @@ final appPinGateStatusProvider = Provider<AppPinStatus>((ref) {
   if (sessionScope != null) {
     final configured = prefs.getBool(appPinConfiguredPrefsKey(sessionScope));
     final storedLen = prefs.getInt(appPinLengthPrefsKey(sessionScope));
-    final pinLen = (storedLen ?? 4).clamp(4, 8);
+    final knownLen = (storedLen != null && storedLen >= 4 && storedLen <= 8)
+        ? storedLen
+        : null;
 
     if (configured == false) {
-      // Explicit local hint: this install has no PIN yet → setup.
+      // Explicit local hint: this install has no PIN yet → setup (create+confirm).
+      // New PINs use the platform minimum (4) for both steps.
+      final setupLen = knownLen ?? 4;
       return AppPinStatus(
         enabled: false,
         configured: false,
         remainingAttempts: 5,
         maxAttempts: 5,
-        minPinLength: pinLen,
-        maxPinLength: pinLen,
+        minPinLength: setupLen,
+        maxPinLength: setupLen,
       );
     }
-    if (configured == true) {
+    // configured == true **or** unknown (null): unlock pad (single verify).
+    if (knownLen != null) {
       return AppPinStatus(
         enabled: true,
         configured: true,
         remainingAttempts: 5,
         maxAttempts: 5,
-        minPinLength: pinLen,
-        maxPinLength: pinLen,
+        minPinLength: knownLen,
+        maxPinLength: knownLen,
       );
     }
-    // Unknown (no local hint): do **not** assume unlock — first login on a new
-    // Linux/Windows install would hit AUTH_018. Prefer setup; if the server
-    // already has a PIN, setup configure will ask for current PIN/TOTP.
-    return AppPinStatus(
-      enabled: false,
-      configured: false,
+    // Length unknown: flexible 4–8, submit via confirm (no wrong auto-submit).
+    return const AppPinStatus(
+      enabled: true,
+      configured: true,
       remainingAttempts: 5,
       maxAttempts: 5,
-      minPinLength: pinLen,
-      maxPinLength: pinLen,
+      minPinLength: 4,
+      maxPinLength: 8,
     );
   }
 
-  // Session scope still resolving — still show unlock pad (never skip gate).
-  return kOptimisticAppPinStatus;
+  // Session scope still resolving — unlock pad with flexible length.
+  return const AppPinStatus(
+    enabled: true,
+    configured: true,
+    remainingAttempts: 5,
+    maxAttempts: 5,
+    minPinLength: 4,
+    maxPinLength: 8,
+  );
+});
+
+/// After Tor settles, pull server PIN status so the gate can switch
+/// setup ↔ unlock **before** the user types.
+///
+/// IMPORTANT for authenticated login (token restore):
+/// - Must **not** be `watch`ed by the PIN pad (AsyncLoading→data rebuilds the
+///   pad and can force a second PIN entry — matches logs: verify + GET status).
+/// - Kick with `ref.read(...future)` once from the gate.
+/// - Only bump epoch when setup↔lock **mode** actually flips. `null → true`
+///   is not a mode change (unknown already shows unlock).
+final appPinGateServerSyncProvider = FutureProvider<void>((ref) async {
+  final auth = ref.watch(authControllerProvider);
+  if (auth is! AuthAuthenticated) return;
+  if (!ref.watch(torSettledProvider)) return;
+  if (ref.read(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked) {
+    return;
+  }
+  if (AppEntryPinSession.pinRequestInFlight) return;
+
+  final sessionScope = ref.watch(sessionStorageScopeProvider);
+  if (sessionScope == null || sessionScope.isEmpty) return;
+
+  final repository = ref.read(securityRepositoryProvider);
+  final result = await repository.getAppPinStatus();
+  if (!ref.mounted) return;
+  // User may have finished PIN while this request was in flight.
+  if (ref.read(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked) {
+    return;
+  }
+  if (AppEntryPinSession.pinRequestInFlight) return;
+
+  result.fold(
+    (_) {},
+    (status) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final configured = status.configured && status.enabled;
+      final prevConfigured =
+          prefs.getBool(appPinConfiguredPrefsKey(sessionScope));
+
+      // Only sync configured flag. NEVER write server minPinLength into the
+      // local pin-length hint — that is the platform minimum (usually 4), not
+      // the user's PIN size.
+      // ignore: discarded_futures
+      prefs.setBool(appPinConfiguredPrefsKey(sessionScope), configured);
+
+      // Mode change only: explicit false ↔ not-false.
+      // null (unknown) already presents as unlock — writing true must not bump.
+      final wasSetup = prevConfigured == false;
+      final nowSetup = !configured;
+      if (wasSetup != nowSetup) {
+        ref.read(appPinLocalStateEpochProvider.notifier).bump();
+      }
+    },
+  );
 });
 
 final sovereigntyStatusProvider = FutureProvider<SecurityStatus>((ref) async {
@@ -177,17 +254,23 @@ final appPinStatusProvider = FutureProvider<AppPinStatus>(
       },
       (status) {
         if (sessionScope != null) {
+          final configured = status.configured && status.enabled;
+          final prevConfigured =
+              prefs.getBool(appPinConfiguredPrefsKey(sessionScope));
+
+          // Configured flag only — pin length is written solely after a
+          // successful verify/configure with the digits the user entered.
           // ignore: discarded_futures
           prefs.setBool(
             appPinConfiguredPrefsKey(sessionScope),
-            status.configured && status.enabled,
+            configured,
           );
-          if (status.minPinLength > 0) {
-            // ignore: discarded_futures
-            prefs.setInt(
-              appPinLengthPrefsKey(sessionScope),
-              status.minPinLength.clamp(4, 8),
-            );
+
+          // Same rule as gate sync: only bump on real setup↔lock mode change.
+          final wasSetup = prevConfigured == false;
+          final nowSetup = !configured;
+          if (wasSetup != nowSetup) {
+            ref.read(appPinLocalStateEpochProvider.notifier).bump();
           }
         }
         return status;
@@ -252,6 +335,53 @@ final adminAuthenticatedDevicesProvider =
   );
 });
 
+/// Process-lifetime unlock flag. Survives Riverpod notifier rebuilds that would
+/// otherwise reset [appEntryPinUnlockedProvider] to `false` and re-show the pad
+/// after a successful verify (double PIN within the same app process).
+class AppEntryPinSession {
+  AppEntryPinSession._();
+
+  static bool unlocked = false;
+
+  /// True while a verify/configure request is in flight — blocks server status
+  /// sync from rewriting local hints and remounting the pad mid-entry.
+  static bool pinRequestInFlight = false;
+
+  static void markUnlocked() => unlocked = true;
+
+  static void clear() {
+    unlocked = false;
+    pinRequestInFlight = false;
+  }
+}
+
+/// When unlock verify hits AUTH_018 (no device PIN yet), the digits already
+/// typed are kept here so setup only asks for **confirm** — not a full
+/// create+confirm after the user already entered a PIN once.
+///
+/// Static (not a Riverpod provider) so setup can take the pin in
+/// [State.didChangeDependencies] without modifying providers mid-build.
+class AppPinSetupHandoff {
+  AppPinSetupHandoff._();
+
+  static String? _pin;
+
+  static void offer(String pin) {
+    final trimmed = pin.trim();
+    if (trimmed.length >= 4 && trimmed.length <= 8) {
+      _pin = trimmed;
+    }
+  }
+
+  static String? take() {
+    final value = _pin;
+    _pin = null;
+    return value;
+  }
+
+  static void clear() => _pin = null;
+}
+
 class AppEntryPinUnlockNotifier extends Notifier<bool> {
   @override
   bool build() {
@@ -259,17 +389,49 @@ class AppEntryPinUnlockNotifier extends Notifier<bool> {
     ref.keepAlive();
     // Do NOT watch auth in build() — every auth tick re-ran build() and reset
     // unlock to false, which re-showed the PIN pad after the user already passed.
+    //
+    // Unlock is sticky until **real sign-out** or a real account switch.
+    // AuthLoading / AuthError / server blips must NOT re-ask the entry PIN.
+    // Also restore from [AppEntryPinSession] if the notifier is recreated.
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      if (next is! AuthAuthenticated) {
+      if (next is AuthAuthenticated) {
+        if (previous is AuthAuthenticated) {
+          final prevId = previous.user.id.trim();
+          final nextId = next.user.id.trim();
+          // Ignore empty/placeholder ids that resolve after the first profile fetch.
+          if (prevId.isNotEmpty &&
+              nextId.isNotEmpty &&
+              prevId != '0' &&
+              nextId != '0' &&
+              prevId != nextId) {
+            AppEntryPinSession.clear();
+            AppPinSetupHandoff.clear();
+            state = false;
+          }
+        }
+        return;
+      }
+
+      // Only clear on explicit unauthenticated (logout / session invalidated).
+      if (next is AuthUnauthenticated) {
+        AppEntryPinSession.clear();
+        AppPinSetupHandoff.clear();
         state = false;
       }
+      // AuthLoading, AuthServerUnavailable, AuthError, TOTP steps, etc.: keep.
     });
-    return false;
+    return AppEntryPinSession.unlocked;
   }
 
-  void unlock() => state = true;
+  void unlock() {
+    AppEntryPinSession.markUnlocked();
+    state = true;
+  }
 
-  void lock() => state = false;
+  void lock() {
+    AppEntryPinSession.clear();
+    state = false;
+  }
 }
 
 final appEntryPinUnlockedProvider =

@@ -6,12 +6,13 @@ import 'package:kerosene/core/services/tor_network_bootstrap.dart';
 import 'package:kerosene/core/services/tor_service.dart';
 import 'package:kerosene/core/providers/tor_providers.dart';
 
-/// Cold-start readiness split for parallel PIN + Tor.
+/// Cold-start readiness for splash + Tor.
 ///
-/// - [minSplashElapsed]: K logo can dismiss (short brand beat).
+/// - [minSplashElapsed]: brand K beat finished.
 /// - [torSettled]: local Tor relay is bound (API can go out).
 ///
-/// PIN UI may appear after [minSplashElapsed] while Tor is still finishing.
+/// Authenticated entry PIN is shown only after Tor is settled (see
+/// mobile_bootstrap) so the pad is never shown twice (pre-Tor + post-Tor).
 class AppColdStartState {
   final bool torSettled;
   final bool minSplashElapsed;
@@ -21,7 +22,8 @@ class AppColdStartState {
     required this.minSplashElapsed,
   });
 
-  /// Shell may leave the K logo (PIN / welcome). Network may still be warming.
+  /// Shell may leave the pure brand splash (welcome / auth shell).
+  /// Authenticated PIN still waits for [torSettled] separately.
   bool get canShowAppShell => minSplashElapsed;
 
   /// Full network path ready (relay bound; circuit may still warm in background).

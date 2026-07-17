@@ -141,15 +141,24 @@ String formatFiatReference({
 String estimatedSendTime(
   SendDestinationAnalysis destination, {
   int? estimatedSeconds,
+  bool testnetLike = false,
 }) {
   if (destination.isOnChain) {
-    if (estimatedSeconds == null || estimatedSeconds <= 0) return '~10 min';
+    if (estimatedSeconds == null || estimatedSeconds <= 0) {
+      return testnetLike ? '~20+ min · testnet varia' : '~10 min';
+    }
     final minutes = (estimatedSeconds / 60).ceil();
-    if (minutes < 60) return '~$minutes min';
-    final hours = minutes ~/ 60;
-    final remainingMinutes = minutes % 60;
-    if (remainingMinutes == 0) return '~$hours h';
-    return '~$hours h $remainingMinutes min';
+    final String base;
+    if (minutes < 60) {
+      base = '~$minutes min';
+    } else {
+      final hours = minutes ~/ 60;
+      final remainingMinutes = minutes % 60;
+      base = remainingMinutes == 0
+          ? '~$hours h'
+          : '~$hours h $remainingMinutes min';
+    }
+    return testnetLike ? '$base · no testnet o tempo varia' : base;
   }
   if (destination.isLightning) return 'Segundos';
   return 'Instantâneo';

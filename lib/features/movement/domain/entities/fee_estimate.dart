@@ -17,6 +17,9 @@ class FeeEstimate extends Equatable {
   final int? fastEstimatedSeconds;
   final int? standardEstimatedSeconds;
   final int? slowEstimatedSeconds;
+  final int fastTargetBlocks;
+  final int standardTargetBlocks;
+  final int slowTargetBlocks;
   final String? feeSource;
   final DateTime? quoteExpiresAt;
   final bool serverPriced;
@@ -37,6 +40,9 @@ class FeeEstimate extends Equatable {
     this.fastEstimatedSeconds,
     this.standardEstimatedSeconds,
     this.slowEstimatedSeconds,
+    this.fastTargetBlocks = 2,
+    this.standardTargetBlocks = 3,
+    this.slowTargetBlocks = 6,
     this.feeSource,
     this.quoteExpiresAt,
     this.serverPriced = false,
@@ -62,6 +68,10 @@ class FeeEstimate extends Equatable {
       standardEstimatedSeconds:
           (json['standardEstimatedSeconds'] as num?)?.toInt(),
       slowEstimatedSeconds: (json['slowEstimatedSeconds'] as num?)?.toInt(),
+      fastTargetBlocks: (json['fastTargetBlocks'] as num?)?.toInt() ?? 2,
+      standardTargetBlocks:
+          (json['standardTargetBlocks'] as num?)?.toInt() ?? 3,
+      slowTargetBlocks: (json['slowTargetBlocks'] as num?)?.toInt() ?? 6,
       feeSource: json['feeSource']?.toString(),
       quoteExpiresAt: DateTime.tryParse(
         json['quoteExpiresAt']?.toString() ?? '',
@@ -87,6 +97,9 @@ class FeeEstimate extends Equatable {
         fastEstimatedSeconds,
         standardEstimatedSeconds,
         slowEstimatedSeconds,
+        fastTargetBlocks,
+        standardTargetBlocks,
+        slowTargetBlocks,
         feeSource,
         quoteExpiresAt,
         serverPriced,

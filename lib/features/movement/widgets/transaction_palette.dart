@@ -196,8 +196,6 @@ class TransactionCardColors {
     Transaction tx, {
     List<Wallet> wallets = const [],
     List<BitcoinAccount> accounts = const [],
-    Color? paperBackground,
-    Color? paperBorder,
   }) {
     final axes = TransactionAxes.classify(
       tx,
@@ -207,10 +205,8 @@ class TransactionCardColors {
     final surface = TransactionVisualTokens.legacySurfaceFor(axes.rail);
     final tone = TransactionPalette.toneFor(tx);
     return TransactionCardColors(
-      // Prefer explicit paper (home ledger tab) — else quiet rail wash.
-      background:
-          paperBackground ?? TransactionVisualTokens.backgroundFor(axes.variant),
-      border: paperBorder ?? TransactionVisualTokens.borderFor(axes.variant),
+      background: TransactionVisualTokens.backgroundFor(axes.variant),
+      border: TransactionVisualTokens.borderFor(axes.variant),
       title: TransactionPalette.inkPrimary,
       subtitle: TransactionPalette.inkSecondary,
       meta: TransactionPalette.inkTertiary,
@@ -228,28 +224,4 @@ class TransactionCardColors {
   }
 }
 
-/// Paper fills for home activity list (by balance tab).
-/// Stronger chroma so wallet context is readable at a glance.
-abstract final class HomeActivityPaper {
-  /// Total / internal — cool grey paper with visible edge.
-  static const Color total = Color(0xFFE8EAED);
-  static const Color totalBorder = Color(0xFFB8BCC4);
 
-  /// On-chain tab — warmer orange wash (still paper, not neon).
-  static const Color onchain = Color(0xFFFFE8D0);
-  static const Color onchainBorder = Color(0xFFE0A86A);
-
-  /// Cold tab — clearer blue wash.
-  static const Color cold = Color(0xFFD6E8F7);
-  static const Color coldBorder = Color(0xFF7EB0D6);
-
-  /// [viewName] is `HomeLedgerBalanceView.name` (total|platform|onChain|cold).
-  static (Color bg, Color border) forLedgerViewName(String viewName) {
-    return switch (viewName) {
-      'onChain' => (onchain, onchainBorder),
-      'cold' => (cold, coldBorder),
-      'platform' => (total, totalBorder),
-      _ => (total, totalBorder), // total
-    };
-  }
-}

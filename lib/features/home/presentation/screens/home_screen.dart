@@ -198,7 +198,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class HomeScreenState extends ConsumerState<HomeScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, FinancialSurfaceMixin {
   Future<void>? _refreshHomeFuture;
   String? _firstUseActionPanelUserId;
   late final StateController<bool> homeRouteActiveController;
@@ -751,6 +751,9 @@ class _HomeFeedBody extends StatelessWidget {
         HomeSectionHeader(
           title: homeRecentActivitiesTitle(context),
           onAction: onOpenStatement,
+          actionLabel: homeSeeYourStatementLabel(context),
+          actionTrailingChevron: true,
+          actionTooltip: context.tr.statementScreenTitle,
         ),
         SizedBox(height: homeSize(AppSpacing.md)),
         if (hasTransactions) ...[

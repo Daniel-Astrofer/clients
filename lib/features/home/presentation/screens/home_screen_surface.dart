@@ -138,26 +138,15 @@ class HomeSkeletonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final skeleton = Container(
+    // Flat matte placeholder — no metallic shimmer.
+    return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: HomeColors.surfaceDim,
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: borderRadius,
-        border: Border.all(color: HomeColors.surfaceBorder),
       ),
     );
-
-    if (KeroseneMotion.reduceMotion(context)) {
-      return skeleton;
-    }
-
-    return skeleton
-        .animate(onPlay: (controller) => controller.repeat())
-        .shimmer(
-          duration: 1300.ms,
-          color: HomeColors.surfaceBorder,
-        );
   }
 }
 

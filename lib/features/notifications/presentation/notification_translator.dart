@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 class NotificationTranslator {
-  static String resolveTitle(BuildContext context, SessionNotificationItem item) {
-    final tr = context.tr;
+  static String resolveTitle(BuildContext? context, SessionNotificationItem item) {
+    final tr = context != null ? context.tr : lookupAppLocalizations(const Locale('pt'));
 
     if (item.kind == SessionNotificationItem.kindAccountCreated) return tr.notifAccountCreatedTitle;
     if (item.kind == SessionNotificationItem.kindSecurityLoginDetected) return tr.notifSecurityLoginDetectedTitle;
@@ -41,8 +42,8 @@ class NotificationTranslator {
     return item.title;
   }
 
-  static String resolveBody(BuildContext context, SessionNotificationItem item) {
-    final tr = context.tr;
+  static String resolveBody(BuildContext? context, SessionNotificationItem item) {
+    final tr = context != null ? context.tr : lookupAppLocalizations(const Locale('pt'));
     
     final amount = item.metadata['amountBtc'] ?? item.metadata['amount'] ?? '';
     final wallet = item.metadata['walletId'] ?? item.metadata['wallet'] ?? 'Principal';

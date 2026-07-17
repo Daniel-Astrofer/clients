@@ -351,6 +351,9 @@ Future<dynamic> _confirmExternalSend({
   required String? Function(String toAddress) resolveRecentDestinationLabel,
   required bool Function() isMounted,
 }) async {
+  final feeRate = feeQuote.feeRateSatPerByte;
+  final feeRateInt =
+      feeRate != null && feeRate > 0 ? feeRate.round() : null;
   final result = await ref.read(withdrawProvider.notifier).withdraw(
         fromWalletName: wallet.id,
         toAddress: destination.isOnChain ? toAddress : null,
@@ -360,6 +363,9 @@ Future<dynamic> _confirmExternalSend({
         isLightning: destination.isLightning,
         networkFeeBtc: feeQuote.networkFeeBtc,
         maxRoutingFeeBtc: defaultLightningRoutingFeeBtc,
+        feeRateSatPerVbyte: destination.isOnChain ? feeRateInt : null,
+        feeTargetBlocks:
+            destination.isOnChain ? feeQuote.feeTargetBlocks : null,
         description: destination.isLightning
             ? 'Pagamento Lightning'
             : SendMoneyCopy.onchainSendDescription(context),

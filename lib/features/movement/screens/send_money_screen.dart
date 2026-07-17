@@ -73,7 +73,8 @@ class SendMoneyScreen extends ConsumerStatefulWidget {
   ConsumerState<SendMoneyScreen> createState() => SendMoneyScreenState();
 }
 
-class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
+class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
+    with FinancialSurfaceMixin {
   static const Color internalBlack = KeroseneBrandTokens.background;
   static const Color internalSurface = KeroseneBrandTokens.surface;
   static const Color internalSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
@@ -627,6 +628,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       networkFeeBtc: tierPick.networkFeeBtc,
       feeRateSatPerByte: tierPick.feeRateSatPerByte,
       estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
+      feeTargetBlocks: tierPick.feeTargetBlocks,
       feeSource: resolvedFee!.feeSource,
       quoteExpiresAt: resolvedFee!.quoteExpiresAt,
     );
@@ -705,6 +707,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       networkFeeBtc: tierPick.networkFeeBtc,
       feeRateSatPerByte: tierPick.feeRateSatPerByte,
       estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
+      feeTargetBlocks: tierPick.feeTargetBlocks,
       feeSource: fee.feeSource,
       quoteExpiresAt: fee.quoteExpiresAt,
     );
@@ -735,6 +738,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       totalDebitedBtc: totalDebited,
       feeRateSatPerByte: tierPick.feeRateSatPerByte,
       estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
+      feeTargetBlocks: tierPick.feeTargetBlocks,
       feeSource: fee.feeSource,
       quoteExpiresAt: fee.quoteExpiresAt,
       feeTier: tier,
@@ -772,6 +776,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     required double networkFeeBtc,
     double? feeRateSatPerByte,
     int? estimatedSettlementSeconds,
+    int? feeTargetBlocks,
     String? feeSource,
     DateTime? quoteExpiresAt,
   }) {
@@ -790,6 +795,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       totalDebitedBtc: calculation.totalDebitedBtc,
       feeRateSatPerByte: feeRateSatPerByte,
       estimatedSettlementSeconds: estimatedSettlementSeconds,
+      feeTargetBlocks: feeTargetBlocks,
       feeSource: feeSource,
       quoteExpiresAt: quoteExpiresAt,
       feeTier: _selectedFeeTier,

@@ -22,6 +22,11 @@ import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    AppEntryPinSession.clear();
+    AppPinSetupHandoff.clear();
+  });
+
   testWidgets('shows the requested PIN setup and unlock copy', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -238,6 +243,137 @@ void main() {
     expect(second.configured, isFalse);
     expect(repository.statusCalls, 2);
   });
+
+  test('unknown local PIN hint defaults to unlock pad (single verify)',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final sharedPreferences = await SharedPreferences.getInstance();
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        authControllerProvider.overrideWith(
+          () => _AuthenticatedAuthController(),
+        ),
+        appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final status = container.read(appPinGateStatusProvider);
+    expect(status.requiresSetup, isFalse);
+    expect(status.requiresVerification, isTrue);
+    expect(status.configured, isTrue);
+    // Flexible length until the real PIN length is known — no auto-submit at 4.
+    expect(status.minPinLength, 4);
+    expect(status.maxPinLength, 8);
+  });
+
+  test('known pin length uses fixed min=max for auto-submit', () async {
+    SharedPreferences.setMockInitialValues({
+      appPinConfiguredPrefsKey('user_user-1'): true,
+      appPinLengthPrefsKey('user_user-1'): 6,
+    });
+    final sharedPreferences = await SharedPreferences.getInstance();
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        authControllerProvider.overrideWith(
+          () => _AuthenticatedAuthController(),
+        ),
+        appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final status = container.read(appPinGateStatusProvider);
+    expect(status.configured, isTrue);
+    expect(status.minPinLength, 6);
+    expect(status.maxPinLength, 6);
+  });
+
+  test('explicit configured=false still shows setup (create + confirm)',
+      () async {
+    // Scope for _testUser (id "user-1") is user_user-1.
+    SharedPreferences.setMockInitialValues({
+      appPinConfiguredPrefsKey('user_user-1'): false,
+    });
+    final sharedPreferences = await SharedPreferences.getInstance();
+
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        authControllerProvider.overrideWith(
+          () => _AuthenticatedAuthController(),
+        ),
+        appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final scope = container.read(sessionStorageScopeProvider);
+    expect(scope, 'user_user-1');
+    final status = container.read(appPinGateStatusProvider);
+    expect(status.requiresSetup, isTrue);
+    expect(status.configured, isFalse);
+  });
+
+  test('PIN unlock survives AuthLoading session probe (no double PIN)',
+      () async {
+    AppEntryPinSession.clear();
+    final controller = _SwitchableAuthController(_testUser);
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith(() => controller),
+        appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(appEntryPinUnlockedProvider.notifier).unlock();
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+    expect(AppEntryPinSession.unlocked, isTrue);
+
+    // Simulate retrySessionCheck-style transient loading.
+    controller.setLoading();
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+
+    controller.setUser(_testUser);
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+
+    controller.setUnauthenticated();
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+    expect(AppEntryPinSession.unlocked, isFalse);
+  });
+
+  test('static session survives notifier rebuild (no double PIN)', () async {
+    AppEntryPinSession.clear();
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => _AuthenticatedAuthController(),
+        ),
+        appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+      ],
+    );
+    addTearDown(() {
+      AppEntryPinSession.clear();
+      container.dispose();
+    });
+
+    container.read(appEntryPinUnlockedProvider.notifier).unlock();
+    expect(AppEntryPinSession.unlocked, isTrue);
+
+    // Force notifier rebuild by invalidating — static session must restore true.
+    container.invalidate(appEntryPinUnlockedProvider);
+    await Future<void>.delayed(Duration.zero);
+    expect(AppEntryPinSession.unlocked, isTrue);
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+  });
 }
 
 class _AuthenticatedAuthController extends AuthController {
@@ -272,6 +408,14 @@ class _SwitchableAuthController extends AuthController {
 
   void setUser(User user) {
     state = AuthAuthenticated(user);
+  }
+
+  void setLoading() {
+    state = const AuthLoading();
+  }
+
+  void setUnauthenticated() {
+    state = const AuthUnauthenticated();
   }
 }
 

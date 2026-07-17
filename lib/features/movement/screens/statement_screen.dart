@@ -82,7 +82,8 @@ class TransactionStatementScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionStatementScreenState
-    extends ConsumerState<TransactionStatementScreen> {
+    extends ConsumerState<TransactionStatementScreen>
+    with FinancialSurfaceMixin {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 

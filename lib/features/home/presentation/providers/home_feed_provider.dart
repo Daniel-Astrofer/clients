@@ -151,33 +151,82 @@ dynamic _tryDecodeJsonObject(String raw) {
   }
 }
 
-/// Cards ready for UI: remote feed or local catalog.
-/// Always ensures card promos (Bronze/Metal/Gold) are visible even if the
-/// remote catalog omits them or the request fails.
+/// Cards ready for the home education carousel.
+///
+/// PLATFORM / TOTAL: always the **3 tier cards** (Bronze / White / Black).
+/// Remote copy (fees/rules) is preferred when the backend sends `edu-card-*`;
+/// mock PNG promos and the old fixed 3 generic tips are not shown here.
+/// ONCHAIN / COLD: remote network tips, else local on-chain fallback.
 List<HomeFeedItem> resolveHomeFeedCards({
   required BuildContext context,
   required HomeLedgerBalanceView view,
   required List<HomeFeedItem>? remote,
 }) {
-  final localCards = _localCardPromos(context, view);
+  if (view == HomeLedgerBalanceView.platform ||
+      view == HomeLedgerBalanceView.total) {
+    return _resolveTierEducationCards(context, remote);
+  }
   if (remote != null && remote.isNotEmpty) {
-    final hasCardPromo = remote.any(_isCardPromoItem);
-    if (hasCardPromo) {
-      return remote;
-    }
-    // Remote education arrived without card ads — prepend local promos.
-    return [...localCards, ...remote];
+    // Drop legacy mock card product shots on non-platform views.
+    final cleaned = remote.where((item) => !_isLegacyMockCardPromo(item)).toList();
+    if (cleaned.isNotEmpty) return cleaned;
   }
   return localEducationFallback(context, view);
 }
 
-bool _isCardPromoItem(HomeFeedItem item) {
+/// Exactly 3 EDUCATION tier items — remote text when present, else local defaults.
+List<HomeFeedItem> _resolveTierEducationCards(
+  BuildContext context,
+  List<HomeFeedItem>? remote,
+) {
+  final local = _localCardTierEducation(context);
+  if (remote == null || remote.isEmpty) return local;
+
+  HomeFeedItem? pick(String code) {
+    final needle = code.toLowerCase();
+    for (final item in remote) {
+      final id = item.id.toLowerCase();
+      final tag = item.tag.toUpperCase();
+      final campaign = (item.campaignId ?? '').toLowerCase();
+      if (tag == code ||
+          id.contains('edu-card-$needle') ||
+          id.contains('card-$needle') ||
+          (id.contains(needle) && id.contains('card')) ||
+          (campaign.contains(needle) && campaign.contains('card'))) {
+        // Keep remote title/body (backend fees) but force tag for 3D mapping.
+        return HomeFeedItem(
+          id: item.id,
+          kind: HomeFeedKind.education,
+          priority: item.priority,
+          title: item.title,
+          body: item.body,
+          tag: code,
+          media: item.media,
+          cta: item.cta,
+          surfaceTint: 'PLATFORM',
+          campaignId: item.campaignId ?? item.id,
+        );
+      }
+    }
+    return null;
+  }
+
+  return [
+    pick('BRONZE') ?? local[0],
+    pick('WHITE') ?? local[1],
+    pick('BLACK') ?? local[2],
+  ];
+}
+
+bool _isLegacyMockCardPromo(HomeFeedItem item) {
   final id = item.id.toLowerCase();
   final campaign = (item.campaignId ?? '').toLowerCase();
-  return id.contains('card') ||
-      id.contains('kerosene-cards') ||
-      campaign.contains('card') ||
-      campaign.contains('kerosene-cards');
+  return id.contains('kerosene-cards-trio') ||
+      id.contains('feat-card-metal') ||
+      id.contains('feat-card-gold') ||
+      id.contains('ann-kerosene-cards') ||
+      campaign.contains('kerosene-cards-trio') ||
+      (item.media.url?.contains('feed/cards/') ?? false);
 }
 
 List<HomeFeedItem> localEducationFallback(
@@ -185,166 +234,99 @@ List<HomeFeedItem> localEducationFallback(
   HomeLedgerBalanceView view,
 ) {
   final tr = context.tr;
-  List<HomeFeedItem> three(
-    String aId,
-    String aIcon,
-    String aTitle,
-    String aBody,
-    String aTag,
-    String bId,
-    String bIcon,
-    String bTitle,
-    String bBody,
-    String bTag,
-    String cId,
-    String cIcon,
-    String cTitle,
-    String cBody,
-    String cTag,
-  ) {
-    return [
-      _local(aId, aIcon, aTitle, aBody, aTag),
-      _local(bId, bIcon, bTitle, bBody, bTag),
-      _local(cId, cIcon, cTitle, cBody, cTag),
-    ];
+  // Offline mirror of backend tier education (BRONZE / WHITE / BLACK).
+  // Prefer remote feed when online so fees and rules stay reactive.
+  if (view == HomeLedgerBalanceView.platform ||
+      view == HomeLedgerBalanceView.total) {
+    return _localCardTierEducation(context);
   }
 
-  final education = switch (view) {
-    HomeLedgerBalanceView.platform => three(
-        'local-internal',
-        'internalTransfer',
-        tr.homeEducationInternalTitle,
-        tr.homeEducationInternalBody,
-        tr.homeEducationInternalTag,
-        'local-hash',
-        'biometric',
-        tr.homeEducationWalletHashTitle,
-        tr.homeEducationWalletHashBody,
-        tr.homeEducationWalletHashTag,
-        'local-ln-p',
-        'lightning',
-        tr.homeEducationLightningTitle,
-        tr.homeEducationLightningBody,
-        tr.homeEducationLightningTag,
-      ),
-    HomeLedgerBalanceView.onChain => three(
-        'local-onchain',
-        'bitcoin',
-        tr.homeEducationOnchainTitle,
-        tr.homeEducationOnchainBody,
-        tr.homeEducationOnchainTag,
-        'local-conf',
-        'sync',
-        tr.homeEducationConfirmationsTitle,
-        tr.homeEducationConfirmationsBody,
-        tr.homeEducationConfirmationsTag,
-        'local-fees',
-        'gauge',
-        tr.homeEducationFeesTitle,
-        tr.homeEducationFeesBody,
-        tr.homeEducationFeesTag,
-      ),
-    HomeLedgerBalanceView.cold => three(
-        'local-cold',
-        'bitcoin',
-        tr.homeEducationOnchainTitle,
-        tr.homeEducationOnchainBody,
-        tr.homeEducationOnchainTag,
-        'local-cold-conf',
-        'sync',
-        tr.homeEducationConfirmationsTitle,
-        tr.homeEducationConfirmationsBody,
-        tr.homeEducationConfirmationsTag,
-        'local-cold-fees',
-        'gauge',
-        tr.homeEducationFeesTitle,
-        tr.homeEducationFeesBody,
-        tr.homeEducationFeesTag,
-      ),
-    HomeLedgerBalanceView.total => three(
-        'local-btc',
-        'bitcoin',
-        tr.homeEducationBitcoinTitle,
-        tr.homeEducationBitcoinBody,
-        tr.homeEducationBitcoinTag,
-        'local-ln',
-        'lightning',
-        tr.homeEducationLightningTitle,
-        tr.homeEducationLightningGeneralBody,
-        tr.homeEducationLightningGeneralTag,
-        'local-kero',
-        'wallet',
-        tr.homeEducationInternalTitle,
-        tr.homeEducationKeroseneGeneralBody,
-        tr.homeEducationKeroseneGeneralTag,
-      ),
-  };
-
-  // Card promos always available offline / when remote fails.
-  // Prepended so they appear first in the carousel after a cold start.
+  // On-chain / cold: network tips only (no hard-coded platform tiers).
   return [
-    ..._localCardPromos(context, view),
-    ...education,
+    _local(
+      'local-onchain',
+      'bitcoin',
+      tr.homeEducationOnchainTitle,
+      tr.homeEducationOnchainBody,
+      tr.homeEducationOnchainTag,
+    ),
+    _local(
+      'local-conf',
+      'sync',
+      tr.homeEducationConfirmationsTitle,
+      tr.homeEducationConfirmationsBody,
+      tr.homeEducationConfirmationsTag,
+    ),
+    _local(
+      'local-fees',
+      'gauge',
+      tr.homeEducationFeesTitle,
+      tr.homeEducationFeesBody,
+      tr.homeEducationFeesTag,
+    ),
   ];
 }
 
-/// Offline mirror of backend card catalog (Bronze / Metal / Gold).
-List<HomeFeedItem> _localCardPromos(
-  BuildContext context,
-  HomeLedgerBalanceView view,
-) {
-  final cardsTitle = context.tr.homeFeedCardsTitle;
-  // On-chain / cold surface: only the trio announcement (matches backend views).
-  if (view == HomeLedgerBalanceView.onChain ||
-      view == HomeLedgerBalanceView.cold) {
-    return [
-      _localCard(
-        id: 'local-ann-kerosene-cards-trio',
-        kind: HomeFeedKind.announcement,
-        title: cardsTitle,
-        body:
-            'Três níveis: Bronze, Metal e Gold. Cada cartão assegurado com taxas e aparência próprias.',
-        tag: 'CARTÕES',
-        asset: 'assets/feed/cards/trio.png',
-      ),
-    ];
-  }
-
+/// Offline defaults matching backend wallet.card.* policy.
+/// Keep in sync with `WalletCardTierCatalog` / application.properties.
+List<HomeFeedItem> _localCardTierEducation(BuildContext context) {
+  final lang = Localizations.localeOf(context).languageCode;
   return [
-    _localCard(
-      id: 'local-ann-kerosene-cards-trio',
-      kind: HomeFeedKind.announcement,
-      title: cardsTitle,
-      body:
-          'Três níveis: Bronze, Metal e Gold. Cada cartão assegurado com taxas e aparência próprias.',
-      tag: 'CARTÕES',
-      asset: 'assets/feed/cards/trio.png',
-    ),
-    _localCard(
-      id: 'local-feat-card-bronze',
-      kind: HomeFeedKind.feature,
-      title: 'Cartão Bronze',
-      body:
-          'Entrada na Conta Assegurada. Ideal para começar com transferências internas e on-chain.',
+    _localTierCard(
+      id: 'local-edu-card-bronze',
+      priority: 200,
+      title: switch (lang) {
+        'en' => 'Bronze card',
+        'es' => 'Tarjeta Bronze',
+        _ => 'Cartão Bronze',
+      },
+      body: switch (lang) {
+        'en' =>
+          'Entry secured-account tier. External fee: 0.9%. Granted automatically to new accounts. Stay active longer and grow monthly volume to unlock lower tiers.',
+        'es' =>
+          'Nivel inicial de la cuenta asegurada. Comisión externa: 0.9%. Disponible automáticamente para cuentas nuevas. Gana antigüedad y volumen mensual para subir de nivel y pagar menos.',
+        _ =>
+          'Nível inicial da Conta Assegurada. Taxa externa: 0.9%. Disponível automaticamente para contas novas. Use a plataforma e aumente o tempo e a movimentação mensal para subir de nível e pagar menos.',
+      },
       tag: 'BRONZE',
       asset: 'assets/feed/cards/bronze.png',
     ),
-    _localCard(
-      id: 'local-feat-card-metal',
-      kind: HomeFeedKind.feature,
-      title: 'Cartão Metal',
-      body:
-          'Acabamento metálico premium. Taxas mais competitivas que o Bronze para uso frequente.',
-      tag: 'METAL',
+    _localTierCard(
+      id: 'local-edu-card-white',
+      priority: 199,
+      title: switch (lang) {
+        'en' => 'White card',
+        'es' => 'Tarjeta White',
+        _ => 'Cartão White',
+      },
+      body: switch (lang) {
+        'en' =>
+          'External deposit/withdrawal fee: 0.8%. How to unlock: monthly volume above 1,500 and at least 6 months of account age. The card upgrades automatically when rules are met.',
+        'es' =>
+          'Comisión de depósito/retiro externo: 0.8%. Cómo conseguirlo: volumen mensual superior a 1,500 y al menos 6 meses de cuenta. La tarjeta sube automáticamente al cumplir las reglas.',
+        _ =>
+          'Taxa de saque/depósito externo: 0.8%. Como conseguir: movimentação mensal acima de 1,500 e pelo menos 6 meses de conta. O cartão sobe automaticamente quando a conta atinge as regras.',
+      },
+      tag: 'WHITE',
       asset: 'assets/feed/cards/metal.png',
     ),
-    _localCard(
-      id: 'local-feat-card-gold',
-      kind: HomeFeedKind.feature,
-      title: 'Cartão Gold',
-      body:
-          'Topo de linha: visual escuro com detalhes dourados e as menores taxas da linha assegurada.',
-      tag: 'GOLD',
+    _localTierCard(
+      id: 'local-edu-card-black',
+      priority: 198,
+      title: switch (lang) {
+        'en' => 'Black card',
+        'es' => 'Tarjeta Black',
+        _ => 'Cartão Black',
+      },
+      body: switch (lang) {
+        'en' =>
+          'Lowest platform fee: 0.7% on external deposits and withdrawals. How to unlock: monthly volume above 4,000 and at least 12 months of account age. Internal Kerosene transfers stay 0%.',
+        'es' =>
+          'Menor comisión de la plataforma: 0.7% en depósitos y retiros externos. Cómo conseguirlo: volumen mensual superior a 4,000 y al menos 12 meses de cuenta. Las transferencias internas Kerosene siguen en 0%.',
+        _ =>
+          'Menor taxa da plataforma: 0.7% em saques e depósitos externos. Como conseguir: movimentação mensal acima de 4,000 e pelo menos 12 meses de conta. Transferências internas entre usuários Kerosene continuam 0%.',
+      },
+      tag: 'BLACK',
       asset: 'assets/feed/cards/gold.png',
     ),
   ];
@@ -368,30 +350,28 @@ HomeFeedItem _local(
   );
 }
 
-HomeFeedItem _localCard({
+HomeFeedItem _localTierCard({
   required String id,
-  required HomeFeedKind kind,
+  required int priority,
   required String title,
   required String body,
   required String tag,
   required String asset,
 }) {
-  final assetUrl = 'asset:$asset';
+  // No mock PNG: FE renders a live 3D tier card from [tag] / appearance.
   return HomeFeedItem(
     id: id,
-    kind: kind,
-    priority: 130,
+    kind: HomeFeedKind.education,
+    priority: priority,
     title: title,
     body: body,
     tag: tag,
     media: HomeFeedMedia(
-      type: HomeFeedMediaType.image,
+      type: HomeFeedMediaType.icon,
       iconKey: 'creditCard',
-      url: assetUrl,
-      posterUrl: assetUrl,
       aspectRatio: 1.6,
     ),
-    surfaceTint: 'TOTAL',
+    surfaceTint: 'PLATFORM',
     campaignId: id,
   );
 }

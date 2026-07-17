@@ -123,7 +123,10 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
         : DateTime.now().difference(_stageIdleSince!);
 
     final prefs = ref.read(sharedPreferencesProvider);
-    final lang = Localizations.localeOf(context).languageCode;
+    final lang = Localizations.localeOf(context).languageCode
+        .toLowerCase()
+        .split(RegExp(r'[_-]'))
+        .first;
     final piece = pickNextTheaterPiece(
       prefs: prefs,
       context: TheaterSchedulerContext(
@@ -226,7 +229,10 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     }
 
     final event = queue.first;
-    final lang = Localizations.localeOf(context).languageCode;
+    final lang = Localizations.localeOf(context).languageCode
+        .toLowerCase()
+        .split(RegExp(r'[_-]'))
+        .first;
     final stage = homeEducationToStage(event, lang: lang);
 
     if (!stage.isActive) {

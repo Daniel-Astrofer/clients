@@ -21,18 +21,24 @@ import 'package:kerosene/features/home/presentation/providers/incoming_transfer_
 import '../../../../core/utils/device_helper.dart';
 import 'financial_dirty_provider.dart';
 import 'financial_refresh.dart';
+import 'financial_surface_provider.dart';
 import 'wallet_provider.dart';
 
 export 'financial_refresh.dart';
 export 'financial_dirty_provider.dart';
+export 'financial_surface_provider.dart';
 
 const double _balanceChangeEpsilon = 0.000000001;
 
-/// Backup poll when realtime WS is healthy (should rarely be the UX path).
-const financialRealtimeFallbackInterval = Duration(seconds: 15);
+/// Backup poll when realtime WS is healthy and a financial screen is visible.
+const financialRealtimeFallbackInterval = Duration(seconds: 90);
 
-/// Aggressive poll while WS is down / reconnecting (Android Tor drops).
-const financialRealtimeDisconnectedInterval = Duration(seconds: 5);
+/// Poll while WS is down / reconnecting (only on financial surfaces).
+const financialRealtimeDisconnectedInterval = Duration(seconds: 20);
+
+/// When user is off financial screens or app is backgrounded, only re-check
+/// the gate this often (no network I/O when still idle).
+const financialRealtimeIdleGateInterval = Duration(seconds: 60);
 
 typedef FinancialRefreshCancel = void Function();
 typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
@@ -41,22 +47,28 @@ typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
 );
 
 /// Schedules financial refreshes serially so a slow request cannot overlap the
-/// next polling cycle. Interval adapts to WebSocket connectivity.
+/// next polling cycle. Interval adapts to WebSocket connectivity and whether a
+/// financial surface is active in the foreground.
 class FinancialRealtimeRefreshLoop {
   FinancialRealtimeRefreshLoop({
     required Future<void> Function() refresh,
     this.connectedInterval = financialRealtimeFallbackInterval,
     this.disconnectedInterval = financialRealtimeDisconnectedInterval,
+    this.idleGateInterval = financialRealtimeIdleGateInterval,
     bool Function()? isRealtimeConnected,
+    bool Function()? isPollAllowed,
     FinancialRefreshScheduler scheduler = _scheduleFinancialRefresh,
   })  : _refresh = refresh,
         _isRealtimeConnected = isRealtimeConnected,
+        _isPollAllowed = isPollAllowed,
         _scheduler = scheduler;
 
   final Future<void> Function() _refresh;
   final Duration connectedInterval;
   final Duration disconnectedInterval;
+  final Duration idleGateInterval;
   final bool Function()? _isRealtimeConnected;
+  final bool Function()? _isPollAllowed;
   final FinancialRefreshScheduler _scheduler;
 
   FinancialRefreshCancel? _cancelScheduledRefresh;
@@ -64,7 +76,12 @@ class FinancialRealtimeRefreshLoop {
   bool _refreshInFlight = false;
   bool _disposed = false;
 
+  bool get _pollAllowed => _isPollAllowed?.call() ?? true;
+
   Duration get _currentInterval {
+    if (!_pollAllowed) {
+      return idleGateInterval;
+    }
     final connected = _isRealtimeConnected?.call() ?? false;
     return connected ? connectedInterval : disconnectedInterval;
   }
@@ -74,8 +91,12 @@ class FinancialRealtimeRefreshLoop {
       return;
     }
     _started = true;
-    // Immediate consistency kick (do not wait a full interval after connect).
-    unawaited(_runRefresh());
+    // Immediate kick only when a financial surface needs data.
+    if (_pollAllowed) {
+      unawaited(_runRefresh());
+    } else {
+      _scheduleNext();
+    }
   }
 
   /// Call when WS connects/disconnects so the next wait uses the right interval.
@@ -84,6 +105,18 @@ class FinancialRealtimeRefreshLoop {
     _cancelScheduledRefresh?.call();
     _cancelScheduledRefresh = null;
     _scheduleNext();
+  }
+
+  /// Call when financial surface / foreground gate flips so we can poll sooner.
+  void onPollGateChanged() {
+    if (_disposed || !_started || _refreshInFlight) return;
+    _cancelScheduledRefresh?.call();
+    _cancelScheduledRefresh = null;
+    if (_pollAllowed) {
+      unawaited(_runRefresh());
+    } else {
+      _scheduleNext();
+    }
   }
 
   void _scheduleNext() {
@@ -100,6 +133,12 @@ class FinancialRealtimeRefreshLoop {
 
   Future<void> _runRefresh() async {
     if (_disposed || _refreshInFlight) {
+      return;
+    }
+
+    // Idle gate: no HTTP — just re-arm the timer.
+    if (!_pollAllowed) {
+      _scheduleNext();
       return;
     }
 
@@ -232,16 +271,10 @@ final balanceWebSocketServiceProvider =
         final isObservedContext =
             update.context.toLowerCase().contains('observ');
         if (hasMeaningfulChange || isObservedContext) {
-          ref.read(financialDirtyProvider.notifier).markDirty();
-          unawaited(refreshFinancialProjection(ref).then((_) {
-            ref.read(financialDirtyProvider.notifier).clear();
-          }));
+          _scheduleFinancialRefreshForEvent(ref);
         }
       } else {
-        ref.read(financialDirtyProvider.notifier).markDirty();
-        unawaited(refreshFinancialProjection(ref).then((_) {
-          ref.read(financialDirtyProvider.notifier).clear();
-        }));
+        _scheduleFinancialRefreshForEvent(ref);
       }
 
       // Apply only with a stable wallet UUID; name-only events force full refresh.
@@ -303,11 +336,8 @@ final balanceWebSocketServiceProvider =
         ref.read(sessionNotificationFeedProvider.notifier).add(notification);
       }
 
-      // Single coordinator: balance + extrato + links.
-      ref.read(financialDirtyProvider.notifier).markDirty();
-      unawaited(refreshFinancialProjection(ref).then((_) {
-        ref.read(financialDirtyProvider.notifier).clear();
-      }));
+      // Single coordinator: balance + extrato (full on financial surfaces).
+      _scheduleFinancialRefreshForEvent(ref, scope: FinancialRefreshScope.full);
 
       // Theater for receives (independent of OS alert prefs).
       if (isIncomingTransactionNotification(notification)) {
@@ -346,23 +376,39 @@ final balanceWebSocketServiceProvider =
     return null;
   }
 
-  // Core can keep this socket connected while KFE events travel through a
-  // separate runtime. Polling remains active as a bounded consistency fallback.
-  // When WS is down, poll every 5s so Android does not sit ~15–30s laggy.
+  // Core keeps the socket connected; HTTP poll is a bounded fallback only while
+  // a financial surface is foregrounded. Off-surface / background = no poll I/O.
   final refreshLoop = FinancialRealtimeRefreshLoop(
-    refresh: () => refreshFinancialProjection(ref),
+    refresh: () => refreshFinancialProjection(
+      ref,
+      scope: FinancialRefreshScope.light,
+    ),
     isRealtimeConnected: () => service.isConnected,
+    isPollAllowed: () {
+      if (!ref.mounted) return false;
+      return ref.read(financialPollAllowedProvider);
+    },
     scheduler: ref.read(financialRefreshSchedulerProvider),
   )..start();
 
   void onWsConnectivity(bool _) => refreshLoop.onConnectivityChanged();
   service.addConnectionListener(onWsConnectivity);
 
+  // Re-arm when user opens home/extrato or app resumes.
+  final gateSub = ref.listen<bool>(
+    financialPollAllowedProvider,
+    (previous, next) {
+      if (previous == next) return;
+      refreshLoop.onPollGateChanged();
+    },
+  );
+
   // Desconectar quando o provider for descartado
   ref.onDispose(() {
     if (kDebugMode) {
       debugPrint('BalanceWebSocket: disconnecting.');
     }
+    gateSub.close();
     service.removeConnectionListener(onWsConnectivity);
     refreshLoop.dispose();
     service.disconnect();
@@ -370,6 +416,22 @@ final balanceWebSocketServiceProvider =
 
   return service;
 });
+
+/// WS / notification event: refresh immediately only if a financial surface is
+/// active; otherwise mark dirty for the next home/resume pull.
+void _scheduleFinancialRefreshForEvent(
+  Ref ref, {
+  FinancialRefreshScope scope = FinancialRefreshScope.light,
+}) {
+  ref.read(financialDirtyProvider.notifier).markDirty();
+  final allowImmediate = ref.read(financialPollAllowedProvider);
+  if (!allowImmediate) {
+    return;
+  }
+  unawaited(refreshFinancialProjection(ref, scope: scope).then((_) {
+    ref.read(financialDirtyProvider.notifier).clear();
+  }));
+}
 
 String? _normalizeSessionToken(String? token) {
   if (token == null) {

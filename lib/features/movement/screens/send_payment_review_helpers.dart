@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
@@ -219,6 +220,8 @@ List<SendPaymentReviewRowData> _buildReviewRows({
       value: estimatedSendTime(
         destination,
         estimatedSeconds: feeQuote.estimatedSettlementSeconds,
+        testnetLike: expectedBitcoinNetwork != BitcoinNetworkKind.mainnet &&
+            expectedBitcoinNetwork != BitcoinNetworkKind.unknown,
       ),
     ),
     // Bank-style total last — always visible so user sees full debit.

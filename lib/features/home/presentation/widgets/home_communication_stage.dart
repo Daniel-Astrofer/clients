@@ -305,24 +305,33 @@ class _StageBody extends StatelessWidget {
       regular: homeFontSize(16),
     );
 
+    // Linux desktops often miss color-emoji in Newsreader — fall back explicitly.
+    const emojiFallback = <String>[
+      'Noto Color Emoji',
+      'Noto Emoji',
+      'Segoe UI Emoji',
+      'Apple Color Emoji',
+      'Twemoji Mozilla',
+    ];
     final titleStyle = AppTypography.newsreader(
       textStyle: theme.textTheme.titleLarge,
       color: Colors.white,
       fontSize: titleSize,
       fontWeight: FontWeight.w400,
       height: 1.25,
-    );
-    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
-          color: Colors.white.withValues(alpha: 0.88),
-          fontSize: bodySize,
-          fontWeight: FontWeight.w300,
-          height: 1.45,
-        ) ??
-        TextStyle(
-          color: Colors.white.withValues(alpha: 0.88),
-          fontSize: bodySize,
-          height: 1.45,
-        );
+    ).copyWith(fontFamilyFallback: emojiFallback);
+    final bodyStyle = (theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.88),
+              fontSize: bodySize,
+              fontWeight: FontWeight.w300,
+              height: 1.45,
+            ) ??
+            TextStyle(
+              color: Colors.white.withValues(alpha: 0.88),
+              fontSize: bodySize,
+              height: 1.45,
+            ))
+        .copyWith(fontFamilyFallback: emojiFallback);
 
     final media = stage.media;
     final screenH = MediaQuery.sizeOf(context).height;
@@ -513,13 +522,18 @@ class _TypewriterBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxW = constraints.maxWidth;
+        // Match measure clamp so ghost height == painted wrap on wide Linux windows.
+        final rawW = constraints.maxWidth;
+        final maxW = (!rawW.isFinite || rawW <= 0)
+            ? 360.0
+            : rawW.clamp(160.0, 720.0);
         final ghost = _buildParagraph(
           fullText,
           titleStyle: titleStyle,
           bodyStyle: bodyStyle,
           gap: gap,
           caret: false,
+          maxWidth: maxW,
         );
         final visible = _buildParagraph(
           visibleText,
@@ -527,6 +541,7 @@ class _TypewriterBlock extends StatelessWidget {
           bodyStyle: bodyStyle,
           gap: gap,
           caret: showCaret,
+          maxWidth: maxW,
         );
 
         // Measure full height so the slot never changes while typing.
@@ -558,7 +573,7 @@ class _TypewriterBlock extends StatelessWidget {
         // pathological lengths above softCeiling.
         if (!needsScroll) {
           return SizedBox(
-            width: maxW.isFinite ? maxW : double.infinity,
+            width: maxW,
             // Exact full height — never less than measured (that clips).
             height: measured,
             child: stack,
@@ -566,7 +581,7 @@ class _TypewriterBlock extends StatelessWidget {
         }
 
         return SizedBox(
-          width: maxW.isFinite ? maxW : double.infinity,
+          width: maxW,
           height: maxHeight,
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -585,6 +600,7 @@ class _TypewriterBlock extends StatelessWidget {
     required TextStyle bodyStyle,
     required double gap,
     required bool caret,
+    double? maxWidth,
   }) {
     final parts = text.split('\n\n');
     final title = parts.isNotEmpty ? parts.first : text;
@@ -609,6 +625,9 @@ class _TypewriterBlock extends StatelessWidget {
     }
 
     if (body.isEmpty) {
+      if (maxWidth != null && maxWidth.isFinite) {
+        return SizedBox(width: maxWidth, child: titleWidget);
+      }
       return titleWidget;
     }
 
@@ -624,7 +643,7 @@ class _TypewriterBlock extends StatelessWidget {
           )
         : Text(body, textAlign: TextAlign.left, style: bodyStyle);
 
-    return Column(
+    final column = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -633,6 +652,10 @@ class _TypewriterBlock extends StatelessWidget {
         bodyWidget,
       ],
     );
+    if (maxWidth != null && maxWidth.isFinite) {
+      return SizedBox(width: maxWidth, child: column);
+    }
+    return column;
   }
 
   static double _measureParagraphHeight(
@@ -642,8 +665,12 @@ class _TypewriterBlock extends StatelessWidget {
     required TextStyle bodyStyle,
     required double gap,
   }) {
+    // Desktop Linux can report unbounded width inside nested rows; clamp so
+    // measure matches the wrapped layout the user actually sees.
     if (!maxWidth.isFinite || maxWidth <= 0) {
       maxWidth = 360;
+    } else {
+      maxWidth = maxWidth.clamp(160.0, 720.0);
     }
     final parts = text.split('\n\n');
     final title = parts.isNotEmpty ? parts.first : text;
@@ -652,6 +679,7 @@ class _TypewriterBlock extends StatelessWidget {
     final titlePainter = TextPainter(
       text: TextSpan(text: title, style: titleStyle),
       textDirection: TextDirection.ltr,
+      textScaler: TextScaler.noScaling,
     )..layout(maxWidth: maxWidth);
 
     if (body.isEmpty) return titlePainter.height;
@@ -659,6 +687,7 @@ class _TypewriterBlock extends StatelessWidget {
     final bodyPainter = TextPainter(
       text: TextSpan(text: body, style: bodyStyle),
       textDirection: TextDirection.ltr,
+      textScaler: TextScaler.noScaling,
     )..layout(maxWidth: maxWidth);
 
     return titlePainter.height + gap + bodyPainter.height;

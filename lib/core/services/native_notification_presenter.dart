@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
+import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 
 /// Android / iOS local-notification channels (must match createNotificationChannel ids).
 abstract final class NativeNotificationChannels {
@@ -84,46 +85,48 @@ class NativeNotificationPresenter {
       _ => NativeNotificationChannels.transactions,
     };
 
-    final amount = _extractAmountLabel(metadata, body);
-    final wallet = _extractWalletLabel(metadata, body);
     final network = _extractNetworkLabel(normalizedKind, metadata, title, body);
-    final confs = metadata['confirmations'] ?? metadata['confirmationsCount'];
+
+    final dummyItem = SessionNotificationItem(
+      id: id,
+      kind: normalizedKind,
+      title: title,
+      body: body,
+      metadata: metadata,
+      deeplink: deeplink,
+      entityType: entityType,
+      entityId: entityId,
+      severity: severity ?? 'info',
+      timestamp: DateTime.now(),
+    );
+
+    final resolvedTitle = NotificationTranslator.resolveTitle(null, dummyItem);
+    final resolvedBody = NotificationTranslator.resolveBody(null, dummyItem);
 
     final composed = switch (family) {
-      NativeNotificationFamily.transactionIncoming => _incoming(
-          serverTitle: title,
-          serverBody: body,
-          amount: amount,
-          wallet: wallet,
-          network: network,
-          confs: confs,
-          kind: normalizedKind,
+      NativeNotificationFamily.transactionIncoming => (
+          resolvedTitle,
+          resolvedBody,
+          network,
         ),
-      NativeNotificationFamily.transactionOutgoing => _outgoing(
-          serverTitle: title,
-          serverBody: body,
-          amount: amount,
-          wallet: wallet,
-          network: network,
-          confs: confs,
-          kind: normalizedKind,
+      NativeNotificationFamily.transactionOutgoing => (
+          resolvedTitle,
+          resolvedBody,
+          network,
         ),
-      NativeNotificationFamily.transactionPending => _pending(
-          serverTitle: title,
-          serverBody: body,
-          amount: amount,
-          wallet: wallet,
-          network: network,
-          confs: confs,
+      NativeNotificationFamily.transactionPending => (
+          resolvedTitle,
+          resolvedBody,
+          'Pendente',
         ),
       NativeNotificationFamily.security => (
-          _shortTitle(title, fallback: 'Alerta de segurança'),
-          _securityBody(body),
+          _shortTitle(resolvedTitle, fallback: 'Alerta de segurança'),
+          _securityBody(resolvedBody),
           'Segurança',
         ),
       NativeNotificationFamily.system => (
-          _shortTitle(title, fallback: 'Kerosene'),
-          body.trim().isEmpty ? 'Atualização da plataforma.' : body.trim(),
+          _shortTitle(resolvedTitle, fallback: 'Kerosene'),
+          resolvedBody.trim().isEmpty ? 'Atualização da plataforma.' : resolvedBody.trim(),
           'Kerosene',
         ),
     };
@@ -230,70 +233,6 @@ class NativeNotificationPresenter {
     return NativeNotificationFamily.system;
   }
 
-  static (String, String, String?) _incoming({
-    required String serverTitle,
-    required String serverBody,
-    required String? amount,
-    required String? wallet,
-    required String network,
-    required String? confs,
-    required String kind,
-  }) {
-    final amountPart = amount ?? 'fundos';
-    final walletPart = wallet ?? 'Principal';
-    final title = amount != null
-        ? 'Recebeu $amountPart'
-        : _shortTitle(serverTitle, fallback: 'Recebimento');
-    final confLine = confs != null && confs.isNotEmpty
-        ? ' · $confs conf.'
-        : (kind.contains('deposit_detected') ? ' · aguardando rede' : '');
-    final body =
-        '$network · carteira $walletPart$confLine\n${_trimServer(serverBody)}';
-    return (title, body, network);
-  }
-
-  static (String, String, String?) _outgoing({
-    required String serverTitle,
-    required String serverBody,
-    required String? amount,
-    required String? wallet,
-    required String network,
-    required String? confs,
-    required String kind,
-  }) {
-    final amountPart = amount ?? 'fundos';
-    final title = amount != null
-        ? 'Enviou $amountPart'
-        : _shortTitle(serverTitle, fallback: 'Envio detectado');
-    final confLine =
-        confs != null && confs.isNotEmpty ? ' · $confs conf.' : '';
-    final walletLine =
-        wallet != null ? ' · carteira $wallet' : '';
-    final body =
-        '$network$walletLine$confLine\n${_trimServer(serverBody)}';
-    return (title, body, network);
-  }
-
-  static (String, String, String?) _pending({
-    required String serverTitle,
-    required String serverBody,
-    required String? amount,
-    required String? wallet,
-    required String network,
-    required String? confs,
-  }) {
-    final amountPart = amount ?? 'fundos';
-    final title = amount != null
-        ? 'Depósito $amountPart'
-        : _shortTitle(serverTitle, fallback: 'Depósito pendente');
-    final confLine = confs != null && confs.isNotEmpty
-        ? '$confs confirmação(ões)'
-        : 'aguardando confirmações';
-    final walletPart = wallet ?? 'Principal';
-    final body =
-        '$network · $walletPart\n$confLine\n${_trimServer(serverBody)}';
-    return (title, body, 'Pendente');
-  }
 
   static String _securityBody(String body) {
     final t = body.trim();
@@ -310,12 +249,6 @@ class NativeNotificationPresenter {
     return '${t.substring(0, 45)}…';
   }
 
-  static String _trimServer(String body) {
-    final t = body.trim();
-    if (t.isEmpty) return '';
-    if (t.length <= 160) return t;
-    return '${t.substring(0, 157)}…';
-  }
 
   static String? _extractAmountLabel(
     Map<String, String> metadata,

@@ -113,11 +113,6 @@ class TokenInterceptor extends QueuedInterceptor {
     required String path,
     required String errorCode,
   }) {
-    final requestPath = Uri.tryParse(path)?.path ?? path;
-    if (requestPath.contains('/auth/security/app-pin')) {
-      return true;
-    }
-
     final code = errorCode.trim();
     return code == 'AUTH_018' ||
         code == 'AUTH_019' ||

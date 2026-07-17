@@ -63,6 +63,7 @@ class SendFeeQuote {
   final double totalDebitedBtc;
   final double? feeRateSatPerByte;
   final int? estimatedSettlementSeconds;
+  final int? feeTargetBlocks;
   final String? feeSource;
   final DateTime? quoteExpiresAt;
   final bool isLoading;
@@ -79,6 +80,7 @@ class SendFeeQuote {
     required this.totalDebitedBtc,
     this.feeRateSatPerByte,
     this.estimatedSettlementSeconds,
+    this.feeTargetBlocks,
     this.feeSource,
     this.quoteExpiresAt,
     this.isLoading = false,

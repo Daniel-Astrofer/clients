@@ -160,7 +160,7 @@ class _MobileAppRoot extends ConsumerWidget {
       }
     });
 
-    // 1) Kerosene K — hold until brand beat finishes (and while auth is probing).
+    // 1) Kerosene K — brand beat while auth probes.
     if (!coldStart.canShowAppShell) {
       return const KeroseneLogoLoadingView(
         status: 'INICIANDO',
@@ -179,7 +179,17 @@ class _MobileAppRoot extends ConsumerWidget {
     }
 
     if (authState is AuthAuthenticated) {
-      // Single PIN gate for cold start. Unlocked → HomeLoadingScreen → Home.
+      // Token login: wait for Tor **before** the PIN pad.
+      // Showing PIN while Tor is still binding, then rebuilding when Tor
+      // settles, re-asked the PIN (double entry). Hold the K logo until the
+      // relay is up, then one unlock pad.
+      if (!coldStart.torSettled && !AppEntryPinSession.unlocked) {
+        return const KeroseneLogoLoadingView(
+          status: 'INICIANDO',
+          detail: 'Preparando conexão segura',
+        );
+      }
+      // Single PIN gate. Unlocked → HomeLoadingScreen → Home.
       return const AppEntryPinGate(
         child: HomeLoadingScreen(),
       );
@@ -389,11 +399,26 @@ class _PrivateMobileRoute extends ConsumerWidget {
       return const Scaffold(backgroundColor: Colors.black);
     }
     if (authState is AuthAuthenticated) {
-      // If the user already unlocked during cold start, do not mount a second
-      // PIN gate (that looked like "PIN twice"). Only gate when still locked.
-      final unlocked = ref.watch(appEntryPinUnlockedProvider);
+      // Never mount a second [AppEntryPinGate] after cold-start unlock.
+      final unlocked = ref.watch(appEntryPinUnlockedProvider) ||
+          AppEntryPinSession.unlocked;
       if (unlocked) {
+        if (!ref.read(appEntryPinUnlockedProvider)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (AppEntryPinSession.unlocked) {
+              ref.read(appEntryPinUnlockedProvider.notifier).unlock();
+            }
+          });
+        }
         return child;
+      }
+      // Same Tor gate as cold start: do not show PIN until the relay is up.
+      final torSettled = ref.watch(torSettledProvider);
+      if (!torSettled) {
+        return const KeroseneLogoLoadingView(
+          status: 'INICIANDO',
+          detail: 'Preparando conexão segura',
+        );
       }
       return AppEntryPinGate(child: child);
     }

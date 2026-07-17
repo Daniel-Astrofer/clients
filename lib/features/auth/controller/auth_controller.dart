@@ -455,10 +455,15 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> retrySessionCheck() async {
-    state = const AuthLoading();
+    // Keep [AuthAuthenticated] while probing so the PIN unlock flag and home
+    // shell are not torn down (AuthLoading used to re-ask the entry PIN).
+    final keepAuthenticatedShell = state is AuthAuthenticated;
+    if (!keepAuthenticatedShell) {
+      state = const AuthLoading();
+    }
     await _checkAuthStatus(
       forceRemote: true,
-      probeWhenUnauthenticated: true,
+      probeWhenUnauthenticated: !keepAuthenticatedShell,
     );
   }
 

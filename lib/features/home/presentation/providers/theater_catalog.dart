@@ -34,6 +34,8 @@ class TheaterCatalogPiece {
   });
 
   /// Localized rich content for [lang] (`pt` / `en` / `es`).
+  ///
+  /// Accepts full locale tags (`pt_BR`, `en-US`) — Linux desktops often pass those.
   TheaterLocalizedCopy copyFor(String lang) {
     final table = _catalogCopy[id];
     if (table == null) {
@@ -44,7 +46,8 @@ class TheaterCatalogPiece {
         ],
       );
     }
-    return table[lang] ?? table['pt'] ?? table.values.first;
+    final key = lang.trim().toLowerCase().split(RegExp(r'[_-]')).first;
+    return table[key] ?? table['pt'] ?? table.values.first;
   }
 }
 
@@ -579,12 +582,12 @@ final Map<String, Map<String, TheaterLocalizedCopy>> _catalogCopy = {
   'prod-cards': _loc(
     ptTitle: 'Cartões Kerosene ✨',
     ptBlocks: [
-      _h2('Bronze · Metal · Gold', emoji: '💳'),
+      _h2('Bronze · White · Black', emoji: '💳'),
       _body(
-        'Os cartões conectam saldo e experiência no ecossistema. Explore a área de cartões quando quiser conhecer os níveis.',
+        'Cada nível tem taxa externa diferente. O cartão sobe com tempo de conta e movimentação mensal — as regras e percentuais vêm da plataforma.',
         spans: _bolds(
-          'Os cartões conectam saldo e experiência no ecossistema. Explore a área de cartões quando quiser conhecer os níveis.',
-          ['cartões'],
+          'Cada nível tem taxa externa diferente. O cartão sobe com tempo de conta e movimentação mensal — as regras e percentuais vêm da plataforma.',
+          ['taxa externa', 'tempo de conta', 'movimentação mensal'],
         ),
       ),
     ],

@@ -29,6 +29,7 @@ import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/theme/monochrome_theme.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/financial_surface_provider.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
@@ -55,7 +56,8 @@ class BitcoinAccountsScreen extends ConsumerStatefulWidget {
       BitcoinAccountsScreenState();
 }
 
-class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen> {
+class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen>
+    with FinancialSurfaceMixin {
   int selectedAccountIndex = 0;
   final Map<String, ReceivingRequestView> receiveAddressOverrides = {};
 
