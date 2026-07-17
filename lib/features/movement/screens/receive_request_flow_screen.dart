@@ -88,6 +88,8 @@ class _ReceiveRequestFlowScreenState
   String? _txid;
   String? _errorMessage;
   bool _isLoadingRequest = false;
+  bool _cancelling = false;
+  bool _archiving = false;
 
   @override
   void initState() {
@@ -650,6 +652,101 @@ class _ReceiveRequestFlowScreenState
     SnackbarHelper.showSuccess(successMessage);
   }
 
+  bool get _linkCanCancel {
+    final link = _link;
+    if (link == null || _cancelling) return false;
+    return link.isPending && !link.isCancelled && !link.isExpired && !link.isPaid;
+  }
+
+  bool get _linkCanArchiveNow {
+    final link = _link;
+    if (link == null || _archiving) return false;
+    return link.isCancelled || link.isExpired;
+  }
+
+  Future<void> _confirmAndCancelPaymentLink() async {
+    final link = _link;
+    if (link == null || !_linkCanCancel) return;
+    final tr = context.tr;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: KeroseneBrandTokens.surfaceHigh,
+        title: Text(
+          tr.receivePaymentLinkCancelTitle,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          tr.receivePaymentLinkCancelMessage,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: Text(tr.receivePaymentLinkConfirmCancel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    try {
+      final updated = await ref
+          .read(transactionRepositoryProvider)
+          .cancelPaymentRequest(link.id);
+      _statusTimer?.cancel();
+      if (!mounted) return;
+      setState(() {
+        _link = updated;
+        _cancelling = false;
+      });
+      ref.invalidate(paymentLinksProvider);
+      ref.invalidate(transactionHistoryProvider);
+      SnackbarHelper.showSuccess(tr.receivePaymentLinkCancelled);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _cancelling = false);
+      SnackbarHelper.showError(
+        ErrorTranslator.translate(context.tr, error.toString()),
+      );
+    }
+  }
+
+  Future<void> _archivePaymentLinkNow() async {
+    final link = _link;
+    if (link == null || !_linkCanArchiveNow) return;
+    setState(() => _archiving = true);
+    try {
+      await ref.read(activityArchiveProvider.notifier).markArchived(
+            paymentLinkArchiveId(link.id),
+          );
+      await ref.read(activityArchiveProvider.notifier).markArchived(
+            'pl_${link.id.trim()}',
+          );
+      ref.invalidate(paymentLinksProvider);
+      ref.invalidate(transactionHistoryProvider);
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context.tr.activityArchiveNowSuccess);
+      Navigator.of(context).maybePop();
+    } finally {
+      if (mounted) setState(() => _archiving = false);
+    }
+  }
+
   void _goHome() {
     HapticFeedback.selectionClick();
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -729,23 +826,77 @@ class _ReceiveRequestFlowScreenState
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: ReceiveActionButton(
-                  icon: KeroseneIcons.copy,
-                  label: context.tr.copy,
-                  onTap: _copyPaymentValue,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: ReceiveActionButton(
+                      icon: KeroseneIcons.copy,
+                      label: context.tr.copy,
+                      onTap: _copyPaymentValue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ReceiveActionButton(
+                      icon: KeroseneIcons.share,
+                      label: context.tr.share,
+                      onTap: _sharePaymentValue,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ReceiveActionButton(
-                  icon: KeroseneIcons.share,
-                  label: context.tr.share,
-                  onTap: _sharePaymentValue,
+              if (_linkCanCancel) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: _cancelling ? null : _confirmAndCancelPaymentLink,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .error
+                            .withValues(alpha: 0.55),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: _cancelling
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(context.tr.receivePaymentLinkCancelTitle),
+                  ),
                 ),
-              ),
+              ],
+              if (_linkCanArchiveNow) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: _archiving ? null : _archivePaymentLinkNow,
+                    icon: const Icon(KeroseneIcons.archive, size: 18),
+                    label: Text(context.tr.activityArchiveNow),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _receiveText,
+                      side: const BorderSide(
+                        color: KeroseneBrandTokens.border,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

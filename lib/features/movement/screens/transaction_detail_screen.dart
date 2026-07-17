@@ -20,6 +20,7 @@ import 'package:kerosene/features/financial_accounts/presentation/state/wallet_s
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/core/security/financial_secure_scope.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart'
@@ -147,16 +148,35 @@ class _TransactionDetailScreenState
     setState(() => _cancelling = true);
     try {
       final repo = ref.read(transactionRepositoryProvider);
-      final updated = await repo.cancelTransaction(tx.id);
+      final updated = await _cancelActivity(repo, tx);
       if (!mounted) return;
       setState(() {
         _tx = updated;
         _cancelling = false;
       });
-      // Refresh feeds; keep cancelled visible until this open archives it.
+      // Refresh feeds; archive immediately after explicit cancel from detail.
       ref.invalidate(transactionHistoryProvider);
+      ref.invalidate(paymentLinksProvider);
       if (updated.isArchiveEligible) {
-        await ref.read(activityArchiveProvider.notifier).markArchived(updated.id);
+        await ref
+            .read(activityArchiveProvider.notifier)
+            .markArchived(updated.id);
+        final prId = (updated.paymentRequestPublicId ??
+                updated.paymentRequestId ??
+                '')
+            .trim();
+        if (prId.isNotEmpty) {
+          await ref
+              .read(activityArchiveProvider.notifier)
+              .markArchived(paymentLinkArchiveId(prId));
+        } else if (updated.id.startsWith('pl_')) {
+          final bare = updated.id.substring(3).trim();
+          if (bare.isNotEmpty) {
+            await ref
+                .read(activityArchiveProvider.notifier)
+                .markArchived(paymentLinkArchiveId(bare));
+          }
+        }
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,6 +189,30 @@ class _TransactionDetailScreenState
         SnackBar(content: Text(context.tr.txDetailCancelError)),
       );
     }
+  }
+
+  Future<Transaction> _cancelActivity(
+    TransactionRepository repo,
+    Transaction current,
+  ) async {
+    final target = (current.cancelTarget ?? '').trim().toUpperCase();
+    final isPaymentRequest = target == 'PAYMENT_REQUEST' ||
+        current.isPaymentLink ||
+        current.id.startsWith('pl_');
+    if (isPaymentRequest) {
+      final requestId = (current.paymentRequestPublicId ??
+              current.paymentRequestId ??
+              (current.id.startsWith('pl_')
+                  ? current.id.substring(3)
+                  : current.id))
+          .trim();
+      if (requestId.isEmpty) {
+        throw StateError('payment request id missing');
+      }
+      final link = await repo.cancelPaymentRequest(requestId);
+      return link.toTransaction();
+    }
+    return repo.cancelTransaction(current.id);
   }
 
   List<Wallet> get _wallets {

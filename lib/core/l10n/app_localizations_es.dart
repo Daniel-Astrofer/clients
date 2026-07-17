@@ -9312,6 +9312,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get txDetailCancelError => 'No se pudo cancelar';
 
   @override
+  String get activityArchiveNow => 'Archivar ahora';
+
+  @override
+  String get activityArchiveNowSuccess => 'Movido a Archivadas';
+
+  @override
+  String get homePendingPaymentLinksTitle => 'Links de pago abiertos';
+
+  @override
   String get txListNeedsReview => 'En revisión';
 
   @override

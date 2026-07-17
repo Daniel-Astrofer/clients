@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
 import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
@@ -106,6 +108,45 @@ void main() {
       );
       final axes = TransactionAxes.classify(tx);
       expect(axes.lifecycle, TxLifecycle.cancelled);
+    });
+  });
+
+  group('payment link cancel + archive keys', () {
+    test('open quote maps to cancellable history row', () {
+      final link = PaymentLink(
+        id: 'abc-123',
+        userId: 1,
+        amountBtc: 0.01,
+        description: 'Test',
+        depositAddress: 'tb1qtest',
+        status: 'pending',
+        paymentRail: 'LIGHTNING',
+        expiresAt: DateTime.now().add(const Duration(hours: 1)),
+        createdAt: DateTime.utc(2026, 1, 1),
+      );
+      final tx = link.toTransaction();
+      expect(tx.id, 'pl_abc-123');
+      expect(tx.cancellable, isTrue);
+      expect(tx.cancelTarget, 'PAYMENT_REQUEST');
+      expect(tx.paymentRequestPublicId, 'abc-123');
+      expect(paymentLinkArchiveId(link.id), 'pl:abc-123');
+    });
+
+    test('cancelled quote is not cancellable and is archive-eligible', () {
+      final link = PaymentLink(
+        id: 'xyz',
+        userId: 1,
+        amountBtc: 0.02,
+        description: '',
+        depositAddress: '',
+        status: 'cancelled',
+        paymentRail: 'ONCHAIN',
+        createdAt: DateTime.utc(2026, 1, 2),
+      );
+      final tx = link.toTransaction();
+      expect(tx.cancellable, isFalse);
+      expect(tx.isCancelled, isTrue);
+      expect(tx.isArchiveEligible, isTrue);
     });
   });
 }

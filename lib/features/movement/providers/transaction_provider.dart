@@ -102,14 +102,18 @@ List<Transaction> _mergeExternalHistory({
     remoteRows: kfeTransactions,
   );
 
-  // Only payment-links with real movement (not pure open quotes).
+  // Payment links: settled movement + open/cancelled quotes so pending invoices
+  // appear in history and can be cancelled without hunting the receive QR.
   final linkRows = paymentLinks
       .where(
         (l) =>
             l.isPaid ||
             l.isCompleted ||
             l.hasObservedOnchainPayment ||
-            l.isValidatingSettlement,
+            l.isValidatingSettlement ||
+            l.isPending ||
+            l.isCancelled ||
+            l.isExpired,
       )
       .map((l) => l.toTransaction())
       .toList(growable: false);

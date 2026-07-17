@@ -4,8 +4,12 @@ import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/home/presentation/widgets/pending_payment_link_item.dart';
 import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
+import 'package:kerosene/features/movement/screens/receive_method.dart';
+import 'package:kerosene/features/movement/screens/receive_request_flow_screen.dart';
+import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -233,6 +237,17 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
       );
     }
 
+    final pendingLinksAsync = ref.watch(paymentLinksProvider);
+    final pendingLinks = pendingLinksAsync.asData?.value
+            .where(
+              (l) =>
+                  !l.isCompleted &&
+                  !l.isPaid &&
+                  (l.isPending || l.isCancelled || l.isExpired),
+            )
+            .toList(growable: false) ??
+        const <PaymentLink>[];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -244,8 +259,84 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
             lastSync: lastSync,
             count: filteredTxs.length,
           ),
+        if (pendingLinks.isNotEmpty && filterIsAll) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              context.tr.homePendingPaymentLinksTitle,
+              style: AppTypography.label.copyWith(
+                color: HomeColors.textMuted,
+                fontSize: homeFontSize(12),
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 168,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: pendingLinks.length,
+              itemBuilder: (context, index) {
+                final link = pendingLinks[index];
+                return PendingPaymentLinkItem(
+                  paymentLink: link,
+                  onTap: () => _openPaymentLink(link),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: homeSize(AppSpacing.md)),
+        ],
         body,
       ],
+    );
+  }
+
+  void _openPaymentLink(PaymentLink link) {
+    HapticFeedback.selectionClick();
+    final walletState = ref.read(walletProvider);
+    final wallets = walletState is WalletLoaded
+        ? walletState.wallets
+        : const <Wallet>[];
+    final metaWalletId = link.metadata['walletId']?.trim();
+    Wallet? wallet;
+    if (metaWalletId != null && metaWalletId.isNotEmpty) {
+      for (final w in wallets) {
+        if (w.id == metaWalletId) {
+          wallet = w;
+          break;
+        }
+      }
+    }
+    wallet ??= wallets.isNotEmpty ? wallets.first : null;
+
+    if (wallet == null) {
+      // Fallback: open as synthetic history detail so cancel/archive still work.
+      unawaited(
+        TransactionDetailScreen.open(context, link.toTransaction()),
+      );
+      return;
+    }
+
+    final onChain = link.paymentRail.toUpperCase().contains('ONCHAIN') ||
+        (!link.isLightningPaymentRequest && !link.isInternalPaymentRequest);
+    final method = link.isLightningPaymentRequest
+        ? ReceiveAmountMethod.lightning
+        : ReceiveAmountMethod.paymentLink;
+
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ReceiveRequestFlowScreen(
+            wallet: wallet!,
+            onChainWallet: onChain,
+            amountBtc: link.amountBtc,
+            method: method,
+            initialPaymentLink: link,
+          ),
+        ),
+      ),
     );
   }
 

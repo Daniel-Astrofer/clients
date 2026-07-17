@@ -16782,6 +16782,24 @@ abstract class AppLocalizations {
   /// **'Could not cancel'**
   String get txDetailCancelError;
 
+  /// No description provided for @activityArchiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive now'**
+  String get activityArchiveNow;
+
+  /// No description provided for @activityArchiveNowSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to Archived'**
+  String get activityArchiveNowSuccess;
+
+  /// No description provided for @homePendingPaymentLinksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open payment links'**
+  String get homePendingPaymentLinksTitle;
+
   /// No description provided for @txListNeedsReview.
   ///
   /// In en, this message translates to:

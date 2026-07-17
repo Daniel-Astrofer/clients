@@ -316,6 +316,12 @@ class PaymentLink extends Equatable {
                 ? referenceLabel!.trim()
                 : 'Carteira receptora');
 
+    final openQuote = !isCompleted &&
+        !cancelledOrExpired &&
+        !isPaid &&
+        !terminal &&
+        !hasObservedOnchainPayment;
+
     return Transaction(
       id: "pl_$id",
       fromAddress: isInternalRail
@@ -359,6 +365,12 @@ class PaymentLink extends Equatable {
           : depositAddress.isNotEmpty
               ? depositAddress
               : settlementReference,
+      // Open invoices can be cancelled from detail / home strip.
+      cancellable: openQuote,
+      cancelTarget: openQuote ? 'PAYMENT_REQUEST' : null,
+      paymentRequestId: id,
+      paymentRequestPublicId: id,
+      paymentRequestStatus: status,
     );
   }
 

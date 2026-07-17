@@ -9307,6 +9307,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get txDetailCancelError => 'Não foi possível cancelar';
 
   @override
+  String get activityArchiveNow => 'Arquivar agora';
+
+  @override
+  String get activityArchiveNowSuccess => 'Movido para Arquivadas';
+
+  @override
+  String get homePendingPaymentLinksTitle => 'Links de pagamento abertos';
+
+  @override
   String get txListNeedsReview => 'Em revisão';
 
   @override

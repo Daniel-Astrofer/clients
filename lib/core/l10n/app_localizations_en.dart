@@ -9231,6 +9231,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txDetailCancelError => 'Could not cancel';
 
   @override
+  String get activityArchiveNow => 'Archive now';
+
+  @override
+  String get activityArchiveNowSuccess => 'Moved to Archived';
+
+  @override
+  String get homePendingPaymentLinksTitle => 'Open payment links';
+
+  @override
   String get txListNeedsReview => 'Needs review';
 
   @override
