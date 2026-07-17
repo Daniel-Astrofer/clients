@@ -9212,6 +9212,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txListCancelled => 'Cancelled';
 
   @override
+  String get txDetailCancelAction => 'Cancel';
+
+  @override
+  String get txDetailCancelTitle => 'Cancel this activity?';
+
+  @override
+  String get txDetailCancelBody =>
+      'The pending invoice or send will be closed. It stays on the statement as cancelled until you open details (then moves to Archived).';
+
+  @override
+  String get txDetailCancelConfirm => 'Yes, cancel';
+
+  @override
+  String get txDetailCancelSuccess => 'Activity cancelled';
+
+  @override
+  String get txDetailCancelError => 'Could not cancel';
+
+  @override
   String get txListNeedsReview => 'Needs review';
 
   @override

@@ -23,6 +23,7 @@ import 'package:kerosene/features/auth/controller/auth_providers.dart'
 import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
@@ -538,7 +539,12 @@ final paymentLinksProvider = FutureProvider<List<PaymentLink>>((ref) async {
   }
 
   final repo = ref.watch(transactionRepositoryProvider);
-  return repo.getPaymentLinks();
+  final archived = ref.watch(activityArchiveProvider);
+  final links = await repo.getPaymentLinks();
+  // Archived cancelled links leave the global pending strip.
+  return links
+      .where((link) => !archived.contains(paymentLinkArchiveId(link.id)))
+      .toList(growable: false);
 });
 
 final externalTransfersProvider = FutureProvider<List<ExternalTransfer>>((

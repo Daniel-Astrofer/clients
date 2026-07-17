@@ -11,6 +11,8 @@ import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/screens/receive_method.dart';
 import 'package:kerosene/features/movement/screens/receive_request_flow_screen.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -267,4 +269,15 @@ class _PollingReceiveRepository implements TransactionRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    throw UnimplementedError();
+  }
+
 }

@@ -4,6 +4,8 @@ import 'package:kerosene/features/auth/data/datasources/auth_local_datasource.da
 import 'package:kerosene/features/movement/data/datasources/transaction_remote_datasource.dart';
 import 'package:kerosene/features/movement/data/repositories/transaction_repository_impl.dart';
 import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 
 class _SpyTransactionRemoteDataSource implements TransactionRemoteDataSource {
   TxStatus response = const TxStatus(
@@ -55,6 +57,17 @@ class _SpyTransactionRemoteDataSource implements TransactionRemoteDataSource {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    throw UnimplementedError();
+  }
+
 }
 
 class _SpyAuthLocalDataSource implements AuthLocalDataSource {

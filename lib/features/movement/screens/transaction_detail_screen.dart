@@ -22,6 +22,8 @@ import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/core/security/financial_secure_scope.dart';
+import 'package:kerosene/features/movement/providers/transaction_provider.dart'
+    hide transactionRepositoryProvider;
 import 'package:kerosene/features/movement/utils/blockchain_explorer.dart';
 import 'package:kerosene/features/movement/utils/transaction_display.dart';
 import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
@@ -73,10 +75,13 @@ class _TransactionDetailScreenState
     with SingleTickerProviderStateMixin {
   late final AnimationController _entrance;
   bool _technicalExpanded = false;
+  bool _cancelling = false;
+  late Transaction _tx;
 
   @override
   void initState() {
     super.initState();
+    _tx = widget.transaction;
     _entrance = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 720),
@@ -85,11 +90,9 @@ class _TransactionDetailScreenState
     // opening the dossier moves them to Arquivadas.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (widget.transaction.isArchiveEligible) {
+      if (_tx.isArchiveEligible) {
         unawaited(
-          ref.read(activityArchiveProvider.notifier).markArchived(
-                widget.transaction.id,
-              ),
+          ref.read(activityArchiveProvider.notifier).markArchived(_tx.id),
         );
       }
     });
@@ -101,7 +104,72 @@ class _TransactionDetailScreenState
     super.dispose();
   }
 
-  Transaction get tx => widget.transaction;
+  Transaction get tx => _tx;
+
+  Future<void> _confirmAndCancel() async {
+    if (_cancelling || !tx.cancellable) return;
+    final tr = context.tr;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: KeroseneBrandTokens.surfaceHigh,
+        title: Text(
+          tr.txDetailCancelTitle,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          tr.txDetailCancelBody,
+          style: AppTypography.inter(
+            color: KeroseneBrandTokens.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: Text(tr.txDetailCancelConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      final updated = await repo.cancelTransaction(tx.id);
+      if (!mounted) return;
+      setState(() {
+        _tx = updated;
+        _cancelling = false;
+      });
+      // Refresh feeds; keep cancelled visible until this open archives it.
+      ref.invalidate(transactionHistoryProvider);
+      if (updated.isArchiveEligible) {
+        await ref.read(activityArchiveProvider.notifier).markArchived(updated.id);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr.txDetailCancelSuccess)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cancelling = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr.txDetailCancelError)),
+      );
+    }
+  }
 
   List<Wallet> get _wallets {
     final state = ref.watch(walletProvider);
@@ -507,6 +575,35 @@ class _TransactionDetailScreenState
                                   primaryRows.length + technicalRows.length,
                               row: technicalRows[i],
                             ),
+                      ],
+                      if (tx.cancellable) ...[
+                        const SizedBox(height: 28),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _cancelling ? null : _confirmAndCancel,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.error,
+                              side: BorderSide(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .error
+                                    .withValues(alpha: 0.55),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: _cancelling
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(context.tr.txDetailCancelAction),
+                          ),
+                        ),
                       ],
                     ],
                   ),

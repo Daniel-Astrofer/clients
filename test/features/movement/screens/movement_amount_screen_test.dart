@@ -18,6 +18,7 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/movement/screens/movement_amount_screen.dart';
 import 'package:kerosene/features/movement/flow/receive_nfc_availability_provider.dart';
 import 'package:kerosene/features/movement/screens/receive_method.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 void main() {
   testWidgets('shows payment link configuration before generating link',
@@ -287,13 +288,23 @@ class _ReceiveAmountRepository implements TransactionRepository {
   Future<List<PaymentLink>> getPaymentLinks() => throw UnimplementedError();
 
   @override
-  Future<WalletNetworkAddress> getWalletNetworkProfile({
-    required String walletName,
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    throw UnimplementedError();
   }
 
   @override
-  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async => null;
-) =>
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async =>
+      null;
+
+  @override
+  Future<WalletNetworkAddress> getWalletNetworkProfile({
+    required String walletName,
+  }) =>
       throw UnimplementedError();
 
   @override

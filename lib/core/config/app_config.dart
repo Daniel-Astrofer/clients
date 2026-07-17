@@ -196,6 +196,8 @@ class AppConfig {
   static const String kfeTransactions = '/kfe/transactions';
   static String kfeTransaction(String transactionId) =>
       '$kfeTransactions/$transactionId';
+  static String kfeTransactionCancel(String transactionId) =>
+      '${kfeTransaction(transactionId)}/cancel';
   static String kfeWallet(String walletId) => '$kfeWallets/$walletId';
   static String kfeWalletArchive(String walletId) =>
       '${kfeWallet(walletId)}/archive';

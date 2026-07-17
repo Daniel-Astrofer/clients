@@ -15,6 +15,8 @@ import 'package:kerosene/features/financial_accounts/presentation/providers/wall
     hide transactionRepositoryProvider;
 import 'package:kerosene/features/movement/screens/send_money_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 
 void main() {
   testWidgets('wallet selection step confirms send wallet by hold',
@@ -503,4 +505,15 @@ class _UnusedTransactionRepository implements TransactionRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    throw UnimplementedError();
+  }
+
 }

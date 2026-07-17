@@ -9288,6 +9288,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get txListCancelled => 'Cancelada';
 
   @override
+  String get txDetailCancelAction => 'Cancelar';
+
+  @override
+  String get txDetailCancelTitle => 'Cancelar esta movimentação?';
+
+  @override
+  String get txDetailCancelBody =>
+      'Invoice ou envio pendente será encerrado. O item permanece no extrato como cancelado até você abrir os detalhes (depois vai para Arquivadas).';
+
+  @override
+  String get txDetailCancelConfirm => 'Sim, cancelar';
+
+  @override
+  String get txDetailCancelSuccess => 'Movimentação cancelada';
+
+  @override
+  String get txDetailCancelError => 'Não foi possível cancelar';
+
+  @override
   String get txListNeedsReview => 'Em revisão';
 
   @override

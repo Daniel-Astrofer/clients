@@ -16746,6 +16746,42 @@ abstract class AppLocalizations {
   /// **'Cancelled'**
   String get txListCancelled;
 
+  /// No description provided for @txDetailCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get txDetailCancelAction;
+
+  /// No description provided for @txDetailCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this activity?'**
+  String get txDetailCancelTitle;
+
+  /// No description provided for @txDetailCancelBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The pending invoice or send will be closed. It stays on the statement as cancelled until you open details (then moves to Archived).'**
+  String get txDetailCancelBody;
+
+  /// No description provided for @txDetailCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, cancel'**
+  String get txDetailCancelConfirm;
+
+  /// No description provided for @txDetailCancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity cancelled'**
+  String get txDetailCancelSuccess;
+
+  /// No description provided for @txDetailCancelError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not cancel'**
+  String get txDetailCancelError;
+
   /// No description provided for @txListNeedsReview.
   ///
   /// In en, this message translates to:

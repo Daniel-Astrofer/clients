@@ -4,6 +4,7 @@ import '../entities/fee_estimate.dart';
 import '../entities/tx_status.dart';
 import '../entities/deposit.dart';
 import '../entities/payment_link.dart';
+import '../entities/transaction.dart';
 import '../entities/external_transfer.dart';
 import '../entities/onchain_address_allocation.dart';
 import '../entities/wallet_network_address.dart';
@@ -49,6 +50,12 @@ abstract class TransactionRepository {
   });
   Future<PaymentLink> getPaymentLink(String linkId);
   Future<List<PaymentLink>> getPaymentLinks();
+
+  /// Cancel open invoice / abandonable pending transaction (KFE).
+  Future<Transaction> cancelTransaction(String transactionId);
+
+  /// Cancel open payment request / invoice link (KFE).
+  Future<PaymentLink> cancelPaymentRequest(String requestId);
 
   /// When [invoiceOrHash] is a platform-owned BOLT11 / payment hash, returns the
   /// payment request so the client can settle via INTERNAL ledger. Null if external.

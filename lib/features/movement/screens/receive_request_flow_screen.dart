@@ -20,10 +20,12 @@ import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
 import 'package:kerosene/features/movement/domain/entities/onchain_address_allocation.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/widgets/movement_confirmation_surface.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/financial_surface_provider.dart';
 import 'package:kerosene/features/movement/screens/receive_method.dart';
 import 'receive_request_flow_components.dart';
 
@@ -72,7 +74,7 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
 
 class _ReceiveRequestFlowScreenState
     extends ConsumerState<ReceiveRequestFlowScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, FinancialSurfaceMixin {
   Timer? _statusTimer;
   late final AnimationController _scanController;
   late ReceiveRequestStage _stage;
@@ -104,6 +106,18 @@ class _ReceiveRequestFlowScreenState
     if (widget.enableStatusPolling) {
       scheduleMicrotask(_prepareRequest);
     }
+    // Cancelled links leave the global strip after the user opens them.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final link = _link;
+      if (link != null && (link.isCancelled || link.isExpired)) {
+        unawaited(
+          ref.read(activityArchiveProvider.notifier).markArchived(
+                paymentLinkArchiveId(link.id),
+              ),
+        );
+      }
+    });
   }
 
   @override

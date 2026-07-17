@@ -14,29 +14,29 @@ abstract final class TransactionVisualTokens {
   static const surfaceInternalOut = Color(0xFFF0EDE8); // warm stone
   static const borderInternalOut = Color(0xFFD2CBC2);
 
-  // On-chain (orange family — in soft peach, out deeper amber)
-  static const surfaceOnchainIn = Color(0xFFFFD9A8);
-  static const borderOnchainIn = Color(0xFFE8A04A);
-  static const surfaceOnchainOut = Color(0xFFFFB86B);
-  static const borderOnchainOut = Color(0xFFD9883A);
+  // On-chain — quiet warm paper (glyph carries the rail identity).
+  static const surfaceOnchainIn = Color(0xFFF6F1EA);
+  static const borderOnchainIn = Color(0xFFD8D0C6);
+  static const surfaceOnchainOut = Color(0xFFF3EDE5);
+  static const borderOnchainOut = Color(0xFFD2C9BD);
 
-  // Lightning (gold / chartreuse — in soft gold, out brighter)
-  static const surfaceLightningIn = Color(0xFFF7E9A8);
-  static const borderLightningIn = Color(0xFFD4BC4A);
-  static const surfaceLightningOut = Color(0xFFE8F5A0);
-  static const borderLightningOut = Color(0xFFB8C94A);
+  // Lightning — quiet cool-neutral paper.
+  static const surfaceLightningIn = Color(0xFFF3F2EE);
+  static const borderLightningIn = Color(0xFFD5D2C9);
+  static const surfaceLightningOut = Color(0xFFF1F0EB);
+  static const borderLightningOut = Color(0xFFD0CDC4);
 
-  // Cold (ice / steel blue)
-  static const surfaceColdIn = Color(0xFFD9ECF7);
-  static const borderColdIn = Color(0xFF7EB6D4);
-  static const surfaceColdOut = Color(0xFFC5D8E8);
-  static const borderColdOut = Color(0xFF6A93B0);
+  // Cold — soft steel, low chroma.
+  static const surfaceColdIn = Color(0xFFEEF2F5);
+  static const borderColdIn = Color(0xFFC5CED6);
+  static const surfaceColdOut = Color(0xFFE9EEF2);
+  static const borderColdOut = Color(0xFFBEC8D0);
 
-  // Payment link (violet)
-  static const surfaceLinkIn = Color(0xFFE8DFF5);
-  static const borderLinkIn = Color(0xFFA78BDB);
-  static const surfaceLinkOut = Color(0xFFDCC8F0);
-  static const borderLinkOut = Color(0xFF9470C8);
+  // Payment link — soft violet-grey, not candy.
+  static const surfaceLinkIn = Color(0xFFF1EEF4);
+  static const borderLinkIn = Color(0xFFD0C9D8);
+  static const surfaceLinkOut = Color(0xFFEFEBF3);
+  static const borderLinkOut = Color(0xFFCBC3D4);
 
   // Fee / swap / lifecycle
   static const surfaceFee = Color(0xFFE4E4E7);

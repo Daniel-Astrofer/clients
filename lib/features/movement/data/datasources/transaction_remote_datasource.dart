@@ -12,6 +12,7 @@ import '../../domain/entities/fee_estimate.dart';
 import '../../domain/entities/tx_status.dart';
 import '../../domain/entities/deposit.dart';
 import '../../domain/entities/payment_link.dart';
+import '../../domain/entities/transaction.dart';
 import '../../domain/entities/onchain_address_allocation.dart';
 import '../../domain/entities/wallet_network_address.dart';
 
@@ -878,6 +879,38 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       if (e is AppException) rethrow;
       throw ServerException(
         message: 'Não conseguimos carregar seus links de pagamento agora.',
+      );
+    }
+  }
+
+  @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    try {
+      final response = await apiClient.post(
+        AppConfig.kfeTransactionCancel(transactionId),
+      );
+      final data = _parseJsonResponse(response.data);
+      return Transaction.fromJson(data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message: 'Não conseguimos cancelar esta transação agora.',
+      );
+    }
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    try {
+      final response = await apiClient.post(
+        AppConfig.kfePaymentRequestCancel(requestId),
+      );
+      final data = _parseJsonResponse(response.data);
+      return _paymentLinkFromKfePayload(data);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ServerException(
+        message: 'Não conseguimos cancelar este link de pagamento agora.',
       );
     }
   }

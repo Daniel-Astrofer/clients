@@ -643,6 +643,22 @@ class MockTransactionRepository implements TransactionRepository {
   Future<List<PaymentLink>> getPaymentLinks() async => mockPaymentLinks;
 
   @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    return mockTransactions.firstWhere(
+      (t) => t.id == transactionId,
+      orElse: () => mockTransactions.first,
+    );
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    return mockPaymentLinks.firstWhere(
+      (item) => item.id == requestId,
+      orElse: () => mockPaymentLinks.first,
+    );
+  }
+
+  @override
   Future<WalletNetworkAddress> getWalletNetworkProfile({
     required String walletName,
   }) async {

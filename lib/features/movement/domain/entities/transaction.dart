@@ -111,6 +111,16 @@ final class Transaction extends Equatable {
   /// Stable failure code from KFE (safe for localized mapping). Never a stack.
   final String? failureCode;
 
+  /// From KFE detail/list: client may show Cancel when true.
+  final bool cancellable;
+
+  /// `PAYMENT_REQUEST` | `TRANSACTION` | null.
+  final String? cancelTarget;
+
+  final String? paymentRequestId;
+  final String? paymentRequestPublicId;
+  final String? paymentRequestStatus;
+
   /// Indica se a transação possui taxa de rede exibível.
   final bool hasNetworkFee;
 
@@ -169,6 +179,11 @@ final class Transaction extends Equatable {
     this.rail,
     this.provider,
     this.failureCode,
+    this.cancellable = false,
+    this.cancelTarget,
+    this.paymentRequestId,
+    this.paymentRequestPublicId,
+    this.paymentRequestStatus,
     this.hasNetworkFee = false,
     this.displayAmountUsd,
     this.displayAmountEur,
@@ -404,6 +419,11 @@ final class Transaction extends Equatable {
       'rail': rail,
       'provider': provider,
       'failureCode': failureCode,
+      'cancellable': cancellable,
+      'cancelTarget': cancelTarget,
+      'paymentRequestId': paymentRequestId,
+      'paymentRequestPublicId': paymentRequestPublicId,
+      'paymentRequestStatus': paymentRequestStatus,
       'hasNetworkFee': hasNetworkFee,
       'displayAmountUsd': displayAmountUsd,
       'displayAmountEur': displayAmountEur,
@@ -484,6 +504,11 @@ final class Transaction extends Equatable {
         provider: json['provider']?.toString(),
         // Never persist raw failureMessage (may contain internal detail).
         failureCode: json['failureCode']?.toString(),
+        cancellable: json['cancellable'] == true,
+        cancelTarget: json['cancelTarget']?.toString(),
+        paymentRequestId: json['paymentRequestId']?.toString(),
+        paymentRequestPublicId: json['paymentRequestPublicId']?.toString(),
+        paymentRequestStatus: json['paymentRequestStatus']?.toString(),
         hasNetworkFee: json['hasNetworkFee'] == true,
         displayAmountUsd: _parseDouble(_firstJsonValue(json, const [
           'displayAmountUsd',
@@ -851,6 +876,11 @@ final class Transaction extends Equatable {
       provider: provider.isNotEmpty ? provider : null,
       // Only the stable code — never raw failureMessage in local storage/UI.
       failureCode: json['failureCode']?.toString(),
+      cancellable: json['cancellable'] == true,
+      cancelTarget: json['cancelTarget']?.toString(),
+      paymentRequestId: json['paymentRequestId']?.toString(),
+      paymentRequestPublicId: json['paymentRequestPublicId']?.toString(),
+      paymentRequestStatus: json['paymentRequestStatus']?.toString(),
       walletLabel: json['walletLabel']?.toString(),
       sourceWalletLabel: json['sourceWalletLabel']?.toString(),
       destinationWalletLabel: json['destinationWalletLabel']?.toString(),
@@ -1199,6 +1229,11 @@ final class Transaction extends Equatable {
         rail,
         provider,
         failureCode,
+        cancellable,
+        cancelTarget,
+        paymentRequestId,
+        paymentRequestPublicId,
+        paymentRequestStatus,
         hasNetworkFee,
         displayAmountUsd,
         displayAmountEur,

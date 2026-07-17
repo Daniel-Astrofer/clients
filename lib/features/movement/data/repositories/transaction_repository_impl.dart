@@ -8,6 +8,7 @@ import '../../domain/entities/deposit.dart';
 import '../../domain/entities/external_transfer.dart';
 import '../../domain/entities/onchain_address_allocation.dart';
 import '../../domain/entities/payment_link.dart';
+import '../../domain/entities/transaction.dart';
 import '../../domain/entities/wallet_network_address.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../datasources/transaction_remote_datasource.dart';
@@ -178,6 +179,18 @@ class TransactionRepositoryImpl implements TransactionRepository {
   Future<List<PaymentLink>> getPaymentLinks() async {
     await _checkAuth();
     return remoteDataSource.getPaymentLinks();
+  }
+
+  @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    await _checkAuth();
+    return remoteDataSource.cancelTransaction(transactionId);
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    await _checkAuth();
+    return remoteDataSource.cancelPaymentRequest(requestId);
   }
 
   @override

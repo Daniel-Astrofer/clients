@@ -73,13 +73,13 @@ abstract final class TransactionPalette {
   static const Color surfaceInternal = Color(0xFFF4F4F5);
   static const Color borderInternal = Color(0xFFD8DADF);
 
-  /// On-chain — stronger orange wash (reads as orange, not beige).
-  static const Color surfaceOnchain = Color(0xFFFFC98A);
-  static const Color borderOnchain = Color(0xFFE89B3C);
+  /// On-chain — quiet warm paper (rail shown by glyph, not neon wash).
+  static const Color surfaceOnchain = Color(0xFFF6F1EA);
+  static const Color borderOnchain = Color(0xFFD8D0C6);
 
-  /// Lightning — soft gold (cooler than on-chain orange).
-  static const Color surfaceLightning = Color(0xFFF5E6A8);
-  static const Color borderLightning = Color(0xFFD9C45C);
+  /// Lightning — quiet neutral paper.
+  static const Color surfaceLightning = Color(0xFFF3F2EE);
+  static const Color borderLightning = Color(0xFFD5D2C9);
 
   static const Color surfaceDivider = Color(0x290F0F10);
 
