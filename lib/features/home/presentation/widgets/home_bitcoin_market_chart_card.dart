@@ -9,23 +9,6 @@ import '../screens/home_screen_dependencies.dart';
 import '../screens/home_screen.dart';
 import '../screens/home_screen_surface.dart';
 
-class _StaticChartPrice extends StatelessWidget {
-  final double price;
-  final String Function(double value) formatter;
-  final TextStyle style;
-
-  const _StaticChartPrice({
-    required this.price,
-    required this.formatter,
-    required this.style,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(formatter(price), maxLines: 1, style: style);
-  }
-}
-
 class HomeBitcoinMarketChartCard extends ConsumerStatefulWidget {
   const HomeBitcoinMarketChartCard({super.key});
 
@@ -40,7 +23,8 @@ class _HomeBitcoinMarketChartCardState
   /// Stroke was 2.4 → −30% ≈ 1.68
   static const double _lineStrokeWidth = 1.68;
   /// Glow stroke was 5 → −30% ≈ 3.5; alpha was 0.18 → −40% ≈ 0.108
-
+  static const double _lineGlowWidth = 3.5;
+  static const double _lineGlowAlpha = 0.108;
 
   int? _selectedIndex;
   DateTime? _lastSelectionHapticAt;
@@ -152,8 +136,7 @@ class _HomeBitcoinMarketChartCardState
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
-                      // Plain text — ticker TweenAnimationBuilder thrash under scroll.
-                      child: _StaticChartPrice(
+                      child: HomeBitcoinPriceTicker(
                         price: displayPrice,
                         formatter: (value) => money.format(
                           amount: value,
@@ -240,31 +223,41 @@ class _HomeBitcoinMarketChartCardState
                       children: [
                         Positioned.fill(
                           child: RepaintBoundary(
-                            // Static paint — no draw-on AnimationController.
-                            // Draw-on was re-painting the full series every frame.
-                            child: CustomPaint(
-                              painter: _BitcoinMarketChartPainter(
-                                snapshot: snapshot,
-                                selectedIndex: _safeSelectedIndex(snapshot),
-                                padding: _chartPadding,
-                                lineColor: trendColor,
-                                drawProgress: 1,
-                                lineStrokeWidth: _lineStrokeWidth,
-                                labelColor:
-                                    Colors.white.withValues(alpha: 0.42),
-                                priceLabelFormatter: (value) => _compactPrice(
-                                  value,
-                                  snapshot.request.quoteCurrency,
-                                ),
-                                timeLabelFormatter: (time) => _timeLabel(
-                                  time,
-                                  snapshot.request.range,
-                                  locale: Localizations.localeOf(context)
-                                      .toLanguageTag(),
-                                ),
+                            child: HomeBitcoinChartDrawOn(
+                              seriesKey: Object.hash(
+                                snapshot.request.symbol,
+                                snapshot.request.rangeLabel,
+                                snapshot.request.customStart,
+                                points.length > 2 ? points.first.timeMillis : 0,
                               ),
-                              isComplex: true,
-                              willChange: false,
+                              builder: (context, progress) {
+                                return CustomPaint(
+                                  painter: _BitcoinMarketChartPainter(
+                                    snapshot: snapshot,
+                                    selectedIndex:
+                                        _safeSelectedIndex(snapshot),
+                                    padding: _chartPadding,
+                                    lineColor: trendColor,
+                                    drawProgress: progress,
+                                    lineStrokeWidth: _lineStrokeWidth,
+                                    lineGlowWidth: _lineGlowWidth,
+                                    lineGlowAlpha: _lineGlowAlpha,
+                                    labelColor:
+                                        Colors.white.withValues(alpha: 0.42),
+                                    priceLabelFormatter: (value) =>
+                                        _compactPrice(
+                                      value,
+                                      snapshot.request.quoteCurrency,
+                                    ),
+                                    timeLabelFormatter: (time) => _timeLabel(
+                                      time,
+                                      snapshot.request.range,
+                                      locale: Localizations.localeOf(context)
+                                          .toLanguageTag(),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ),
@@ -800,6 +793,8 @@ class _BitcoinMarketChartPainter extends CustomPainter {
   final Color lineColor;
   final double drawProgress;
   final double lineStrokeWidth;
+  final double lineGlowWidth;
+  final double lineGlowAlpha;
   final Color labelColor;
   final String Function(double value) priceLabelFormatter;
   final String Function(DateTime time) timeLabelFormatter;
@@ -811,6 +806,8 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     required this.lineColor,
     required this.drawProgress,
     required this.lineStrokeWidth,
+    required this.lineGlowWidth,
+    required this.lineGlowAlpha,
     required this.labelColor,
     required this.priceLabelFormatter,
     required this.timeLabelFormatter,
@@ -847,40 +844,53 @@ class _BitcoinMarketChartPainter extends CustomPainter {
         ),
     ];
 
-    // Downsample dense series — home chart rarely needs 500+ points.
-    final paintOffsets = offsets.length > 80
-        ? _downsampleOffsets(offsets, 80)
-        : offsets;
-    final path = _straightPath(paintOffsets);
-    final progress = drawProgress.clamp(0.0, 1.0);
+    final path = _straightPath(offsets);
+    final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return;
 
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = lineStrokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..color = lineColor
-      ..isAntiAlias = true;
+    final totalLen = metrics.fold<double>(0, (sum, m) => sum + m.length);
+    final visibleLen = totalLen * drawProgress.clamp(0.0, 1.0);
 
-    // Steady state: draw full path — skip PathMetric extract (expensive).
-    if (progress >= 0.999) {
-      final fillPath = Path.from(path)
-        ..lineTo(plotRect.right, plotRect.bottom)
+    final extract = _extractPath(metrics, visibleLen);
+    if (extract != null) {
+      final fillPath = Path.from(extract)
+        ..lineTo(extract.getBounds().right, plotRect.bottom)
         ..lineTo(plotRect.left, plotRect.bottom)
         ..close();
       canvas.drawPath(
         fillPath,
-        Paint()..color = lineColor.withValues(alpha: 0.10),
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              lineColor.withValues(alpha: 0.16),
+              lineColor.withValues(alpha: 0.01),
+            ],
+          ).createShader(plotRect),
       );
-      canvas.drawPath(path, stroke);
-    } else {
-      final metrics = path.computeMetrics().toList();
-      if (metrics.isEmpty) return;
-      final totalLen = metrics.fold<double>(0, (sum, m) => sum + m.length);
-      final extract = _extractPath(metrics, totalLen * progress);
-      if (extract != null) {
-        canvas.drawPath(extract, stroke);
-      }
+
+      // Soft glow under the stroke.
+      canvas.drawPath(
+        extract,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = lineGlowWidth
+          ..strokeCap = StrokeCap.round
+          ..color = lineColor.withValues(alpha: lineGlowAlpha)
+          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 3),
+      );
+
+      canvas.drawPath(
+        extract,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = lineStrokeWidth
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = lineColor
+          ..isAntiAlias = true,
+      );
     }
 
     final selected = selectedIndex;
@@ -902,17 +912,6 @@ class _BitcoinMarketChartPainter extends CustomPainter {
       out.addPath(metric.extractPath(0, take), Offset.zero);
       remaining -= take;
     }
-    return out;
-  }
-
-  List<Offset> _downsampleOffsets(List<Offset> src, int maxPoints) {
-    if (src.length <= maxPoints || maxPoints < 2) return src;
-    final out = <Offset>[src.first];
-    final step = (src.length - 1) / (maxPoints - 1);
-    for (var i = 1; i < maxPoints - 1; i++) {
-      out.add(src[(i * step).round()]);
-    }
-    out.add(src.last);
     return out;
   }
 
@@ -1008,6 +1007,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
         oldDelegate.lineColor != lineColor ||
         oldDelegate.drawProgress != drawProgress ||
         oldDelegate.lineStrokeWidth != lineStrokeWidth ||
+        oldDelegate.lineGlowAlpha != lineGlowAlpha ||
         oldDelegate.labelColor != labelColor;
   }
 }

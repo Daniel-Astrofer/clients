@@ -61,13 +61,13 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
 
     setState(() => _isContinuing = true);
     try {
-      final paymentLink = await _createPaymentLinkIfNeeded(
-        amountBtc: amountBtc,
-        expiresInMinutes: flowState.paymentLinkExpiresInMinutes,
-      );
-      if (!mounted) return;
-
+      // NFC still needs the link id before the write screen.
       if (widget.method == ReceiveAmountMethod.nfc) {
+        final paymentLink = await _createPaymentLinkIfNeeded(
+          amountBtc: amountBtc,
+          expiresInMinutes: flowState.paymentLinkExpiresInMinutes,
+        );
+        if (!mounted) return;
         if (paymentLink == null || paymentLink.id.trim().isEmpty) {
           throw FormatException(ReceiveMoneyCopy.nfcIdMissing(context));
         }
@@ -87,6 +87,9 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         return;
       }
 
+      // QR / link / lightning / p2p: open the receive surface immediately and
+      // create the request there so the user is not stuck on the amount screen.
+      if (!mounted) return;
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (context) => ReceiveRequestFlowScreen(
@@ -94,7 +97,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
             method: widget.method,
             onChainWallet: widget.onChainWallet,
             amountBtc: amountBtc,
-            initialPaymentLink: paymentLink,
+            paymentLinkExpiresInMinutes: flowState.paymentLinkExpiresInMinutes,
           ),
         ),
       );

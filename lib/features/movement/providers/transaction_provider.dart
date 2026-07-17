@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -45,6 +46,9 @@ const _paymentLinkSelfPayException = ValidationException(
 );
 
 /// Post money-move refresh without importing financial_refresh (cycle-safe).
+///
+/// Must not block the authorize / send UI: wallet + history fetches over Tor can
+/// take many seconds after the money-move API already succeeded.
 Future<void> _refreshAfterMoneyMoved(Ref ref) async {
   ref.read(transactionHistoryCursorProvider.notifier).reset();
   ref.invalidate(transactionHistoryProvider);
@@ -53,10 +57,18 @@ Future<void> _refreshAfterMoneyMoved(Ref ref) async {
   ref.invalidate(depositBalanceProvider);
   ref.invalidate(paymentLinksProvider);
   ref.invalidate(externalTransfersProvider);
-  await Future.wait<void>([
-    ref.read(walletProvider.notifier).refresh(),
-    ref.read(transactionHistoryProvider.future).then((_) {}, onError: (_) {}),
-  ]);
+  // Fire-and-forget: return as soon as providers are invalidated.
+  unawaited(
+    Future.wait<void>([
+      ref
+          .read(walletProvider.notifier)
+          .refresh()
+          .then((_) {}, onError: (_, __) {}),
+      ref
+          .read(transactionHistoryProvider.future)
+          .then((_) {}, onError: (_, __) {}),
+    ]),
+  );
 }
 
 // ==================== Filter Logic ====================

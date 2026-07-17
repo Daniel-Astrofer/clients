@@ -8,9 +8,12 @@ import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
 /// Soft multi-blob aurora for the home shell (theater background glow).
 ///
-/// **Look:** full rich multi-blob haze + soft stops — the designed theater light.
-/// **Perf:** no continuous ambient ticker. Field is cached as a [ui.Picture]
-/// and only re-baked when size or palette changes (theater color swap).
+/// **Look:** full rich multi-blob haze (designed theater light).
+/// **Freeze-safe:**
+/// - No AnimationController.repeat
+/// - No per-frame re-bake of radials (that froze the UI)
+/// - Picture built at most once per palette+size change, never inside a tick
+/// - Palette apply is post-frame only (never setState/notify during build)
 class SceneAuroraBackground extends ConsumerStatefulWidget {
   const SceneAuroraBackground({super.key});
 
@@ -19,186 +22,148 @@ class SceneAuroraBackground extends ConsumerStatefulWidget {
       _SceneAuroraBackgroundState();
 }
 
-class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground>
-    with SingleTickerProviderStateMixin {
-  static const _colorDuration = Duration(milliseconds: 720);
+class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground> {
+  Color _primary = const Color(0xFF4D7EFF);
+  Color _secondary = const Color(0xFF9B7BFF);
+  double _intensity = 0.36;
+  double _topInset = 0;
 
-  late final AnimationController _colorCtrl;
-  late final _AuroraPalette _palette;
-
-  Color _fromPrimary = const Color(0xFF4D7EFF);
-  Color _fromSecondary = const Color(0xFF9B7BFF);
-  double _fromIntensity = 0.36;
-  Color _toPrimary = const Color(0xFF4D7EFF);
-  Color _toSecondary = const Color(0xFF9B7BFF);
-  double _toIntensity = 0.36;
-  bool _seeded = false;
-
-  Size? _lastSize;
+  Size? _size;
   ui.Picture? _picture;
-  int _pictureGen = 0;
-  int _builtGen = -1;
+  int _key = 0;
+  int _builtKey = -1;
+  bool _applyScheduled = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _palette = _AuroraPalette();
-    _colorCtrl = AnimationController(vsync: this, duration: _colorDuration)
-      ..addListener(_onColorTick)
-      ..value = 1;
-  }
+  // Desired palette from last build (applied post-frame).
+  Color? _wantPrimary;
+  Color? _wantSecondary;
+  double? _wantIntensity;
+  double? _wantTopInset;
 
   @override
   void dispose() {
-    _colorCtrl.dispose();
     _picture?.dispose();
-    _palette.dispose();
     super.dispose();
   }
 
-  void _onColorTick() {
-    final t = Curves.easeInOutCubic.transform(_colorCtrl.value);
-    _palette.primary = Color.lerp(_fromPrimary, _toPrimary, t) ?? _toPrimary;
-    _palette.secondary =
-        Color.lerp(_fromSecondary, _toSecondary, t) ?? _toSecondary;
-    _palette.intensity = _fromIntensity + (_toIntensity - _fromIntensity) * t;
-    _pictureGen++;
-    _palette.notify();
-  }
-
-  void _beginColorTransition({
-    required Color primary,
-    required Color secondary,
-    required double intensity,
-    required bool reduce,
-  }) {
-    if (!_seeded) {
-      _fromPrimary = primary;
-      _fromSecondary = secondary;
-      _fromIntensity = intensity;
-      _toPrimary = primary;
-      _toSecondary = secondary;
-      _toIntensity = intensity;
-      _seeded = true;
-      _colorCtrl.value = 1;
-      _onColorTick();
-      return;
-    }
-    if (_near(_toPrimary, primary) &&
-        _near(_toSecondary, secondary) &&
-        (_toIntensity - intensity).abs() < 0.015) {
-      return;
-    }
-    final t = Curves.easeInOutCubic.transform(_colorCtrl.value);
-    _fromPrimary = Color.lerp(_fromPrimary, _toPrimary, t) ?? _toPrimary;
-    _fromSecondary =
-        Color.lerp(_fromSecondary, _toSecondary, t) ?? _toSecondary;
-    _fromIntensity = _fromIntensity + (_toIntensity - _fromIntensity) * t;
-    _toPrimary = primary;
-    _toSecondary = secondary;
-    _toIntensity = intensity;
-    if (reduce) {
-      _colorCtrl.value = 1;
-      _onColorTick();
-    } else {
-      _colorCtrl.forward(from: 0);
-    }
-  }
-
-  bool _near(Color a, Color b) =>
+  bool _nearColor(Color a, Color b) =>
       (a.r - b.r).abs() < 0.02 &&
       (a.g - b.g).abs() < 0.02 &&
       (a.b - b.b).abs() < 0.02 &&
       (a.a - b.a).abs() < 0.02;
 
-  ui.Picture _buildPicture(Size size) {
+  void _scheduleApply({
+    required Color primary,
+    required Color secondary,
+    required double intensity,
+    required double topInset,
+  }) {
+    _wantPrimary = primary;
+    _wantSecondary = secondary;
+    _wantIntensity = intensity;
+    _wantTopInset = topInset;
+    if (_applyScheduled) return;
+    _applyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyScheduled = false;
+      if (!mounted) return;
+      final p = _wantPrimary;
+      final s = _wantSecondary;
+      final i = _wantIntensity;
+      final t = _wantTopInset;
+      if (p == null || s == null || i == null || t == null) return;
+      if (_nearColor(_primary, p) &&
+          _nearColor(_secondary, s) &&
+          (_intensity - i).abs() < 0.015 &&
+          (_topInset - t).abs() < 0.5) {
+        return;
+      }
+      _primary = p;
+      _secondary = s;
+      _intensity = i;
+      _topInset = t;
+      _key++;
+      // Drop cached picture so next paint rebuilds once.
+      _picture?.dispose();
+      _picture = null;
+      _builtKey = -1;
+      setState(() {});
+    });
+  }
+
+  ui.Picture _ensurePicture(Size size) {
+    if (_size == size && _builtKey == _key && _picture != null) {
+      return _picture!;
+    }
+    _picture?.dispose();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     _paintField(
       canvas,
       size,
-      primary: _palette.primary,
-      secondary: _palette.secondary,
-      intensity: _palette.intensity,
-      topInset: _palette.topInset,
+      primary: _primary,
+      secondary: _secondary,
+      intensity: _intensity,
+      topInset: _topInset,
     );
-    return recorder.endRecording();
+    _picture = recorder.endRecording();
+    _size = size;
+    _builtKey = _key;
+    return _picture!;
   }
 
   @override
   Widget build(BuildContext context) {
     final bg = ref.watch(homeSceneBackgroundProvider);
     final topInset = MediaQuery.paddingOf(context).top;
-    final reduce = MediaQuery.disableAnimationsOf(context);
 
     if (!bg.isActive || bg.type == SceneBackgroundType.none) {
       return const SizedBox.shrink();
     }
 
-    _palette.topInset = topInset;
-    _beginColorTransition(
+    _scheduleApply(
       primary: bg.primary ?? const Color(0xFF4D7EFF),
       secondary: bg.secondary ?? const Color(0xFF9B7BFF),
       intensity: bg.intensity.clamp(0.28, 0.75),
-      reduce: reduce,
+      topInset: topInset,
     );
 
     return IgnorePointer(
       child: RepaintBoundary(
-        child: CustomPaint(
-          painter: _CachedAuroraPainter(
-            palette: _palette,
-            ensurePicture: (size) {
-              if (_lastSize != size ||
-                  _builtGen != _pictureGen ||
-                  _picture == null) {
-                _picture?.dispose();
-                _picture = _buildPicture(size);
-                _lastSize = size;
-                _builtGen = _pictureGen;
-              }
-              return _picture!;
-            },
-          ),
-          isComplex: true,
-          willChange: false,
-          child: const SizedBox.expand(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = Size(constraints.maxWidth, constraints.maxHeight);
+            if (size.isEmpty) return const SizedBox.expand();
+            final picture = _ensurePicture(size);
+            return CustomPaint(
+              painter: _PicturePainter(picture: picture),
+              isComplex: true,
+              willChange: false,
+              child: const SizedBox.expand(),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _AuroraPalette extends ChangeNotifier {
-  Color primary = const Color(0xFF4D7EFF);
-  Color secondary = const Color(0xFF9B7BFF);
-  double intensity = 0.36;
-  double topInset = 0;
-
-  void notify() => notifyListeners();
-}
-
-class _CachedAuroraPainter extends CustomPainter {
-  _CachedAuroraPainter({
-    required this.palette,
-    required this.ensurePicture,
-  }) : super(repaint: palette);
-
-  final _AuroraPalette palette;
-  final ui.Picture Function(Size size) ensurePicture;
+class _PicturePainter extends CustomPainter {
+  _PicturePainter({required this.picture});
+  final ui.Picture picture;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    canvas.drawPicture(ensurePicture(size));
+    canvas.drawPicture(picture);
   }
 
   @override
-  bool shouldRepaint(covariant _CachedAuroraPainter oldDelegate) =>
-      oldDelegate.palette != palette;
+  bool shouldRepaint(covariant _PicturePainter oldDelegate) =>
+      oldDelegate.picture != picture;
 }
 
-// ── Rich static field (designed theater glow — multi-blob soft haze) ────────
+// ── Rich static field (designed theater glow) ───────────────────────────────
 
 void _paintField(
   Canvas canvas,
@@ -235,7 +200,6 @@ void _paintField(
   final sky = Color.lerp(secondary, const Color(0xFF7DD3FC), 0.55)!;
   final mint = Color.lerp(secondary, const Color(0xFF5EEAD4), 0.45)!;
 
-  // Ambient washes (large soft discs)
   haze(
     Offset(w * 0.50, h * 0.10 + topInset * 0.04),
     math.max(w, h) * 1.05,
@@ -249,7 +213,6 @@ void _paintField(
     0.16 * s,
   );
 
-  // Soft multi-blob field — designed composition for the theater stage
   final blobs = <(double, double, double, Color, double)>[
     (0.28, 0.14, 0.95, primary, 0.20),
     (0.74, 0.12, 0.90, secondary, 0.18),

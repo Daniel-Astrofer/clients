@@ -49,6 +49,8 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final int? initialConfirmations;
   final int? requiredConfirmations;
   final DateTime? identifiedAt;
+  /// When no [initialPaymentLink] is provided, the screen creates one using this TTL.
+  final int paymentLinkExpiresInMinutes;
 
   const ReceiveRequestFlowScreen({
     super.key,
@@ -65,6 +67,7 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
     this.initialConfirmations,
     this.requiredConfirmations,
     this.identifiedAt,
+    this.paymentLinkExpiresInMinutes = 60,
   });
 
   @override
@@ -131,17 +134,96 @@ class _ReceiveRequestFlowScreenState
 
   Future<void> _prepareRequest() async {
     final link = _link;
-    if (widget.onChainWallet && link == null) {
-      await _issueOnchainAddress();
-      return;
-    }
-
     if (link != null) {
       _applyPaymentLinkStage(link);
       if (_stage == ReceiveRequestStage.identified) {
         return;
       }
       _startPaymentLinkPolling();
+      return;
+    }
+
+    // Create shareable request on this screen (amount screen no longer blocks on it).
+    final needsPaymentLink = widget.method == ReceiveAmountMethod.paymentLink ||
+        widget.method == ReceiveAmountMethod.qrCode ||
+        widget.method == ReceiveAmountMethod.nfc ||
+        widget.method == ReceiveAmountMethod.p2p ||
+        widget.method == ReceiveAmountMethod.lightning;
+    if (needsPaymentLink) {
+      await _createPaymentLinkOnScreen();
+      return;
+    }
+
+    if (widget.onChainWallet) {
+      await _issueOnchainAddress();
+    }
+  }
+
+  String _paymentRequestRail() {
+    switch (widget.method) {
+      case ReceiveAmountMethod.p2p:
+        return 'INTERNAL';
+      case ReceiveAmountMethod.lightning:
+        return 'LIGHTNING';
+      case ReceiveAmountMethod.nfc:
+        return widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL';
+      case ReceiveAmountMethod.qrCode:
+      case ReceiveAmountMethod.paymentLink:
+        return 'ONCHAIN';
+    }
+  }
+
+  Future<void> _createPaymentLinkOnScreen() async {
+    setState(() {
+      _isLoadingRequest = true;
+      _errorMessage = null;
+    });
+    try {
+      final paymentLink =
+          await ref.read(transactionRepositoryProvider).createPaymentLink(
+                amount: widget.amountBtc,
+                description: ReceiveMoneyCopy.paymentLinkDescription(
+                  context,
+                  widget.wallet.name,
+                ),
+                expiresInMinutes: widget.paymentLinkExpiresInMinutes,
+                visibility: 'PRIVATE',
+                confirmationMode: 'USER_ACTION_REQUIRED',
+                amountLocked: true,
+                referenceLabel: widget.wallet.name,
+                metadata: {
+                  'walletId': widget.wallet.id,
+                  'walletName': widget.wallet.name,
+                  'rail': _paymentRequestRail(),
+                  'method': widget.method.name,
+                  'source': 'receive_flow',
+                },
+              );
+      if (!mounted) return;
+      setState(() {
+        _link = paymentLink;
+        _address = paymentLink.depositAddress.trim().isEmpty
+            ? _address
+            : paymentLink.depositAddress.trim();
+        _paymentUri = _paymentUriFor(paymentLink);
+        _txid = paymentLink.txid;
+        _isLoadingRequest = false;
+        _applyPaymentLinkStage(paymentLink);
+      });
+      ref.invalidate(paymentLinksProvider);
+      ref.invalidate(transactionHistoryProvider);
+      if (_stage != ReceiveRequestStage.identified) {
+        _startPaymentLinkPolling();
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final translated =
+          ErrorTranslator.translate(context.tr, error.toString());
+      setState(() {
+        _isLoadingRequest = false;
+        _errorMessage = translated;
+      });
+      SnackbarHelper.showError(translated);
     }
   }
 

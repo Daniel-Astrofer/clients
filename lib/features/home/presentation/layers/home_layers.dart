@@ -98,24 +98,12 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
     final userId = flags.authenticatedUserId;
     if (userId == null) {
       _firstUseActionPanelUserId = null;
-    }
-
-    // First-use panel (rare path) — local state, not a global provider storm.
-    if (userId != null &&
-        flags.isReadyActionsVariant &&
+    } else if (flags.isReadyActionsVariant &&
         flags.hasLoadedHistory &&
         !flags.hasTransactions &&
-        !flags.hasBalance &&
         _firstUseActionPanelUserId != userId) {
-      // arm once when conditions match empty ready wallet
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_firstUseActionPanelUserId == null &&
-            flags.isReadyActionsVariant &&
-            !flags.hasTransactions) {
-          setState(() => _firstUseActionPanelUserId = userId);
-        }
-      });
+      // Arm once without setState storm — field is read below after assign.
+      _firstUseActionPanelUserId = userId;
     }
 
     final showFirstUseReadyPanel = userId != null &&

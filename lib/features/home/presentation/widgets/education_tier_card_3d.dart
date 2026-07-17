@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -42,9 +43,7 @@ bool isEducationTierFeedItem(HomeFeedItem item) =>
 
 /// Compact credit-card face with subtle 3D tilt — same palettes as live wallets.
 /// Replaces mock PNG thumbs in the home education carousel.
-///
-/// Static transform only — a continuous tilt ticker was killing home scroll FPS.
-class EducationTierCard3D extends StatelessWidget {
+class EducationTierCard3D extends StatefulWidget {
   final WalletCardType tier;
   final double width;
   final double height;
@@ -57,22 +56,61 @@ class EducationTierCard3D extends StatelessWidget {
   });
 
   @override
+  State<EducationTierCard3D> createState() => _EducationTierCard3DState();
+}
+
+class _EducationTierCard3DState extends State<EducationTierCard3D>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _tilt;
+
+  @override
+  void initState() {
+    super.initState();
+    _tilt = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4200),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (KeroseneMotion.reduceMotion(context)) {
+        _tilt.value = 0.35;
+        return;
+      }
+      _tilt.repeat(reverse: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tilt.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final appearance = WalletCardAppearance.fromCardType(tier);
-    // Frozen gentle pose (same resting pose as the old mid-tilt frame).
-    const t = 0.35;
-    final yaw = (t - 0.5) * 0.22;
-    final pitch = math.sin(t * math.pi) * 0.08;
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, 0.0022)
-        ..rotateY(yaw)
-        ..rotateX(pitch),
+    final appearance = WalletCardAppearance.fromCardType(widget.tier);
+    final reduce = KeroseneMotion.reduceMotion(context);
+
+    return AnimatedBuilder(
+      animation: _tilt,
+      builder: (context, child) {
+        final t = reduce ? 0.35 : _tilt.value;
+        // Gentle yaw / pitch — cheap matrix, no shaders.
+        final yaw = (t - 0.5) * 0.22;
+        final pitch = math.sin(t * math.pi) * 0.08;
+        return Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.0022)
+            ..rotateY(yaw)
+            ..rotateX(pitch),
+          child: child,
+        );
+      },
       child: _TierCardFace(
         appearance: appearance,
-        width: width,
-        height: height,
+        width: widget.width,
+        height: widget.height,
       ),
     );
   }
@@ -97,12 +135,11 @@ class _TierCardFace extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        // Soft shadow only (no large blurRadius — cheap paint on home scroll).
         boxShadow: [
           BoxShadow(
-            color: appearance.cardShadowColor.withValues(alpha: 0.28),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
+            color: appearance.cardShadowColor.withValues(alpha: 0.45),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
           ),
         ],
       ),

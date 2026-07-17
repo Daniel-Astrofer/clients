@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -202,11 +204,13 @@ Future<dynamic> _confirmPaymentLink({
       );
 
   if (result != null) {
-    await showSentTransactionNotification(
-      wallet: wallet,
-      destination: destination,
-      amount: amount,
-      toAddress: toAddress,
+    unawaited(
+      showSentTransactionNotification(
+        wallet: wallet,
+        destination: destination,
+        amount: amount,
+        toAddress: toAddress,
+      ),
     );
     HapticFeedback.vibrate();
     ref.read(paymentLinkNotifierProvider.notifier).reset();
@@ -291,18 +295,20 @@ Future<dynamic> _confirmColdSend({
       broadcast: true,
     );
 
-    await ref
-        .read(recentTransactionDestinationsProvider.notifier)
-        .saveDestination(
-          address: toAddress,
-          kind: RecentTransactionDestinationKind.onChain,
-          label: resolveRecentDestinationLabel(toAddress),
-        );
-    await showSentTransactionNotification(
-      wallet: wallet,
-      destination: destination,
-      amount: amount,
-      toAddress: toAddress,
+    unawaited(
+      ref.read(recentTransactionDestinationsProvider.notifier).saveDestination(
+            address: toAddress,
+            kind: RecentTransactionDestinationKind.onChain,
+            label: resolveRecentDestinationLabel(toAddress),
+          ),
+    );
+    unawaited(
+      showSentTransactionNotification(
+        wallet: wallet,
+        destination: destination,
+        amount: amount,
+        toAddress: toAddress,
+      ),
     );
     HapticFeedback.vibrate();
 
@@ -375,20 +381,23 @@ Future<dynamic> _confirmExternalSend({
       );
 
   if (result != null) {
-    await ref
-        .read(recentTransactionDestinationsProvider.notifier)
-        .saveDestination(
-          address: toAddress,
-          kind: destination.isLightning
-              ? RecentTransactionDestinationKind.lightning
-              : RecentTransactionDestinationKind.onChain,
-          label: resolveRecentDestinationLabel(toAddress),
-        );
-    await showSentTransactionNotification(
-      wallet: wallet,
-      destination: destination,
-      amount: amount,
-      toAddress: toAddress,
+    // Do not block the authorize UI on local bookkeeping / toast.
+    unawaited(
+      ref.read(recentTransactionDestinationsProvider.notifier).saveDestination(
+            address: toAddress,
+            kind: destination.isLightning
+                ? RecentTransactionDestinationKind.lightning
+                : RecentTransactionDestinationKind.onChain,
+            label: resolveRecentDestinationLabel(toAddress),
+          ),
+    );
+    unawaited(
+      showSentTransactionNotification(
+        wallet: wallet,
+        destination: destination,
+        amount: amount,
+        toAddress: toAddress,
+      ),
     );
     HapticFeedback.vibrate();
     ref.read(withdrawProvider.notifier).reset();
@@ -445,18 +454,20 @@ Future<dynamic> _confirmInternalSend({
       );
 
   if (result != null) {
-    await ref
-        .read(recentTransactionDestinationsProvider.notifier)
-        .saveDestination(
-          address: resolveRecentDestinationAddress(toAddress),
-          kind: RecentTransactionDestinationKind.internal,
-          label: resolveRecentDestinationLabel(toAddress),
-        );
-    await showSentTransactionNotification(
-      wallet: wallet,
-      destination: destination,
-      amount: amount,
-      toAddress: toAddress,
+    unawaited(
+      ref.read(recentTransactionDestinationsProvider.notifier).saveDestination(
+            address: resolveRecentDestinationAddress(toAddress),
+            kind: RecentTransactionDestinationKind.internal,
+            label: resolveRecentDestinationLabel(toAddress),
+          ),
+    );
+    unawaited(
+      showSentTransactionNotification(
+        wallet: wallet,
+        destination: destination,
+        amount: amount,
+        toAddress: toAddress,
+      ),
     );
     HapticFeedback.vibrate();
     ref.read(sendTransactionProvider.notifier).reset();

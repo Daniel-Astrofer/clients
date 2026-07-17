@@ -213,8 +213,6 @@ class StatementTransactionCard extends ConsumerWidget {
               iconSize: iconSize,
               axes: presentation.axes,
               expanded: expanded,
-              // Continuous ring spin destroys list FPS — home is always static.
-              allowSpin: !isHome,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -282,72 +280,51 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
           ],
         ),
-        // Home: no AnimatedSize (layout thrash while scrolling).
-        // Extrato keeps the soft open/close curve.
-        if (isHome && expanded)
-          Padding(
-            padding: const EdgeInsets.only(top: 14),
-            child: _HomeQuickExpand(
-              transaction: transaction,
-              presentation: presentation,
-              colors: colors,
-            ),
-          )
-        else if (!isHome)
-          AnimatedSize(
-            duration: KeroseneMotion.duration(
-              context,
-              const Duration(milliseconds: 800),
-            ),
-            curve: Curves.easeInOutCubic,
-            alignment: Alignment.topCenter,
-            clipBehavior: Clip.hardEdge,
-            child: expanded
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: _TransactionDetailsTable(
-                      transaction: transaction,
-                      presentation: presentation,
-                      colors: colors,
-                    ),
-                  )
-                : const SizedBox(width: double.infinity),
+        // 0.8s ease-in-out: slow start → fast middle → slow end (open & close).
+        AnimatedSize(
+          duration: KeroseneMotion.duration(
+            context,
+            const Duration(milliseconds: 800),
           ),
+          curve: Curves.easeInOutCubic,
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.hardEdge,
+          child: expanded
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: isHome
+                      ? _HomeQuickExpand(
+                          transaction: transaction,
+                          presentation: presentation,
+                          colors: colors,
+                        )
+                      : _TransactionDetailsTable(
+                          transaction: transaction,
+                          presentation: presentation,
+                          colors: colors,
+                        ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     );
 
-    final card = Container(
-      decoration: decoration,
-      padding: EdgeInsets.all(cardPadding),
-      child: body,
-    );
-
-    // Home: GestureDetector only — Material/InkWell layers cost scroll FPS.
-    final tappable = onTap == null
-        ? card
-        : isHome
-            ? GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: card,
-              )
-            : Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: radius,
-                  child: card,
-                ),
-              );
-
-    final semantic = Semantics(
+    return Semantics(
       button: onTap != null,
       label: a11yLabel,
-      child: tappable,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Container(
+            decoration: decoration,
+            padding: EdgeInsets.all(cardPadding),
+            child: body,
+          ),
+        ),
+      ),
     );
-
-    // Isolate each home row so list scroll doesn't repaint neighbors.
-    return isHome ? RepaintBoundary(child: semantic) : semantic;
   }
 }
 
@@ -1127,8 +1104,6 @@ class _ActivityStatusIcon extends StatefulWidget {
   final TransactionAxes? axes;
   /// When true, status badge is larger so ✓ is obvious on open cards.
   final bool expanded;
-  /// Continuous spin ticks kill list FPS — home always passes false.
-  final bool allowSpin;
 
   const _ActivityStatusIcon({
     required this.transaction,
@@ -1136,7 +1111,6 @@ class _ActivityStatusIcon extends StatefulWidget {
     required this.iconSize,
     this.axes,
     this.expanded = false,
-    this.allowSpin = true,
   });
 
   @override
@@ -1146,8 +1120,6 @@ class _ActivityStatusIcon extends StatefulWidget {
 class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     with SingleTickerProviderStateMixin {
   AnimationController? _spinController;
-  ScrollPosition? _scrollPosition;
-  bool _needsSpin = false;
 
   static const Color _yellow = Color(0xFFE0A012);
   static const Color _green = Color(0xFF34C759);
@@ -1160,18 +1132,6 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final pos = Scrollable.maybeOf(context)?.position;
-    if (_scrollPosition != pos) {
-      _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
-      _scrollPosition = pos;
-      _scrollPosition?.isScrollingNotifier.addListener(_onScrollChanged);
-      _onScrollChanged();
-    }
-  }
-
-  @override
   void didUpdateWidget(covariant _ActivityStatusIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.transaction.confirmations !=
@@ -1179,35 +1139,21 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         oldWidget.transaction.status != widget.transaction.status ||
         oldWidget.transaction.displayStatus !=
             widget.transaction.displayStatus ||
-        oldWidget.expanded != widget.expanded ||
-        oldWidget.allowSpin != widget.allowSpin) {
+        oldWidget.expanded != widget.expanded) {
       _syncAnimations();
-    }
-  }
-
-  void _onScrollChanged() {
-    if (!mounted) return;
-    final scrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
-    final spin = _spinController;
-    if (spin == null) return;
-    if (scrolling || !widget.allowSpin) {
-      if (spin.isAnimating) spin.stop();
-    } else if (_needsSpin && !spin.isAnimating) {
-      spin.repeat();
     }
   }
 
   void _syncAnimations() {
     final mode = _ringMode(widget.transaction);
-    _needsSpin = widget.allowSpin &&
-        (mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress);
-    if (_needsSpin) {
+    final needsSpin =
+        mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
+    if (needsSpin) {
       _spinController ??= AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 1100),
       );
-      final scrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
-      if (!scrolling && !(_spinController!.isAnimating)) {
+      if (!(_spinController!.isAnimating)) {
         _spinController!.repeat();
       }
     } else {
@@ -1220,7 +1166,6 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 
   @override
   void dispose() {
-    _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
     _spinController?.dispose();
     super.dispose();
   }
