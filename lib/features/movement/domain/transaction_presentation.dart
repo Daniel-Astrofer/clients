@@ -106,13 +106,24 @@ class PresentationField {
   final bool copyable;
   final bool technical;
 
+  /// On-chain confirmation progress (only for [key] == confirmations).
+  final int? progressCurrent;
+  final int? progressTarget;
+
   const PresentationField({
     required this.key,
     required this.label,
     required this.value,
     this.copyable = false,
     this.technical = false,
+    this.progressCurrent,
+    this.progressTarget,
   });
+
+  bool get hasConfirmationProgress =>
+      progressCurrent != null &&
+      progressTarget != null &&
+      progressTarget! > 0;
 }
 
 /// Single presentation model for Home / Extrato list rows and detail primary.
@@ -305,14 +316,18 @@ final class TransactionPresentation {
     ]);
 
     if (tx.showsOnchainConfirmations) {
-      final conf = tx.confirmations >= tx.onchainConfirmationTarget
-          ? '${tx.confirmations}+'
-          : '${tx.confirmations}/${tx.onchainConfirmationTarget}';
+      final target = tx.onchainConfirmationTarget.clamp(1, 6);
+      final confCount = tx.confirmations.clamp(0, target);
+      final conf = confCount >= target
+          ? '$confCount+'
+          : '$confCount/$target';
       expanded.add(
         PresentationField(
           key: 'confirmations',
           label: copy.confirmations,
           value: conf,
+          progressCurrent: confCount,
+          progressTarget: target,
         ),
       );
     }
@@ -500,21 +515,26 @@ final class TransactionPresentation {
       add('total', copy.totalDebited, totalLabel);
     }
 
-    // On-chain only: confirmations (+ rough ETA while open) and txid.
+    // On-chain only: confirmations (+ progress bar metadata) and txid.
     if (tx.showsOnchainConfirmations ||
         (isOnchain && !isInternal && !isLightning)) {
-      final target = tx.onchainConfirmationTarget;
+      final target = tx.onchainConfirmationTarget.clamp(1, 6);
       final conf = tx.confirmations.clamp(0, target);
       final confLabel = conf >= target ? '$conf+' : '$conf/$target';
       final open = axes.lifecycle == TxLifecycle.pending ||
           axes.lifecycle == TxLifecycle.confirming;
-      if (open && conf < target) {
-        // ~10 min/block heuristic (Bitcoin) — rough UX only.
-        final minutes = ((target - conf) * 10).clamp(10, 120);
-        add('confirmations', copy.confirmations, '$confLabel · ~$minutes min');
-      } else {
-        add('confirmations', copy.confirmations, confLabel);
-      }
+      final value = open && conf < target
+          ? '$confLabel · ~${((target - conf) * 10).clamp(10, 120)} min'
+          : confLabel;
+      fields.add(
+        PresentationField(
+          key: 'confirmations',
+          label: copy.confirmations,
+          value: value,
+          progressCurrent: conf,
+          progressTarget: target,
+        ),
+      );
 
       final txid = (tx.blockchainTxid ?? '').trim();
       if (txid.isNotEmpty) {

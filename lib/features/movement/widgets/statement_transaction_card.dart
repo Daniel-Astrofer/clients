@@ -543,25 +543,30 @@ class _TransactionDetailsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = presentation.expandedFields;
-    // High-contrast labels/values — "Quando", "Status", etc. must read clearly.
     final labelColor =
         dark ? const Color(0xFFC8CCD4) : const Color(0xFF1C1C1F);
     final valueColor =
         dark ? const Color(0xFFF4F5F7) : const Color(0xFF0A0A0B);
+    final lineColor =
+        dark ? const Color(0xFF3A3A40) : const Color(0xFFD4D4D8);
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Column(
         children: [
-          for (var index = 0; index < rows.length; index++)
-            Padding(
-              padding: EdgeInsets.only(top: index == 0 ? 0 : 10),
-              child: _PresentationFieldRow(
-                field: rows[index],
-                labelColor: labelColor,
-                valueColor: valueColor,
+          for (var index = 0; index < rows.length; index++) ...[
+            if (index > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Container(height: 1, color: lineColor),
               ),
+            _PresentationFieldRow(
+              field: rows[index],
+              labelColor: labelColor,
+              valueColor: valueColor,
+              dark: dark,
             ),
+          ],
           const SizedBox(height: 16),
           _ActivityExpandedActions(
             transaction: transaction,
@@ -590,22 +595,29 @@ class _HomeQuickExpand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = presentation.listExpandFields;
-    // Paper cards: near-black labels, pure black values (readable on orange/blue/grey).
     const labelColor = Color(0xFF1C1C1F);
     const valueColor = Color(0xFF0A0A0B);
+    // Solid divider — same weight on every paper wash.
+    const lineColor = Color(0xFFD0D0D4);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (rows.isNotEmpty) ...[
-          for (var i = 0; i < rows.length; i++)
-            Padding(
-              padding: EdgeInsets.only(top: i == 0 ? 4 : 10),
-              child: _PresentationFieldRow(
-                field: rows[i],
-                labelColor: labelColor,
-                valueColor: valueColor,
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: ColoredBox(
+                  color: lineColor,
+                  child: SizedBox(height: 1, width: double.infinity),
+                ),
               ),
+            _PresentationFieldRow(
+              field: rows[i],
+              labelColor: labelColor,
+              valueColor: valueColor,
             ),
+          ],
           const SizedBox(height: 12),
         ],
         _ActivityExpandedActions(transaction: transaction, dark: false),
@@ -767,70 +779,247 @@ class _PresentationFieldRow extends StatelessWidget {
   final PresentationField field;
   final Color labelColor;
   final Color valueColor;
+  final bool dark;
 
   const _PresentationFieldRow({
     required this.field,
     required this.labelColor,
     required this.valueColor,
+    this.dark = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final isConf = field.key == 'confirmations' && field.hasConfirmationProgress;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            field.label,
-            style: TextStyle(
-              color: labelColor,
-              fontFamily: AppTypography.bodyFontFamily,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
-              height: 1.3,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 3,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Flexible(
-                child: Text(
-                  field.value,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: valueColor,
-                    fontFamily: AppTypography.bodyFontFamily,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    height: 1.3,
-                  ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                field.label,
+                style: TextStyle(
+                  color: labelColor,
+                  fontFamily: AppTypography.bodyFontFamily,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
+                  height: 1.3,
                 ),
               ),
-              if (field.copyable) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () async {
-                    HapticFeedback.selectionClick();
-                    await Clipboard.setData(ClipboardData(text: field.value));
-                  },
-                  child: Icon(
-                    KeroseneIcons.copy,
-                    size: 15,
-                    color: labelColor,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Flexible(
+                    child: Text(
+                      field.value,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: valueColor,
+                        fontFamily: AppTypography.bodyFontFamily,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                  if (field.copyable) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.selectionClick();
+                        await Clipboard.setData(
+                          ClipboardData(text: field.value),
+                        );
+                      },
+                      child: Icon(
+                        KeroseneIcons.copy,
+                        size: 15,
+                        color: labelColor,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (isConf) ...[
+          const SizedBox(height: 8),
+          _ConfirmationProgressLine(
+            current: field.progressCurrent!,
+            target: field.progressTarget!,
+            dark: dark,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Yellow progress = conf/target; remainder is a soft grey loading shimmer.
+/// Only used under the Confirmations row for on-chain-eligible txs.
+class _ConfirmationProgressLine extends StatefulWidget {
+  final int current;
+  final int target;
+  final bool dark;
+
+  const _ConfirmationProgressLine({
+    required this.current,
+    required this.target,
+    this.dark = false,
+  });
+
+  @override
+  State<_ConfirmationProgressLine> createState() =>
+      _ConfirmationProgressLineState();
+}
+
+class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
+    with SingleTickerProviderStateMixin {
+  static const _yellow = Color(0xFFE0A012);
+  static const _yellowDone = Color(0xFF34C759);
+
+  late final AnimationController _shimmer;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    if (!_isComplete) {
+      _shimmer.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConfirmationProgressLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_isComplete) {
+      _shimmer.stop();
+    } else if (!_shimmer.isAnimating) {
+      _shimmer.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmer.dispose();
+    super.dispose();
+  }
+
+  bool get _isComplete => widget.current >= widget.target;
+
+  /// e.g. 1 conf of 4 → 25%; of 6 → ~16.7%. Uses conf/target.
+  double get _filled =>
+      (widget.current / widget.target).clamp(0.0, 1.0);
+
+  @override
+  Widget build(BuildContext context) {
+    final trackBase =
+        widget.dark ? const Color(0xFF3A3A40) : const Color(0xFFE4E4E8);
+    final trackHi =
+        widget.dark ? const Color(0xFF55555C) : const Color(0xFFF0F0F3);
+    final fill = _isComplete ? _yellowDone : _yellow;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: SizedBox(
+        height: 5,
+        width: double.infinity,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final filledW = w * _filled;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Remaining track — solid grey + sliding shimmer while open.
+                if (!_isComplete)
+                  AnimatedBuilder(
+                    animation: _shimmer,
+                    builder: (context, _) {
+                      final t = _shimmer.value;
+                      return CustomPaint(
+                        painter: _GreyLoadingTrackPainter(
+                          base: trackBase,
+                          highlight: trackHi,
+                          phase: t,
+                        ),
+                      );
+                    },
+                  )
+                else
+                  ColoredBox(color: trackBase),
+                // Primary yellow (or green when complete) progress.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOutCubic,
+                    width: filledW,
+                    height: 5,
+                    color: fill,
                   ),
                 ),
               ],
-            ],
-          ),
+            );
+          },
         ),
-      ],
+      ),
     );
+  }
+}
+
+class _GreyLoadingTrackPainter extends CustomPainter {
+  final Color base;
+  final Color highlight;
+  final double phase;
+
+  _GreyLoadingTrackPainter({
+    required this.base,
+    required this.highlight,
+    required this.phase,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawRect(rect, Paint()..color = base);
+    // Soft band that sweeps left → right (loading remainder).
+    final band = size.width * 0.42;
+    final x = (phase * (size.width + band)) - band;
+    final shader = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [
+        base,
+        highlight,
+        base,
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    ).createShader(Rect.fromLTWH(x, 0, band, size.height));
+    canvas.drawRect(
+      Rect.fromLTWH(x, 0, band, size.height).intersect(rect),
+      Paint()..shader = shader,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GreyLoadingTrackPainter oldDelegate) {
+    return phase != oldDelegate.phase ||
+        base != oldDelegate.base ||
+        highlight != oldDelegate.highlight;
   }
 }
 
