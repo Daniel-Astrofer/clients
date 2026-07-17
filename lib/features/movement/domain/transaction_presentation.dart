@@ -130,6 +130,9 @@ final class TransactionPresentation {
   final List<PresentationField> expandedFields;
   final List<PresentationField> technicalFields;
 
+  /// Compact expand rows for Home / stacked list (curated by rail × product).
+  final List<PresentationField> listExpandFields;
+
   const TransactionPresentation({
     required this.id,
     required this.axes,
@@ -143,6 +146,7 @@ final class TransactionPresentation {
     required this.primaryAmountLabel,
     required this.expandedFields,
     required this.technicalFields,
+    this.listExpandFields = const [],
   });
 
   factory TransactionPresentation.fromTransaction(
@@ -349,6 +353,19 @@ final class TransactionPresentation {
       );
     }
 
+    final listExpand = _listExpandFields(
+      context: context,
+      copy: copy,
+      tx: tx,
+      axes: axes,
+      from: from,
+      to: to,
+      own: own,
+      principalLabel: principalLabel,
+      totalLabel: amount,
+      includeFeesInDebit: includeFeesInDebit,
+    );
+
     return TransactionPresentation(
       id: tx.id,
       axes: axes,
@@ -362,7 +379,165 @@ final class TransactionPresentation {
       primaryAmountLabel: amount,
       expandedFields: expanded,
       technicalFields: technical,
+      listExpandFields: listExpand,
     );
+  }
+
+  /// Curated rows for Home/list expand (not the full dossier).
+  ///
+  /// Matrix by product × rail × direction — see product docs in commit message.
+  static List<PresentationField> _listExpandFields({
+    required BuildContext context,
+    required TransactionPresentationCopy copy,
+    required Transaction tx,
+    required TransactionAxes axes,
+    required String from,
+    required String to,
+    required String own,
+    required String principalLabel,
+    required String totalLabel,
+    required bool includeFeesInDebit,
+  }) {
+    final fields = <PresentationField>[];
+
+    void add(
+      String key,
+      String label,
+      String value, {
+      bool copyable = false,
+    }) {
+      final v = value.trim();
+      if (v.isEmpty || v == '—') return;
+      fields.add(
+        PresentationField(
+          key: key,
+          label: label,
+          value: v,
+          copyable: copyable,
+        ),
+      );
+    }
+
+    add('when', copy.whenLabel,
+        AppDateTime.formatRelativeWithClock(context, tx.timestamp));
+    add('status', copy.status, copy.lifecycleLabel(axes.lifecycle));
+    add('network', copy.network, copy.railShort(axes.rail));
+    add('amount', copy.amountLabel, principalLabel);
+
+    final isLink = axes.product == TxProduct.paymentLink;
+    final isInternal = axes.rail == TxRail.internal;
+    final isLightning = axes.rail == TxRail.lightning;
+    final isOnchain =
+        axes.rail == TxRail.onchain || axes.rail == TxRail.cold;
+    final incoming = axes.direction == TxDirection.incoming;
+    final outgoing = axes.direction == TxDirection.outgoing;
+
+    // Parties — direction-aware, no empty noise.
+    if (incoming) {
+      add('from', copy.fromPrefix, from);
+      add('wallet', copy.destinationWallet, own.isEmpty ? '' : own);
+      if (own.isEmpty) add('to', copy.toPrefix, to);
+    } else if (outgoing) {
+      add('wallet', copy.sourceWallet, own.isEmpty ? '' : own);
+      if (own.isEmpty) add('from', copy.fromPrefix, from);
+      add('to', copy.toPrefix, to, copyable: looksLikeOnchainAddress(to));
+    } else {
+      add('from', copy.fromPrefix, from);
+      add('to', copy.toPrefix, to, copyable: looksLikeOnchainAddress(to));
+    }
+
+    if (isLink) {
+      final desc = (tx.description ?? '').trim();
+      if (desc.isNotEmpty) {
+        add('description', copy.description, desc);
+      }
+    }
+
+    // Lightning: invoice / hash (short display, copy full).
+    if (isLightning || (isLink && tx.isLightningEffective)) {
+      final invoice = (tx.lightningInvoice ?? '').trim();
+      if (invoice.isNotEmpty) {
+        final short = invoice.length > 22
+            ? '${invoice.substring(0, 12)}…${invoice.substring(invoice.length - 8)}'
+            : invoice;
+        fields.add(
+          PresentationField(
+            key: 'invoice',
+            label: copy.lightningInvoice,
+            value: short,
+            copyable: true,
+          ),
+        );
+      }
+      final hash = (tx.paymentHash ?? '').trim();
+      if (hash.isNotEmpty && invoice.isEmpty) {
+        final short = hash.length > 18
+            ? '${hash.substring(0, 10)}…${hash.substring(hash.length - 6)}'
+            : hash;
+        fields.add(
+          PresentationField(
+            key: 'payment-hash',
+            label: copy.paymentHash,
+            value: short,
+            copyable: true,
+          ),
+        );
+      }
+    }
+
+    // Fees: network (miner/routing) + platform — only when present.
+    if (tx.showsNetworkFee) {
+      add(
+        'network-fee',
+        isLightning ? copy.networkFee : copy.networkFee,
+        formatSatsAsBtc(tx.feeSatoshis),
+      );
+    }
+    if (tx.showsServiceFee) {
+      add('service-fee', copy.serviceFee, formatSatsAsBtc(tx.serviceFeeSatoshis));
+    }
+    if (includeFeesInDebit) {
+      add('total', copy.totalDebited, totalLabel);
+    }
+
+    // On-chain only: confirmations (+ rough ETA while open) and txid.
+    if (tx.showsOnchainConfirmations ||
+        (isOnchain && !isInternal && !isLightning)) {
+      final target = tx.onchainConfirmationTarget;
+      final conf = tx.confirmations.clamp(0, target);
+      final confLabel = conf >= target ? '$conf+' : '$conf/$target';
+      final open = axes.lifecycle == TxLifecycle.pending ||
+          axes.lifecycle == TxLifecycle.confirming;
+      if (open && conf < target) {
+        // ~10 min/block heuristic (Bitcoin) — rough UX only.
+        final minutes = ((target - conf) * 10).clamp(10, 120);
+        add('confirmations', copy.confirmations, '$confLabel · ~$minutes min');
+      } else {
+        add('confirmations', copy.confirmations, confLabel);
+      }
+
+      final txid = (tx.blockchainTxid ?? '').trim();
+      if (txid.isNotEmpty) {
+        final short = txid.length > 18
+            ? '${txid.substring(0, 10)}…${txid.substring(txid.length - 6)}'
+            : txid;
+        fields.add(
+          PresentationField(
+            key: 'txid',
+            label: copy.onchainTxid,
+            value: short,
+            copyable: true,
+          ),
+        );
+      }
+    }
+
+    // Cap list expand so home stays scannable.
+    const maxRows = 10;
+    if (fields.length > maxRows) {
+      return fields.sublist(0, maxRows);
+    }
+    return fields;
   }
 
   static String _title(

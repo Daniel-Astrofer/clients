@@ -272,15 +272,16 @@ class StatementTransactionCard extends ConsumerWidget {
         ),
         if (expanded) ...[
           const SizedBox(height: 14),
-          if (!isHome)
-            _TransactionDetailsTable(
+          if (isHome)
+            _HomeQuickExpand(
               transaction: transaction,
               presentation: presentation,
               colors: colors,
             )
           else
-            _HomeQuickExpand(
+            _TransactionDetailsTable(
               transaction: transaction,
+              presentation: presentation,
               colors: colors,
             ),
         ],
@@ -569,21 +570,54 @@ class _TransactionDetailsTable extends StatelessWidget {
   }
 }
 
-/// Home expand: only cancel/archive + open full dossier — no field dump.
+/// Home expand: curated fields by rail/product + cancel + full dossier link.
 class _HomeQuickExpand extends StatelessWidget {
   final Transaction transaction;
+  final TransactionPresentation presentation;
   final TransactionCardColors colors;
 
   const _HomeQuickExpand({
     required this.transaction,
+    required this.presentation,
     required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
+    final rows = presentation.listExpandFields;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (rows.isNotEmpty) ...[
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.divider)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                children: [
+                  for (var i = 0; i < rows.length; i++) ...[
+                    if (i > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Divider(height: 1, color: colors.divider),
+                      ),
+                    Padding(
+                      padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
+                      child: _PresentationFieldRow(
+                        field: rows[i],
+                        labelColor: Colors.black.withValues(alpha: 0.55),
+                        valueColor: Colors.black,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         _ActivityExpandedActions(transaction: transaction, dark: false),
         const SizedBox(height: 4),
         _SeeDetailsLink(transaction: transaction, dark: false),
