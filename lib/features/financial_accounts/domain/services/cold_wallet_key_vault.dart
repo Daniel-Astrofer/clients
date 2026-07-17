@@ -26,11 +26,12 @@ class ColdWalletKeyVault {
 
   static final ColdWalletKeyVault instance = ColdWalletKeyVault._internal();
 
-  static const String _seedKeyPrefix = 'cold_wallet_seed';
-  static const String _passphraseKeyPrefix = 'cold_wallet_passphrase';
-  static const String _fingerprintKeyPrefix = 'cold_wallet_fingerprint';
-  static const String _seedKindKeyPrefix = 'cold_wallet_seed_kind';
-  static const String _indexKey = 'cold_wallet_seed_index';
+  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
+  static const String _seedKeyPrefix = '${_prefix}cold_wallet_seed';
+  static const String _passphraseKeyPrefix = '${_prefix}cold_wallet_passphrase';
+  static const String _fingerprintKeyPrefix = '${_prefix}cold_wallet_fingerprint';
+  static const String _seedKindKeyPrefix = '${_prefix}cold_wallet_seed_kind';
+  static const String _indexKey = '${_prefix}cold_wallet_seed_index';
 
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuthentication;

@@ -240,6 +240,26 @@ void main() {
       });
     });
 
+    test('platform paymentRequest publicId forces INTERNAL even if isLightning',
+        () {
+      final payload =
+          TransactionRemoteDataSourceImpl.buildWithdrawRequestPayload(
+        idempotencyKey: 'idem-platform-ln',
+        fromWalletName: 'Minha Carteira',
+        toAddress: '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8',
+        paymentRequest: '8ou3btbrv9wdqgipgcicxh8k',
+        amount: 0.00009333,
+        isLightning: true,
+      );
+
+      expect(payload['rail'], 'INTERNAL');
+      expect(payload['direction'], 'INTERNAL');
+      expect(payload['destinationWalletId'],
+          '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8');
+      expect(payload['paymentRequestPublicId'], '8ou3btbrv9wdqgipgcicxh8k');
+      expect(payload.containsKey('externalReference'), isFalse);
+    });
+
     test('requires idempotencyKey for external withdrawals', () {
       expect(
         () => TransactionRemoteDataSourceImpl.buildWithdrawRequestPayload(

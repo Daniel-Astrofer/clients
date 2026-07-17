@@ -12,6 +12,8 @@ import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
+import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
+import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 
 class NotificationNavigation {
   static Future<void> openFromContext(
@@ -172,6 +174,9 @@ class NotificationNavigation {
       SessionNotificationItem.kindDepositConfirmed,
       SessionNotificationItem.kindPaymentSent,
       SessionNotificationItem.kindPaymentRequestPaid,
+      SessionNotificationItem.kindLightningInvoicePaid,
+      SessionNotificationItem.kindLightningPaymentSent,
+      SessionNotificationItem.kindLightningPaymentFailed,
     }.contains(notification.kind);
   }
 
@@ -322,7 +327,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              notification.title,
+                              NotificationTranslator.resolveTitle(context, notification),
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -342,7 +347,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        notification.body,
+                        NotificationTranslator.resolveBody(context, notification),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white.withValues(alpha: 0.76),
                           height: 1.42,

@@ -208,6 +208,10 @@ class AppConfig {
       '$kfePaymentRequests/$requestId';
   static String kfePublicPaymentRequest(String publicId) =>
       '/api/public/kfe/payment-requests/$publicId';
+
+  /// Resolve BOLT11 / payment hash to a platform payment request (INTERNAL path).
+  static String kfePublicPaymentRequestLookup(String invoice) =>
+      '/api/public/kfe/payment-requests/lookup?invoice=${Uri.encodeComponent(invoice.trim())}';
   static String kfePaymentRequestExpire(String requestId) =>
       '$kfePaymentRequests/$requestId/expire';
   static String kfePaymentRequestHide(String requestId) =>

@@ -16949,6 +16949,313 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On-chain link address'**
   String get txListPartyLinkAddress;
+
+  /// No description provided for @notifAccountCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created'**
+  String get notifAccountCreatedTitle;
+
+  /// No description provided for @notifAccountCreatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Kerosene account was successfully created.'**
+  String get notifAccountCreatedBody;
+
+  /// No description provided for @notifSecurityLoginDetectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New login detected'**
+  String get notifSecurityLoginDetectedTitle;
+
+  /// No description provided for @notifSecurityLoginDetectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We identified a new login to your Kerosene account. If you don\'t recognize this activity, check your active sessions immediately.'**
+  String get notifSecurityLoginDetectedBody;
+
+  /// No description provided for @notifSecurityAdminAccessAttemptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin access attempt'**
+  String get notifSecurityAdminAccessAttemptTitle;
+
+  /// No description provided for @notifSecurityAdminAccessAttemptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'An administrative panel access request is pending your review.'**
+  String get notifSecurityAdminAccessAttemptBody;
+
+  /// No description provided for @notifSecurityRecoveryCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security recovery completed'**
+  String get notifSecurityRecoveryCompletedTitle;
+
+  /// No description provided for @notifSecurityRecoveryCompletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your recovery phrase, TOTP, passkey, and backup codes have been renewed. Please login again.'**
+  String get notifSecurityRecoveryCompletedBody;
+
+  /// No description provided for @notifTransactionInternalReceivedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'BTC received'**
+  String get notifTransactionInternalReceivedTitle;
+
+  /// No description provided for @notifTransactionInternalReceivedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You received {amount} BTC in wallet “{wallet}”.'**
+  String notifTransactionInternalReceivedBody(String amount, String wallet);
+
+  /// No description provided for @notifTransactionInternalSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'BTC sent'**
+  String get notifTransactionInternalSentTitle;
+
+  /// No description provided for @notifTransactionInternalSentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You sent {amount} BTC from wallet “{wallet}”.'**
+  String notifTransactionInternalSentBody(String amount, String wallet);
+
+  /// No description provided for @notifTransactionPaymentRequestCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice created'**
+  String get notifTransactionPaymentRequestCreatedTitle;
+
+  /// No description provided for @notifTransactionPaymentRequestCreatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice for {amount} BTC created for wallet “{wallet}”.'**
+  String notifTransactionPaymentRequestCreatedBody(
+      String amount, String wallet);
+
+  /// No description provided for @notifTransactionPaymentRequestPaidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice paid'**
+  String get notifTransactionPaymentRequestPaidTitle;
+
+  /// No description provided for @notifTransactionPaymentRequestPaidBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your invoice for {amount} BTC was successfully paid.'**
+  String notifTransactionPaymentRequestPaidBody(String amount);
+
+  /// No description provided for @notifTransactionBroadcastNoAmountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction broadcast'**
+  String get notifTransactionBroadcastNoAmountTitle;
+
+  /// No description provided for @notifTransactionBroadcastNoAmountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transaction was broadcast to the Bitcoin network.'**
+  String get notifTransactionBroadcastNoAmountBody;
+
+  /// No description provided for @notifTransactionBroadcastWithAmountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'BTC sent'**
+  String get notifTransactionBroadcastWithAmountTitle;
+
+  /// No description provided for @notifTransactionBroadcastWithAmountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} BTC transaction broadcast to the Bitcoin network.'**
+  String notifTransactionBroadcastWithAmountBody(String amount);
+
+  /// No description provided for @notifTransactionDepositPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit pending'**
+  String get notifTransactionDepositPendingTitle;
+
+  /// No description provided for @notifTransactionDepositPendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit of {amount} BTC awaiting confirmations.'**
+  String notifTransactionDepositPendingBody(String amount);
+
+  /// No description provided for @notifTransactionDepositProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit confirming'**
+  String get notifTransactionDepositProgressTitle;
+
+  /// No description provided for @notifTransactionDepositProgressBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit of {amount} BTC: {confirmations} confirmation(s) received.'**
+  String notifTransactionDepositProgressBody(
+      String amount, String confirmations);
+
+  /// No description provided for @notifTransactionNetworkTransferConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer confirmed'**
+  String get notifTransactionNetworkTransferConfirmedTitle;
+
+  /// No description provided for @notifTransactionNetworkTransferConfirmedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer of {amount} BTC confirmed on the Bitcoin network.'**
+  String notifTransactionNetworkTransferConfirmedBody(String amount);
+
+  /// No description provided for @notifTransactionNetworkDepositConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit confirmed'**
+  String get notifTransactionNetworkDepositConfirmedTitle;
+
+  /// No description provided for @notifTransactionNetworkDepositConfirmedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit of {amount} BTC confirmed. Net credit: {credit} BTC.'**
+  String notifTransactionNetworkDepositConfirmedBody(
+      String amount, String credit);
+
+  /// No description provided for @notifTransactionExternalOnchainPaymentSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment sent'**
+  String get notifTransactionExternalOnchainPaymentSentTitle;
+
+  /// No description provided for @notifTransactionExternalOnchainPaymentSentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain payment successfully sent.'**
+  String get notifTransactionExternalOnchainPaymentSentBody;
+
+  /// No description provided for @notifTransactionExternalLightningPaymentSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment sent'**
+  String get notifTransactionExternalLightningPaymentSentTitle;
+
+  /// No description provided for @notifTransactionExternalLightningPaymentSentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning payment successfully sent.'**
+  String get notifTransactionExternalLightningPaymentSentBody;
+
+  /// No description provided for @notifTransactionExternalOnchainDepositConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit confirmed'**
+  String get notifTransactionExternalOnchainDepositConfirmedTitle;
+
+  /// No description provided for @notifTransactionExternalOnchainDepositConfirmedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On-chain deposit confirmed. Net credit: {credit} BTC.'**
+  String notifTransactionExternalOnchainDepositConfirmedBody(String credit);
+
+  /// No description provided for @notifTransactionExternalLightningDepositConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit confirmed'**
+  String get notifTransactionExternalLightningDepositConfirmedTitle;
+
+  /// No description provided for @notifTransactionExternalLightningDepositConfirmedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning deposit settled. Net credit: {credit} BTC.'**
+  String notifTransactionExternalLightningDepositConfirmedBody(String credit);
+
+  /// No description provided for @notifTransactionColdOutboundDetectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold wallet outbound'**
+  String get notifTransactionColdOutboundDetectedTitle;
+
+  /// No description provided for @notifTransactionColdOutboundDetectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Outbound transfer of {amount} BTC detected in cold wallet (mempool/network).'**
+  String notifTransactionColdOutboundDetectedBody(String amount);
+
+  /// No description provided for @notifTransactionColdOutboundConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer confirmed'**
+  String get notifTransactionColdOutboundConfirmedTitle;
+
+  /// No description provided for @notifTransactionColdOutboundConfirmedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer of {amount} BTC confirmed on the Bitcoin network.'**
+  String notifTransactionColdOutboundConfirmedBody(String amount);
+
+  /// No description provided for @notifTransactionColdInboundDetectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cold wallet inbound'**
+  String get notifTransactionColdInboundDetectedTitle;
+
+  /// No description provided for @notifTransactionColdInboundDetectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbound transfer of {amount} BTC detected in cold wallet.'**
+  String notifTransactionColdInboundDetectedBody(String amount);
+
+  /// No description provided for @notifTransactionReceivedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer Received'**
+  String get notifTransactionReceivedTitle;
+
+  /// No description provided for @notifTransactionReceivedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You received {amount} {moeda} via {rede} in wallet {carteira}.'**
+  String notifTransactionReceivedBody(
+      String amount, String moeda, String rede, String carteira);
+
+  /// No description provided for @notifTransactionSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer successfully sent'**
+  String get notifTransactionSentTitle;
+
+  /// No description provided for @notifTransactionSentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You sent {amount} {moeda} via {rede} to {endereco}.'**
+  String notifTransactionSentBody(
+      String rede, String amount, String moeda, String endereco);
+
+  /// No description provided for @notifTransactionInvoiceStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice payment is {status}'**
+  String notifTransactionInvoiceStatusTitle(String status);
+
+  /// No description provided for @notifTransactionInvoiceStatusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice of {amount} {moeda} is {status}.'**
+  String notifTransactionInvoiceStatusBody(
+      String amount, String moeda, String status);
+
+  /// No description provided for @notifTransactionStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit {status}'**
+  String notifTransactionStatusTitle(String status);
+
+  /// No description provided for @notifTransactionStatusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer of {amount} {moeda} via {rede} is {status}.'**
+  String notifTransactionStatusBody(
+      String amount, String moeda, String rede, String status);
 }
 
 class _AppLocalizationsDelegate

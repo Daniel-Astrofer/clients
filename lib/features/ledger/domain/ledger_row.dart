@@ -6,7 +6,14 @@ enum LedgerDirection { inbound, outbound, internal }
 
 enum LedgerRail { onchain, lightning, internal }
 
-enum LedgerStatus { pending, confirming, confirmed, failed, cancelled }
+enum LedgerStatus {
+  pending,
+  confirming,
+  confirmed,
+  failed,
+  cancelled,
+  reconciling,
+}
 
 enum LedgerSource { remote, statement, local }
 

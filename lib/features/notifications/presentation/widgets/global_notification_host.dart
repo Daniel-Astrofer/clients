@@ -13,6 +13,7 @@ import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
+import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
@@ -313,17 +314,17 @@ class _NotificationBannerCard extends ConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  notification.title.trim().isEmpty
+                                  NotificationTranslator.resolveTitle(context, notification).isEmpty
                                       ? _fallbackTitle(context)
-                                      : notification.title.trim(),
+                                      : NotificationTranslator.resolveTitle(context, notification),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: titleStyle,
                                 ),
-                                if (notification.body.trim().isNotEmpty) ...[
+                                if (NotificationTranslator.resolveBody(context, notification).isNotEmpty) ...[
                                   const SizedBox(height: 5),
                                   Text(
-                                    notification.body.trim(),
+                                    NotificationTranslator.resolveBody(context, notification),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: bodyStyle,

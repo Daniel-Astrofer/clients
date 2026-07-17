@@ -14,6 +14,7 @@ void main() {
 
     expect(find.text('Gateway de pagamento'), findsOneWidget);
     expect(find.text('P2P'), findsOneWidget);
+    expect(find.text('Fatura Lightning'), findsOneWidget);
     expect(find.text('QR Code'), findsOneWidget);
     expect(find.text('Link de pagamento'), findsOneWidget);
     expect(find.text('NFC'), findsOneWidget);
@@ -25,11 +26,13 @@ void main() {
 
     expect(find.text('Gateway de pagamento'), findsOneWidget);
     expect(find.text('P2P'), findsOneWidget);
+    expect(find.text('Fatura Lightning'), findsOneWidget);
 
     await _pumpMovementHubScreen(tester, initialWallet: _onchainWallet());
     await tester.pumpAndSettle();
 
     expect(find.text('Gateway de pagamento'), findsNothing);
+    expect(find.text('Fatura Lightning'), findsNothing);
     expect(find.text('QR Code'), findsOneWidget);
     expect(find.text('Link de pagamento'), findsOneWidget);
     expect(find.text('NFC'), findsNothing);
@@ -39,6 +42,7 @@ void main() {
 
     expect(find.text('Gateway de pagamento'), findsNothing);
     expect(find.text('P2P'), findsNothing);
+    expect(find.text('Fatura Lightning'), findsNothing);
     expect(find.text('QR Code'), findsOneWidget);
     expect(find.text('Link de pagamento'), findsOneWidget);
     expect(find.text('NFC'), findsNothing);

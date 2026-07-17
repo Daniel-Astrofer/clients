@@ -5,6 +5,7 @@ import 'package:kerosene/features/movement/domain/entities/transaction.dart'
     as domain;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// SQLite projection for on-device extrato rows (non-web).
 ///
@@ -22,6 +23,12 @@ class LocalTransactionSqlite {
     if (kIsWeb) return null;
     if (_db != null) return _db;
     try {
+      if (defaultTargetPlatform == TargetPlatform.linux || 
+          defaultTargetPlatform == TargetPlatform.windows || 
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+      }
       final dir = await getDatabasesPath();
       final path = p.join(dir, _dbName);
       _db = await openDatabase(

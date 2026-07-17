@@ -71,7 +71,11 @@ class PendingPaymentLinkItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    isCompleted ? KeroseneIcons.success : KeroseneIcons.pending,
+                    isCompleted
+                        ? KeroseneIcons.success
+                        : (paymentLink.isLightningPaymentRequest
+                            ? KeroseneIcons.lightning
+                            : KeroseneIcons.pending),
                     color: isCompleted
                         ? AppColors.hexFF00FF94
                         : AppColors.hexFFFFB800,
@@ -150,7 +154,9 @@ class PendingPaymentLinkItem extends StatelessWidget {
             Text(
               paymentLink.description.isNotEmpty
                   ? paymentLink.description
-                  : 'Aguardando pagamento via rede Bitcoin...',
+                  : (paymentLink.isLightningPaymentRequest
+                      ? 'Aguardando pagamento Lightning (BOLT11)...'
+                      : 'Aguardando pagamento via rede Bitcoin...'),
               style: TextStyle(
                 color: Theme.of(context)
                     .colorScheme
@@ -170,7 +176,13 @@ class PendingPaymentLinkItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  isCompleted ? 'Confirmado' : 'Link de Pagamento',
+                  isCompleted
+                      ? (paymentLink.isLightningPaymentRequest
+                          ? 'Pago · Lightning'
+                          : 'Confirmado')
+                      : (paymentLink.isLightningPaymentRequest
+                          ? 'Fatura Lightning'
+                          : 'Link de Pagamento'),
                   style: TextStyle(
                     color: Theme.of(context)
                         .colorScheme

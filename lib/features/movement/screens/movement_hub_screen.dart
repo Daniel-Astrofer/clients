@@ -361,6 +361,17 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
           verticalPadding: 24,
           isLoading: isLoading,
         ),
+      MovementReceiveActionKind.lightning => _ReceiveActionTile(
+          icon: KeroseneIcons.bolt,
+          title: ReceiveMoneyCopy.lightningTitle(context),
+          subtitle: ReceiveMoneyCopy.lightningSubtitle(context),
+          onTap: isLoading
+              ? () {}
+              : () => _openReceive(ReceiveAmountMethod.lightning),
+          showDivider: showDivider,
+          verticalPadding: 24,
+          isLoading: isLoading,
+        ),
       MovementReceiveActionKind.qrCode => _ReceiveActionTile(
           icon: KeroseneIcons.qr,
           title: context.tr.receiveMethodQrTitle,

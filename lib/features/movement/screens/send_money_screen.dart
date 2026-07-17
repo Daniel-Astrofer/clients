@@ -1220,8 +1220,31 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
     final resolver = PaymentIntentResolver.instance;
 
     if (!workingIntent.isInternal) {
+      // Platform BOLT11 → INTERNAL payment-link settlement (never LND self-pay).
+      var intentForResolve = workingIntent;
+      if (workingIntent.isLightning) {
+        final platformLink = await ref
+            .read(transactionRepositoryProvider)
+            .lookupPlatformLightningInvoice(workingIntent.normalizedValue);
+        if (!mounted) return null;
+        if (platformLink != null) {
+          intentForResolve = PaymentIntent(
+            kind: PaymentDestinationKind.paymentLink,
+            rawInput: workingIntent.rawInput,
+            normalizedValue: platformLink.id,
+            paymentLinkId: platformLink.id,
+            amountBtc: platformLink.amountBtc > 0
+                ? platformLink.amountBtc
+                : workingIntent.amountBtc,
+            label: platformLink.description.isNotEmpty
+                ? platformLink.description
+                : 'Pagamento Kerosene (interno)',
+            message: workingIntent.message,
+          );
+        }
+      }
       final local = resolver.resolveLocal(
-        intent: workingIntent,
+        intent: intentForResolve,
         source: source,
         sourceWalletId: wallet?.id,
         sourceWalletAddress: wallet?.address,

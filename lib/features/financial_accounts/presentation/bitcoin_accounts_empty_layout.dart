@@ -42,13 +42,9 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
               0,
             ),
             sliver: SliverToBoxAdapter(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: responsive.mobileContentMaxWidth,
-                  ),
-                  child: _BitcoinAccountsEmptyHeader(onBack: onBack),
-                ),
+              child: KeroseneAppColumn(
+                maxWidth: responsive.mobileContentMaxWidth,
+                child: _BitcoinAccountsEmptyHeader(onBack: onBack),
               ),
             ),
           ),
@@ -61,12 +57,9 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
             ),
             sliver: SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: responsive.mobileContentMaxWidth,
-                  ),
-                  child: Column(
+              child: KeroseneAppColumn(
+                maxWidth: responsive.mobileContentMaxWidth,
+                child: Column(
                     children: [
                       const Expanded(
                         child: Center(
@@ -113,7 +106,6 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
               ),
             ),
           ),

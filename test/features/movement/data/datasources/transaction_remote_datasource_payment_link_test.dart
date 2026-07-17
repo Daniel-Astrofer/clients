@@ -55,6 +55,31 @@ void main() {
     expect(link.locked, isFalse);
     expect(link.paymentUri, isNull);
   });
+
+  test('maps LIGHTNING payment request bolt11 into shareable payload', () async {
+    final apiClient = _PaymentRequestApiClient(walletId: walletId);
+    final dataSource = TransactionRemoteDataSourceImpl(apiClient);
+    const bolt11 = 'lntb100n1pkerosenetestinvoiceforfrontend';
+
+    final link = await dataSource.createPaymentLink(
+      amount: 0.0001,
+      description: 'Lightning receive',
+      referenceLabel: 'Conta principal',
+      metadata: const {
+        'walletName': 'Conta principal',
+        'rail': 'LIGHTNING',
+      },
+    );
+
+    expect(apiClient.postedData?['rail'], 'LIGHTNING');
+    expect(apiClient.postedData?.containsKey('issueFreshAddress'), isFalse);
+    expect(link.paymentRail, 'LIGHTNING');
+    expect(link.isLightningPaymentRequest, isTrue);
+    expect(link.paymentRequest, bolt11);
+    expect(link.paymentHash, 'hash-lightning-1');
+    expect(link.shareablePaymentPayload, bolt11);
+    expect(link.paymentUri, bolt11);
+  });
 }
 
 class _PaymentRequestApiClient implements ApiClient {
@@ -97,15 +122,29 @@ class _PaymentRequestApiClient implements ApiClient {
     postedData = Map<String, dynamic>.from(data! as Map);
     final rail = postedData!['rail'] as String;
     final internal = rail == 'INTERNAL';
+    final lightning = rail == 'LIGHTNING';
     return Response<dynamic>(
       requestOptions: RequestOptions(path: path),
       data: {
-        'id': internal ? 'private-internal-id' : 'private-onchain-id',
-        'publicId': internal ? 'public-internal-id' : 'public-onchain-id',
+        'id': internal
+            ? 'private-internal-id'
+            : lightning
+                ? 'private-lightning-id'
+                : 'private-onchain-id',
+        'publicId': internal
+            ? 'public-internal-id'
+            : lightning
+                ? 'public-lightning-id'
+                : 'public-onchain-id',
         'userId': 7,
         'walletId': walletId,
-        'address':
-            internal ? 'kerosene:wallet:$walletId' : 'bcrt1qpaymentrequest',
+        'address': internal
+            ? 'kerosene:wallet:$walletId'
+            : lightning
+                ? ''
+                : 'bcrt1qpaymentrequest',
+        if (lightning) 'paymentRequest': 'lntb100n1pkerosenetestinvoiceforfrontend',
+        if (lightning) 'paymentHash': 'hash-lightning-1',
         'rail': rail,
         'status': 'OPEN',
         'amountSats': 10000,

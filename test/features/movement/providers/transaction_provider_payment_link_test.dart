@@ -62,6 +62,30 @@ void main() {
     expect(repository.paymentRequestPublicIds, [null]);
   });
 
+  test('pays a LIGHTNING platform link via INTERNAL ledger (not LND)', () async {
+    final repository = _PaymentLinkRepository(
+      _link(
+        paymentRail: 'LIGHTNING',
+        depositAddress: 'lntb10u1ptest',
+        destinationHash: destinationWalletId,
+        paymentRequest: 'lntb10u1ptest',
+      ),
+    );
+    final container = _container(repository);
+    addTearDown(container.dispose);
+
+    final result =
+        await container.read(paymentLinkNotifierProvider.notifier).pay(
+              linkId: 'ln-platform-link',
+              payerWalletId: 'payer-wallet-id',
+              idempotencyKey: 'ln-platform-idempotency',
+            );
+
+    expect(result, isNotNull);
+    expect(repository.withdrawalDestinations, [destinationWalletId]);
+    expect(repository.paymentRequestPublicIds, ['payment-link']);
+  });
+
   test('keeps the INTERNAL destination hash during passkey retry', () async {
     final repository = _PaymentLinkRepository(
       _link(
@@ -375,6 +399,7 @@ PaymentLink _link({
   String? destinationHash,
   String status = 'PENDING',
   DateTime? expiresAt,
+  String? paymentRequest,
 }) {
   return PaymentLink(
     id: id,
@@ -383,10 +408,11 @@ PaymentLink _link({
     description: 'Payment request',
     depositAddress: depositAddress,
     destinationHash: destinationHash,
-    locked: paymentRail == 'INTERNAL',
+    locked: paymentRail == 'INTERNAL' || paymentRail == 'LIGHTNING',
     status: status,
     expiresAt: expiresAt,
     paymentRail: paymentRail,
+    paymentRequest: paymentRequest,
   );
 }
 

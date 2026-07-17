@@ -70,22 +70,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     bottomPadding,
                   ),
                   sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: responsive.appColumnConstraints,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SettingsHeader(onClose: _close),
-                            const SizedBox(height: AppSpacing.xxl),
-                            const SettingsHero(),
-                            const SizedBox(height: AppSpacing.xxl),
-                            SettingsNavigationRail(
-                              selected: null,
-                              onSelected: _openPane,
-                            ),
-                          ],
-                        ),
+                    child: KeroseneAppColumn(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SettingsHeader(onClose: _close),
+                          const SizedBox(height: AppSpacing.xxl),
+                          const SettingsHero(),
+                          const SizedBox(height: AppSpacing.xxl),
+                          SettingsNavigationRail(
+                            selected: null,
+                            onSelected: _openPane,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -180,22 +177,19 @@ class _SettingsPaneDetailScreen extends StatelessWidget {
                     bottomPadding,
                   ),
                   sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: responsive.appColumnConstraints,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SettingsHeader(
-                              onClose: () {
-                                HapticFeedback.selectionClick();
-                                Navigator.of(context).maybePop();
-                              },
-                            ),
-                            const SizedBox(height: AppSpacing.xxl),
-                            _AnimatedPaneSwitcher(pane),
-                          ],
-                        ),
+                    child: KeroseneAppColumn(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SettingsHeader(
+                            onClose: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.of(context).maybePop();
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                          _AnimatedPaneSwitcher(pane),
+                        ],
                       ),
                     ),
                   ),

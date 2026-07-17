@@ -170,10 +170,9 @@ class _TransactionStatementScreenState
       body: Stack(
         children: [
           SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: CustomScrollView(
+            child: KeroseneAppColumn(
+              maxWidth: maxWidth,
+              child: CustomScrollView(
                   controller: _scrollController,
                   physics: const BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics(),
@@ -264,7 +263,6 @@ class _TransactionStatementScreenState
                     ),
                   ],
                 ),
-              ),
             ),
           ),
           AppPrimaryNavigationBar.overlay(

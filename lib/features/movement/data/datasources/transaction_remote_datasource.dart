@@ -97,8 +97,10 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'blockchainTxid': payload['blockchainTxid']?.toString() ?? '',
       'paymentHash': payload['paymentHash']?.toString() ?? '',
       'expectedAmountBtc': amountSats / 100000000.0,
-      'confirmations':
-          payload['status']?.toString().toUpperCase() == 'SETTLED' ? 6 : 0,
+      // Lightning never has block confs; on-chain uses payload or 0 (not fake 6).
+      'confirmations': rail == 'LIGHTNING'
+          ? 0
+          : (payload['confirmations'] as num?)?.toInt() ?? 0,
       'createdAt': payload['createdAt']?.toString(),
       'updatedAt': payload['updatedAt']?.toString(),
       'context': payload['memo']?.toString() ?? '',
@@ -293,18 +295,31 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     final publicId = payload['publicId']?.toString().trim() ?? '';
     final walletId = payload['walletId']?.toString().trim() ?? '';
     final isInternal = paymentRail == 'INTERNAL';
+    final isLightning = paymentRail == 'LIGHTNING';
+    final bolt11 = (payload['paymentRequest']?.toString() ??
+            payload['payment_request']?.toString() ??
+            payload['bolt11']?.toString() ??
+            '')
+        .trim();
+    final paymentHash = (payload['paymentHash']?.toString() ??
+            payload['payment_hash']?.toString() ??
+            '')
+        .trim();
     final rawAddress = (payload['address']?.toString() ??
             payload['externalReference']?.toString() ??
             '')
         .trim();
-    // INTERNAL requests use kerosene:wallet:<uuid>; never treat that as deposit
-    // address for BIP-21 / external wallets.
+    // INTERNAL refs (kerosene:wallet:<uuid>) and bolt11 are kept for display,
+    // but never treated as BIP-21 chain addresses.
     final isChainAddress = rawAddress.isNotEmpty &&
         !rawAddress.toLowerCase().startsWith('kerosene:') &&
+        !rawAddress.toLowerCase().startsWith('ln') &&
         looksLikeBitcoinAddress(rawAddress);
-    final depositAddress = isChainAddress
-        ? rawAddress
-        : (isInternal ? '' : rawAddress);
+    final depositAddress = isLightning
+        ? (bolt11.isNotEmpty ? bolt11 : rawAddress)
+        : isChainAddress
+            ? rawAddress
+            : rawAddress;
     final amountSats = (payload['amountSats'] as num?)?.toDouble() ??
         (payload['receiverAmountSats'] as num?)?.toDouble() ??
         (payload['grossAmountSats'] as num?)?.toDouble() ??
@@ -312,7 +327,9 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     final amountBtc =
         amountSats > 0 ? amountSats / 100000000.0 : (fallbackAmountBtc ?? 0);
     final String? paymentUri;
-    if (isChainAddress) {
+    if (isLightning && bolt11.isNotEmpty) {
+      paymentUri = bolt11;
+    } else if (isChainAddress) {
       paymentUri = QrPaymentParser.encode(
         address: depositAddress,
         amountBtc: amountBtc > 0 ? amountBtc : null,
@@ -326,24 +343,34 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     } else {
       paymentUri = null;
     }
+    final mergedMetadata = <String, String>{
+      ...?metadata,
+      if (bolt11.isNotEmpty) 'paymentRequest': bolt11,
+      if (paymentHash.isNotEmpty) 'paymentHash': paymentHash,
+    };
     return PaymentLink.fromJson({
       'id': payload['publicId'] ?? payload['id'] ?? payload['transactionId'],
       'userId': payload['userId'],
       'amountBtc': amountBtc,
       'description': payload['memo']?.toString() ??
           fallbackDescription ??
-          'Recebimento via QR',
+          (isLightning ? 'Recebimento Lightning' : 'Recebimento via QR'),
       'depositAddress': depositAddress,
       'visibility': 'PRIVATE',
       'confirmationMode': 'USER_ACTION_REQUIRED',
       'amountLocked': true,
       'referenceLabel': referenceLabel,
-      'metadata': metadata ?? const <String, String>{},
-      if (isInternal && walletId.isNotEmpty) 'destinationHash': walletId,
+      'metadata': mergedMetadata,
+      // Always expose wallet destination so in-app pay settles via INTERNAL ledger
+      // (including LIGHTNING-rail payment requests — LND self-pay is denied).
+      if (walletId.isNotEmpty) 'destinationHash': walletId,
       if (paymentUri != null) 'paymentUri': paymentUri,
+      if (bolt11.isNotEmpty) 'paymentRequest': bolt11,
+      if (paymentHash.isNotEmpty) 'paymentHash': paymentHash,
       'locked': isInternal,
       'status': payload['status']?.toString() ?? 'PENDING',
-      'txid': payload['blockchainTxid']?.toString(),
+      'txid': payload['blockchainTxid']?.toString() ??
+          (paymentHash.isNotEmpty ? paymentHash : null),
       'createdAt': payload['createdAt']?.toString(),
       'paidAt': payload['settledAt']?.toString(),
       'completedAt': payload['updatedAt']?.toString(),
@@ -354,7 +381,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
           payload['status']?.toString() ??
           'PENDING',
       'settlementReference': payload['settlementTransactionId']?.toString(),
-      'confirmations': payload['confirmations'],
+      'confirmations': payload['confirmations'] ?? (isLightning ? 0 : 0),
       'terminal': payload['terminal'] ?? false,
     });
   }
@@ -384,11 +411,12 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     if (rail == null || rail.isEmpty) {
       return 'ONCHAIN';
     }
-    if (rail == 'INTERNAL' || rail == 'ONCHAIN') {
+    if (rail == 'INTERNAL' || rail == 'ONCHAIN' || rail == 'LIGHTNING') {
       return rail;
     }
     throw const ValidationException(
-      message: 'Payment requests support INTERNAL and ONCHAIN rails only.',
+      message:
+          'Payment requests support INTERNAL, ONCHAIN and LIGHTNING rails only.',
       statusCode: 400,
       errorCode: 'ERR_KFE_PAYMENT_LINK_RAIL_UNSUPPORTED',
     );
@@ -774,7 +802,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         data: {
           'walletId': walletId,
           'rail': rail,
-          'amountSats': _btcToSats(amount),
+          if (amount > 0) 'amountSats': _btcToSats(amount),
           if (description != null && description.trim().isNotEmpty)
             'description': description.trim(),
           if (referenceLabel != null && referenceLabel.trim().isNotEmpty)
@@ -818,6 +846,28 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
   }
 
   @override
+  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async {
+    final raw = invoiceOrHash.trim();
+    if (raw.isEmpty) return null;
+    try {
+      final response = await apiClient.get(
+        AppConfig.kfePublicPaymentRequestLookup(raw),
+      );
+      final data = _parseJsonResponse(response.data);
+      return _paymentLinkFromKfePayload(data);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode ?? 0;
+      if (status == 404) return null;
+      if (e is AppException) rethrow;
+      // Network / 5xx — treat as unknown (not platform) so external LN still works offline path.
+      return null;
+    } catch (e) {
+      if (e is AppException) rethrow;
+      return null;
+    }
+  }
+
+  @override
   Future<List<PaymentLink>> getPaymentLinks() async {
     try {
       final response = await apiClient.get(AppConfig.kfePaymentRequests);
@@ -846,20 +896,33 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
           errorCode: 'ERR_WALLET_NOT_FOUND',
         );
       }
+      final kind = wallet['kind']?.toString().toUpperCase() ?? '';
+      final isWatchOnly = kind == 'WATCH_ONLY' || kind.contains('COLD');
+      final isCustodialOnchain =
+          kind.contains('CUSTODIAL') || kind.contains('ONCHAIN');
+      // Internal Kerosene custody can create LIGHTNING payment requests (BOLT11).
+      final lightningEnabled = !isWatchOnly && !isCustodialOnchain;
       return WalletNetworkAddress.fromJson({
-        'walletName': wallet['label']?.toString() ?? walletName,
+        'walletName': wallet['label']?.toString() ??
+            wallet['walletName']?.toString() ??
+            walletName,
         'onchainAddress': wallet['activeAddress']?.toString() ?? '',
-        'lightningAddress': '',
-        'network': wallet['kind']?.toString() ?? '',
+        'lightningAddress': wallet['lightningAddress']?.toString() ?? '',
+        'network': kind.isEmpty ? 'INTERNAL' : kind,
         'provider': 'KFE',
         'externalWalletReference':
             wallet['walletId']?.toString() ?? wallet['id']?.toString() ?? '',
-        'walletMode': wallet['kind']?.toString().toUpperCase() == 'WATCH_ONLY'
+        'walletMode': isWatchOnly
             ? 'SELF_CUSTODY'
-            : 'KEROSENE',
-        'lightningEnabled': false,
-        'lightningUnavailableReason':
-            'Recebimento Lightning KFE ainda não está disponível.',
+            : isCustodialOnchain
+                ? 'CUSTODIAL_ONCHAIN'
+                : 'KEROSENE',
+        'lightningEnabled': lightningEnabled,
+        'lightningUnavailableReason': lightningEnabled
+            ? ''
+            : isWatchOnly
+                ? 'Cold wallets do not issue Lightning invoices on Kerosene.'
+                : 'Lightning receive is available on the internal Kerosene wallet.',
       });
     } catch (e) {
       if (e is AppException) rethrow;
@@ -1029,20 +1092,49 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'idempotencyKey',
     );
     final normalizedDescription = _optionalText(description);
-    final destination = isLightning
-        ? _requiredText(paymentRequest, 'paymentRequest')
-        : _requiredText(toAddress, 'toAddress');
-    final isInternal = !isLightning && _looksLikeUuid(destination);
-    final paymentRequestPublicId =
-        isInternal ? _optionalText(paymentRequest) : null;
-    final rail = isLightning
+    // Prefer paymentRequest when present, else toAddress.
+    final rawDestination = _optionalText(paymentRequest) ??
+        _optionalText(toAddress) ??
+        '';
+    if (rawDestination.isEmpty) {
+      throw ValidationException(
+        message: isLightning
+            ? 'paymentRequest is required'
+            : 'toAddress is required',
+      );
+    }
+
+    // Wallet UUID is always Kerosene INTERNAL — never a Lightning destination.
+    // (UI sometimes picks "Lightning" rail for a Kerosene user and locks wallet id.)
+    final isWalletUuid = _looksLikeUuid(rawDestination);
+    // Explicit platform payment-request public id → always INTERNAL ledger.
+    final explicitPaymentRequestPublicId = _optionalText(paymentRequest) != null &&
+            !_looksLikeUuid(_optionalText(paymentRequest)!) &&
+            !_looksLikeExecutableLightningDestination(_optionalText(paymentRequest)!)
+        ? _optionalText(paymentRequest)
+        : null;
+    final effectiveLightning = isLightning &&
+        explicitPaymentRequestPublicId == null &&
+        !isWalletUuid &&
+        _looksLikeExecutableLightningDestination(rawDestination);
+    final destination = effectiveLightning
+        ? _normalizeLightningDestination(rawDestination)
+        : rawDestination;
+    final isInternal = explicitPaymentRequestPublicId != null ||
+        isWalletUuid ||
+        (!effectiveLightning && _looksLikeUuid(destination));
+    final paymentRequestPublicId = explicitPaymentRequestPublicId ??
+        (isInternal && !_looksLikeUuid(rawDestination)
+            ? _optionalText(paymentRequest)
+            : null);
+    final rail = effectiveLightning
         ? 'LIGHTNING'
         : isInternal
             ? 'INTERNAL'
             : 'ONCHAIN';
     final feeBtc = isInternal
         ? 0.0
-        : isLightning && networkFeeBtc <= 0
+        : effectiveLightning && networkFeeBtc <= 0
             ? maxRoutingFeeBtc
             : networkFeeBtc;
 
@@ -1058,7 +1150,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'networkFeeSats': (feeBtc * 100000000).round(),
       if (!isInternal) 'externalReference': destination,
       'memo': normalizedDescription ??
-          (isLightning
+          (effectiveLightning
               ? 'Pagamento Lightning'
               : isInternal
                   ? 'transferencia interna'
@@ -1089,5 +1181,66 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       return null;
     }
     return normalized;
+  }
+
+  /// Align with KFE [LightningDestinationClassifier]: strip wrappers so
+  /// `lightning:…`, BIP-21 `?lightning=`, and whitespace do not 400.
+  @visibleForTesting
+  static String normalizeLightningDestination(String raw) {
+    return _normalizeLightningDestination(raw);
+  }
+
+  static bool _looksLikeExecutableLightningDestination(String raw) {
+    final v = _normalizeLightningDestination(raw);
+    if (v.isEmpty || _looksLikeUuid(v)) return false;
+    final lower = v.toLowerCase();
+    if (RegExp(r'^(lnbc|lntb|lnbcrt|lnsb|lntbs)[0-9a-z]+$').hasMatch(lower)) {
+      return true;
+    }
+    if (RegExp(r'^lnurl1[0-9a-z]+$').hasMatch(lower)) return true;
+    if (RegExp(r'^[0-9a-f]{66}$').hasMatch(lower)) return true;
+    if (RegExp(
+      r'^[a-zA-Z0-9._%+\-]{1,64}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$',
+    ).hasMatch(v)) {
+      return true;
+    }
+    return false;
+  }
+
+  static String _normalizeLightningDestination(String raw) {
+    var value = raw
+        .replaceAll('\uFEFF', '')
+        .replaceAll('\u200B', '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
+    if (value.isEmpty) return value;
+
+    final lower = value.toLowerCase();
+    if (lower.startsWith('bitcoin:') || lower.startsWith('web+bitcoin:')) {
+      final uri = Uri.tryParse(value);
+      final lightning = uri?.queryParameters['lightning']?.trim();
+      if (lightning != null && lightning.isNotEmpty) {
+        value = lightning;
+      }
+    }
+
+    final stripped = value.toLowerCase().startsWith('lightning:')
+        ? value.substring('lightning:'.length).trim()
+        : value;
+    value = stripped.startsWith('//') ? stripped.substring(2).trim() : stripped;
+
+    final q = value.indexOf('?');
+    if (q > 0 &&
+        (value.toLowerCase().startsWith('ln') ||
+            value.contains('@') ||
+            RegExp(r'^[0-9a-fA-F]{66}$').hasMatch(value))) {
+      value = value.substring(0, q);
+    }
+
+    // BOLT11 / LNURL are case-insensitive bech32-ish.
+    if (value.toLowerCase().startsWith('ln')) {
+      return value.toLowerCase();
+    }
+    return value;
   }
 }

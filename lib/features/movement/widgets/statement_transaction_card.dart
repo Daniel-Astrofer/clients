@@ -784,20 +784,19 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
     super.dispose();
   }
 
-  /// On-chain confs = **backend only**. Internal/LN: full ring when settled.
+  /// On-chain confs = **backend only**. Lightning/internal never use N/6 confs.
   int _backendConfirmations(Transaction tx) {
+    if (tx.isLightningEffective ||
+        tx.isInternal ||
+        !tx.showsOnchainConfirmations) {
+      return 0;
+    }
     if (tx.isUnconfirmedExpired ||
         tx.displayStatus == TransactionStatus.failed ||
         tx.displayStatus == TransactionStatus.cancelled ||
         tx.displayStatus == TransactionStatus.reconciling) {
       return 0;
     }
-    if (!tx.showsOnchainConfirmations) {
-      return tx.displayStatus == TransactionStatus.confirmed
-          ? tx.onchainConfirmationTarget
-          : 0;
-    }
-    // Do not invent confs from status alone when payload is 0 and still open.
     return tx.confirmations.clamp(0, tx.onchainConfirmationTarget);
   }
 
@@ -810,12 +809,16 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
     if (tx.displayStatus == TransactionStatus.reconciling) {
       return _RingMode.yellowSpin;
     }
-    if (!tx.showsOnchainConfirmations) {
+    // Lightning / internal: no block-conf ring segments — settled or soft pending.
+    if (tx.isLightningEffective ||
+        tx.isInternal ||
+        !tx.showsOnchainConfirmations) {
       if (tx.displayStatus == TransactionStatus.confirmed) {
         return _RingMode.settled;
       }
       if (tx.displayStatus == TransactionStatus.pending ||
           tx.displayStatus == TransactionStatus.confirming) {
+        // Soft amber spin = "em processamento", never 0/6 conf UI.
         return _RingMode.yellowSpin;
       }
       return _RingMode.settled;
@@ -886,11 +889,21 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
                 size: widget.iconSize * 0.45,
               ),
               secondChild: Text(
-                isSettledVisual && conf <= 0
-                    ? 'OK'
-                    : tx.isUnconfirmedExpired
+                // Never show N/6 for Lightning or internal.
+                (tx.isLightningEffective ||
+                        tx.isInternal ||
+                        !tx.showsOnchainConfirmations)
+                    ? (tx.isUnconfirmedExpired ||
+                            tx.displayStatus == TransactionStatus.failed
                         ? '!'
-                        : '$conf/$target',
+                        : isSettledVisual
+                            ? 'OK'
+                            : '…')
+                    : isSettledVisual && conf <= 0
+                        ? 'OK'
+                        : tx.isUnconfirmedExpired
+                            ? '!'
+                            : '$conf/$target',
                 style: TextStyle(
                   color: widget.colors.icon,
                   fontFamily: AppTypography.bodyFontFamily,

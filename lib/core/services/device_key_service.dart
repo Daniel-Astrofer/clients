@@ -61,10 +61,11 @@ class DeviceKeyService {
 
   static final DeviceKeyService instance = DeviceKeyService._internal();
 
-  static const String _activeCredentialKey = 'device_key_active_credential';
-  static const String _privateSeedKey = 'device_key_seed';
-  static const String _publicKeyKey = 'device_key_public';
-  static const String _counterKey = 'device_key_counter';
+  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
+  static const String _activeCredentialKey = '${_prefix}device_key_active_credential';
+  static const String _privateSeedKey = '${_prefix}device_key_seed';
+  static const String _publicKeyKey = '${_prefix}device_key_public';
+  static const String _counterKey = '${_prefix}device_key_counter';
 
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuthentication;

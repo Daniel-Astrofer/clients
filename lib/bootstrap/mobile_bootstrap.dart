@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -420,6 +421,12 @@ class _AppRealtimeBootstrap extends ConsumerWidget {
 
 class KeroseneScrollBehavior extends ScrollBehavior {
   const KeroseneScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        ...super.dragDevices,
+        PointerDeviceKind.mouse,
+      };
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {

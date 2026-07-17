@@ -375,8 +375,9 @@ class QrPaymentParser {
     final trimmed = s.trim();
     if (trimmed.isEmpty) return false;
     final lower = trimmed.toLowerCase();
-    return RegExp(r'^(lnbc|lntb|lnbcrt)[0-9][0-9a-z]+$').hasMatch(lower) ||
-        RegExp(r'^lnurl[0-9a-z]+$').hasMatch(lower) ||
+    return RegExp(r'^(lnbc|lntb|lnbcrt|lnsb|lntbs)[0-9a-z]+$').hasMatch(lower) ||
+        RegExp(r'^lnurl1[0-9a-z]+$').hasMatch(lower) ||
+        RegExp(r'^[0-9a-f]{66}$').hasMatch(lower) ||
         _looksLikeLightningAddress(trimmed);
   }
 

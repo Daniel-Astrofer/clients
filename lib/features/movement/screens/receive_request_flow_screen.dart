@@ -322,11 +322,30 @@ class _ReceiveRequestFlowScreenState
   }
 
   void _applyPaymentLinkStage(PaymentLink link) {
-    final onChain = widget.onChainWallet ||
-        link.paymentRail.trim().toUpperCase() == 'ONCHAIN' ||
-        looksLikeBitcoinAddress(link.depositAddress.trim());
+    final rail = link.paymentRail.trim().toUpperCase();
+    final isLightning = link.isLightningPaymentRequest || rail == 'LIGHTNING';
+    final onChain = !isLightning &&
+        (widget.onChainWallet ||
+            rail == 'ONCHAIN' ||
+            looksLikeBitcoinAddress(link.depositAddress.trim()));
+    final bolt11 = link.paymentRequest?.trim() ?? '';
+    if (isLightning && bolt11.isNotEmpty) {
+      _address = bolt11;
+      _paymentUri = bolt11;
+    } else {
+      final uri = _paymentUriFor(link);
+      if (uri != null && uri.isNotEmpty) {
+        _paymentUri = uri;
+      }
+      final deposit = link.depositAddress.trim();
+      if (deposit.isNotEmpty) {
+        _address = deposit;
+      }
+    }
+    // Lightning settles in one step (invoice paid) — no multi-conf wait.
     final complete = link.isCompleted ||
-        (!onChain && link.isPaid) ||
+        (isLightning && link.isPaid) ||
+        (!onChain && !isLightning && link.isPaid) ||
         (onChain &&
             link.isPaid &&
             link.confirmations >= _requiredConfirmations);
@@ -351,15 +370,38 @@ class _ReceiveRequestFlowScreenState
   /// the wallet classification flag — INTERNAL ledger wallets can still issue
   /// testnet/mainnet deposit addresses.
   bool get _isOnChainReceive {
+    if (_isLightningReceive) return false;
     if (widget.onChainWallet) return true;
     final rail = (_link?.paymentRail ?? '').trim().toUpperCase();
     if (rail == 'ONCHAIN') return true;
-    final address = _addressValue;
+    final address = (_address ?? _link?.depositAddress ?? '').trim();
+    if (address.toLowerCase().startsWith('ln')) return false;
     return address.isNotEmpty && looksLikeBitcoinAddress(address);
+  }
+
+  bool get _isLightningReceive {
+    if (widget.method == ReceiveAmountMethod.lightning) return true;
+    final link = _link;
+    if (link != null && link.isLightningPaymentRequest) return true;
+    final rail = (_link?.paymentRail ?? '').trim().toUpperCase();
+    if (rail == 'LIGHTNING') return true;
+    final payload = (_paymentUri ?? _address ?? '').trim().toLowerCase();
+    return payload.startsWith('ln');
   }
 
   String? _paymentUriFor(PaymentLink? link) {
     if (link == null) return null;
+    // Lightning: QR must encode the BOLT11 invoice, not a truncated address.
+    final bolt11 = link.paymentRequest?.trim();
+    if (link.isLightningPaymentRequest &&
+        bolt11 != null &&
+        bolt11.isNotEmpty) {
+      return bolt11;
+    }
+    final shareable = link.shareablePaymentPayload;
+    if (shareable.toLowerCase().startsWith('ln')) {
+      return shareable;
+    }
     final address = link.depositAddress.trim();
     final hasChainAddress =
         address.isNotEmpty && looksLikeBitcoinAddress(address);
@@ -378,7 +420,7 @@ class _ReceiveRequestFlowScreenState
     if (explicitUri != null &&
         explicitUri.isNotEmpty &&
         !explicitUri.toLowerCase().startsWith('bitcoin:')) {
-      // kerosene://… internal payment URI
+      // kerosene://… internal payment URI or raw bolt11
       return explicitUri;
     }
     if (link.isInternalPaymentRequest || !_isOnChainReceive) {
@@ -388,6 +430,15 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _addressValue {
+    if (_isLightningReceive) {
+      final bolt11 = (_link?.paymentRequest ??
+              _paymentUri ??
+              _address ??
+              _link?.depositAddress ??
+              '')
+          .trim();
+      if (bolt11.isNotEmpty) return bolt11;
+    }
     final current = _address?.trim() ?? '';
     if (current.isNotEmpty &&
         !current.toLowerCase().startsWith('kerosene:') &&
@@ -416,8 +467,17 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _paymentValue {
+    final link = _link;
+    if (link != null) {
+      final shareable = link.shareablePaymentPayload.trim();
+      if (shareable.isNotEmpty) return shareable;
+    }
     final current = _paymentUri?.trim() ?? '';
     if (current.isNotEmpty) return current;
+    if (_isLightningReceive) {
+      final bolt11 = _addressValue;
+      if (bolt11.toLowerCase().startsWith('ln')) return bolt11;
+    }
     final address = _addressValue;
     if (address.isNotEmpty && looksLikeBitcoinAddress(address)) {
       return QrPaymentParser.encode(
@@ -468,6 +528,7 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _networkLabel {
+    if (_isLightningReceive) return 'Lightning';
     if (!_isOnChainReceive) return 'Kerosene · interno';
     final fromAddress = bitcoinNetworkDisplayName(
       inferBitcoinNetworkFromAddress(_addressValue),
@@ -488,6 +549,9 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _statusLabel {
+    if (_isLightningReceive) {
+      return ReceiveMoneyCopy.lightningSettledStatus(context);
+    }
     if (_isOnChainReceive) return 'Confirmado na rede';
     return 'Confirmado na Kerosene';
   }
@@ -514,15 +578,34 @@ class _ReceiveRequestFlowScreenState
 
   String get _monitorStatusLabel {
     if (_stage == ReceiveRequestStage.identified) {
+      if (_isLightningReceive) {
+        return ReceiveMoneyCopy.lightningSettledStatus(context);
+      }
       return _isOnChainReceive ? 'Confirmado' : 'Recebido';
     }
     if (_stage == ReceiveRequestStage.confirmations) {
+      if (_isLightningReceive) {
+        return ReceiveMoneyCopy.lightningPendingStatus(context);
+      }
       if (_link?.isValidatingSettlement == true) {
         return 'Validando ${_currentConfirmations.clamp(0, _requiredConfirmations)}/$_requiredConfirmations confirmações';
       }
       return '${_currentConfirmations.clamp(0, _requiredConfirmations)}/$_requiredConfirmations confirmações';
     }
+    if (_isLightningReceive) {
+      return ReceiveMoneyCopy.lightningPendingStatus(context);
+    }
     return 'Pendente';
+  }
+
+  String get _receiveFlowTitle {
+    if (_isLightningReceive) {
+      return ReceiveMoneyCopy.receiveLightningTitle(context);
+    }
+    if (_isOnChainReceive) {
+      return ReceiveMoneyCopy.receiveBitcoinTitle(context);
+    }
+    return ReceiveMoneyCopy.receiveKeroseneTitle(context);
   }
 
   String get _fiatLabel {
@@ -590,9 +673,7 @@ class _ReceiveRequestFlowScreenState
   }
 
   Widget _buildQrScreen(BuildContext context) {
-    final receiveTitle = _isOnChainReceive
-        ? ReceiveMoneyCopy.receiveBitcoinTitle(context)
-        : ReceiveMoneyCopy.receiveKeroseneTitle(context);
+    final receiveTitle = _receiveFlowTitle;
     final pendingTitle = ReceiveMoneyCopy.qrPendingTitle(context);
     return Column(
       children: [
@@ -691,12 +772,18 @@ class _ReceiveRequestFlowScreenState
   }
 
   Widget _buildAddressPill(BuildContext context) {
+    final label = _isLightningReceive
+        ? ReceiveMoneyCopy.detailInvoice(context)
+        : ReceiveMoneyCopy.detailAddress(context);
+    final display = _isLightningReceive
+        ? shortenReceiveAddress(_addressValue, head: 12, tail: 8)
+        : shortenReceiveAddress(_addressValue, head: 10, tail: 6);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
           Text(
-            ReceiveMoneyCopy.detailAddress(context),
+            label,
             style: AppTypography.inter(
               color: _receiveMuted,
               fontSize: 14,
@@ -715,7 +802,7 @@ class _ReceiveRequestFlowScreenState
                 children: [
                   Flexible(
                     child: Text(
-                      shortenReceiveAddress(_addressValue, head: 10, tail: 6),
+                      display,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.right,
@@ -739,16 +826,19 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _copyRawAddress() async {
-    await Clipboard.setData(ClipboardData(text: _addressValue));
+    final payload = _isLightningReceive ? _paymentValue : _addressValue;
+    await Clipboard.setData(ClipboardData(text: payload));
     await HapticFeedback.selectionClick();
     if (!mounted) return;
-    SnackbarHelper.showSuccess(ReceiveMoneyCopy.addressCopied(context));
+    SnackbarHelper.showSuccess(
+      _isLightningReceive
+          ? ReceiveMoneyCopy.invoiceCopied(context)
+          : ReceiveMoneyCopy.addressCopied(context),
+    );
   }
 
   Widget _buildConfirmationsScreen(BuildContext context) {
-    final receiveTitle = _isOnChainReceive
-        ? ReceiveMoneyCopy.receiveBitcoinTitle(context)
-        : ReceiveMoneyCopy.receiveKeroseneTitle(context);
+    final receiveTitle = _receiveFlowTitle;
     return Column(
       children: [
         ReceiveContextHeader(
@@ -782,6 +872,7 @@ class _ReceiveRequestFlowScreenState
                 const SizedBox(height: 16),
                 ReceiveNetworkStatusRow(
                   onChainWallet: _isOnChainReceive,
+                  lightning: _isLightningReceive,
                   identified: _stage == ReceiveRequestStage.identified,
                   currentConfirmations:
                       _currentConfirmations.clamp(0, _requiredConfirmations).toInt(),

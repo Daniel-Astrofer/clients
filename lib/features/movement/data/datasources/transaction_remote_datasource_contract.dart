@@ -46,6 +46,7 @@ abstract class TransactionRemoteDataSource {
   });
   Future<PaymentLink> getPaymentLink(String linkId);
   Future<List<PaymentLink>> getPaymentLinks();
+  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash);
   Future<WalletNetworkAddress> getWalletNetworkProfile({
     required String walletName,
   });

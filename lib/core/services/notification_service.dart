@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:kerosene/core/services/native_notification_presenter.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
+import 'package:kerosene/core/logging/app_log.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -224,22 +225,27 @@ class NotificationService {
     );
 
     final id = _stableId(presentation.dedupeKey);
-    await flutterLocalNotificationsPlugin.show(
-      id: id,
-      title: presentation.title,
-      body: presentation.body,
-      notificationDetails: NotificationDetails(
-        android: androidColor,
-        iOS: darwinNotificationDetails,
-      ),
-      payload: presentation.payload,
-    );
-
-    if (kDebugMode) {
-      debugPrint(
-        'NotificationService: shown id=$id channel=${presentation.channelId} '
-        'title="${presentation.title}"',
+    appLog('NotificationService: attempting to show id=$id channel=${presentation.channelId}');
+    
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        id: id,
+        title: presentation.title,
+        body: presentation.body,
+        notificationDetails: NotificationDetails(
+          android: androidColor,
+          iOS: darwinNotificationDetails,
+          macOS: darwinNotificationDetails,
+          linux: LinuxNotificationDetails(
+            icon: AssetsLinuxIcon('assets/logo/kerosene-k-logo.png'),
+          ),
+        ),
+        payload: presentation.payload,
       );
+      appLog('NotificationService: successfully shown id=$id title="${presentation.title}"');
+    } catch (e, stack) {
+      appLog('NotificationService: FAILED to show notification. Error: $e');
+      appLog(stack.toString());
     }
   }
 

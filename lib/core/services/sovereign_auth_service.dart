@@ -74,10 +74,11 @@ abstract interface class SovereignKeyStore {
 }
 
 class SecureStorageSovereignKeyStore implements SovereignKeyStore {
-  static const String _privateKeySeedStorageKey = 'sovereign_auth_seed';
-  static const String _publicKeyStorageKey = 'sovereign_auth_pubkey';
-  static const String _signatureCounterStorageKey = 'sovereign_auth_sign_count';
-  static const String _credentialIdStorageKey = 'sovereign_auth_credential_id';
+  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
+  static const String _privateKeySeedStorageKey = '${_prefix}sovereign_auth_seed';
+  static const String _publicKeyStorageKey = '${_prefix}sovereign_auth_pubkey';
+  static const String _signatureCounterStorageKey = '${_prefix}sovereign_auth_sign_count';
+  static const String _credentialIdStorageKey = '${_prefix}sovereign_auth_credential_id';
 
   final FlutterSecureStorage _secureStorage;
 

@@ -125,12 +125,9 @@ class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen> {
                             bottom,
                           ),
                           children: [
-                            Center(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: responsive.mobileContentMaxWidth,
-                                ),
-                                child: Column(
+                            KeroseneAppColumn(
+                              maxWidth: responsive.mobileContentMaxWidth,
+                              child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
@@ -160,7 +157,6 @@ class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
                             ),
                           ],
                         ),

@@ -11,8 +11,11 @@ class CreatePaymentLinkUseCase {
   Future<Either<Failure, PaymentLink>> call({
     required double amount,
     required String receiverWalletName,
+    String rail = 'ONCHAIN',
+    String? walletId,
   }) async {
     try {
+      final normalizedRail = rail.trim().toUpperCase();
       final result = await repository.createPaymentLink(
         amount: amount,
         description: 'Recebimento $receiverWalletName',
@@ -23,7 +26,9 @@ class CreatePaymentLinkUseCase {
         referenceLabel: receiverWalletName,
         metadata: {
           'walletName': receiverWalletName,
-          'rail': 'ONCHAIN',
+          if (walletId != null && walletId.trim().isNotEmpty)
+            'walletId': walletId.trim(),
+          'rail': normalizedRail.isEmpty ? 'ONCHAIN' : normalizedRail,
           'source': 'receive_flow',
         },
       );

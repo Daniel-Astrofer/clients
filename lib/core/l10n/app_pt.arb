@@ -3502,5 +3502,243 @@
   "txListPartyColdNetwork": "Rede Bitcoin (cold)",
   "txListPartyOnchainNetwork": "Rede Bitcoin (on-chain)",
   "txListPartyLinkRecipient": "Destinatário (link interno)",
-  "txListPartyLinkAddress": "Endereço do link on-chain"
+  "txListPartyLinkAddress": "Endereço do link on-chain",
+  "notifAccountCreatedTitle": "Conta criada",
+  "notifAccountCreatedBody": "Sua conta Kerosene foi criada com sucesso.",
+  "notifSecurityLoginDetectedTitle": "Novo acesso detectado",
+  "notifSecurityLoginDetectedBody": "Identificamos um novo acesso à sua conta Kerosene. Se não reconhece esta atividade, revise suas sessões ativas imediatamente.",
+  "notifSecurityAdminAccessAttemptTitle": "Tentativa de acesso administrativo",
+  "notifSecurityAdminAccessAttemptBody": "Uma solicitação de acesso ao painel administrativo está aguardando sua revisão.",
+  "notifSecurityRecoveryCompletedTitle": "Recuperação de segurança concluída",
+  "notifSecurityRecoveryCompletedBody": "Sua frase de recuperação, TOTP, passkey e códigos de backup foram renovados. Entre novamente usando as novas credenciais.",
+  "notifTransactionInternalReceivedTitle": "BTC recebido",
+  "notifTransactionInternalReceivedBody": "Você recebeu {amount} BTC na carteira “{wallet}”.",
+  "@notifTransactionInternalReceivedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionInternalSentTitle": "BTC enviado",
+  "notifTransactionInternalSentBody": "Você enviou {amount} BTC da carteira “{wallet}”.",
+  "@notifTransactionInternalSentBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionPaymentRequestCreatedTitle": "Cobrança criada",
+  "notifTransactionPaymentRequestCreatedBody": "Cobrança de {amount} BTC criada para a carteira “{wallet}”.",
+  "@notifTransactionPaymentRequestCreatedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionPaymentRequestPaidTitle": "Cobrança paga",
+  "notifTransactionPaymentRequestPaidBody": "Sua cobrança de {amount} BTC foi paga com sucesso.",
+  "@notifTransactionPaymentRequestPaidBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionBroadcastNoAmountTitle": "Transação enviada",
+  "notifTransactionBroadcastNoAmountBody": "Sua transação foi enviada para a rede Bitcoin.",
+  "notifTransactionBroadcastWithAmountTitle": "BTC enviado",
+  "notifTransactionBroadcastWithAmountBody": "Envio de {amount} BTC transmitido à rede Bitcoin.",
+  "@notifTransactionBroadcastWithAmountBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionDepositPendingTitle": "Depósito pendente",
+  "notifTransactionDepositPendingBody": "Depósito de {amount} BTC aguardando confirmações.",
+  "@notifTransactionDepositPendingBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionDepositProgressTitle": "Depósito em confirmação",
+  "notifTransactionDepositProgressBody": "Depósito de {amount} BTC: {confirmations} confirmação(ões) recebida(s).",
+  "@notifTransactionDepositProgressBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "confirmations": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionNetworkTransferConfirmedTitle": "Transferência confirmada",
+  "notifTransactionNetworkTransferConfirmedBody": "Transferência de {amount} BTC confirmada na rede Bitcoin.",
+  "@notifTransactionNetworkTransferConfirmedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionNetworkDepositConfirmedTitle": "Depósito confirmado",
+  "notifTransactionNetworkDepositConfirmedBody": "Depósito de {amount} BTC confirmado. Crédito líquido: {credit} BTC.",
+  "@notifTransactionNetworkDepositConfirmedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "credit": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionExternalOnchainPaymentSentTitle": "Pagamento enviado",
+  "notifTransactionExternalOnchainPaymentSentBody": "Pagamento on-chain enviado com sucesso.",
+  "notifTransactionExternalLightningPaymentSentTitle": "Pagamento enviado",
+  "notifTransactionExternalLightningPaymentSentBody": "Pagamento Lightning enviado com sucesso.",
+  "notifTransactionExternalOnchainDepositConfirmedTitle": "Depósito confirmado",
+  "notifTransactionExternalOnchainDepositConfirmedBody": "Depósito on-chain confirmado. Crédito líquido: {credit} BTC.",
+  "@notifTransactionExternalOnchainDepositConfirmedBody": {
+    "placeholders": {
+      "credit": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionExternalLightningDepositConfirmedTitle": "Depósito confirmado",
+  "notifTransactionExternalLightningDepositConfirmedBody": "Depósito Lightning liquidado. Crédito líquido: {credit} BTC.",
+  "@notifTransactionExternalLightningDepositConfirmedBody": {
+    "placeholders": {
+      "credit": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionColdOutboundDetectedTitle": "Envio na cold wallet",
+  "notifTransactionColdOutboundDetectedBody": "Envio de {amount} BTC detectado na carteira fria (mempool/rede).",
+  "@notifTransactionColdOutboundDetectedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionColdOutboundConfirmedTitle": "Envio confirmado",
+  "notifTransactionColdOutboundConfirmedBody": "Envio de {amount} BTC confirmado na rede Bitcoin.",
+  "@notifTransactionColdOutboundConfirmedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionColdInboundDetectedTitle": "Recebimento na cold wallet",
+  "notifTransactionColdInboundDetectedBody": "Recebimento de {amount} BTC detectado na carteira fria.",
+  "@notifTransactionColdInboundDetectedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionReceivedTitle": "Transferência Recebida",
+  "notifTransactionReceivedBody": "Você recebeu {amount} {moeda} via {rede} na carteira {carteira}.",
+  "@notifTransactionReceivedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "moeda": {
+        "type": "String"
+      },
+      "rede": {
+        "type": "String"
+      },
+      "carteira": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionSentTitle": "Transferência enviada com sucesso",
+  "notifTransactionSentBody": "Você enviou via {rede} {amount} {moeda} para {endereco}.",
+  "@notifTransactionSentBody": {
+    "placeholders": {
+      "rede": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "moeda": {
+        "type": "String"
+      },
+      "endereco": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionInvoiceStatusTitle": "Pagamento de invoice está {status}",
+  "@notifTransactionInvoiceStatusTitle": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionInvoiceStatusBody": "Invoice de {amount} {moeda} está {status}.",
+  "@notifTransactionInvoiceStatusBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "moeda": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionStatusTitle": "Depósito {status}",
+  "@notifTransactionStatusTitle": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTransactionStatusBody": "Transferência de {amount} {moeda} via {rede} está {status}.",
+  "@notifTransactionStatusBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "moeda": {
+        "type": "String"
+      },
+      "rede": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  }
 }

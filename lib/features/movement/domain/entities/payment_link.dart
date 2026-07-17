@@ -33,6 +33,9 @@ class PaymentLink extends Equatable {
   final String? settlementReference;
   final bool terminal;
   final int confirmations;
+  /// BOLT11 invoice when [paymentRail] is LIGHTNING.
+  final String? paymentRequest;
+  final String? paymentHash;
 
   const PaymentLink({
     required this.id,
@@ -65,6 +68,8 @@ class PaymentLink extends Equatable {
     this.settlementReference,
     this.terminal = false,
     this.confirmations = 0,
+    this.paymentRequest,
+    this.paymentHash,
   });
 
   bool get isPending => status == 'pending';
@@ -94,6 +99,20 @@ class PaymentLink extends Equatable {
 
   bool get isInternalPaymentRequest =>
       locked || (destinationHash != null && destinationHash!.isNotEmpty);
+
+  bool get isLightningPaymentRequest =>
+      paymentRail.toUpperCase().contains('LIGHTNING') ||
+      (paymentRequest != null &&
+          paymentRequest!.trim().toLowerCase().startsWith('ln'));
+
+  /// Payload shown in QR / share: bolt11, BIP-21 URI, or address.
+  String get shareablePaymentPayload {
+    final bolt11 = paymentRequest?.trim();
+    if (bolt11 != null && bolt11.isNotEmpty) return bolt11;
+    final uri = paymentUri?.trim();
+    if (uri != null && uri.isNotEmpty) return uri;
+    return depositAddress.trim();
+  }
 
   factory PaymentLink.fromJson(Map<String, dynamic> json) {
     final data = json['data'] is Map
@@ -192,7 +211,23 @@ class PaymentLink extends Equatable {
       confirmations: (data['confirmations'] as num?)?.toInt() ??
           (data['confirmationCount'] as num?)?.toInt() ??
           0,
+      paymentRequest: data['paymentRequest']?.toString() ??
+          data['payment_request']?.toString() ??
+          data['bolt11']?.toString() ??
+          metadataPaymentRequest(data),
+      paymentHash: data['paymentHash']?.toString() ??
+          data['payment_hash']?.toString(),
     );
+  }
+
+  static String? metadataPaymentRequest(Map<String, dynamic> data) {
+    final meta = data['metadata'];
+    if (meta is Map) {
+      final value = meta['paymentRequest'] ?? meta['payment_request'];
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+    return null;
   }
 
   @override
@@ -227,6 +262,8 @@ class PaymentLink extends Equatable {
         settlementReference,
         terminal,
         confirmations,
+        paymentRequest,
+        paymentHash,
       ];
 
   /// Converte PaymentLink para Transaction para exibição no histórico unificado
@@ -269,14 +306,24 @@ class PaymentLink extends Equatable {
             ? 'LIGHTNING'
             : 'ONCHAIN';
 
+    final bolt11 = paymentRequest?.trim();
+    final hash = paymentHash?.trim();
+    final displayDestination = isLightningRail && bolt11 != null && bolt11.isNotEmpty
+        ? bolt11
+        : depositAddress.isNotEmpty
+            ? depositAddress
+            : (referenceLabel?.trim().isNotEmpty == true
+                ? referenceLabel!.trim()
+                : 'Carteira receptora');
+
     return Transaction(
       id: "pl_$id",
-      fromAddress: isInternalRail ? 'Kerosene' : 'Rede Bitcoin',
-      toAddress: depositAddress.isNotEmpty
-          ? depositAddress
-          : (referenceLabel?.trim().isNotEmpty == true
-              ? referenceLabel!.trim()
-              : 'Carteira receptora'),
+      fromAddress: isInternalRail
+          ? 'Kerosene'
+          : isLightningRail
+              ? 'Lightning'
+              : 'Rede Bitcoin',
+      toAddress: displayDestination,
       amountSatoshis: (amountBtc * 100000000).round(),
       feeSatoshis: 0,
       status: isCompleted
@@ -287,8 +334,12 @@ class PaymentLink extends Equatable {
                   ? TransactionStatus.confirming
                   : TransactionStatus.pending,
       type: TransactionType.receive,
-      confirmations:
-          isCompleted ? (confirmations > 0 ? confirmations : 3) : confirmations,
+      // Lightning has no block confirmations (HTLC settles instantly).
+      confirmations: isLightningRail
+          ? 0
+          : isCompleted
+              ? (confirmations > 0 ? confirmations : 3)
+              : confirmations,
       timestamp: createdAt ?? DateTime.now(),
       description: transactionDescription,
       isInternal: isInternalRail,
@@ -297,8 +348,17 @@ class PaymentLink extends Equatable {
       provider: 'PAYMENT_LINK',
       blockchainTxid:
           txid == null || txid!.trim().isEmpty ? null : txid!.trim(),
-      externalReference:
-          depositAddress.isNotEmpty ? depositAddress : settlementReference,
+      paymentHash: hash != null && hash.isNotEmpty ? hash : null,
+      lightningInvoice: bolt11 != null && bolt11.isNotEmpty ? bolt11 : null,
+      externalReference: isLightningRail
+          ? (hash != null && hash.isNotEmpty
+              ? hash
+              : (bolt11 != null && bolt11.isNotEmpty
+                  ? bolt11
+                  : settlementReference))
+          : depositAddress.isNotEmpty
+              ? depositAddress
+              : settlementReference,
     );
   }
 

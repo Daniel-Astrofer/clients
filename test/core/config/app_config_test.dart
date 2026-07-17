@@ -66,6 +66,10 @@ void main() {
       '/api/public/kfe/payment-requests/public-1',
     );
     expect(
+      AppConfig.kfePublicPaymentRequestLookup('lntb1abc'),
+      '/api/public/kfe/payment-requests/lookup?invoice=lntb1abc',
+    );
+    expect(
       AppConfig.kfeColdWalletUtxos('cold-1'),
       '/kfe/wallets/cold-1/utxos',
     );

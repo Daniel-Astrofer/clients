@@ -32,9 +32,10 @@ class LocalTransactionHistoryStore {
   final LocalHistoryKvStore _secureStorage;
 
   static const int maxEntries = LocalTransactionSqlite.maxEntries;
-  static const String _keyPrefix = 'tx_history_v1';
-  static const String _macKeyPrefix = 'tx_history_mac_v1';
-  static const String _sealPrefix = 'tx_history_seal_v3';
+  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
+  static const String _keyPrefix = '${_prefix}tx_history_v1';
+  static const String _macKeyPrefix = '${_prefix}tx_history_mac_v1';
+  static const String _sealPrefix = '${_prefix}tx_history_seal_v3';
   static const int _blobVersion = 2;
   static const int _sealVersion = 3;
 

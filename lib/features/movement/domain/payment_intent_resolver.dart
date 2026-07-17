@@ -94,13 +94,15 @@ class PaymentIntentResolver {
           message: 'Carteira fria não envia Lightning. Use on-chain.',
         ));
       } else if (source == SourceCustody.internal) {
-        // INTERNAL ledger can still withdraw via KFE lightning path when configured.
+        // INTERNAL ledger can withdraw via KFE lightning only for *external* invoices.
+        // Platform-owned BOLT11 is rewritten to paymentLink (INTERNAL) before submit.
       }
       return ResolvedPaymentIntent(
         intent: intent,
         source: source,
         selectedRail: PaymentRail.lightning,
-        explainWhy: 'Invoice / endereço Lightning detectado.',
+        explainWhy:
+            'Invoice Lightning externo. Invoices da plataforma usam pagamento interno.',
         amountLocked: intent.hasLockedAmount,
         blockers: blockers,
       );
@@ -219,7 +221,11 @@ class PaymentIntentResolver {
         recommended: false,
       ));
     }
-    if (canLightning) {
+    // Network Lightning only when destination is already an LN executable
+    // (bolt11/LNURL/address). Kerosene usernames use INTERNAL ledger — there is
+    // no invoice to pay just because canReceiveLightning is true.
+    if (canLightning &&
+        _isExecutableLightningDestination(intent.normalizedValue)) {
       options.add(const RailOption(
         rail: PaymentRail.lightning,
         title: 'Lightning',
@@ -321,9 +327,25 @@ class PaymentIntentResolver {
           message: intent.message,
         );
       case PaymentRail.lightning:
+        // Only lock as Lightning when we have an executable LN destination
+        // (bolt11 / LNURL / address / keysend). Kerosene users resolve to a
+        // wallet UUID — that is INTERNAL ledger, never externalReference LN.
+        final value = intent.normalizedValue.trim();
+        if (_isExecutableLightningDestination(value)) {
+          return SendDestinationAnalysis(
+            type: SendDestinationType.lightning,
+            normalizedValue: value,
+            amountBtc: intent.amountBtc,
+            label: intent.label,
+            message: intent.message,
+          );
+        }
+        final walletId = resolved.destWalletId?.trim().isNotEmpty == true
+            ? resolved.destWalletId!.trim()
+            : value;
         return SendDestinationAnalysis(
-          type: SendDestinationType.lightning,
-          normalizedValue: intent.normalizedValue,
+          type: SendDestinationType.internal,
+          normalizedValue: walletId,
           amountBtc: intent.amountBtc,
           label: intent.label,
           message: intent.message,
@@ -368,6 +390,35 @@ class PaymentIntentResolver {
       return PaymentRail.internal;
     }
     return null;
+  }
+
+  /// True when [value] can be paid on the Lightning network without further
+  /// invoice creation (bolt11, LNURL, LUD-16 address, keysend pubkey).
+  static bool _isExecutableLightningDestination(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return false;
+    var v = trimmed;
+    if (v.toLowerCase().startsWith('lightning:')) {
+      v = v.substring('lightning:'.length).trim();
+      if (v.startsWith('//')) v = v.substring(2).trim();
+    }
+    final lower = v.toLowerCase();
+    if (RegExp(r'^(lnbc|lntb|lnbcrt|lnsb|lntbs)[0-9a-z]+$').hasMatch(lower)) {
+      return true;
+    }
+    if (RegExp(r'^lnurl1[0-9a-z]+$').hasMatch(lower)) {
+      return true;
+    }
+    if (RegExp(r'^[0-9a-f]{66}$').hasMatch(lower)) {
+      return true;
+    }
+    // Lightning Address (external), not Kerosene username.
+    if (RegExp(
+      r'^[a-zA-Z0-9._%+\-]{1,64}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$',
+    ).hasMatch(v)) {
+      return true;
+    }
+    return false;
   }
 
   List<PaymentBlocker> _selfPayBlockers({

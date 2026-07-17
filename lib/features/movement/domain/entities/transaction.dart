@@ -220,17 +220,27 @@ final class Transaction extends Equatable {
   /// Valor em BTC com sinal do ponto de vista do usuario atual.
   double get signedAmountBTC => isDebit ? -amountBTC : amountBTC;
 
+  /// Lightning by flag, rail, or payment-hash / bolt11 (cache may omit flags).
+  bool get isLightningEffective {
+    if (isLightning) return true;
+    final r = (rail ?? '').trim().toUpperCase();
+    if (r == 'LIGHTNING') return true;
+    if ((paymentHash ?? '').trim().isNotEmpty) return true;
+    if ((lightningInvoice ?? '').trim().isNotEmpty) return true;
+    return false;
+  }
+
   /// Ledger-internal transfer (Kerosene → Kerosene). Not a chain object.
-  bool get isLedgerInternal => isInternal && !isLightning;
+  bool get isLedgerInternal => isInternal && !isLightningEffective;
 
   /// Bitcoin on-chain movement (external deposit/withdraw/cold observation).
-  bool get isOnChain => !isInternal && !isLightning;
+  bool get isOnChain => !isInternal && !isLightningEffective;
 
   /// Normalized rail string (INTERNAL / ONCHAIN / LIGHTNING / empty).
   String get normalizedRail {
     final raw = (rail ?? '').trim().toUpperCase();
     if (raw.isNotEmpty) return raw;
-    if (isLightning) return 'LIGHTNING';
+    if (isLightningEffective) return 'LIGHTNING';
     if (isInternal) return 'INTERNAL';
     if (isOnChain) return 'ONCHAIN';
     return '';
@@ -271,12 +281,12 @@ final class Transaction extends Equatable {
 
   /// Payment link settled via on-chain deposit address.
   bool get isPaymentLinkOnchain =>
-      isPaymentLink && !isPaymentLinkInternal && !isLightning;
+      isPaymentLink && !isPaymentLinkInternal && !isLightningEffective;
 
-  /// UI: blockchain confirmation progress (rings).
-  /// Internal ledger and Lightning settle by protocol status, not block confs.
-  /// Mempool (0 confs) still shows progress UI — empty/spinning rings, never 6/6.
+  /// UI: blockchain confirmation progress (rings / N/6).
+  /// Internal ledger and Lightning settle by protocol status, never block confs.
   bool get showsOnchainConfirmations {
+    if (isLightningEffective || isInternal) return false;
     if (!isOnChain) return false;
     final txid = blockchainTxid?.trim() ?? '';
     if (txid.isNotEmpty) return true;
@@ -429,7 +439,17 @@ final class Transaction extends Equatable {
           (e) => e.name == json['status'],
         ),
         type: TransactionType.values.firstWhere((e) => e.name == json['type']),
-        confirmations: json['confirmations'],
+        confirmations: () {
+          final lightning = json['isLightning'] == true ||
+              (json['rail']?.toString().toUpperCase() == 'LIGHTNING');
+          final internal = json['isInternal'] == true ||
+              (json['rail']?.toString().toUpperCase() == 'INTERNAL');
+          if (lightning || internal) return 0;
+          final raw = json['confirmations'];
+          if (raw is int) return raw;
+          if (raw is num) return raw.toInt();
+          return int.tryParse(raw?.toString() ?? '') ?? 0;
+        }(),
         timestamp: _parseDateTime(json['timestamp'] ?? json['createdAt']) ??
             DateTime.now(),
         updatedAt: _parseDateTime(json['updatedAt']),

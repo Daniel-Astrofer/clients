@@ -7,6 +7,8 @@ import 'package:kerosene/features/web/theme/admin_colors.dart';
 import 'package:kerosene/features/web/theme/admin_typography.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
+import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import '../../theme/admin_copy.dart';
 
 final notificationsListProvider =
@@ -106,6 +108,16 @@ class _NotificationCard extends ConsumerWidget {
         icon = KeroseneIcons.info;
     }
 
+    final sessionItem = SessionNotificationItem(
+      id: notification.id,
+      title: notification.title,
+      body: notification.body,
+      timestamp: notification.timestamp,
+      kind: notification.kind,
+      severity: notification.severity,
+      metadata: notification.metadata,
+    );
+
     return Card(
       color: AdminColors.surface,
       margin: const EdgeInsets.only(bottom: 16),
@@ -120,7 +132,7 @@ class _NotificationCard extends ConsumerWidget {
           child: Icon(icon, color: severityColor),
         ),
         title: Text(
-          notification.title,
+          NotificationTranslator.resolveTitle(context, sessionItem),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -131,7 +143,7 @@ class _NotificationCard extends ConsumerWidget {
           children: [
             const SizedBox(height: 8),
             Text(
-              notification.body,
+              NotificationTranslator.resolveBody(context, sessionItem),
               style: const TextStyle(color: AdminColors.textSecondary),
             ),
             const SizedBox(height: 12),

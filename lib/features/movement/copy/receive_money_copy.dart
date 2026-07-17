@@ -37,18 +37,20 @@ class ReceiveMoneyCopy {
     if (showNfc) {
       return switch (_language(context)) {
         'en' =>
-          'Choose NFC, P2P, link, QR, or gateway to receive on Kerosene.',
+          'Choose Lightning, NFC, P2P, link, QR, or gateway to receive on Kerosene.',
         'es' =>
-          'Elige NFC, P2P, link, QR o gateway para recibir en Kerosene.',
+          'Elige Lightning, NFC, P2P, link, QR o gateway para recibir en Kerosene.',
         _ =>
-          'Escolha NFC, P2P, link, QR Code ou gateway para receber na plataforma.',
+          'Escolha Lightning, NFC, P2P, link, QR Code ou gateway para receber na plataforma.',
       };
     }
     return switch (_language(context)) {
-      'en' => 'Choose P2P, link, QR, or gateway to receive on Kerosene.',
-      'es' => 'Elige P2P, link, QR o gateway para recibir en Kerosene.',
+      'en' =>
+        'Choose Lightning, P2P, link, QR, or gateway to receive on Kerosene.',
+      'es' =>
+        'Elige Lightning, P2P, link, QR o gateway para recibir en Kerosene.',
       _ =>
-        'Escolha P2P, link, QR Code ou gateway para receber na plataforma.',
+        'Escolha Lightning, P2P, link, QR Code ou gateway para receber na plataforma.',
     };
   }
 
@@ -89,6 +91,11 @@ class ReceiveMoneyCopy {
             'es' => 'Recibir por NFC',
             _ => 'Receber via NFC',
           },
+        ReceiveAmountMethod.lightning => switch (_language(context)) {
+            'en' => 'Receive Lightning',
+            'es' => 'Recibir Lightning',
+            _ => 'Receber Lightning',
+          },
         ReceiveAmountMethod.p2p => switch (_language(context)) {
             'en' => 'Receive P2P',
             'es' => 'Recibir P2P',
@@ -113,6 +120,7 @@ class ReceiveMoneyCopy {
   }) {
     return switch (method) {
       ReceiveAmountMethod.p2p => 'Kerosene',
+      ReceiveAmountMethod.lightning => 'Lightning',
       ReceiveAmountMethod.nfc => onChainWallet ? 'On-chain · NFC' : 'NFC',
       ReceiveAmountMethod.qrCode => 'On-chain · QR',
       ReceiveAmountMethod.paymentLink => switch (_language(context)) {
@@ -122,6 +130,18 @@ class ReceiveMoneyCopy {
         },
     };
   }
+
+  static String lightningTitle(BuildContext context) => switch (_language(context)) {
+        'en' => 'Lightning invoice',
+        'es' => 'Factura Lightning',
+        _ => 'Fatura Lightning',
+      };
+
+  static String lightningSubtitle(BuildContext context) => switch (_language(context)) {
+        'en' => 'Create a BOLT11 invoice to receive instantly',
+        'es' => 'Crea una factura BOLT11 para recibir al instante',
+        _ => 'Crie uma fatura BOLT11 para receber na hora',
+      };
 
   static String paymentLinkDescription(
     BuildContext context,
@@ -154,6 +174,13 @@ class ReceiveMoneyCopy {
         _ => 'Receber na Kerosene',
       };
 
+  static String receiveLightningTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Receive Lightning',
+        'es' => 'Recibir Lightning',
+        _ => 'Receber Lightning',
+      };
+
   static String detailNetwork(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Network',
@@ -175,11 +202,39 @@ class ReceiveMoneyCopy {
         _ => 'Endereço',
       };
 
+  static String detailInvoice(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Invoice',
+        'es' => 'Factura',
+        _ => 'Fatura',
+      };
+
   static String addressCopied(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Address copied',
         'es' => 'Dirección copiada',
         _ => 'Endereço copiado',
+      };
+
+  static String invoiceCopied(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Invoice copied',
+        'es' => 'Factura copiada',
+        _ => 'Fatura copiada',
+      };
+
+  static String lightningSettledStatus(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Paid on Lightning',
+        'es' => 'Pagado en Lightning',
+        _ => 'Pago na Lightning',
+      };
+
+  static String lightningPendingStatus(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Waiting for Lightning payment',
+        'es' => 'Esperando pago Lightning',
+        _ => 'Aguardando pagamento Lightning',
       };
 
   static String paymentIdentifiedTitle(BuildContext context) =>

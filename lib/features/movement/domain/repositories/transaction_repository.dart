@@ -50,6 +50,10 @@ abstract class TransactionRepository {
   Future<PaymentLink> getPaymentLink(String linkId);
   Future<List<PaymentLink>> getPaymentLinks();
 
+  /// When [invoiceOrHash] is a platform-owned BOLT11 / payment hash, returns the
+  /// payment request so the client can settle via INTERNAL ledger. Null if external.
+  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash);
+
   Future<WalletNetworkAddress> getWalletNetworkProfile({
     required String walletName,
   });

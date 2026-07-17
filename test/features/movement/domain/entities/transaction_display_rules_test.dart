@@ -110,10 +110,32 @@ void main() {
       });
 
       expect(tx.isLightning, isTrue);
+      expect(tx.isLightningEffective, isTrue);
       expect(tx.showsOnchainConfirmations, isFalse);
       expect(tx.confirmations, 0);
       expect(tx.showsNetworkFee, isTrue);
       expect(tx.status, TransactionStatus.confirmed);
+    });
+
+    test('lightning detected by paymentHash alone never shows confs', () {
+      final tx = Transaction.fromJson({
+        'id': 'local-ln-1',
+        'fromAddress': 'a',
+        'toAddress': 'b',
+        'amountSatoshis': 1000,
+        'feeSatoshis': 1,
+        'status': 'pending',
+        'type': 'withdrawal',
+        'confirmations': 0,
+        'timestamp': '2026-07-01T12:00:00Z',
+        'isInternal': false,
+        'isLightning': false,
+        'paymentHash': 'abc123paymenthash',
+      });
+
+      expect(tx.isLightningEffective, isTrue);
+      expect(tx.isOnChain, isFalse);
+      expect(tx.showsOnchainConfirmations, isFalse);
     });
   });
 }

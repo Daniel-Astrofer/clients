@@ -119,7 +119,8 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     if (widget.method != ReceiveAmountMethod.paymentLink &&
         widget.method != ReceiveAmountMethod.qrCode &&
         widget.method != ReceiveAmountMethod.nfc &&
-        widget.method != ReceiveAmountMethod.p2p) {
+        widget.method != ReceiveAmountMethod.p2p &&
+        widget.method != ReceiveAmountMethod.lightning) {
       return null;
     }
 
@@ -152,11 +153,14 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     switch (widget.method) {
       case ReceiveAmountMethod.p2p:
         return 'INTERNAL';
+      case ReceiveAmountMethod.lightning:
+        return 'LIGHTNING';
       case ReceiveAmountMethod.nfc:
         return widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL';
       case ReceiveAmountMethod.qrCode:
       case ReceiveAmountMethod.paymentLink:
-        return 'ONCHAIN';
+        // Internal wallet QR/link stays on-chain custodial address unless Lightning.
+        return widget.onChainWallet ? 'ONCHAIN' : 'ONCHAIN';
     }
   }
 
@@ -229,7 +233,8 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
           appLocale: money.locale,
           maxDecimalPlaces: 8,
         ),
-        ctaLabel: widget.method == ReceiveAmountMethod.paymentLink
+        ctaLabel: widget.method == ReceiveAmountMethod.paymentLink ||
+                widget.method == ReceiveAmountMethod.lightning
             ? context.tr.receiveGenAction
             : context.tr.continueButton,
         ctaEnabled: amountBtc > 0 && !_isContinuing,

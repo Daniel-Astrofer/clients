@@ -216,6 +216,11 @@ class ErrorTranslator {
       case 'ERR_LEDGER_PAYMENT_REQUEST_SELF_PAY':
       case 'ERR_LEDGER_PAYMENT_SELF_PAY':
         return l10n.errLedgerPaymentRequestSelfPay;
+      case 'LEDGER_010':
+      case 'ERR_LEDGER_PLATFORM_LIGHTNING_DENIED':
+        // Prefer server message (includes publicId / INTERNAL guidance).
+        return safeExtractedMessage ??
+            'Invoice Lightning da plataforma: use pagamento interno Kerosene, não a rede Lightning.';
 
       // Wallet Errors
       case 'WALLET_001':
@@ -260,6 +265,25 @@ class ErrorTranslator {
         return l10n.errQuoteExpired;
       case 'QUOTE_CHANGED':
         return l10n.errQuoteChanged;
+      // KFE binary settlement gate / liquidity (backend messages)
+      case 'V_SALDO_DISP':
+      case 'INSUFFICIENT_AVAILABLE':
+      case 'INSUFFICIENT_BALANCE':
+        return safeExtractedMessage ?? l10n.errLedgerInsufficientBalance;
+      case 'V_LIQUIDEZ':
+      case 'INSUFFICIENT_FREE_OUTBOUND_CAPACITY':
+      case 'INSUFFICIENT_OUTBOUND_CAPACITY':
+      case 'INSUFFICIENT_INBOUND_CAPACITY':
+        return l10n.errLightningInsufficientLiquidity;
+      case 'V_NO_JAMMING':
+      case 'PENDING_HTLC_LIMIT':
+      case 'V_ROTA':
+      case 'NO_ROUTE':
+        return safeExtractedMessage ?? l10n.errLightningRouteNotFound;
+      case 'KFE_SETTLEMENT_GATE':
+      case 'SETTLEMENT_GATE_REJECTED':
+      case 'BINARY_SETTLEMENT_REJECTED':
+        return safeExtractedMessage ?? l10n.errUnexpected;
     }
 
     // Fallback translations based on message content

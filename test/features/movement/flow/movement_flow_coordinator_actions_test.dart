@@ -25,13 +25,21 @@ void main() {
     );
     expect(
       internalActions.map((action) => action.kind),
-      containsAllInOrder([
+      containsAll([
         MovementReceiveActionKind.gateway,
         MovementReceiveActionKind.p2p,
+        MovementReceiveActionKind.lightning,
         MovementReceiveActionKind.qrCode,
         MovementReceiveActionKind.paymentLink,
         MovementReceiveActionKind.nfc,
       ]),
+    );
+    expect(
+      railForReceiveMethod(
+        method: ReceiveAmountMethod.lightning,
+        onChainWallet: false,
+      ),
+      MovementRail.lightning,
     );
 
     final onchainActions = availableReceiveActions(

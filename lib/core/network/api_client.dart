@@ -52,7 +52,11 @@ class ApiClient {
     _configureProxyRouting();
 
     // Adicionar interceptors
-    _dio.interceptors.add(_LogInterceptor());
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.linux) {
+      _dio.interceptors.add(_PrettyLogInterceptor());
+    } else {
+      _dio.interceptors.add(_LogInterceptor());
+    }
     _dio.interceptors.add(ApiResponseInterceptor());
 
     final retryEvaluator = DefaultRetryEvaluator({
@@ -567,6 +571,71 @@ class _LogInterceptor extends Interceptor {
         : '';
     appLog('[$code] $path${errCode.isNotEmpty ? ' ($errCode)' : ''}');
     super.onError(err, handler);
+  }
+}
+
+class _PrettyLogInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final buffer = StringBuffer();
+    buffer.writeln('╭── REQUEST ────────────────────────────');
+    buffer.writeln('│ ${options.method} ${options.baseUrl}${options.path}');
+    if (options.queryParameters.isNotEmpty) {
+      buffer.writeln('│ Query: ${options.queryParameters}');
+    }
+    if (options.headers.isNotEmpty) {
+      buffer.writeln('│ Headers:');
+      options.headers.forEach((key, value) {
+        buffer.writeln('│   $key: $value');
+      });
+    }
+    if (options.data != null) {
+      buffer.writeln('│ Body:');
+      buffer.writeln('│   ${_formatData(options.data)}');
+    }
+    buffer.writeln('╰────────────────────────────────────────');
+    appLog(buffer.toString());
+    super.onRequest(options, handler);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    final buffer = StringBuffer();
+    buffer.writeln('╭── RESPONSE ───────────────────────────');
+    buffer.writeln('│ ${response.statusCode} ${response.requestOptions.baseUrl}${response.requestOptions.path}');
+    if (response.data != null) {
+      buffer.writeln('│ Body:');
+      buffer.writeln('│   ${_formatData(response.data)}');
+    }
+    buffer.writeln('╰────────────────────────────────────────');
+    appLog(buffer.toString());
+    super.onResponse(response, handler);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final buffer = StringBuffer();
+    buffer.writeln('╭── ERROR ──────────────────────────────');
+    buffer.writeln('│ ${err.response?.statusCode ?? '?'} ${err.requestOptions.baseUrl}${err.requestOptions.path}');
+    buffer.writeln('│ Message: ${err.message}');
+    if (err.response?.data != null) {
+      buffer.writeln('│ Data:');
+      buffer.writeln('│   ${_formatData(err.response?.data)}');
+    }
+    buffer.writeln('╰────────────────────────────────────────');
+    appLog(buffer.toString());
+    super.onError(err, handler);
+  }
+
+  String _formatData(dynamic data) {
+    if (data is Map || data is List) {
+      try {
+        return const JsonEncoder.withIndent('  ').convert(data).replaceAll('\n', '\n│   ');
+      } catch (_) {
+        return data.toString().replaceAll('\n', '\n│   ');
+      }
+    }
+    return data.toString().replaceAll('\n', '\n│   ');
   }
 }
 

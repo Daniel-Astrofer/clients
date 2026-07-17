@@ -259,14 +259,23 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           currency: Currency.btc,
                         ),
                       ),
-                      if (t.showsOnchainConfirmations || t.isLightning) ...[
+                      if (t.showsOnchainConfirmations || t.isLightningEffective) ...[
                         const SizedBox(height: AppSpacing.xs),
                         _buildDetailRow(
                           'REDE',
-                          t.isLightning
+                          t.isLightningEffective
                               ? 'LIGHTNING NETWORK'
                               : 'BITCOIN ON-CHAIN',
                         ),
+                        if (t.isLightningEffective) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          _buildDetailRow(
+                            'LIQUIDAÇÃO',
+                            t.status == TransactionStatus.confirmed
+                                ? 'INSTANTÂNEA'
+                                : 'EM PROCESSAMENTO',
+                          ),
+                        ],
                         if (t.showsOnchainConfirmations) ...[
                           const SizedBox(height: AppSpacing.xs),
                           _buildDetailRow(

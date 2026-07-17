@@ -207,7 +207,7 @@ TransactionNetwork resolveTransactionNetwork(
         ? TransactionNetwork.paymentLinkInternal
         : TransactionNetwork.paymentLinkOnchain;
   }
-  if (tx.isLightning) return TransactionNetwork.lightning;
+  if (tx.isLightningEffective) return TransactionNetwork.lightning;
   if (tx.isInternal) return TransactionNetwork.internal;
 
   if (tx.isColdProvider) return TransactionNetwork.cold;

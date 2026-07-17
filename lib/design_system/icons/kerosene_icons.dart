@@ -26,6 +26,8 @@ class KeroseneIcons {
   static const IconData internalTransfer = PhosphorIconsRegular.arrowsLeftRight;
   static const IconData onchain = PhosphorIconsRegular.link;
   static const IconData lightning = PhosphorIconsRegular.lightning;
+  /// Alias used by receive hub / Lightning notification visuals.
+  static const IconData bolt = lightning;
   static const IconData bitcoin = PhosphorIconsRegular.currencyBtc;
   static const IconData fee = PhosphorIconsRegular.percent;
   static const IconData creditCard = PhosphorIconsRegular.creditCard;

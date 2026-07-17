@@ -181,6 +181,12 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async {
+    // Public lookup — no session required for resolve; still fine after auth check.
+    return remoteDataSource.lookupPlatformLightningInvoice(invoiceOrHash);
+  }
+
+  @override
   Future<WalletNetworkAddress> getWalletNetworkProfile({
     required String walletName,
   }) async {

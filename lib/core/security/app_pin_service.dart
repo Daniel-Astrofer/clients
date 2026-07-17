@@ -9,7 +9,8 @@ class AppPinService {
   AppPinService({SecureStorageService? storage})
       : _storage = storage ?? SecureStorageService();
 
-  static const _pinKey = 'kerosene.app_pin.hash';
+  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
+  static const _pinKey = '${_prefix}kerosene.app_pin.hash';
   static const _saltLength = 24;
 
   final SecureStorageService _storage;

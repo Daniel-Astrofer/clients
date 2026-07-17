@@ -49,13 +49,17 @@ NotificationVisuals resolveNotificationVisuals(
     case SessionNotificationItem.kindTransferReceived:
       return NotificationVisuals(
         tone: AppNotificationTone.success,
-        icon: KeroseneIcons.southWest,
+        icon: _isLightningMetadata(item)
+            ? KeroseneIcons.bolt
+            : KeroseneIcons.southWest,
         categoryLabel: tr.notifCategoryReceived,
       );
     case SessionNotificationItem.kindTransferSent:
       return NotificationVisuals(
         tone: _toneForSeverity(item.severity),
-        icon: KeroseneIcons.northEast,
+        icon: _isLightningMetadata(item)
+            ? KeroseneIcons.bolt
+            : KeroseneIcons.northEast,
         categoryLabel: tr.notifCategorySent,
       );
     case SessionNotificationItem.kindPaymentRequestCreated:
@@ -85,7 +89,27 @@ NotificationVisuals resolveNotificationVisuals(
     case SessionNotificationItem.kindPaymentSent:
       return NotificationVisuals(
         tone: _toneForSeverity(item.severity),
-        icon: KeroseneIcons.send,
+        icon: _isLightningMetadata(item)
+            ? KeroseneIcons.bolt
+            : KeroseneIcons.send,
+        categoryLabel: tr.notifCategorySent,
+      );
+    case SessionNotificationItem.kindLightningInvoicePaid:
+      return NotificationVisuals(
+        tone: AppNotificationTone.success,
+        icon: KeroseneIcons.bolt,
+        categoryLabel: tr.notifCategoryReceived,
+      );
+    case SessionNotificationItem.kindLightningPaymentSent:
+      return NotificationVisuals(
+        tone: _toneForSeverity(item.severity),
+        icon: KeroseneIcons.bolt,
+        categoryLabel: tr.notifCategorySent,
+      );
+    case SessionNotificationItem.kindLightningPaymentFailed:
+      return NotificationVisuals(
+        tone: AppNotificationTone.warning,
+        icon: KeroseneIcons.bolt,
         categoryLabel: tr.notifCategorySent,
       );
     default:
@@ -119,4 +143,16 @@ AppNotificationTone _toneForSeverity(String severity) {
     default:
       return AppNotificationTone.info;
   }
+}
+
+bool _isLightningMetadata(SessionNotificationItem item) {
+  final rail = (item.metadata['rail'] ??
+          item.metadata['paymentRail'] ??
+          item.metadata['network'] ??
+          '')
+      .trim()
+      .toUpperCase();
+  if (rail.contains('LIGHTNING') || rail == 'LN') return true;
+  final kind = item.kind.toLowerCase();
+  return kind.contains('lightning');
 }

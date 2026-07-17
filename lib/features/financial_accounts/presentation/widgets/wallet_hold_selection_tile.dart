@@ -255,6 +255,13 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                     ),
                   ),
                 ),
+                if (_supportsLightning(widget.wallet)) ...[
+                  SizedBox(height: compact ? 10 : 12),
+                  _LightningCapabilityChip(
+                    selected: selected,
+                    compact: compact,
+                  ),
+                ],
               ],
             ),
           ),
@@ -263,9 +270,17 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
     );
   }
 
+  static bool _supportsLightning(Wallet wallet) {
+    // Internal Kerosene custody can send/receive via Lightning (BOLT11).
+    return wallet.isInternalCustody && !wallet.isColdWallet;
+  }
+
   static IconData _walletIcon(Wallet wallet) {
     if (wallet.isColdWallet || wallet.isCustodialOnchain) {
       return KeroseneIcons.coldWallet;
+    }
+    if (_supportsLightning(wallet)) {
+      return KeroseneIcons.lightning;
     }
     return KeroseneIcons.wallet;
   }
@@ -273,5 +288,56 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
   static String _displayName(String value) {
     final trimmed = value.trim();
     return trimmed.isEmpty ? 'Wallet' : trimmed;
+  }
+}
+
+class _LightningCapabilityChip extends StatelessWidget {
+  final bool selected;
+  final bool compact;
+
+  const _LightningCapabilityChip({
+    required this.selected,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected
+        ? AppColors.hexFF000000.withValues(alpha: 0.72)
+        : AppColors.hexFFA1A1A1;
+    final bg = selected
+        ? AppColors.hexFF000000.withValues(alpha: 0.06)
+        : AppColors.hexFF242424;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 5,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: selected
+              ? AppColors.hexFF000000.withValues(alpha: 0.10)
+              : AppColors.hexFF333333,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(KeroseneIcons.lightning, size: compact ? 11 : 12, color: fg),
+          const SizedBox(width: 5),
+          Text(
+            'Lightning',
+            style: AppTypography.inter(
+              color: fg,
+              fontSize: compact ? 10 : 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

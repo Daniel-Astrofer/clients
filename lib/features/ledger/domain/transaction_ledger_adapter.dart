@@ -115,7 +115,10 @@ class TransactionLedgerAdapter {
       serviceFeeSatoshis: row.serviceFeeSats,
       status: _toTxStatus(row.status),
       type: shell.type,
-      confirmations: row.confirmations,
+      // Lightning/internal never carry block confirmations through the ledger.
+      confirmations: shell.isLightningEffective || shell.isInternal || a.isLightningEffective
+          ? 0
+          : row.confirmations,
       timestamp: row.createdAt,
       updatedAt: row.updatedAt,
       blockHash: shell.blockHash,
@@ -130,8 +133,10 @@ class TransactionLedgerAdapter {
       externalTransferType: shell.externalTransferType,
       description: row.memo ?? shell.description,
       isInternal: shell.isInternal,
-      isLightning: shell.isLightning,
-      rail: shell.rail ?? a.rail,
+      isLightning: shell.isLightningEffective || a.isLightningEffective,
+      rail: shell.isLightningEffective || a.isLightningEffective
+          ? 'LIGHTNING'
+          : (shell.rail ?? a.rail),
       provider: row.provider ?? shell.provider ?? a.provider,
       failureCode: shell.failureCode ?? a.failureCode,
       hasNetworkFee: shell.hasNetworkFee || row.feeSats > 0,
@@ -187,13 +192,15 @@ class TransactionLedgerAdapter {
   }
 
   static LedgerDirection _direction(Transaction tx) {
-    if (tx.isInternal && !tx.isLightning) return LedgerDirection.internal;
+    if (tx.isInternal && !tx.isLightningEffective) {
+      return LedgerDirection.internal;
+    }
     if (tx.isDebit) return LedgerDirection.outbound;
     return LedgerDirection.inbound;
   }
 
   static LedgerRail _rail(Transaction tx) {
-    if (tx.isLightning) return LedgerRail.lightning;
+    if (tx.isLightningEffective) return LedgerRail.lightning;
     if (tx.isInternal) return LedgerRail.internal;
     return LedgerRail.onchain;
   }
@@ -205,8 +212,7 @@ class TransactionLedgerAdapter {
       TransactionStatus.confirmed => LedgerStatus.confirmed,
       TransactionStatus.failed => LedgerStatus.failed,
       TransactionStatus.cancelled => LedgerStatus.cancelled,
-      // Surface reconciling as failed in ledger merge clock (needs review).
-      TransactionStatus.reconciling => LedgerStatus.failed,
+      TransactionStatus.reconciling => LedgerStatus.reconciling,
     };
   }
 
@@ -217,6 +223,7 @@ class TransactionLedgerAdapter {
       LedgerStatus.confirmed => TransactionStatus.confirmed,
       LedgerStatus.failed => TransactionStatus.failed,
       LedgerStatus.cancelled => TransactionStatus.cancelled,
+      LedgerStatus.reconciling => TransactionStatus.reconciling,
     };
   }
 }

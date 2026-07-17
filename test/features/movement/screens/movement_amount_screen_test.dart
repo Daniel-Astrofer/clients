@@ -289,7 +289,11 @@ class _ReceiveAmountRepository implements TransactionRepository {
   @override
   Future<WalletNetworkAddress> getWalletNetworkProfile({
     required String walletName,
-  }) =>
+  }
+
+  @override
+  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async => null;
+) =>
       throw UnimplementedError();
 
   @override

@@ -242,16 +242,42 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
               ),
               if (transaction != null &&
                   (transaction!.showsOnchainConfirmations ||
-                      transaction!.isLightning)) ...[
+                      transaction!.isLightningEffective)) ...[
                 const SizedBox(height: 12),
                 _ReceiptSection(
                   children: [
                     _ReceiptRow(
                       label: _financialCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
-                      value: transaction!.isLightning
+                      value: transaction!.isLightningEffective
                           ? 'Lightning Network'
                           : 'Bitcoin On-chain',
                     ),
+                    // Lightning: status only — never mempool / N/6 confirmations.
+                    if (transaction!.isLightningEffective)
+                      _ReceiptRow(
+                        label: _financialCopy(
+                          context,
+                          pt: 'Liquidação',
+                          en: 'Settlement',
+                          es: 'Liquidación',
+                        ),
+                        value: transaction!.displayStatus ==
+                                TransactionStatus.confirmed
+                            ? _financialCopy(
+                                context,
+                                pt: 'Instantânea (HTLC)',
+                                en: 'Instant (HTLC)',
+                                es: 'Instantánea (HTLC)',
+                              )
+                            : _financialCopy(
+                                context,
+                                pt: 'Em processamento',
+                                en: 'In progress',
+                                es: 'En proceso',
+                              ),
+                        isHighlight: transaction!.displayStatus ==
+                            TransactionStatus.confirmed,
+                      ),
                     if (transaction!.showsOnchainConfirmations)
                       _ReceiptRow(
                         label: _financialCopy(context, pt: 'Confirmações', en: 'Confirmations', es: 'Confirmaciones'),

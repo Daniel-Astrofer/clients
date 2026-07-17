@@ -536,12 +536,14 @@ String formatReceiveDateTime(DateTime value) {
 
 class ReceiveNetworkStatusRow extends StatelessWidget {
   final bool onChainWallet;
+  final bool lightning;
   final bool identified;
   final int currentConfirmations;
   final int requiredConfirmations;
 
   const ReceiveNetworkStatusRow({
     required this.onChainWallet,
+    this.lightning = false,
     required this.identified,
     required this.currentConfirmations,
     required this.requiredConfirmations,
@@ -550,26 +552,38 @@ class ReceiveNetworkStatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lang = Localizations.localeOf(context).languageCode;
-    final waitingLabel = onChainWallet
-        ? switch (lang) {
-            'en' =>
-              'Waiting for confirmations ($currentConfirmations/$requiredConfirmations)',
-            'es' =>
-              'Esperando confirmaciones ($currentConfirmations/$requiredConfirmations)',
-            _ =>
-              'Aguardando confirmações ($currentConfirmations/$requiredConfirmations)',
-          }
-        : identified
+    final waitingLabel = lightning
+        ? (identified
             ? switch (lang) {
-                'en' => 'Confirmed',
-                'es' => 'Confirmado',
-                _ => 'Confirmado',
+                'en' => 'Paid on Lightning',
+                'es' => 'Pagado en Lightning',
+                _ => 'Pago na Lightning',
               }
             : switch (lang) {
-                'en' => 'Waiting for confirmation',
-                'es' => 'Esperando confirmación',
-                _ => 'Aguardando confirmação',
-              };
+                'en' => 'Waiting for Lightning payment',
+                'es' => 'Esperando pago Lightning',
+                _ => 'Aguardando pagamento Lightning',
+              })
+        : onChainWallet
+            ? switch (lang) {
+                'en' =>
+                  'Waiting for confirmations ($currentConfirmations/$requiredConfirmations)',
+                'es' =>
+                  'Esperando confirmaciones ($currentConfirmations/$requiredConfirmations)',
+                _ =>
+                  'Aguardando confirmações ($currentConfirmations/$requiredConfirmations)',
+              }
+            : identified
+                ? switch (lang) {
+                    'en' => 'Confirmed',
+                    'es' => 'Confirmado',
+                    _ => 'Confirmado',
+                  }
+                : switch (lang) {
+                    'en' => 'Waiting for confirmation',
+                    'es' => 'Esperando confirmación',
+                    _ => 'Aguardando confirmação',
+                  };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

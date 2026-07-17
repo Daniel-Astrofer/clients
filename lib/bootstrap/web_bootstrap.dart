@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -450,6 +451,12 @@ Future<void> _loadAdminSurface() async {
 
 class _WebScrollBehavior extends ScrollBehavior {
   const _WebScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        ...super.dragDevices,
+        PointerDeviceKind.mouse,
+      };
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {

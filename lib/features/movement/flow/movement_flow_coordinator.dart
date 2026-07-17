@@ -11,7 +11,14 @@ enum MovementRail { internal, onchain, lightning, paymentLink, nfc, onramp }
 
 enum MovementReceiveWalletKind { internal, custodialOnchain, coldWallet }
 
-enum MovementReceiveActionKind { gateway, p2p, qrCode, paymentLink, nfc }
+enum MovementReceiveActionKind {
+  gateway,
+  p2p,
+  qrCode,
+  paymentLink,
+  nfc,
+  lightning,
+}
 
 class MovementReceiveAction {
   final MovementReceiveActionKind kind;
@@ -169,6 +176,12 @@ List<MovementReceiveAction> availableReceiveActions({
         rail: MovementRail.internal,
         receiveMethod: ReceiveAmountMethod.p2p,
       ),
+    if (isInternal)
+      const MovementReceiveAction(
+        kind: MovementReceiveActionKind.lightning,
+        rail: MovementRail.lightning,
+        receiveMethod: ReceiveAmountMethod.lightning,
+      ),
     MovementReceiveAction(
       kind: MovementReceiveActionKind.qrCode,
       rail: isInternal ? MovementRail.internal : MovementRail.onchain,
@@ -194,6 +207,7 @@ MovementRail railForReceiveMethod({
 }) {
   return switch (method) {
     ReceiveAmountMethod.p2p => MovementRail.internal,
+    ReceiveAmountMethod.lightning => MovementRail.lightning,
     ReceiveAmountMethod.nfc => MovementRail.nfc,
     ReceiveAmountMethod.paymentLink => MovementRail.paymentLink,
     ReceiveAmountMethod.qrCode =>

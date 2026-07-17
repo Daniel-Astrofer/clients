@@ -92,8 +92,16 @@ List<Transaction> _mergeExternalHistory({
   required List<ExternalTransfer> externalTransfers,
   required List<PaymentLink> paymentLinks,
 }) {
-  // Only links with movement (paid / detecting / completed). Pure open quotes
-  // stay in the payment-link product UI, not the operational extrato.
+  // Primary source of truth: live /kfe/transactions.
+  // Do NOT re-inject dashboard "external transfers" — those are the same KFE
+  // rows re-parsed from recentStatement (often with fake confs=6 and wrong ids),
+  // which scrambled home order, filters, and details for years.
+  final withKfe = TransactionLedgerAdapter.mergeTransactionLists(
+    localRows: const [],
+    remoteRows: kfeTransactions,
+  );
+
+  // Only payment-links with real movement (not pure open quotes).
   final linkRows = paymentLinks
       .where(
         (l) =>
@@ -104,21 +112,50 @@ List<Transaction> _mergeExternalHistory({
       )
       .map((l) => l.toTransaction())
       .toList(growable: false);
-  final extras = <Transaction>[
-    ...externalTransfers.map((t) => t.toTransaction()),
-    ...linkRows,
-  ];
-  // Field-level merge (LOCAL_LEDGER_SYNC): remote KFE first, then extras as remote batch.
-  final withKfe = TransactionLedgerAdapter.mergeTransactionLists(
-    localRows: const [],
-    remoteRows: kfeTransactions,
-  );
-  final merged = TransactionLedgerAdapter.mergeTransactionLists(
-    localRows: withKfe,
-    remoteRows: extras,
-  );
-  // Drop pl_* when KFE already has the settlement for the same chain ref.
-  return TransactionLedgerAdapter.dedupePaymentLinkOverlays(merged);
+
+  // Keep non-KFE external transfers only when they add a new id not already in KFE
+  // (legacy providers). Prefer KFE UUID rows over statement-shaped duplicates.
+  final kfeIds = <String>{
+    for (final t in withKfe)
+      if (t.id.trim().isNotEmpty) t.id.trim().toLowerCase(),
+  };
+  final kfeRefs = <String>{};
+  for (final t in withKfe) {
+    final txid = (t.blockchainTxid ?? '').trim().toLowerCase();
+    if (txid.isNotEmpty) kfeRefs.add(txid);
+    final ph = (t.paymentHash ?? '').trim().toLowerCase();
+    if (ph.isNotEmpty) kfeRefs.add(ph);
+  }
+  final uniqueExternal = externalTransfers
+      .map((t) => t.toTransaction())
+      .where((t) {
+        final id = t.id.trim().toLowerCase();
+        if (id.isNotEmpty && kfeIds.contains(id)) return false;
+        final txid = (t.blockchainTxid ?? '').trim().toLowerCase();
+        if (txid.isNotEmpty && kfeRefs.contains(txid)) return false;
+        final ph = (t.paymentHash ?? '').trim().toLowerCase();
+        if (ph.isNotEmpty && kfeRefs.contains(ph)) return false;
+        // Drop dashboard-mirrored KFE rows (provider KFE + UUID id style).
+        if ((t.provider ?? '').toUpperCase() == 'KFE') return false;
+        return true;
+      })
+      .toList(growable: false);
+
+  final extras = <Transaction>[...uniqueExternal, ...linkRows];
+  final merged = extras.isEmpty
+      ? withKfe
+      : TransactionLedgerAdapter.mergeTransactionLists(
+          localRows: withKfe,
+          remoteRows: extras,
+        );
+  final deduped = TransactionLedgerAdapter.dedupePaymentLinkOverlays(merged);
+  // Newest first (stable for home date headers).
+  deduped.sort((a, b) {
+    final byTime = b.effectiveUpdatedAt.compareTo(a.effectiveUpdatedAt);
+    if (byTime != 0) return byTime;
+    return b.timestamp.compareTo(a.timestamp);
+  });
+  return deduped;
 }
 
 /// Last successfully merged history (survives FutureProvider reloads).
@@ -706,20 +743,25 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     required double amount,
     required String receiverWalletName,
     int? expiresIn,
+    String rail = 'ONCHAIN',
+    String? walletId,
   }) async {
     state = const AsyncActionState(isLoading: true);
     try {
+      final normalizedRail = rail.trim().toUpperCase();
       final result = await _repository.createPaymentLink(
         amount: amount,
         description: 'Recebimento $receiverWalletName',
-        expiresInMinutes: 60,
+        expiresInMinutes: expiresIn ?? 60,
         visibility: 'PRIVATE',
         confirmationMode: 'USER_ACTION_REQUIRED',
         amountLocked: true,
         referenceLabel: receiverWalletName,
         metadata: {
           'walletName': receiverWalletName,
-          'rail': 'ONCHAIN',
+          if (walletId != null && walletId.trim().isNotEmpty)
+            'walletId': walletId.trim(),
+          'rail': normalizedRail.isEmpty ? 'ONCHAIN' : normalizedRail,
           'source': 'receive_flow',
         },
       );
@@ -817,24 +859,28 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
     }
   }
 
+  /// In-app payment of any Kerosene payment request settles on the INTERNAL ledger.
+  /// LIGHTNING-rail requests still use publicId + destination wallet (LND self-pay denied).
   String _withdrawalDestination(PaymentLink link) {
-    if (link.paymentRail.trim().toUpperCase() != 'INTERNAL') {
+    final destinationHash = link.destinationHash?.trim();
+    if (destinationHash != null && destinationHash.isNotEmpty) {
+      return destinationHash;
+    }
+    // Legacy INTERNAL-only path; on-chain external links still use deposit address.
+    if (link.paymentRail.trim().toUpperCase() == 'ONCHAIN') {
       return link.depositAddress;
     }
-
-    final destinationHash = link.destinationHash?.trim();
-    if (destinationHash == null || destinationHash.isEmpty) {
-      throw const ValidationException(
-        message: 'Internal payment link destination is missing.',
-        statusCode: 422,
-        errorCode: 'ERR_KFE_PAYMENT_LINK_DESTINATION_MISSING',
-      );
-    }
-    return destinationHash;
+    throw const ValidationException(
+      message: 'Payment link destination wallet is missing.',
+      statusCode: 422,
+      errorCode: 'ERR_KFE_PAYMENT_LINK_DESTINATION_MISSING',
+    );
   }
 
   String? _paymentRequestPublicId(PaymentLink link) {
-    if (link.paymentRail.trim().toUpperCase() != 'INTERNAL') {
+    final rail = link.paymentRail.trim().toUpperCase();
+    // INTERNAL + LIGHTNING platform requests pay via ledger + publicId.
+    if (rail != 'INTERNAL' && rail != 'LIGHTNING') {
       return null;
     }
 
@@ -975,22 +1021,28 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     } catch (e) {
       final stepUp = _extractStepUpChallenge(e);
       if (stepUp != null) {
-        return _retryWithdrawWithPasskeyChallenge(
-          initialChallenge: stepUp.legacyChallenge,
-          actionRequired: stepUp.actionRequired,
-          fromWalletName: fromWalletName,
-          toAddress: toAddress,
-          paymentRequest: paymentRequest,
-          amount: amount,
-          totpCode: totpCode,
-          isLightning: isLightning,
-          networkFeeBtc: networkFeeBtc,
-          maxRoutingFeeBtc: maxRoutingFeeBtc,
-          description: description,
-          confirmationPassphrase: confirmationPassphrase,
-          idempotencyKey: operationIdempotencyKey,
-          appPin: appPin,
-        );
+        try {
+          return await _retryWithdrawWithPasskeyChallenge(
+            initialChallenge: stepUp.legacyChallenge,
+            actionRequired: stepUp.actionRequired,
+            fromWalletName: fromWalletName,
+            toAddress: toAddress,
+            paymentRequest: paymentRequest,
+            amount: amount,
+            totpCode: totpCode,
+            isLightning: isLightning,
+            networkFeeBtc: networkFeeBtc,
+            maxRoutingFeeBtc: maxRoutingFeeBtc,
+            description: description,
+            confirmationPassphrase: confirmationPassphrase,
+            idempotencyKey: operationIdempotencyKey,
+            appPin: appPin,
+          );
+        } catch (retryErr) {
+          // Never leave the confirmation UI spinning after step-up failure.
+          state = AsyncActionState(error: retryErr.toString());
+          return null;
+        }
       }
 
       state = AsyncActionState(error: e.toString());
@@ -1058,6 +1110,12 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
         challenge = renewed.legacyChallenge;
         stepUpAction = renewed.actionRequired;
       }
+    }
+    // Exhausted step-up retries — never leave confirmation UI spinning.
+    if (state.isLoading) {
+      state = const AsyncActionState(
+        error: 'Não foi possível concluir a autorização do envio.',
+      );
     }
     return null;
   }

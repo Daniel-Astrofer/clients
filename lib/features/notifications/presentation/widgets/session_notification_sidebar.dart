@@ -10,6 +10,7 @@ import 'package:kerosene/core/theme/app_colors.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
+import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/design_system/icons.dart';
 
@@ -211,8 +212,8 @@ class SessionNotificationSidebar extends ConsumerWidget {
                           child: Stack(
                             children: [
                               PushNotificationCard(
-                                title: item.title,
-                                message: item.body,
+                                title: NotificationTranslator.resolveTitle(context, item),
+                                message: NotificationTranslator.resolveBody(context, item),
                                 footerLabel: buildNotificationFooterLabel(
                                   context,
                                   item,

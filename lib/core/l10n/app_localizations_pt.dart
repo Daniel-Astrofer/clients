@@ -9387,4 +9387,218 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get txListPartyLinkAddress => 'Endereço do link on-chain';
+
+  @override
+  String get notifAccountCreatedTitle => 'Conta criada';
+
+  @override
+  String get notifAccountCreatedBody =>
+      'Sua conta Kerosene foi criada com sucesso.';
+
+  @override
+  String get notifSecurityLoginDetectedTitle => 'Novo acesso detectado';
+
+  @override
+  String get notifSecurityLoginDetectedBody =>
+      'Identificamos um novo acesso à sua conta Kerosene. Se não reconhece esta atividade, revise suas sessões ativas imediatamente.';
+
+  @override
+  String get notifSecurityAdminAccessAttemptTitle =>
+      'Tentativa de acesso administrativo';
+
+  @override
+  String get notifSecurityAdminAccessAttemptBody =>
+      'Uma solicitação de acesso ao painel administrativo está aguardando sua revisão.';
+
+  @override
+  String get notifSecurityRecoveryCompletedTitle =>
+      'Recuperação de segurança concluída';
+
+  @override
+  String get notifSecurityRecoveryCompletedBody =>
+      'Sua frase de recuperação, TOTP, passkey e códigos de backup foram renovados. Entre novamente usando as novas credenciais.';
+
+  @override
+  String get notifTransactionInternalReceivedTitle => 'BTC recebido';
+
+  @override
+  String notifTransactionInternalReceivedBody(String amount, String wallet) {
+    return 'Você recebeu $amount BTC na carteira “$wallet”.';
+  }
+
+  @override
+  String get notifTransactionInternalSentTitle => 'BTC enviado';
+
+  @override
+  String notifTransactionInternalSentBody(String amount, String wallet) {
+    return 'Você enviou $amount BTC da carteira “$wallet”.';
+  }
+
+  @override
+  String get notifTransactionPaymentRequestCreatedTitle => 'Cobrança criada';
+
+  @override
+  String notifTransactionPaymentRequestCreatedBody(
+      String amount, String wallet) {
+    return 'Cobrança de $amount BTC criada para a carteira “$wallet”.';
+  }
+
+  @override
+  String get notifTransactionPaymentRequestPaidTitle => 'Cobrança paga';
+
+  @override
+  String notifTransactionPaymentRequestPaidBody(String amount) {
+    return 'Sua cobrança de $amount BTC foi paga com sucesso.';
+  }
+
+  @override
+  String get notifTransactionBroadcastNoAmountTitle => 'Transação enviada';
+
+  @override
+  String get notifTransactionBroadcastNoAmountBody =>
+      'Sua transação foi enviada para a rede Bitcoin.';
+
+  @override
+  String get notifTransactionBroadcastWithAmountTitle => 'BTC enviado';
+
+  @override
+  String notifTransactionBroadcastWithAmountBody(String amount) {
+    return 'Envio de $amount BTC transmitido à rede Bitcoin.';
+  }
+
+  @override
+  String get notifTransactionDepositPendingTitle => 'Depósito pendente';
+
+  @override
+  String notifTransactionDepositPendingBody(String amount) {
+    return 'Depósito de $amount BTC aguardando confirmações.';
+  }
+
+  @override
+  String get notifTransactionDepositProgressTitle => 'Depósito em confirmação';
+
+  @override
+  String notifTransactionDepositProgressBody(
+      String amount, String confirmations) {
+    return 'Depósito de $amount BTC: $confirmations confirmação(ões) recebida(s).';
+  }
+
+  @override
+  String get notifTransactionNetworkTransferConfirmedTitle =>
+      'Transferência confirmada';
+
+  @override
+  String notifTransactionNetworkTransferConfirmedBody(String amount) {
+    return 'Transferência de $amount BTC confirmada na rede Bitcoin.';
+  }
+
+  @override
+  String get notifTransactionNetworkDepositConfirmedTitle =>
+      'Depósito confirmado';
+
+  @override
+  String notifTransactionNetworkDepositConfirmedBody(
+      String amount, String credit) {
+    return 'Depósito de $amount BTC confirmado. Crédito líquido: $credit BTC.';
+  }
+
+  @override
+  String get notifTransactionExternalOnchainPaymentSentTitle =>
+      'Pagamento enviado';
+
+  @override
+  String get notifTransactionExternalOnchainPaymentSentBody =>
+      'Pagamento on-chain enviado com sucesso.';
+
+  @override
+  String get notifTransactionExternalLightningPaymentSentTitle =>
+      'Pagamento enviado';
+
+  @override
+  String get notifTransactionExternalLightningPaymentSentBody =>
+      'Pagamento Lightning enviado com sucesso.';
+
+  @override
+  String get notifTransactionExternalOnchainDepositConfirmedTitle =>
+      'Depósito confirmado';
+
+  @override
+  String notifTransactionExternalOnchainDepositConfirmedBody(String credit) {
+    return 'Depósito on-chain confirmado. Crédito líquido: $credit BTC.';
+  }
+
+  @override
+  String get notifTransactionExternalLightningDepositConfirmedTitle =>
+      'Depósito confirmado';
+
+  @override
+  String notifTransactionExternalLightningDepositConfirmedBody(String credit) {
+    return 'Depósito Lightning liquidado. Crédito líquido: $credit BTC.';
+  }
+
+  @override
+  String get notifTransactionColdOutboundDetectedTitle =>
+      'Envio na cold wallet';
+
+  @override
+  String notifTransactionColdOutboundDetectedBody(String amount) {
+    return 'Envio de $amount BTC detectado na carteira fria (mempool/rede).';
+  }
+
+  @override
+  String get notifTransactionColdOutboundConfirmedTitle => 'Envio confirmado';
+
+  @override
+  String notifTransactionColdOutboundConfirmedBody(String amount) {
+    return 'Envio de $amount BTC confirmado na rede Bitcoin.';
+  }
+
+  @override
+  String get notifTransactionColdInboundDetectedTitle =>
+      'Recebimento na cold wallet';
+
+  @override
+  String notifTransactionColdInboundDetectedBody(String amount) {
+    return 'Recebimento de $amount BTC detectado na carteira fria.';
+  }
+
+  @override
+  String get notifTransactionReceivedTitle => 'Transferência Recebida';
+
+  @override
+  String notifTransactionReceivedBody(
+      String amount, String moeda, String rede, String carteira) {
+    return 'Você recebeu $amount $moeda via $rede na carteira $carteira.';
+  }
+
+  @override
+  String get notifTransactionSentTitle => 'Transferência enviada com sucesso';
+
+  @override
+  String notifTransactionSentBody(
+      String rede, String amount, String moeda, String endereco) {
+    return 'Você enviou via $rede $amount $moeda para $endereco.';
+  }
+
+  @override
+  String notifTransactionInvoiceStatusTitle(String status) {
+    return 'Pagamento de invoice está $status';
+  }
+
+  @override
+  String notifTransactionInvoiceStatusBody(
+      String amount, String moeda, String status) {
+    return 'Invoice de $amount $moeda está $status.';
+  }
+
+  @override
+  String notifTransactionStatusTitle(String status) {
+    return 'Depósito $status';
+  }
+
+  @override
+  String notifTransactionStatusBody(
+      String amount, String moeda, String rede, String status) {
+    return 'Transferência de $amount $moeda via $rede está $status.';
+  }
 }

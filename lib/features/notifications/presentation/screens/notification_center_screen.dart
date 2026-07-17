@@ -14,6 +14,7 @@ import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
+import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 
 Future<void> openNotificationCenter(
@@ -628,7 +629,7 @@ class _NotificationCenterCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            item.title,
+                            NotificationTranslator.resolveTitle(context, item),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.inter(
@@ -655,7 +656,7 @@ class _NotificationCenterCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      item.body,
+                      NotificationTranslator.resolveBody(context, item),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(

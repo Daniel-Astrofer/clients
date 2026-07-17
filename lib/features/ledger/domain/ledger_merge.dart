@@ -202,9 +202,12 @@ class LedgerMerge {
 
   static int _rank(LedgerStatus s) {
     return switch (s) {
-      LedgerStatus.confirmed => 5,
-      LedgerStatus.confirming => 4,
-      LedgerStatus.pending => 3,
+      LedgerStatus.confirmed => 6,
+      LedgerStatus.confirming => 5,
+      LedgerStatus.pending => 4,
+      // Needs review — above failed so a stuck reconciling row is not
+      // overwritten by a stale failed local projection.
+      LedgerStatus.reconciling => 3,
       LedgerStatus.failed => 2,
       LedgerStatus.cancelled => 1,
     };

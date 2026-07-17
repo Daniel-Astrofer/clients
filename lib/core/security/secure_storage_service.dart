@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 
 class SecureStorageService {
   final FlutterSecureStorage _storage;
+  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
+
+  String _p(String key) => '$_prefix$key';
 
   SecureStorageService({FlutterSecureStorage? storage})
       : _storage = storage ??
@@ -33,7 +36,7 @@ class SecureStorageService {
   Future<void> write({required String key, required String value}) async {
     try {
       await _storage.write(
-        key: key,
+        key: _p(key),
         value: value,
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
@@ -52,7 +55,7 @@ class SecureStorageService {
   Future<String?> read({required String key}) async {
     try {
       final value = await _storage.read(
-        key: key,
+        key: _p(key),
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
         lOptions: _linuxOptions(),
@@ -74,14 +77,14 @@ class SecureStorageService {
   Future<void> delete({required String key}) async {
     try {
       await _storage.delete(
-        key: key,
+        key: _p(key),
         iOptions: _iosOptions(),
         aOptions: _androidOptions(),
         lOptions: _linuxOptions(),
         wOptions: _windowsOptions(),
       );
       await _storage.delete(
-        key: key,
+        key: _p(key),
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
         lOptions: _linuxOptions(),
@@ -121,7 +124,7 @@ class SecureStorageService {
   Future<String?> _readLegacy(String key) async {
     try {
       final value = await _storage.read(
-        key: key,
+        key: _p(key),
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
         lOptions: _linuxOptions(),
@@ -133,7 +136,7 @@ class SecureStorageService {
 
       await write(key: key, value: value);
       await _storage.delete(
-        key: key,
+        key: _p(key),
         iOptions: _legacyIOSOptions(),
         aOptions: _legacyAndroidOptions(),
         lOptions: _linuxOptions(),

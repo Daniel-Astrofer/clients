@@ -335,26 +335,37 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
                   ),
                 ],
                 SizedBox(height: homeSize(20)),
-                Row(
-                  children: [
-                    Expanded(
-                      child: HomeBalanceActionButton(
-                        icon: KeroseneIcons.down,
-                        label: context.tr.homeReceiveActionShort,
-                        onTap: widget.onReceive,
-                        primary: true,
-                      ),
+                // On desktop, cap button row so Receive/Send don't stretch wall-to-wall.
+                Align(
+                  alignment: Alignment.center,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: responsive.useWideHomeLayout
+                          ? homeSize(560)
+                          : double.infinity,
                     ),
-                    SizedBox(width: homeSize(12)),
-                    Expanded(
-                      child: HomeBalanceActionButton(
-                        icon: KeroseneIcons.up,
-                        label: context.tr.homeSendTitle,
-                        onTap: widget.onSend,
-                        primary: false,
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: HomeBalanceActionButton(
+                            icon: KeroseneIcons.down,
+                            label: context.tr.homeReceiveActionShort,
+                            onTap: widget.onReceive,
+                            primary: true,
+                          ),
+                        ),
+                        SizedBox(width: homeSize(12)),
+                        Expanded(
+                          child: HomeBalanceActionButton(
+                            icon: KeroseneIcons.up,
+                            label: context.tr.homeSendTitle,
+                            onTap: widget.onSend,
+                            primary: false,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),

@@ -63,6 +63,11 @@ class KeroseneResponsiveMetrics {
     return math.max(0.0, size.width - (horizontalPadding * 2));
   }
 
+  /// Whether the window is large enough for desktop-style multi-column home.
+  bool get useWideHomeLayout =>
+      windowClass == KeroseneWindowClass.expanded ||
+      windowClass == KeroseneWindowClass.wide;
+
   /// Wide reading column (landing, long-form). Caps only — screens own padding.
   double get maxReadableWidth {
     return switch (windowClass) {
@@ -75,14 +80,16 @@ class KeroseneResponsiveMetrics {
 
   /// Primary app column (home, settings, statements, accounts).
   ///
-  /// Grows with the window so large desktops no longer show phone-width
-  /// content floating on black side bars. Screens apply their own padding.
+  /// Fills the window so Linux/desktop never shows a phone-width column with
+  /// empty side bars. Screens apply their own horizontal padding for breathing
+  /// room; only extreme ultrawide gets a soft readability cap.
   double get mobileContentMaxWidth {
     return switch (windowClass) {
       KeroseneWindowClass.compact => size.width,
-      KeroseneWindowClass.medium => math.min(size.width, 720),
-      KeroseneWindowClass.expanded => math.min(size.width, 960),
-      KeroseneWindowClass.wide => math.min(size.width, 1200),
+      KeroseneWindowClass.medium => size.width,
+      KeroseneWindowClass.expanded => size.width,
+      // Soft cap only for multi-monitor ultrawide setups.
+      KeroseneWindowClass.wide => math.min(size.width, 1920),
     };
   }
 
@@ -230,4 +237,36 @@ class KeroseneResponsiveBoundary extends StatelessWidget {
 
 extension KeroseneResponsiveContext on BuildContext {
   KeroseneResponsiveMetrics get responsive => KeroseneResponsiveScope.of(this);
+}
+
+/// Centers content and **forces** it to consume available width up to [maxWidth].
+///
+/// A bare [Center] + [ConstrainedBox] only sets a ceiling — children can still
+/// shrink-wrap to phone width on desktop. This wrapper expands to the column.
+class KeroseneAppColumn extends StatelessWidget {
+  final Widget child;
+  final double? maxWidth;
+  final AlignmentGeometry alignment;
+
+  const KeroseneAppColumn({
+    super.key,
+    required this.child,
+    this.maxWidth,
+    this.alignment = Alignment.topCenter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cap = maxWidth ?? context.responsive.appColumnMaxWidth;
+    return Align(
+      alignment: alignment,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: cap),
+        child: SizedBox(
+          width: double.infinity,
+          child: child,
+        ),
+      ),
+    );
+  }
 }

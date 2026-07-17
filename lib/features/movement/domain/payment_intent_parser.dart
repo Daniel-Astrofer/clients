@@ -165,8 +165,10 @@ bool _looksLikeLightningRequest(String value) {
   final trimmed = _stripLightningPrefix(value);
   if (trimmed.isEmpty) return false;
   final lower = trimmed.toLowerCase();
-  return RegExp(r'^(lnbc|lntb|lnbcrt)[0-9][0-9a-z]+$').hasMatch(lower) ||
-      RegExp(r'^lnurl[0-9a-z]+$').hasMatch(lower) ||
+  // BOLT11 (incl. amountless), LNURL1, Lightning Address, keysend pubkey.
+  return RegExp(r'^(lnbc|lntb|lnbcrt|lnsb|lntbs)[0-9a-z]+$').hasMatch(lower) ||
+      RegExp(r'^lnurl1[0-9a-z]+$').hasMatch(lower) ||
+      RegExp(r'^[0-9a-f]{66}$').hasMatch(lower) ||
       _looksLikeLightningAddress(trimmed);
 }
 

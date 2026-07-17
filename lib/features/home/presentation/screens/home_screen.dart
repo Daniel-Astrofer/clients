@@ -206,7 +206,7 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     homeRouteActiveController = ref.read(homeRouteActiveProvider.notifier);
-    homeRouteActiveController.state = true;
+    Future.microtask(() => homeRouteActiveController.state = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _refreshHomeData();
@@ -216,7 +216,7 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    homeRouteActiveController.state = false;
+    Future.microtask(() => homeRouteActiveController.state = false);
     super.dispose();
   }
 
@@ -453,11 +453,16 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
-    // Grow with the window — avoid phone-width column + black side bars on desktop.
+    // Fill the window — never pin to phone width on Linux/desktop.
     final contentMaxWidth = responsive.appColumnMaxWidth;
     final pageHorizontalPadding = responsive.isTinyPhone
         ? homeSize(18)
-        : (responsive.isCompact ? homeSize(24) : responsive.horizontalPadding);
+        : responsive.isCompact
+            ? homeSize(24)
+            : responsive.isWide
+                ? AppSpacing.xxxl
+                : responsive.horizontalPadding;
+    final useWideHomeLayout = responsive.useWideHomeLayout;
     final navigationClearance =
         MediaQuery.viewPaddingOf(context).bottom + homeSize(32);
 
@@ -569,135 +574,74 @@ class HomeScreenState extends ConsumerState<HomeScreen>
               slivers: [
                 BitcoinRefreshIndicator(onRefresh: _refreshHomeData),
                 // ── HEADER (scrolls away): wash only on theater row; balance on black
+                // KeroseneAppColumn forces full window width (not phone shrink-wrap).
                 SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                      child: showHomeLoading
-                          ? Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                pageHorizontalPadding,
-                                pageTopPad +
-                                    MediaQuery.paddingOf(context).top,
-                                pageHorizontalPadding,
-                                homeSize(8),
-                              ),
-                              child: const HomeLoadingContent()
-                                  .animate()
-                                  .fade(duration: 220.ms),
-                            )
-                          : HomeEntryTransition(
-                              child: HomeBalanceSection(
-                                userName: userName,
-                                walletState: ref.read(walletProvider),
-                                activeWallet: activeWallet,
-                                pageHorizontalPadding: pageHorizontalPadding,
-                                pageTopPad: pageTopPad,
-                                onReceive: () =>
-                                    _openReceiveFlow(activeWallet),
-                                onSend: () => _openSend(activeWallet),
-                                onViewStatement: openStatement,
-                                onOpenWallets: () =>
-                                    AppPrimaryNavigationBar.navigateTo(
-                                  context,
-                                  AppPrimaryDestination.card,
-                                ),
+                  child: KeroseneAppColumn(
+                    maxWidth: contentMaxWidth,
+                    child: showHomeLoading
+                        ? Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              pageHorizontalPadding,
+                              pageTopPad +
+                                  MediaQuery.paddingOf(context).top,
+                              pageHorizontalPadding,
+                              homeSize(8),
+                            ),
+                            child: const HomeLoadingContent()
+                                .animate()
+                                .fade(duration: 220.ms),
+                          )
+                        : HomeEntryTransition(
+                            child: HomeBalanceSection(
+                              userName: userName,
+                              walletState: ref.read(walletProvider),
+                              activeWallet: activeWallet,
+                              pageHorizontalPadding: pageHorizontalPadding,
+                              pageTopPad: pageTopPad,
+                              onReceive: () =>
+                                  _openReceiveFlow(activeWallet),
+                              onSend: () => _openSend(activeWallet),
+                              onViewStatement: openStatement,
+                              onOpenWallets: () =>
+                                  AppPrimaryNavigationBar.navigateTo(
+                                context,
+                                AppPrimaryDestination.card,
                               ),
                             ),
-                    ),
+                          ),
                   ),
                 ),
                 // ── FEED: solid black covers scaffold so body stays black
                 SliverToBoxAdapter(
                   child: ColoredBox(
                     color: homeBackgroundColor,
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(maxWidth: contentMaxWidth),
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            pageHorizontalPadding,
-                            gapAfterHeader,
-                            pageHorizontalPadding,
-                            navigationClearance,
-                          ),
-                          child: showHomeLoading
-                              ? const SizedBox.shrink()
-                              : Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    const HomeOnboardingProgressCard(),
-                                    SizedBox(height: gapAfterHeader),
-                                    const HomeBitcoinMarketChartCard(),
-                                    if (showPrimaryActionPanel) ...[
-                                      SizedBox(height: gapAfterHeader),
-                                      HomeSetupNotice(
-                                        icon: !hasWallet
-                                            ? KeroseneIcons.wallet
-                                            : !hasBalance
-                                                ? KeroseneIcons.download
-                                                : KeroseneIcons.send,
-                                        title: !hasWallet
-                                            ? context
-                                                .l10n.homePrimaryNoWalletTitle
-                                            : !hasBalance
-                                                ? context.tr
-                                                    .homePrimaryReadyNoBalanceTitle
-                                                : context
-                                                    .tr.homePrimaryReadyTitle,
-                                        subtitle: !hasWallet
-                                            ? context.tr
-                                                .homePrimaryNoWalletSubtitle
-                                            : !hasBalance
-                                                ? context.tr
-                                                    .homePrimaryReadyNoBalanceSubtitle
-                                                : context.tr
-                                                    .homePrimaryReadySubtitle,
-                                        actionLabel: !hasWallet
-                                            ? context
-                                                .l10n.homeCreateWalletAction
-                                            : !hasBalance
-                                                ? context
-                                                    .tr.homeDepositFundsAction
-                                                : context
-                                                    .l10n.homeSendBtcAction,
-                                        onAction: !hasWallet
-                                            ? _openCreateWallet
-                                            : !hasBalance
-                                                ? () =>
-                                                    _openDeposit(activeWallet)
-                                                : () =>
-                                                    _openSend(activeWallet),
-                                      ),
-                                    ],
-                                    SizedBox(height: gapBeforeFeed),
-                                    const HomeEducationCarousel(),
-                                    SizedBox(height: homeSize(AppSpacing.md)),
-                                    SizedBox(height: homeSize(AppSpacing.xl)),
-                                    HomeFundsDistributionSection(
-                                      walletState: ref.read(walletProvider),
-                                      onViewStatement: openStatement,
-                                    ),
-                                    SizedBox(height: homeSize(AppSpacing.xl)),
-                                    HomeSectionHeader(
-                                      title:
-                                          homeRecentActivitiesTitle(context),
-                                      onAction: openStatement,
-                                    ),
-                                    SizedBox(height: homeSize(AppSpacing.md)),
-                                    if (hasTransactions) ...[
-                                      const HomeActivityFilterChips(),
-                                      SizedBox(height: homeSize(AppSpacing.md)),
-                                    ],
-                                    HomeTransactionsList(
-                                      onCreateWallet: _openCreateWallet,
-                                      onDepositWallet: _openDepositForWallet,
-                                    ),
-                                  ],
-                                ),
+                    child: KeroseneAppColumn(
+                      maxWidth: contentMaxWidth,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          pageHorizontalPadding,
+                          gapAfterHeader,
+                          pageHorizontalPadding,
+                          navigationClearance,
                         ),
+                        child: showHomeLoading
+                            ? const SizedBox.shrink()
+                            : _HomeFeedBody(
+                                useWideLayout: useWideHomeLayout,
+                                gapAfterHeader: gapAfterHeader,
+                                gapBeforeFeed: gapBeforeFeed,
+                                showPrimaryActionPanel: showPrimaryActionPanel,
+                                hasWallet: hasWallet,
+                                hasBalance: hasBalance,
+                                hasTransactions: hasTransactions,
+                                onOpenCreateWallet: _openCreateWallet,
+                                onOpenDeposit: () =>
+                                    _openDeposit(activeWallet),
+                                onOpenSend: () => _openSend(activeWallet),
+                                onOpenStatement: openStatement,
+                                onDepositWallet: _openDepositForWallet,
+                                walletState: ref.read(walletProvider),
+                              ),
                       ),
                     ),
                   ),
@@ -710,6 +654,133 @@ class HomeScreenState extends ConsumerState<HomeScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Home feed body — single column on phones/tablets, two columns on desktop.
+class _HomeFeedBody extends StatelessWidget {
+  final bool useWideLayout;
+  final double gapAfterHeader;
+  final double gapBeforeFeed;
+  final bool showPrimaryActionPanel;
+  final bool hasWallet;
+  final bool hasBalance;
+  final bool hasTransactions;
+  final VoidCallback onOpenCreateWallet;
+  final VoidCallback onOpenDeposit;
+  final VoidCallback onOpenSend;
+  final VoidCallback onOpenStatement;
+  final ValueChanged<Wallet> onDepositWallet;
+  final WalletState walletState;
+
+  const _HomeFeedBody({
+    required this.useWideLayout,
+    required this.gapAfterHeader,
+    required this.gapBeforeFeed,
+    required this.showPrimaryActionPanel,
+    required this.hasWallet,
+    required this.hasBalance,
+    required this.hasTransactions,
+    required this.onOpenCreateWallet,
+    required this.onOpenDeposit,
+    required this.onOpenSend,
+    required this.onOpenStatement,
+    required this.onDepositWallet,
+    required this.walletState,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final setupNotice = showPrimaryActionPanel
+        ? HomeSetupNotice(
+            icon: !hasWallet
+                ? KeroseneIcons.wallet
+                : !hasBalance
+                    ? KeroseneIcons.download
+                    : KeroseneIcons.send,
+            title: !hasWallet
+                ? context.l10n.homePrimaryNoWalletTitle
+                : !hasBalance
+                    ? context.tr.homePrimaryReadyNoBalanceTitle
+                    : context.tr.homePrimaryReadyTitle,
+            subtitle: !hasWallet
+                ? context.tr.homePrimaryNoWalletSubtitle
+                : !hasBalance
+                    ? context.tr.homePrimaryReadyNoBalanceSubtitle
+                    : context.tr.homePrimaryReadySubtitle,
+            actionLabel: !hasWallet
+                ? context.l10n.homeCreateWalletAction
+                : !hasBalance
+                    ? context.tr.homeDepositFundsAction
+                    : context.l10n.homeSendBtcAction,
+            onAction: !hasWallet
+                ? onOpenCreateWallet
+                : !hasBalance
+                    ? onOpenDeposit
+                    : onOpenSend,
+          )
+        : null;
+
+    final insightColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const HomeOnboardingProgressCard(),
+        SizedBox(height: gapAfterHeader),
+        const HomeBitcoinMarketChartCard(),
+        if (setupNotice != null) ...[
+          SizedBox(height: gapAfterHeader),
+          setupNotice,
+        ],
+        SizedBox(height: gapBeforeFeed),
+        const HomeEducationCarousel(),
+        SizedBox(height: homeSize(AppSpacing.md)),
+        SizedBox(height: homeSize(AppSpacing.xl)),
+        HomeFundsDistributionSection(
+          walletState: walletState,
+          onViewStatement: onOpenStatement,
+        ),
+      ],
+    );
+
+    final activityColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HomeSectionHeader(
+          title: homeRecentActivitiesTitle(context),
+          onAction: onOpenStatement,
+        ),
+        SizedBox(height: homeSize(AppSpacing.md)),
+        if (hasTransactions) ...[
+          const HomeActivityFilterChips(),
+          SizedBox(height: homeSize(AppSpacing.md)),
+        ],
+        HomeTransactionsList(
+          onCreateWallet: onOpenCreateWallet,
+          onDepositWallet: onDepositWallet,
+        ),
+      ],
+    );
+
+    if (!useWideLayout) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          insightColumn,
+          SizedBox(height: homeSize(AppSpacing.xl)),
+          activityColumn,
+        ],
+      );
+    }
+
+    // Desktop / large Linux windows: market + education left, activity right.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 5, child: insightColumn),
+        SizedBox(width: homeSize(AppSpacing.xl)),
+        Expanded(flex: 4, child: activityColumn),
+      ],
     );
   }
 }
