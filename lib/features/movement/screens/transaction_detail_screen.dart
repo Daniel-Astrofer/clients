@@ -28,6 +28,7 @@ import 'package:kerosene/features/movement/providers/transaction_provider.dart'
 import 'package:kerosene/features/movement/utils/blockchain_explorer.dart';
 import 'package:kerosene/features/movement/utils/transaction_display.dart';
 import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
+import 'package:kerosene/features/movement/widgets/home_activity_surface.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 
 /// Full-screen transaction dossier — black canvas, Newsreader title, staggered
@@ -37,31 +38,26 @@ class TransactionDetailScreen extends ConsumerStatefulWidget {
 
   const TransactionDetailScreen({super.key, required this.transaction});
 
-  static Future<void> open(BuildContext context, Transaction transaction) {
+  /// Opens with the same circular-reveal family as the notification center.
+  static Future<void> open(
+    BuildContext context,
+    Transaction transaction, {
+    Rect? originRect,
+  }) {
+    final size = MediaQuery.sizeOf(context);
+    final origin = originRect ??
+        keroseneOriginRectFromContext(context) ??
+        Rect.fromCenter(
+          center: size.center(Offset.zero),
+          width: 48,
+          height: 48,
+        );
     return Navigator.of(context).push<void>(
-      PageRouteBuilder<void>(
-        transitionDuration: KeroseneMotion.medium,
-        reverseTransitionDuration: KeroseneMotion.short,
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return TransactionDetailScreen(transaction: transaction);
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.06),
-                end: Offset.zero,
-              ).animate(curved),
-              child: child,
-            ),
-          );
-        },
+      keroseneCircularRevealRoute<void>(
+        page: TransactionDetailScreen(transaction: transaction),
+        originRect: origin,
+        transitionDuration: KeroseneMotion.long,
+        reverseTransitionDuration: KeroseneMotion.medium,
       ),
     );
   }

@@ -25,6 +25,7 @@ import 'package:kerosene/features/movement/providers/transaction_provider.dart'
     hide transactionRepositoryProvider;
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
+import 'package:kerosene/features/movement/widgets/home_activity_surface.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
@@ -95,6 +96,9 @@ class StatementTransactionCard extends ConsumerWidget {
   final Color? paperBackground;
   final Color? paperBorder;
 
+  /// Full home surface style (gradient card + inverted ink on colored tabs).
+  final HomeActivitySurfaceStyle? homeSurface;
+
   const StatementTransactionCard({
     super.key,
     required this.transaction,
@@ -104,6 +108,7 @@ class StatementTransactionCard extends ConsumerWidget {
     this.density = StatementTransactionCardDensity.full,
     this.paperBackground,
     this.paperBorder,
+    this.homeSurface,
   });
 
   @override
@@ -117,12 +122,13 @@ class StatementTransactionCard extends ConsumerWidget {
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final wallets = _walletsFromRef(ref);
     final accounts = _accountsFromRef(ref);
+    final surface = homeSurface;
     final colors = TransactionCardColors.resolve(
       transaction,
       wallets: wallets,
       accounts: accounts,
-      paperBackground: paperBackground,
-      paperBorder: paperBorder,
+      paperBackground: surface?.cardTop ?? paperBackground,
+      paperBorder: surface?.border ?? paperBorder,
     );
     final presentation = TransactionPresentation.fromTransaction(
       context,
@@ -145,6 +151,11 @@ class StatementTransactionCard extends ConsumerWidget {
     final iconSize = isHome ? 40.0 : (compact ? 42.0 : 48.0);
     final titleFontSize = isHome ? 14.5 : (compact ? 15.0 : 17.0);
     final counterpartyFontSize = isHome ? 11.5 : (compact ? 12.0 : 13.0);
+    // Colored ledger tabs: ink follows surface style for contrast.
+    final titleColor = surface?.title ?? colors.title;
+    final subtitleColor = surface?.subtitle ?? colors.subtitle;
+    final metaColor = surface?.meta ?? colors.meta;
+    final amountColor = surface?.amount ?? colors.title;
 
     if (mode == StatementTransactionCardMode.separated) {
       return _BankStatementTransactionRow(
@@ -175,11 +186,21 @@ class StatementTransactionCard extends ConsumerWidget {
       if (expanded) 'expandido',
     ].where((s) => s.trim().isNotEmpty).join('. ');
 
-    // Home: no AnimatedContainer / heavy shadows — list scroll stays cheap.
+    // Home: vertical card gradient; colored tabs use richer chroma + border.
     final decoration = BoxDecoration(
-      color: colors.background,
+      gradient: surface != null
+          ? LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [surface.cardTop, surface.cardBottom],
+            )
+          : null,
+      color: surface == null ? colors.background : null,
       borderRadius: BorderRadius.circular(isHome ? 20 : 28),
-      border: Border.all(color: colors.border),
+      border: Border.all(
+        color: surface?.border ?? colors.border,
+        width: surface != null && surface.invertInk ? 1.4 : 1,
+      ),
       boxShadow: isHome
           ? null
           : [
@@ -215,7 +236,7 @@ class StatementTransactionCard extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: colors.title,
+                      color: titleColor,
                       fontFamily: AppTypography.bodyFontFamily,
                       fontSize: titleFontSize,
                       fontWeight: FontWeight.w600,
@@ -229,7 +250,7 @@ class StatementTransactionCard extends ConsumerWidget {
                       maxLines: isHome ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: colors.subtitle,
+                        color: subtitleColor,
                         fontFamily: AppTypography.bodyFontFamily,
                         fontSize: counterpartyFontSize,
                         fontWeight: FontWeight.w400,
@@ -250,7 +271,7 @@ class StatementTransactionCard extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.financial(
-                    color: colors.title,
+                    color: amountColor,
                     fontSize: isHome ? 15 : 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -260,7 +281,7 @@ class StatementTransactionCard extends ConsumerWidget {
                   timestampLabel,
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: colors.meta,
+                    color: metaColor,
                     fontFamily: AppTypography.bodyFontFamily,
                     fontSize: isHome ? 11 : 12,
                     fontWeight: FontWeight.w500,
@@ -271,7 +292,7 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
           ],
         ),
-        // 1.2s ease-in-out: slow start → fast middle → slow end (open & close).
+        // 0.8s ease-in-out: slow start → fast middle → slow end (open & close).
         AnimatedSize(
           duration: KeroseneMotion.duration(
             context,
@@ -288,6 +309,7 @@ class StatementTransactionCard extends ConsumerWidget {
                           transaction: transaction,
                           presentation: presentation,
                           colors: colors,
+                          surface: surface,
                         )
                       : _TransactionDetailsTable(
                           transaction: transaction,
@@ -585,31 +607,33 @@ class _HomeQuickExpand extends StatelessWidget {
   final Transaction transaction;
   final TransactionPresentation presentation;
   final TransactionCardColors colors;
+  final HomeActivitySurfaceStyle? surface;
 
   const _HomeQuickExpand({
     required this.transaction,
     required this.presentation,
     required this.colors,
+    this.surface,
   });
 
   @override
   Widget build(BuildContext context) {
     final rows = presentation.listExpandFields;
-    const labelColor = Color(0xFF1C1C1F);
-    const valueColor = Color(0xFF0A0A0B);
-    // Solid divider — same weight on every paper wash.
-    const lineColor = Color(0xFFD0D0D4);
+    final labelColor = surface?.detailLabel ?? const Color(0xFF1C1C1F);
+    final valueColor = surface?.detailValue ?? const Color(0xFF0A0A0B);
+    final lineColor = surface?.divider ?? const Color(0xFFD0D0D4);
+    final actionColor = surface?.action ?? Colors.black;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (rows.isNotEmpty) ...[
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 child: ColoredBox(
                   color: lineColor,
-                  child: SizedBox(height: 1, width: double.infinity),
+                  child: const SizedBox(height: 1, width: double.infinity),
                 ),
               ),
             _PresentationFieldRow(
@@ -622,7 +646,11 @@ class _HomeQuickExpand extends StatelessWidget {
         ],
         _ActivityExpandedActions(transaction: transaction, dark: false),
         const SizedBox(height: 4),
-        _SeeDetailsLink(transaction: transaction, dark: false),
+        _SeeDetailsLink(
+          transaction: transaction,
+          dark: false,
+          foreground: actionColor,
+        ),
       ],
     );
   }
@@ -1026,25 +1054,46 @@ class _GreyLoadingTrackPainter extends CustomPainter {
 class _SeeDetailsLink extends StatelessWidget {
   final Transaction transaction;
   final bool dark;
+  final Color? foreground;
 
   const _SeeDetailsLink({
     required this.transaction,
     this.dark = false,
+    this.foreground,
   });
 
   @override
   Widget build(BuildContext context) {
     final label = TransactionPresentationCopy.of(context).viewDetails;
-    final color = dark ? TransactionPalette.inkOnDark : Colors.black;
+    final color = foreground ??
+        (dark ? TransactionPalette.inkOnDark : Colors.black);
     return Center(
       child: TextButton(
         onPressed: () {
           HapticFeedback.selectionClick();
-          TransactionDetailScreen.open(context, transaction);
+          // Circular reveal from this button (same family as notifications).
+          final origin = keroseneOriginRectFromContext(context) ??
+              Rect.fromCenter(
+                center: MediaQuery.sizeOf(context).center(Offset.zero),
+                width: 48,
+                height: 48,
+              );
+          TransactionDetailScreen.open(
+            context,
+            transaction,
+            originRect: origin,
+          );
         },
         style: TextButton.styleFrom(
           foregroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // No underline / “risca” under the label.
+          textStyle: AppTypography.bodySmall.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+            decoration: TextDecoration.none,
+          ),
         ),
         child: Text(
           label,
@@ -1053,8 +1102,7 @@ class _SeeDetailsLink extends StatelessWidget {
             color: color,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.2,
-            decoration: TextDecoration.underline,
-            decorationColor: color.withValues(alpha: 0.55),
+            decoration: TextDecoration.none,
           ),
         ),
       ),

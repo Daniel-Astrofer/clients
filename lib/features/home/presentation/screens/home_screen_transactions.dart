@@ -6,7 +6,7 @@ import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_acc
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
-import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
+import 'package:kerosene/features/movement/widgets/home_activity_surface.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -248,30 +248,35 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
       );
     }
 
-    // No "Sincronizando extrato" / last-sync chrome — list is enough.
-    // Offline still gets a minimal text-only notice (no icon).
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (!isOnline)
-          Padding(
-            padding: EdgeInsets.only(left: 4, right: 4, bottom: homeSize(10)),
-            child: Text(
-              lastSync != null
-                  ? context.tr.homeOfflineExtractDate(
-                      AppDateTime.formatRelative(context, lastSync),
-                    )
-                  : context.tr.homeOfflineExtract,
-              style: AppTypography.label.copyWith(
-                color: homeAmberColor,
-                fontSize: homeFontSize(11),
-                fontWeight: FontWeight.w500,
+    final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
+    final surface = HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
+
+    // Ambient gradient wash + soft sparkle behind the list (performant).
+    return HomeActivityAmbientWash(
+      style: surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isOnline)
+            Padding(
+              padding: EdgeInsets.only(left: 4, right: 4, bottom: homeSize(10)),
+              child: Text(
+                lastSync != null
+                    ? context.tr.homeOfflineExtractDate(
+                        AppDateTime.formatRelative(context, lastSync),
+                      )
+                    : context.tr.homeOfflineExtract,
+                style: AppTypography.label.copyWith(
+                  color: homeAmberColor,
+                  fontSize: homeFontSize(11),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-        body,
-      ],
+          body,
+        ],
+      ),
     );
   }
 
@@ -305,7 +310,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
     final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    final paper = HomeActivityPaper.forLedgerViewName(ledgerView.name);
+    final surface = HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
 
     return Semantics(
       label: semanticLabel,
@@ -316,8 +321,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
         expanded: expanded,
         mode: StatementTransactionCardMode.stacked,
         density: StatementTransactionCardDensity.home,
-        paperBackground: paper.$1,
-        paperBorder: paper.$2,
+        homeSurface: surface,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {
