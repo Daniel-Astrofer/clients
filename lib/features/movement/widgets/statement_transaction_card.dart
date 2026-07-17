@@ -1248,10 +1248,10 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
       );
     }
 
-    // Center of the well: glyph when collapsed; status mark when expanded (or X always on error).
+    // Center of the well: glyph when collapsed; ✓ / conf / ✕ only when expanded.
     Widget centerChild;
-    if (failed) {
-      // Error/cancel: red X inside the icon (always, not only expanded).
+    if (widget.expanded && failed) {
+      // Error/cancel: red X only while the card is open.
       centerChild = Icon(
         Icons.close_rounded,
         key: const ValueKey('icon-x'),
