@@ -39,10 +39,10 @@ class HomeActivitySurfaceStyle {
     required this.glowTertiary,
   });
 
-  /// Near-white middle cards (no wallet tint).
-  static const HomeActivitySurfaceStyle middleWhite = HomeActivitySurfaceStyle(
-    cardTop: Color(0xFFFFFFFF),
-    cardBottom: Color(0xFFF7F7F9),
+  /// Plain white cards — list uses a single shared glow behind them.
+  static const HomeActivitySurfaceStyle listCard = HomeActivitySurfaceStyle(
+    cardTop: Color(0xF2FFFFFF),
+    cardBottom: Color(0xE6F4F4F7),
     border: Color(0xFFE0E0E6),
     title: Color(0xFF0A0A0C),
     subtitle: Color(0xFF3A3A42),
@@ -58,13 +58,13 @@ class HomeActivitySurfaceStyle {
     glowTertiary: Color(0xFFE4E4EA),
   );
 
-  /// [viewName] is `HomeLedgerBalanceView.name`.
+  /// [viewName] is `HomeLedgerBalanceView.name` — drives the **shared** list glow.
   static HomeActivitySurfaceStyle forLedgerViewName(String viewName) {
     return switch (viewName) {
       'onChain' => const HomeActivitySurfaceStyle(
-          cardTop: Color(0xFFFFC878),
-          cardBottom: Color(0xFFFFA940),
-          border: Color(0xFFE08920),
+          cardTop: Color(0xF2FFFFFF),
+          cardBottom: Color(0xE6FFF6EB),
+          border: Color(0xFFE8C99A),
           title: Color(0xFF1A0C02),
           subtitle: Color(0xFF3D2208),
           meta: Color(0xFF5C3410),
@@ -74,14 +74,14 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF100600),
           action: Color(0xFF1A0C02),
           invertInk: true,
-          glowPrimary: Color(0xFFFFF3D6),
-          glowSecondary: Color(0xFFFFD080),
-          glowTertiary: Color(0xFFFF9A2E),
+          glowPrimary: Color(0xFFFFF0C8),
+          glowSecondary: Color(0xFFFFB84A),
+          glowTertiary: Color(0xFFFF8A1A),
         ),
       'cold' => const HomeActivitySurfaceStyle(
-          cardTop: Color(0xFF8EC8F0),
-          cardBottom: Color(0xFF5AADD9),
-          border: Color(0xFF2E7EB0),
+          cardTop: Color(0xF2FFFFFF),
+          cardBottom: Color(0xE6EAF5FC),
+          border: Color(0xFF9BC4E0),
           title: Color(0xFF061018),
           subtitle: Color(0xFF0E2433),
           meta: Color(0xFF163447),
@@ -91,14 +91,14 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF040C14),
           action: Color(0xFF061018),
           invertInk: true,
-          glowPrimary: Color(0xFFF0F9FF),
-          glowSecondary: Color(0xFFA8D4F5),
-          glowTertiary: Color(0xFF3D8FCB),
+          glowPrimary: Color(0xFFEAF7FF),
+          glowSecondary: Color(0xFF6BB8E8),
+          glowTertiary: Color(0xFF2E7EB0),
         ),
       'platform' => const HomeActivitySurfaceStyle(
-          cardTop: Color(0xFFE8ECF2),
-          cardBottom: Color(0xFFD2D8E2),
-          border: Color(0xFF9AA3B0),
+          cardTop: Color(0xF2FFFFFF),
+          cardBottom: Color(0xE6EEF1F5),
+          border: Color(0xFFB0B8C4),
           title: Color(0xFF0A0A0C),
           subtitle: Color(0xFF2C3038),
           meta: Color(0xFF4A5060),
@@ -109,47 +109,57 @@ class HomeActivitySurfaceStyle {
           action: Color(0xFF0A0A0C),
           invertInk: false,
           glowPrimary: Color(0xFFFFFFFF),
-          glowSecondary: Color(0xFFD0D8E8),
-          glowTertiary: Color(0xFFA8B4C8),
+          glowSecondary: Color(0xFFC8D0DC),
+          glowTertiary: Color(0xFF8A96A8),
         ),
-      _ => middleWhite,
+      _ => listCard.copyWithGlows(
+          glowPrimary: const Color(0xFFFFFFFF),
+          glowSecondary: const Color(0xFFE8E8F0),
+          glowTertiary: const Color(0xFFC8C8D4),
+        ),
     };
   }
+
+  HomeActivitySurfaceStyle copyWithGlows({
+    required Color glowPrimary,
+    required Color glowSecondary,
+    required Color glowTertiary,
+  }) {
+    return HomeActivitySurfaceStyle(
+      cardTop: cardTop,
+      cardBottom: cardBottom,
+      border: border,
+      title: title,
+      subtitle: subtitle,
+      meta: meta,
+      amount: amount,
+      divider: divider,
+      detailLabel: detailLabel,
+      detailValue: detailValue,
+      action: action,
+      invertInk: invertInk,
+      glowPrimary: glowPrimary,
+      glowSecondary: glowSecondary,
+      glowTertiary: glowTertiary,
+    );
+  }
 }
 
-/// Where a row sits in the list — drives white middle vs glowing ends.
-enum HomeActivityListBand { top, middle, bottom }
-
-HomeActivityListBand homeActivityListBand(int index, int total) {
-  if (total <= 0) return HomeActivityListBand.middle;
-  if (total == 1) return HomeActivityListBand.top;
-  if (total == 2) {
-    return index == 0
-        ? HomeActivityListBand.top
-        : HomeActivityListBand.bottom;
-  }
-  if (total == 3) {
-    if (index == 0) return HomeActivityListBand.top;
-    if (index == 2) return HomeActivityListBand.bottom;
-    return HomeActivityListBand.middle;
-  }
-  final t = index / (total - 1);
-  if (t <= 0.30) return HomeActivityListBand.top;
-  if (t >= 0.70) return HomeActivityListBand.bottom;
-  return HomeActivityListBand.middle;
-}
-
-/// Moving glow **inside** top/bottom cards only (clipped by the card).
-class HomeActivityCardGlow extends StatelessWidget {
+/// **One** soft glow for the whole transaction list — not per card.
+///
+/// Sits behind the cards, clipped to the list. Drifts in the middle band with
+/// seamless sin/cos motion; intensity and reach breathe gently. Wallet-focused
+/// colors come from [style].
+class HomeActivityListGlow extends StatelessWidget {
   final HomeActivitySurfaceStyle style;
   final Animation<double> phase;
-  final int seed;
+  final Widget child;
 
-  const HomeActivityCardGlow({
+  const HomeActivityListGlow({
     super.key,
     required this.style,
     required this.phase,
-    required this.seed,
+    required this.child,
   });
 
   @override
@@ -157,128 +167,110 @@ class HomeActivityCardGlow extends StatelessWidget {
     final reduce = MediaQuery.maybeOf(context)?.disableAnimations == true ||
         MediaQuery.maybeOf(context)?.accessibleNavigation == true;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
-        if (w <= 0 || h <= 0) return const SizedBox.shrink();
-
-        if (reduce) {
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(-0.3, -0.45),
-                radius: 1.05,
-                colors: [
-                  style.glowPrimary.withValues(alpha: 0.4),
-                  style.glowSecondary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return AnimatedBuilder(
-          animation: phase,
-          builder: (context, _) {
-            final t = phase.value * 2 * math.pi;
-            final s = (seed & 0x7fffffff) / 0x7fffffff;
-            final s2 =
-                ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-
-            Widget orb({
-              required double ax,
-              required double ay,
-              required double sizeFactor,
-              required Color color,
-              required double peakAlpha,
-              required double phaseOff,
-              required double speed,
-            }) {
-              // Continuous loop — sin/cos never jumps.
-              final px = (ax + 0.22 * math.sin(t * speed + phaseOff))
-                  .clamp(-0.9, 0.9);
-              final py = (ay + 0.18 * math.cos(t * speed * 0.85 + phaseOff * 1.1))
-                  .clamp(-0.9, 0.9);
-              final pulse = 0.5 +
-                  0.5 * (0.5 + 0.5 * math.sin(t * speed * 1.1 + phaseOff));
-              final reach = 0.78 +
-                  0.32 * (0.5 + 0.5 * math.cos(t * speed * 0.7 + phaseOff));
-              final dim = math.min(w, h) * sizeFactor * reach;
-
-              return Align(
-                alignment: Alignment(px, py),
-                child: Container(
-                  width: dim,
-                  height: dim,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        color.withValues(alpha: peakAlpha * pulse),
-                        color.withValues(alpha: peakAlpha * pulse * 0.35),
-                        color.withValues(alpha: 0),
-                      ],
-                      stops: const [0.0, 0.38, 1.0],
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment(
-                        -0.25 + 0.1 * math.sin(t + s * 3),
-                        -0.5 + 0.08 * math.cos(t * 0.8),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          // Single shared glow layer (behind cards).
+          Positioned.fill(
+            child: IgnorePointer(
+              child: reduce
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 0.85,
+                          colors: [
+                            style.glowSecondary.withValues(alpha: 0.35),
+                            style.glowTertiary.withValues(alpha: 0.0),
+                          ],
+                        ),
                       ),
-                      radius: 1.2,
-                      colors: [
-                        style.glowPrimary.withValues(alpha: 0.38),
-                        style.glowSecondary.withValues(alpha: 0.12),
-                        style.glowTertiary.withValues(alpha: 0),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
+                    )
+                  : AnimatedBuilder(
+                      animation: phase,
+                      builder: (context, _) {
+                        return CustomPaint(
+                          painter: _SingleListGlowPainter(
+                            phase: phase.value,
+                            primary: style.glowPrimary,
+                            secondary: style.glowSecondary,
+                            tertiary: style.glowTertiary,
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                ),
-                orb(
-                  ax: -0.4 + 0.15 * s,
-                  ay: -0.35 + 0.1 * s2,
-                  sizeFactor: 1.05,
-                  color: style.glowPrimary,
-                  peakAlpha: 0.62,
-                  phaseOff: s * 6.28,
-                  speed: 1.0,
-                ),
-                orb(
-                  ax: 0.5 + 0.1 * s2,
-                  ay: 0.15 + 0.15 * s,
-                  sizeFactor: 0.85,
-                  color: style.glowSecondary,
-                  peakAlpha: 0.48,
-                  phaseOff: s2 * 6.28 + 2.0,
-                  speed: 1.15,
-                ),
-                orb(
-                  ax: 0.1 + 0.12 * s,
-                  ay: 0.55 + 0.1 * s2,
-                  sizeFactor: 0.65,
-                  color: style.glowTertiary,
-                  peakAlpha: 0.34,
-                  phaseOff: (s + s2) * 3.14 + 1.1,
-                  speed: 0.9,
-                ),
-              ],
-            );
-          },
-        );
-      },
+            ),
+          ),
+          child,
+        ],
+      ),
     );
+  }
+}
+
+/// One glow blob that drifts smoothly in the list (seamless loop).
+class _SingleListGlowPainter extends CustomPainter {
+  final double phase;
+  final Color primary;
+  final Color secondary;
+  final Color tertiary;
+
+  _SingleListGlowPainter({
+    required this.phase,
+    required this.primary,
+    required this.secondary,
+    required this.tertiary,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final t = phase * 2 * math.pi;
+
+    // Center path: stays mostly in the middle band, slow drift.
+    // sin/cos → when phase wraps 0↔1 the position is continuous (no jump).
+    final cx = size.width * (0.50 + 0.18 * math.sin(t * 0.9));
+    final cy = size.height * (0.50 + 0.16 * math.cos(t * 0.75));
+
+    // Intensity + reach breathe slowly.
+    final intensity = 0.55 + 0.45 * (0.5 + 0.5 * math.sin(t * 1.05));
+    final reach = 0.70 + 0.30 * (0.5 + 0.5 * math.cos(t * 0.8));
+
+    final baseR = math.min(size.width, size.height);
+    final r1 = baseR * 0.55 * reach;
+    final r2 = baseR * 0.32 * reach;
+
+    void soft(Offset c, double r, Color color, double alpha) {
+      final paint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            color.withValues(alpha: alpha),
+            color.withValues(alpha: alpha * 0.35),
+            color.withValues(alpha: 0),
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ).createShader(Rect.fromCircle(center: c, radius: r));
+      canvas.drawCircle(c, r, paint);
+    }
+
+    // Core + soft halo — one coherent light, not many independent orbs per card.
+    soft(Offset(cx, cy), r1, secondary, 0.42 * intensity);
+    soft(Offset(cx, cy), r2, primary, 0.55 * intensity);
+
+    // Tiny trailing glint (same light family, offset continuously).
+    final tx = cx + size.width * 0.10 * math.cos(t * 0.9 + 0.6);
+    final ty = cy + size.height * 0.08 * math.sin(t * 0.9 + 0.6);
+    soft(Offset(tx, ty), r2 * 0.55, tertiary, 0.28 * intensity);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SingleListGlowPainter oldDelegate) {
+    return (phase - oldDelegate.phase).abs() > 0.002 ||
+        primary != oldDelegate.primary ||
+        secondary != oldDelegate.secondary ||
+        tertiary != oldDelegate.tertiary;
   }
 }
 

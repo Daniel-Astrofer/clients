@@ -270,7 +270,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           final tile = _buildTransactionTile(
             tx,
             expanded: _expandedTransactionIds.contains(tx.id),
-            band: homeActivityListBand(index, filteredTxs.length),
           );
 
           // First three rows: sequential L→R paint of colors/data after load.
@@ -304,7 +303,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       );
     }
 
-    // Black gaps between cards stay plain — glow lives only inside each card.
+    final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
+    final glowStyle =
+        HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
+
+    // One shared glow behind the list (not per card). Cards stay paper white.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -325,7 +328,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
               ),
             ),
           ),
-        body,
+        HomeActivityListGlow(
+          style: glowStyle,
+          phase: _cardGlowPhase,
+          child: body,
+        ),
       ],
     );
   }
@@ -355,17 +362,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   Widget _buildTransactionTile(
     Transaction tx, {
     required bool expanded,
-    required HomeActivityListBand band,
   }) {
     final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
     final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    // Top + bottom: wallet-colored glow. Middle: plain white, no glow.
-    final surface = band == HomeActivityListBand.middle
-        ? HomeActivitySurfaceStyle.middleWhite
-        : HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
-    final useGlow = band != HomeActivityListBand.middle;
+    // Paper only — glow is a single list layer behind all cards.
+    final surface =
+        HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
 
     return Semantics(
       label: semanticLabel,
@@ -377,7 +381,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         mode: StatementTransactionCardMode.stacked,
         density: StatementTransactionCardDensity.home,
         homeSurface: surface,
-        interiorGlowPhase: useGlow ? _cardGlowPhase : null,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {

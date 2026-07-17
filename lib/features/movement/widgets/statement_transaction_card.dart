@@ -96,11 +96,8 @@ class StatementTransactionCard extends ConsumerWidget {
   final Color? paperBackground;
   final Color? paperBorder;
 
-  /// Full home surface style (gradient card + inverted ink on colored tabs).
+  /// Full home surface style (gradient card + ink).
   final HomeActivitySurfaceStyle? homeSurface;
-
-  /// Shared slow phase for interior card glow (one ticker for the whole list).
-  final Animation<double>? interiorGlowPhase;
 
   const StatementTransactionCard({
     super.key,
@@ -112,7 +109,6 @@ class StatementTransactionCard extends ConsumerWidget {
     this.paperBackground,
     this.paperBorder,
     this.homeSurface,
-    this.interiorGlowPhase,
   });
 
   @override
@@ -327,14 +323,9 @@ class StatementTransactionCard extends ConsumerWidget {
     );
 
     final radius = BorderRadius.circular(isHome ? 20 : 28);
-    final glow = surface != null && interiorGlowPhase != null
-        ? HomeActivityCardGlow(
-            style: surface,
-            phase: interiorGlowPhase!,
-            seed: transaction.id.hashCode,
-          )
-        : null;
 
+    // Cards are semi-opaque paper only — list glow is a single shared layer
+    // behind the whole list (not per-card).
     return Semantics(
       button: onTap != null,
       label: a11yLabel,
@@ -345,19 +336,12 @@ class StatementTransactionCard extends ConsumerWidget {
           borderRadius: radius,
           child: ClipRRect(
             borderRadius: radius,
-            // Glow stays inside the card; black gaps between cards stay plain.
-            child: Stack(
-              children: [
-                // Base paper / gradient.
-                Positioned.fill(
-                  child: DecoratedBox(decoration: decoration),
-                ),
-                if (glow != null) Positioned.fill(child: glow),
-                Padding(
-                  padding: EdgeInsets.all(cardPadding),
-                  child: body,
-                ),
-              ],
+            child: DecoratedBox(
+              decoration: decoration,
+              child: Padding(
+                padding: EdgeInsets.all(cardPadding),
+                child: body,
+              ),
             ),
           ),
         ),
