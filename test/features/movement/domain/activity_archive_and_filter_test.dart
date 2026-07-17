@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
+import 'package:kerosene/features/movement/domain/activity_cancel.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
 import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
 
@@ -148,5 +150,103 @@ void main() {
       expect(tx.isCancelled, isTrue);
       expect(tx.isArchiveEligible, isTrue);
     });
+
+    test('cancelActivity routes pl_ rows to cancelPaymentRequest', () async {
+      final repo = _CancelRoutingRepo();
+      final result = await cancelActivity(
+        repo,
+        _tx(id: 'pl_link-9').copyAsPaymentLink('link-9'),
+      );
+      expect(repo.cancelledPaymentRequestIds, ['link-9']);
+      expect(repo.cancelledTransactionIds, isEmpty);
+      expect(result.isCancelled, isTrue);
+    });
+
+    test('cancelActivity routes normal rows to cancelTransaction', () async {
+      final repo = _CancelRoutingRepo();
+      final result = await cancelActivity(
+        repo,
+        _tx(id: 'tx-uuid', status: TransactionStatus.pending).withCancellable(),
+      );
+      expect(repo.cancelledTransactionIds, ['tx-uuid']);
+      expect(repo.cancelledPaymentRequestIds, isEmpty);
+      expect(result.isCancelled, isTrue);
+    });
   });
+}
+
+extension on Transaction {
+  Transaction copyAsPaymentLink(String publicId) {
+    return Transaction(
+      id: id,
+      fromAddress: fromAddress,
+      toAddress: toAddress,
+      amountSatoshis: amountSatoshis,
+      feeSatoshis: feeSatoshis,
+      timestamp: timestamp,
+      status: status,
+      type: type,
+      confirmations: confirmations,
+      provider: 'PAYMENT_LINK',
+      cancellable: true,
+      cancelTarget: 'PAYMENT_REQUEST',
+      paymentRequestId: publicId,
+      paymentRequestPublicId: publicId,
+    );
+  }
+
+  Transaction withCancellable() {
+    return Transaction(
+      id: id,
+      fromAddress: fromAddress,
+      toAddress: toAddress,
+      amountSatoshis: amountSatoshis,
+      feeSatoshis: feeSatoshis,
+      timestamp: timestamp,
+      status: status,
+      type: type,
+      confirmations: confirmations,
+      cancellable: true,
+      cancelTarget: 'TRANSACTION',
+    );
+  }
+}
+
+class _CancelRoutingRepo implements TransactionRepository {
+  final cancelledTransactionIds = <String>[];
+  final cancelledPaymentRequestIds = <String>[];
+
+  @override
+  Future<Transaction> cancelTransaction(String transactionId) async {
+    cancelledTransactionIds.add(transactionId);
+    return Transaction(
+      id: transactionId,
+      fromAddress: 'a',
+      toAddress: 'b',
+      amountSatoshis: 1,
+      feeSatoshis: 0,
+      timestamp: DateTime.utc(2026, 1, 1),
+      status: TransactionStatus.cancelled,
+      type: TransactionType.send,
+      confirmations: 0,
+    );
+  }
+
+  @override
+  Future<PaymentLink> cancelPaymentRequest(String requestId) async {
+    cancelledPaymentRequestIds.add(requestId);
+    return PaymentLink(
+      id: requestId,
+      userId: 1,
+      amountBtc: 0.01,
+      description: '',
+      depositAddress: '',
+      status: 'cancelled',
+      paymentRail: 'LIGHTNING',
+      createdAt: DateTime.utc(2026, 1, 1),
+    );
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

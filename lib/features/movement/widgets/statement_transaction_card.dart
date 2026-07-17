@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,8 +17,12 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
+import 'package:kerosene/features/movement/domain/activity_cancel.dart';
 import 'package:kerosene/features/movement/domain/transaction_presentation.dart';
 import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
+import 'package:kerosene/features/movement/providers/transaction_provider.dart'
+    hide transactionRepositoryProvider;
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
 import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
@@ -542,10 +548,162 @@ class _TransactionDetailsTable extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
-            _SeeDetailsLink(transaction: transaction),
+            _ActivityExpandedActions(
+              transaction: transaction,
+              dark: dark,
+            ),
+            const SizedBox(height: 8),
+            _SeeDetailsLink(transaction: transaction, dark: dark),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Cancel / Archive now on expanded home + extrato cards.
+class _ActivityExpandedActions extends ConsumerStatefulWidget {
+  final Transaction transaction;
+  final bool dark;
+
+  const _ActivityExpandedActions({
+    required this.transaction,
+    required this.dark,
+  });
+
+  @override
+  ConsumerState<_ActivityExpandedActions> createState() =>
+      _ActivityExpandedActionsState();
+}
+
+class _ActivityExpandedActionsState
+    extends ConsumerState<_ActivityExpandedActions> {
+  bool _busy = false;
+
+  Transaction get tx => widget.transaction;
+
+  bool get _canCancel => tx.cancellable && !_busy;
+
+  bool get _canArchiveNow {
+    if (!tx.isArchiveEligible || _busy) return false;
+    final archived = ref.watch(activityArchiveProvider);
+    return !archived.contains(tx.id.trim());
+  }
+
+  Future<void> _confirmAndCancel() async {
+    if (!_canCancel) return;
+    final tr = context.tr;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr.txDetailCancelTitle),
+        content: Text(tr.txDetailCancelBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: Text(tr.txDetailCancelConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await cancelActivity(ref.read(transactionRepositoryProvider), tx);
+      // Stay in global feed until user archives or opens detail.
+      ref.invalidate(transactionHistoryProvider);
+      ref.invalidate(paymentLinksProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr.txDetailCancelSuccess),
+          action: SnackBarAction(
+            label: tr.activityArchiveNow,
+            onPressed: () => unawaited(_archiveNow(silent: true)),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr.txDetailCancelError)),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _archiveNow({bool silent = false}) async {
+    if (_busy && !silent) return;
+    setState(() => _busy = true);
+    try {
+      await archiveActivity(
+        ref.read(activityArchiveProvider.notifier),
+        tx,
+      );
+      ref.invalidate(paymentLinksProvider);
+      if (!mounted || silent) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr.activityArchiveNowSuccess)),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_canCancel && !_canArchiveNow) {
+      return const SizedBox.shrink();
+    }
+    final tr = context.tr;
+    final error = Theme.of(context).colorScheme.error;
+    final foreground = widget.dark ? TransactionPalette.inkOnDark : Colors.black;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_canCancel)
+          OutlinedButton(
+            onPressed: _busy ? null : _confirmAndCancel,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: error,
+              side: BorderSide(color: error.withValues(alpha: 0.55)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: _busy
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: error,
+                    ),
+                  )
+                : Text(tr.txDetailCancelAction),
+          ),
+        if (_canArchiveNow) ...[
+          if (_canCancel) const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _busy ? null : () => unawaited(_archiveNow()),
+            icon: Icon(KeroseneIcons.archive, size: 16, color: foreground),
+            label: Text(tr.activityArchiveNow),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: foreground,
+              side: BorderSide(color: foreground.withValues(alpha: 0.35)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -620,12 +778,17 @@ class _PresentationFieldRow extends StatelessWidget {
 
 class _SeeDetailsLink extends StatelessWidget {
   final Transaction transaction;
+  final bool dark;
 
-  const _SeeDetailsLink({required this.transaction});
+  const _SeeDetailsLink({
+    required this.transaction,
+    this.dark = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final label = TransactionPresentationCopy.of(context).viewDetails;
+    final color = dark ? TransactionPalette.inkOnDark : Colors.black;
     return Center(
       child: TextButton(
         onPressed: () {
@@ -633,18 +796,18 @@ class _SeeDetailsLink extends StatelessWidget {
           TransactionDetailScreen.open(context, transaction);
         },
         style: TextButton.styleFrom(
-          foregroundColor: Colors.black,
+          foregroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: AppTypography.bodySmall.copyWith(
-            color: Colors.black,
+            color: color,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.2,
             decoration: TextDecoration.underline,
-            decorationColor: Colors.black.withValues(alpha: 0.55),
+            decorationColor: color.withValues(alpha: 0.55),
           ),
         ),
       ),
