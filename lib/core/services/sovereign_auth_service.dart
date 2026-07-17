@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:kerosene/core/constants/app_copy.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 
 final class SovereignAuthErrorCodes {
   static const noLocalCredentials = 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS';
@@ -74,11 +75,14 @@ abstract interface class SovereignKeyStore {
 }
 
 class SecureStorageSovereignKeyStore implements SovereignKeyStore {
-  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
-  static const String _privateKeySeedStorageKey = '${_prefix}sovereign_auth_seed';
-  static const String _publicKeyStorageKey = '${_prefix}sovereign_auth_pubkey';
-  static const String _signatureCounterStorageKey = '${_prefix}sovereign_auth_sign_count';
-  static const String _credentialIdStorageKey = '${_prefix}sovereign_auth_credential_id';
+  String get _privateKeySeedStorageKey =>
+      '${keroseneSecurePrefix()}sovereign_auth_seed';
+  String get _publicKeyStorageKey =>
+      '${keroseneSecurePrefix()}sovereign_auth_pubkey';
+  String get _signatureCounterStorageKey =>
+      '${keroseneSecurePrefix()}sovereign_auth_sign_count';
+  String get _credentialIdStorageKey =>
+      '${keroseneSecurePrefix()}sovereign_auth_credential_id';
 
   final FlutterSecureStorage _secureStorage;
 

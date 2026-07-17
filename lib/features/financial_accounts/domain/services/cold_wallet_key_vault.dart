@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 import 'package:kerosene/core/constants/app_copy.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_public_material.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/electrum_seed_utils.dart';
 
@@ -26,12 +27,14 @@ class ColdWalletKeyVault {
 
   static final ColdWalletKeyVault instance = ColdWalletKeyVault._internal();
 
-  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
-  static const String _seedKeyPrefix = '${_prefix}cold_wallet_seed';
-  static const String _passphraseKeyPrefix = '${_prefix}cold_wallet_passphrase';
-  static const String _fingerprintKeyPrefix = '${_prefix}cold_wallet_fingerprint';
-  static const String _seedKindKeyPrefix = '${_prefix}cold_wallet_seed_kind';
-  static const String _indexKey = '${_prefix}cold_wallet_seed_index';
+  String get _seedKeyPrefix => '${keroseneSecurePrefix()}cold_wallet_seed';
+  String get _passphraseKeyPrefix =>
+      '${keroseneSecurePrefix()}cold_wallet_passphrase';
+  String get _fingerprintKeyPrefix =>
+      '${keroseneSecurePrefix()}cold_wallet_fingerprint';
+  String get _seedKindKeyPrefix =>
+      '${keroseneSecurePrefix()}cold_wallet_seed_kind';
+  String get _indexKey => '${keroseneSecurePrefix()}cold_wallet_seed_index';
 
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuthentication;

@@ -11,6 +11,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../constants/app_copy.dart';
 import '../security/device_credential_capabilities.dart';
+import '../security/kerosene_secure_prefix.dart';
 import '../telemetry/device_credential_telemetry.dart';
 import '../utils/device_helper.dart';
 
@@ -61,11 +62,11 @@ class DeviceKeyService {
 
   static final DeviceKeyService instance = DeviceKeyService._internal();
 
-  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
-  static const String _activeCredentialKey = '${_prefix}device_key_active_credential';
-  static const String _privateSeedKey = '${_prefix}device_key_seed';
-  static const String _publicKeyKey = '${_prefix}device_key_public';
-  static const String _counterKey = '${_prefix}device_key_counter';
+  String get _activeCredentialKey =>
+      '${keroseneSecurePrefix()}device_key_active_credential';
+  String get _privateSeedKey => '${keroseneSecurePrefix()}device_key_seed';
+  String get _publicKeyKey => '${keroseneSecurePrefix()}device_key_public';
+  String get _counterKey => '${keroseneSecurePrefix()}device_key_counter';
 
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuthentication;

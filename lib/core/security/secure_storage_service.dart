@@ -1,11 +1,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 
 class SecureStorageService {
   final FlutterSecureStorage _storage;
-  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
 
-  String _p(String key) => '$_prefix$key';
+  String _p(String key) => '${keroseneSecurePrefix()}$key';
 
   SecureStorageService({FlutterSecureStorage? storage})
       : _storage = storage ??

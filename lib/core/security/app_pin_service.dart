@@ -3,14 +3,14 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 
+import 'kerosene_secure_prefix.dart';
 import 'secure_storage_service.dart';
 
 class AppPinService {
   AppPinService({SecureStorageService? storage})
       : _storage = storage ?? SecureStorageService();
 
-  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
-  static const _pinKey = '${_prefix}kerosene.app_pin.hash';
+  String get _pinKey => '${keroseneSecurePrefix()}kerosene.app_pin.hash';
   static const _saltLength = 24;
 
   final SecureStorageService _storage;

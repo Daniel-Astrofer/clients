@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/security/secure_storage_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
@@ -14,8 +15,7 @@ class ActivityArchiveStore {
 
   final SecureStorageService _storage;
 
-  static const _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
-  static const _keyRoot = '${_prefix}activity_archive_v1';
+  String get _keyRoot => '${keroseneSecurePrefix()}activity_archive_v1';
 
   String _key(String scope) => '$_keyRoot:${scope.trim()}';
 

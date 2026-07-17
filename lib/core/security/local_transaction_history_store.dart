@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/core/security/local_transaction_sqlite.dart';
 import 'package:kerosene/core/security/secure_storage_service.dart';
 import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
@@ -32,12 +33,12 @@ class LocalTransactionHistoryStore {
   final LocalHistoryKvStore _secureStorage;
 
   static const int maxEntries = LocalTransactionSqlite.maxEntries;
-  static const String _prefix = String.fromEnvironment('KERO_SECURE_PREFIX');
-  static const String _keyPrefix = '${_prefix}tx_history_v1';
-  static const String _macKeyPrefix = '${_prefix}tx_history_mac_v1';
-  static const String _sealPrefix = '${_prefix}tx_history_seal_v3';
   static const int _blobVersion = 2;
   static const int _sealVersion = 3;
+
+  String get _keyPrefix => '${keroseneSecurePrefix()}tx_history_v1';
+  String get _macKeyPrefix => '${keroseneSecurePrefix()}tx_history_mac_v1';
+  String get _sealPrefix => '${keroseneSecurePrefix()}tx_history_seal_v3';
 
   String _storageKey(String sessionScope) =>
       '$_keyPrefix:${sessionScope.trim()}';
