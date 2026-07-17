@@ -271,21 +271,32 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
           ],
         ),
-        if (expanded) ...[
-          const SizedBox(height: 14),
-          if (isHome)
-            _HomeQuickExpand(
-              transaction: transaction,
-              presentation: presentation,
-              colors: colors,
-            )
-          else
-            _TransactionDetailsTable(
-              transaction: transaction,
-              presentation: presentation,
-              colors: colors,
-            ),
-        ],
+        // 2s ease-in-out: slow start → fast middle → slow end (open & close).
+        AnimatedSize(
+          duration: KeroseneMotion.duration(
+            context,
+            const Duration(milliseconds: 2000),
+          ),
+          curve: Curves.easeInOutCubic,
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.hardEdge,
+          child: expanded
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: isHome
+                      ? _HomeQuickExpand(
+                          transaction: transaction,
+                          presentation: presentation,
+                          colors: colors,
+                        )
+                      : _TransactionDetailsTable(
+                          transaction: transaction,
+                          presentation: presentation,
+                          colors: colors,
+                        ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     );
 
@@ -532,11 +543,14 @@ class _TransactionDetailsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = presentation.expandedFields;
-    final labelColor = dark ? TransactionPalette.inkTertiary : Colors.black;
-    final valueColor = dark ? TransactionPalette.inkOnDark : Colors.black;
+    // High-contrast labels/values — "Quando", "Status", etc. must read clearly.
+    final labelColor =
+        dark ? const Color(0xFFC8CCD4) : const Color(0xFF1C1C1F);
+    final valueColor =
+        dark ? const Color(0xFFF4F5F7) : const Color(0xFF0A0A0B);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.only(top: 4),
       child: Column(
         children: [
           for (var index = 0; index < rows.length; index++)
@@ -576,6 +590,9 @@ class _HomeQuickExpand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = presentation.listExpandFields;
+    // Paper cards: near-black labels, pure black values (readable on orange/blue/grey).
+    const labelColor = Color(0xFF1C1C1F);
+    const valueColor = Color(0xFF0A0A0B);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -585,8 +602,8 @@ class _HomeQuickExpand extends StatelessWidget {
               padding: EdgeInsets.only(top: i == 0 ? 4 : 10),
               child: _PresentationFieldRow(
                 field: rows[i],
-                labelColor: Colors.black.withValues(alpha: 0.55),
-                valueColor: Colors.black,
+                labelColor: labelColor,
+                valueColor: valueColor,
               ),
             ),
           const SizedBox(height: 12),
@@ -769,8 +786,10 @@ class _PresentationFieldRow extends StatelessWidget {
             style: TextStyle(
               color: labelColor,
               fontFamily: AppTypography.bodyFontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
+              height: 1.3,
             ),
           ),
         ),
@@ -787,8 +806,9 @@ class _PresentationFieldRow extends StatelessWidget {
                   style: TextStyle(
                     color: valueColor,
                     fontFamily: AppTypography.bodyFontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
                   ),
                 ),
               ),
@@ -801,7 +821,7 @@ class _PresentationFieldRow extends StatelessWidget {
                   },
                   child: Icon(
                     KeroseneIcons.copy,
-                    size: 14,
+                    size: 15,
                     color: labelColor,
                   ),
                 ),
