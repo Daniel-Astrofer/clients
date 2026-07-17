@@ -27,20 +27,36 @@ class OnboardingProgress {
 }
 
 final onboardingProgressProvider = Provider<OnboardingProgress>((ref) {
-  final walletState = ref.watch(walletProvider);
-  final txHistoryAsync = ref.watch(transactionHistoryProvider);
-
-  // We read the lists from current states, defaulting to empty if loading for the first time
-  final wallets = walletState is WalletLoaded ? walletState.wallets : const [];
-  final transactions = txHistoryAsync.value ?? const [];
-
-  final hasCustodialWallet = wallets.any((w) => w.isKeroseneCustody);
-  final hasDeposit = transactions.any((t) => t.isCredit || t.type == TransactionType.deposit);
-  final hasInternalTransfer = transactions.any(
-    (t) =>
-        t.isInternal &&
-        t.status != TransactionStatus.failed &&
-        t.status != TransactionStatus.cancelled,
+  // Booleans only — never re-emit because a new List instance arrived.
+  final hasCustodialWallet = ref.watch(
+    walletProvider.select((w) {
+      if (w is! WalletLoaded) return false;
+      return w.wallets.any((wallet) => wallet.isKeroseneCustody);
+    }),
+  );
+  final hasDeposit = ref.watch(
+    transactionHistoryProvider.select((async) {
+      final txs = async.asData?.value;
+      if (txs == null || txs.isEmpty) return false;
+      for (final t in txs) {
+        if (t.isCredit || t.type == TransactionType.deposit) return true;
+      }
+      return false;
+    }),
+  );
+  final hasInternalTransfer = ref.watch(
+    transactionHistoryProvider.select((async) {
+      final txs = async.asData?.value;
+      if (txs == null || txs.isEmpty) return false;
+      for (final t in txs) {
+        if (t.isInternal &&
+            t.status != TransactionStatus.failed &&
+            t.status != TransactionStatus.cancelled) {
+          return true;
+        }
+      }
+      return false;
+    }),
   );
 
   return OnboardingProgress(

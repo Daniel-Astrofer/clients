@@ -99,6 +99,8 @@ class InternalTransferReviewScreenState<T>
     extends State<InternalTransferReviewScreen<T>> {
   bool _isSubmitting = false;
   bool _firstSendAcknowledged = false;
+  int _submittingPhase = 0;
+  Timer? _submittingPhaseTimer;
 
   bool get _canAuthorize {
     if (_isSubmitting) return false;
@@ -106,19 +108,47 @@ class InternalTransferReviewScreenState<T>
     return true;
   }
 
+  void _startSubmittingPhases() {
+    _submittingPhaseTimer?.cancel();
+    _submittingPhase = 0;
+    _submittingPhaseTimer = Timer.periodic(const Duration(milliseconds: 900), (
+      _,
+    ) {
+      if (!mounted || !_isSubmitting) return;
+      setState(() => _submittingPhase += 1);
+    });
+  }
+
+  void _stopSubmittingPhases() {
+    _submittingPhaseTimer?.cancel();
+    _submittingPhaseTimer = null;
+    _submittingPhase = 0;
+  }
+
+  @override
+  void dispose() {
+    _stopSubmittingPhases();
+    super.dispose();
+  }
+
   Future<void> _confirm() async {
     if (!_canAuthorize) return;
     HapticFeedback.mediumImpact();
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _submittingPhase = 0;
+    });
+    _startSubmittingPhases();
 
-    // Brief breath before auth gate — soft, not theatrical.
-    await Future<void>.delayed(const Duration(milliseconds: 280));
+    // Short breath before auth gate — keep under a frame budget, not a pause.
+    await Future<void>.delayed(const Duration(milliseconds: 80));
     if (!mounted) return;
 
     final result = await widget.onConfirm(context);
     if (!mounted) return;
 
     if (result != null) {
+      _stopSubmittingPhases();
       final receipt = widget.receiptBuilder?.call(result);
       if (receipt != null) {
         final receiptResult = await Navigator.of(context).push<T>(
@@ -138,6 +168,7 @@ class InternalTransferReviewScreenState<T>
       return;
     }
 
+    _stopSubmittingPhases();
     setState(() => _isSubmitting = false);
   }
 
@@ -150,7 +181,7 @@ class InternalTransferReviewScreenState<T>
         ? SendMoneyCopy.authorizeAction(context)
         : widget.confirmLabel;
     final submittingLabel = widget.submittingLabel.trim().isEmpty
-        ? SendMoneyCopy.authorizingAction(context)
+        ? SendMoneyCopy.authorizingPhase(context, _submittingPhase)
         : widget.submittingLabel;
     final authNext = widget.authNextStepLabel?.trim() ?? '';
 
@@ -786,7 +817,9 @@ class _AuthorizeButton extends StatelessWidget {
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 180),
                       child: Row(
-                        key: ValueKey<bool>(isSubmitting),
+                        key: ValueKey<String>(
+                          isSubmitting ? 's:$submittingLabel' : 'idle',
+                        ),
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(

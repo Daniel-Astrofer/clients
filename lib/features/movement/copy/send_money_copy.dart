@@ -351,6 +351,33 @@ class SendMoneyCopy {
         _ => 'Autorizando…',
       };
 
+  /// Progressive labels while the authorize button waits on the network.
+  static String authorizingPhase(BuildContext context, int phaseIndex) {
+    final phases = switch (_language(context)) {
+      'en' => const [
+          'Authorizing…',
+          'Securing…',
+          'Broadcasting…',
+          'Almost done…',
+        ],
+      'es' => const [
+          'Autorizando…',
+          'Protegiendo…',
+          'Transmitiendo…',
+          'Casi listo…',
+        ],
+      _ => const [
+          'Autorizando…',
+          'Protegendo…',
+          'Transmitindo…',
+          'Quase lá…',
+        ],
+    };
+    if (phases.isEmpty) return authorizingAction(context);
+    final i = phaseIndex < 0 ? 0 : phaseIndex % phases.length;
+    return phases[i];
+  }
+
   static String firstSendAckTitle(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'New address',

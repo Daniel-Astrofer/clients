@@ -109,7 +109,9 @@ class StatementTransactionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isHome = density == StatementTransactionCardDensity.home;
-    final money = ref.watch(moneyFormatConfigProvider);
+    final money = isHome
+        ? ref.read(moneyFormatConfigProvider)
+        : ref.watch(moneyFormatConfigProvider);
     final selectedCurrency = money.currency;
     // Home list: snapshot prices/wallets once — live watches rebuild every
     // visible card on each BTC tick and destroy scroll FPS. Extrato keeps live.
@@ -211,6 +213,8 @@ class StatementTransactionCard extends ConsumerWidget {
               iconSize: iconSize,
               axes: presentation.axes,
               expanded: expanded,
+              // Continuous ring spin destroys list FPS — home is always static.
+              allowSpin: !isHome,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -278,32 +282,37 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
           ],
         ),
-        // 0.8s ease-in-out: slow start → fast middle → slow end (open & close).
-        AnimatedSize(
-          duration: KeroseneMotion.duration(
-            context,
-            const Duration(milliseconds: 800),
+        // Home: no AnimatedSize (layout thrash while scrolling).
+        // Extrato keeps the soft open/close curve.
+        if (isHome && expanded)
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: _HomeQuickExpand(
+              transaction: transaction,
+              presentation: presentation,
+              colors: colors,
+            ),
+          )
+        else if (!isHome)
+          AnimatedSize(
+            duration: KeroseneMotion.duration(
+              context,
+              const Duration(milliseconds: 800),
+            ),
+            curve: Curves.easeInOutCubic,
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.hardEdge,
+            child: expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: _TransactionDetailsTable(
+                      transaction: transaction,
+                      presentation: presentation,
+                      colors: colors,
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
           ),
-          curve: Curves.easeInOutCubic,
-          alignment: Alignment.topCenter,
-          clipBehavior: Clip.hardEdge,
-          child: expanded
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: isHome
-                      ? _HomeQuickExpand(
-                          transaction: transaction,
-                          presentation: presentation,
-                          colors: colors,
-                        )
-                      : _TransactionDetailsTable(
-                          transaction: transaction,
-                          presentation: presentation,
-                          colors: colors,
-                        ),
-                )
-              : const SizedBox(width: double.infinity),
-        ),
       ],
     );
 
@@ -1118,6 +1127,8 @@ class _ActivityStatusIcon extends StatefulWidget {
   final TransactionAxes? axes;
   /// When true, status badge is larger so ✓ is obvious on open cards.
   final bool expanded;
+  /// Continuous spin ticks kill list FPS — home always passes false.
+  final bool allowSpin;
 
   const _ActivityStatusIcon({
     required this.transaction,
@@ -1125,6 +1136,7 @@ class _ActivityStatusIcon extends StatefulWidget {
     required this.iconSize,
     this.axes,
     this.expanded = false,
+    this.allowSpin = true,
   });
 
   @override
@@ -1167,7 +1179,8 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         oldWidget.transaction.status != widget.transaction.status ||
         oldWidget.transaction.displayStatus !=
             widget.transaction.displayStatus ||
-        oldWidget.expanded != widget.expanded) {
+        oldWidget.expanded != widget.expanded ||
+        oldWidget.allowSpin != widget.allowSpin) {
       _syncAnimations();
     }
   }
@@ -1177,7 +1190,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     final scrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
     final spin = _spinController;
     if (spin == null) return;
-    if (scrolling) {
+    if (scrolling || !widget.allowSpin) {
       if (spin.isAnimating) spin.stop();
     } else if (_needsSpin && !spin.isAnimating) {
       spin.repeat();
@@ -1186,8 +1199,8 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 
   void _syncAnimations() {
     final mode = _ringMode(widget.transaction);
-    _needsSpin =
-        mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
+    _needsSpin = widget.allowSpin &&
+        (mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress);
     if (_needsSpin) {
       _spinController ??= AnimationController(
         vsync: this,

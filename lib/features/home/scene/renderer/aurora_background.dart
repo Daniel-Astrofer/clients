@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/features/home/scene/models/home_scene.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
-/// Soft multi-blob aurora for the home shell.
+/// Soft multi-blob aurora for the home shell (theater background glow).
 ///
-/// **120fps-first:** no continuous ambient ticker. The field is static (and
-/// cached as a [ui.Picture]) so scroll never competes with full-screen paint.
-/// Palette still eases with a short curve when theater colors change.
+/// **Look:** full rich multi-blob haze + soft stops — the designed theater light.
+/// **Perf:** no continuous ambient ticker. Field is cached as a [ui.Picture]
+/// and only re-baked when size or palette changes (theater color swap).
 class SceneAuroraBackground extends ConsumerStatefulWidget {
   const SceneAuroraBackground({super.key});
 
@@ -198,7 +198,7 @@ class _CachedAuroraPainter extends CustomPainter {
       oldDelegate.palette != palette;
 }
 
-// ── Static field geometry (no continuous motion — keeps 120fps scroll) ──────
+// ── Rich static field (designed theater glow — multi-blob soft haze) ────────
 
 void _paintField(
   Canvas canvas,
@@ -235,7 +235,7 @@ void _paintField(
   final sky = Color.lerp(secondary, const Color(0xFF7DD3FC), 0.55)!;
   final mint = Color.lerp(secondary, const Color(0xFF5EEAD4), 0.45)!;
 
-  // Ambient washes
+  // Ambient washes (large soft discs)
   haze(
     Offset(w * 0.50, h * 0.10 + topInset * 0.04),
     math.max(w, h) * 1.05,
@@ -249,7 +249,7 @@ void _paintField(
     0.16 * s,
   );
 
-  // Soft multi-blob field (static positions — same composition as animated era)
+  // Soft multi-blob field — designed composition for the theater stage
   final blobs = <(double, double, double, Color, double)>[
     (0.28, 0.14, 0.95, primary, 0.20),
     (0.74, 0.12, 0.90, secondary, 0.18),

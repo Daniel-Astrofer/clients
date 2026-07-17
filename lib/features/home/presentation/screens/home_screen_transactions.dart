@@ -202,8 +202,18 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   @override
   Widget build(BuildContext context) {
     final selectedFilter = ref.watch(homeActivityFilterProvider);
-    final transactionsAsync = ref.watch(transactionHistoryProvider);
-    final lastHistory = ref.watch(lastTransactionHistoryProvider);
+    final filteredTxs = ref.watch(filteredHomeTransactionsProvider);
+    // Load/error phase only — full history list lives in filteredTxs.
+    final historyPhase = ref.watch(
+      transactionHistoryProvider.select((a) {
+        if (a.hasError && a.asData?.value == null) return 2; // error
+        if (!a.hasValue && a.asData?.value == null) return 0; // loading
+        return 1; // ready
+      }),
+    );
+    final lastHistoryEmpty = ref.watch(
+      lastTransactionHistoryProvider.select((h) => h.isEmpty),
+    );
     final lastSync = ref.watch(transactionHistoryLastSyncProvider);
     final isOnline = ref.watch(networkStatusProvider);
     final hasWallet = ref.watch(walletProvider.select(
@@ -217,12 +227,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       return false;
     }));
 
-    // Keep previous projection while reloading so the feed does not flash empty.
-    final txs = transactionsAsync.asData?.value ??
-        (lastHistory.isNotEmpty ? lastHistory : null);
-    final hasError = transactionsAsync.hasError && txs == null;
-
-    if (hasError) {
+    if (historyPhase == 2 && filteredTxs.isEmpty && lastHistoryEmpty) {
       final err = Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: StateFeedbackView.networkError(
@@ -233,7 +238,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       return widget.asSliver ? SliverToBoxAdapter(child: err) : err;
     }
 
-    if (txs == null) {
+    if (historyPhase == 0 && filteredTxs.isEmpty && lastHistoryEmpty) {
       // Skeleton → data path should re-arm the entrance once.
       _armEntranceReveal = true;
       _entranceTileCache = null;
@@ -244,7 +249,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           : skeleton;
     }
 
-    final filteredTxs = ref.watch(filteredHomeTransactionsProvider);
     final filterIsAll = selectedFilter == HomeActivityFilter.all;
     final filterIsCancelled =
         selectedFilter == HomeActivityFilter.cancelled;

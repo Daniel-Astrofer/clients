@@ -286,81 +286,16 @@ class _MarqueeLine extends StatefulWidget {
   State<_MarqueeLine> createState() => _MarqueeLineState();
 }
 
-class _MarqueeLineState extends State<_MarqueeLine>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: widget.durationMs.clamp(8000, 60000)),
-    )..repeat();
-  }
-
-  @override
-  void didUpdateWidget(covariant _MarqueeLine oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.durationMs != widget.durationMs) {
-      _ctrl.duration =
-          Duration(milliseconds: widget.durationMs.clamp(8000, 60000));
-      if (!_ctrl.isAnimating) _ctrl.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
+class _MarqueeLineState extends State<_MarqueeLine> {
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: (widget.style.fontSize ?? 20) * 1.5,
-      width: double.infinity,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final painter = TextPainter(
-            text: TextSpan(text: widget.text, style: widget.style),
-            textDirection: TextDirection.ltr,
-            maxLines: 1,
-          )..layout();
-          final textWidth = painter.width;
-          final viewport = constraints.maxWidth;
-          if (textWidth <= viewport) {
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Text(widget.text, maxLines: 1, style: widget.style),
-            );
-          }
-          const gap = 80.0;
-          final loopWidth = textWidth + gap;
-          return ClipRect(
-            child: AnimatedBuilder(
-              animation: _ctrl,
-              builder: (_, __) {
-                final dx = -_ctrl.value * loopWidth;
-                return Stack(
-                  children: [
-                    Transform.translate(
-                      offset: Offset(dx, 0),
-                      child:
-                          Text(widget.text, maxLines: 1, style: widget.style),
-                    ),
-                    Transform.translate(
-                      offset: Offset(dx + loopWidth, 0),
-                      child:
-                          Text(widget.text, maxLines: 1, style: widget.style),
-                    ),
-                  ],
-                );
-              },
-            ),
-          );
-        },
-      ),
+    // Static ellipsis — continuous marquee AnimationController.repeat kills FPS.
+    return Text(
+      widget.text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: widget.style,
     );
   }
 }
+

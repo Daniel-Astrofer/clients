@@ -1,10 +1,12 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/providers/home_balance_ceremony_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
+import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_stage_playback_provider.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_communication_stage.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
@@ -23,6 +25,13 @@ double? _coarseUsdQuote(double? price) {
 double? _coarseChangePct(double? pct) {
   if (pct == null) return null;
   return (pct * 20).round() / 20.0;
+}
+
+String _formatHomeBalanceBtc(double btc, int decimals, String localeTag) {
+  final fixed = btc.toStringAsFixed(decimals.clamp(0, 8));
+  // App language separators (pt → 0,00 / en → 0.00).
+  if (localeTag.toLowerCase().startsWith('en')) return fixed;
+  return fixed.replaceAll('.', ',');
 }
 
 class HomeBalanceSection extends ConsumerStatefulWidget {
@@ -61,19 +70,30 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
   bool _suppressRollForViewChange = false;
   bool _playSessionCeremony = false;
 
+  // Snapshot quotes — never ref.watch live price streams here.
+  double? _snapUsd;
+  double? _snapEur;
+  double? _snapBrl;
+  double? _snapChangePct;
+  Timer? _priceTimer;
+
   @override
   void initState() {
     super.initState();
     final initialPage = ref.read(homeLedgerBalancePageProvider);
     _lastSyncedIndex = initialPage;
     _pageController = PageController(initialPage: initialPage);
-    // Claim before first paint so digit ceremony can run once per session.
     _playSessionCeremony =
         ref.read(homeBalanceCeremonyPlayedProvider.notifier).claim();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _armPriceSnapshots();
+    });
   }
 
   @override
   void dispose() {
+    _priceTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -91,27 +111,48 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
     });
   }
 
+  void _armPriceSnapshots() {
+    _pullPriceSnapshot();
+    _priceTimer?.cancel();
+    _priceTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (!mounted) return;
+      if (ref.read(homeScrollBusyProvider)) return;
+      _pullPriceSnapshot();
+    });
+  }
+
+  void _pullPriceSnapshot() {
+    if (!mounted) return;
+    if (!ref.read(homeRouteActiveProvider)) return;
+    final usd = _coarseUsdQuote(ref.read(latestBtcPriceProvider));
+    final eur = _coarseUsdQuote(ref.read(btcEurPriceProvider));
+    final brl = _coarseUsdQuote(ref.read(btcBrlPriceProvider));
+    final chg = _coarseChangePct(ref.read(btcDailyChangePercentProvider));
+    if (usd == _snapUsd &&
+        eur == _snapEur &&
+        brl == _snapBrl &&
+        chg == _snapChangePct) {
+      return;
+    }
+    setState(() {
+      _snapUsd = usd;
+      _snapEur = eur;
+      _snapBrl = brl;
+      _snapChangePct = chg;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
     final selectedCurrency = ref.watch(currencyProvider);
     final money = ref.watch(moneyFormatConfigProvider);
     final balanceSettings = ref.watch(balanceSettingsProvider);
-    final priceFeedActive = ref.watch(homeRouteActiveProvider);
-    // Round quotes so minor tick churn doesn't rebuild the whole header
-    // (header rebuild mid-scroll is a common FPS cliff).
-    final btcUsd = priceFeedActive
-        ? ref.watch(latestBtcPriceProvider.select(_coarseUsdQuote))
-        : null;
-    final btcEur = priceFeedActive
-        ? ref.watch(btcEurPriceProvider.select(_coarseUsdQuote))
-        : null;
-    final btcBrl = priceFeedActive
-        ? ref.watch(btcBrlPriceProvider.select(_coarseUsdQuote))
-        : null;
-    final btcDailyChangePercent = priceFeedActive
-        ? ref.watch(btcDailyChangePercentProvider.select(_coarseChangePct))
-        : null;
+    // Live quotes only via timer snapshot (see _armPriceSnapshots).
+    final btcUsd = _snapUsd;
+    final btcEur = _snapEur;
+    final btcBrl = _snapBrl;
+    final btcDailyChangePercent = _snapChangePct;
     final selectedView = ref.watch(homeLedgerBalanceViewProvider);
     final wallets = widget.walletState is WalletLoaded
         ? (widget.walletState as WalletLoaded).wallets
@@ -251,13 +292,20 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
     }
 
     final heroHeight = responsive.isTinyPhone ? homeSize(220) : homeSize(236);
-    final playback = ref.watch(homeStagePlaybackProvider);
-    // Match theater open curve (720ms easeOutCubic from HomeSceneHost).
-    final bodyOffset = playback.bodyOffsetPx;
-    final bodyDuration = Duration(
-      milliseconds: playback.bodyShiftDurationMs.clamp(480, 1200),
+    // Select only offset — ignore isPlaying churn mid-theater.
+    final bodyOffset = ref.watch(
+      homeStagePlaybackProvider.select((p) => p.bodyOffsetPx),
     );
-    final bodyCurve = resolveStageCurve(playback.bodyShiftCurve);
+    final bodyDurationMs = ref.watch(
+      homeStagePlaybackProvider.select((p) => p.bodyShiftDurationMs),
+    );
+    final bodyCurveName = ref.watch(
+      homeStagePlaybackProvider.select((p) => p.bodyShiftCurve),
+    );
+    final bodyDuration = Duration(
+      milliseconds: bodyDurationMs.clamp(480, 1200),
+    );
+    final bodyCurve = resolveStageCurve(bodyCurveName);
 
     // Single amount display — not inside PageView (avoids remount/odometer on swipe).
     final activeData = cardDataFor(selectedTab);
@@ -311,28 +359,22 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AnimatedContainer(
-                duration: bodyDuration,
-                curve: bodyCurve,
-                height: bodyOffset,
-              ),
+              if (bodyOffset > 0.5)
+                AnimatedContainer(
+                  duration: bodyDuration,
+                  curve: bodyCurve,
+                  height: bodyOffset,
+                ),
+              // Single hero only — PageView kept adjacent pages + odometer
+              // cost. Tab change swaps data without building 4 ledger trees.
               SizedBox(
                 height: heroHeight,
-                child: PageView.builder(
-                  controller: _pageController,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: tabs.length,
-                  onPageChanged: onPageChanged,
-                  itemBuilder: (context, index) {
-                    final tab = tabs[index];
-                    return HomeBalanceHero(
-                      key: ValueKey('home-balance-hero-${tab.view.name}'),
-                      data: cardDataFor(tab.view),
-                      onOpenWallets: widget.onOpenWallets,
-                      suppressDigitRoll: suppressRoll,
-                      animateInitialValue: animateCeremony,
-                    );
-                  },
+                child: HomeBalanceHero(
+                  key: ValueKey('home-balance-hero-${selectedTab.name}'),
+                  data: activeData,
+                  onOpenWallets: widget.onOpenWallets,
+                  suppressDigitRoll: true,
+                  animateInitialValue: false,
                 ),
               ),
               if (tabs.length > 1) ...[
@@ -342,15 +384,15 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
                   activeIndex: selectedIndex,
                   accents: [for (final tab in tabs) tab.accent],
                   onDotTap: (index) {
-                    if (!_pageController.hasClients) return;
+                    if (index < 0 || index >= tabs.length) return;
                     _lastSyncedIndex = index;
                     HapticFeedback.selectionClick();
                     _suppressRollForViewChange = true;
-                    _pageController.animateToPage(
-                      index,
-                      duration: KeroseneMotion.medium,
-                      curve: KeroseneMotion.standard,
-                    );
+                    final view = tabs[index].view;
+                    ref.read(homeLedgerBalanceViewProvider.notifier).state =
+                        view;
+                    ref.read(homeLedgerBalancePageProvider.notifier).state =
+                        index;
                   },
                 ),
               ],
@@ -596,69 +638,51 @@ class HomeBalanceHero extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedSwitcher(
-              duration: KeroseneMotion.short,
-              switchInCurve: KeroseneMotion.standard,
-              switchOutCurve: KeroseneMotion.exit,
-              child: Text(
-                title.toUpperCase(),
-                key: ValueKey('balance-title-${data.view.name}'),
+            Text(
+              title.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppTypography.label.copyWith(
+                color: data.accent.withValues(alpha: 0.88),
+                fontSize: homeFontSize(12),
+                fontWeight: FontWeight.w500,
+                letterSpacing: 1.2,
+              ),
+            ),
+            if (!isTotal && data.wallet != null) ...[
+              SizedBox(height: homeSize(6)),
+              Text(
+                walletName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: AppTypography.label.copyWith(
-                  color: data.accent.withValues(alpha: 0.88),
-                  fontSize: homeFontSize(12),
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-            // Wallet name only — no dual-ledger / "available vs chain" subtitle.
-            if (!isTotal && data.wallet != null) ...[
-              SizedBox(height: homeSize(6)),
-              AnimatedSwitcher(
-                duration: KeroseneMotion.short,
-                child: Text(
-                  walletName,
-                  key: ValueKey('wallet-$walletName'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.h3.copyWith(
-                    color: HomeColors.textPrimary.withValues(alpha: 0.75),
-                    fontSize: homeFontSize(13),
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 0,
-                  ),
+                style: AppTypography.h3.copyWith(
+                  color: HomeColors.textPrimary.withValues(alpha: 0.75),
+                  fontSize: homeFontSize(13),
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 0,
                 ),
               ),
             ],
             SizedBox(height: homeSize(14)),
-            // No background glow on the amount — swipe between wallets must stay
-            // clean black. Receive feedback lives in the theater stage, not here.
+            // Plain Text — AnimatedBalanceDisplay (per-digit ShaderMask +
+            // AnimationController) was saturating UI+Raster under scroll.
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  AnimatedBalanceDisplay(
+                  Text(
                     key: const ValueKey('home-balance-amount'),
-                    balance: data.balanceBtc,
-                    decimalPlaces: data.decimalPlaces,
-                    // App language separators (pt → 0,00 / en → 0.00), not BTC en_US.
-                    locale: ref.watch(moneyFormatConfigProvider).numberLocaleTag,
-                    // Never flash on ledger swipe / remount. Live large deltas only.
-                    enableFlash: !suppressDigitRoll,
-                    isHidden: data.balanceHidden,
-                    digitWidthFactor: 0.72,
-                    characterSpacing: 0.1,
-                    decimalScaleFactor: 0.78,
-                    separatorScaleFactor: 0.78,
-                    animateInitialValue: animateInitialValue,
-                    suppressRoll: suppressDigitRoll,
-                    largeDeltaThreshold: kHomeBalanceLargeDeltaBtc,
+                    data.balanceHidden
+                        ? '••••••••'
+                        : _formatHomeBalanceBtc(
+                            data.balanceBtc,
+                            data.decimalPlaces,
+                            ref.read(moneyFormatConfigProvider).numberLocaleTag,
+                          ),
                     style: AppTypography.homeBalance(
                       color: Colors.white,
                     ).copyWith(
@@ -690,20 +714,16 @@ class HomeBalanceHero extends ConsumerWidget {
               ),
             ),
             SizedBox(height: homeSize(10)),
-            AnimatedSwitcher(
-              duration: KeroseneMotion.short,
-              child: Text(
-                data.convertedBalanceLabel,
-                key: ValueKey(data.convertedBalanceLabel),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: homeMutedTextColor,
-                  fontSize: homeFontSize(15),
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 0,
-                ),
+            Text(
+              data.convertedBalanceLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: homeMutedTextColor,
+                fontSize: homeFontSize(15),
+                fontWeight: FontWeight.w300,
+                letterSpacing: 0,
               ),
             ),
             SizedBox(height: homeSize(8)),

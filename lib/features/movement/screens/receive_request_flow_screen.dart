@@ -206,8 +206,10 @@ class _ReceiveRequestFlowScreenState
     final transferId = _allocation?.transferId.trim() ?? '';
     if (transferId.isEmpty) return;
     _statusTimer?.cancel();
+    // Immediate first refresh so detection does not wait a full poll period.
+    unawaited(_refreshObservedTransfer());
     _statusTimer = Timer.periodic(
-      KeroseneMotion.notificationLongHold,
+      const Duration(seconds: 2),
       (_) => _refreshObservedTransfer(),
     );
   }
@@ -288,8 +290,9 @@ class _ReceiveRequestFlowScreenState
 
   void _startPaymentLinkPolling() {
     _statusTimer?.cancel();
+    unawaited(_refreshPaymentLink());
     _statusTimer = Timer.periodic(
-      KeroseneMotion.notificationLongHold,
+      const Duration(seconds: 2),
       (_) => _refreshPaymentLink(),
     );
   }
@@ -358,13 +361,17 @@ class _ReceiveRequestFlowScreenState
         _address = deposit;
       }
     }
-    // Lightning settles in one step (invoice paid) — no multi-conf wait.
+    // Lightning / internal: paid is done. On-chain: paid/detected opens conf rings;
+    // "Confirmado" only when confs meet the target (or SETTLED settlement).
+    final settlement = link.settlementStatus.trim().toUpperCase();
+    final settledSettlement =
+        settlement == 'SETTLED' || settlement == 'COMPLETED';
     final complete = link.isCompleted ||
         (isLightning && link.isPaid) ||
         (!onChain && !isLightning && link.isPaid) ||
         (onChain &&
             link.isPaid &&
-            link.confirmations >= _requiredConfirmations);
+            (link.confirmations >= _requiredConfirmations || settledSettlement));
     if (complete) {
       _stage = ReceiveRequestStage.identified;
       _identifiedAt = link.completedAt ?? link.paidAt ?? DateTime.now();
@@ -373,7 +380,10 @@ class _ReceiveRequestFlowScreenState
     if (link.isPaid ||
         link.isVerifyingOnboarding ||
         link.confirmations > 0 ||
-        link.hasObservedOnchainPayment) {
+        link.hasObservedOnchainPayment ||
+        settledSettlement ||
+        settlement == 'VALIDATING' ||
+        settlement == 'EXECUTING') {
       _stage = ReceiveRequestStage.confirmations;
       return;
     }

@@ -60,9 +60,9 @@ import 'package:kerosene/features/notifications/presentation/notification_naviga
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
 
+import 'package:kerosene/features/home/presentation/layers/home_layers.dart';
 import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
-import 'package:kerosene/features/home/presentation/widgets/home_aurora_background.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_greeting_slot.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_education_host.dart';
@@ -468,70 +468,9 @@ class HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final responsive = context.responsive;
-    // Fill the window — never pin to phone width on Linux/desktop.
-    final contentMaxWidth = responsive.appColumnMaxWidth;
-    final pageHorizontalPadding = responsive.isTinyPhone
-        ? homeSize(18)
-        : responsive.isCompact
-            ? homeSize(24)
-            : responsive.isWide
-                ? AppSpacing.xxxl
-                : responsive.horizontalPadding;
-    final useWideHomeLayout = responsive.useWideHomeLayout;
-    final navigationClearance =
-        MediaQuery.viewPaddingOf(context).bottom + homeSize(32);
-
-    final authenticatedUserId = ref.watch(
-        authControllerProvider.select((s) => s is AuthAuthenticated ? s.user.id : null));
-    final authenticatedUserName = ref.watch(
-        authControllerProvider.select((s) => s is AuthAuthenticated ? s.user.name.trim() : ''));
-    final authIsLoading = ref.watch(
-        authControllerProvider.select((s) => s is AuthLoading));
-
-    final activeWallet = ref.watch(
-        walletProvider.select((w) => _resolveActiveWallet(w)));
-    final isWalletLoading = ref.watch(
-        walletProvider.select((w) => w is WalletInitial || w is WalletLoading));
-
-    final transactionHistoryAsync = ref.watch(transactionHistoryProvider);
-    final hasWallet = activeWallet != null;
-    final hasBalance = (activeWallet?.balance ?? 0) > 0;
-    final isReadyActionsVariant = hasWallet && hasBalance;
-    final transactionHistory =
-        transactionHistoryAsync.asData?.value ?? const <Transaction>[];
-    final hasLoadedTransactionHistory = transactionHistoryAsync.hasValue;
-    final hasTransactions = transactionHistory.isNotEmpty;
-    final hasSeenFirstUseActionPanel = _hasSeenFirstUseActionPanel(
-      authenticatedUserId,
-    );
-
-    if (authenticatedUserId == null) {
-      _firstUseActionPanelUserId = null;
-    }
-
-    // Do not open first-use "deposit" when balance already exists but history
-    // is still empty (race / sync lag) — that confuses users who just received.
-    if (authenticatedUserId != null &&
-        isReadyActionsVariant &&
-        hasLoadedTransactionHistory &&
-        !hasTransactions &&
-        !hasBalance &&
-        !hasSeenFirstUseActionPanel) {
-      _activateFirstUseActionPanel(authenticatedUserId);
-    }
-
-    final showFirstUseReadyPanel = authenticatedUserId != null &&
-        isReadyActionsVariant &&
-        !hasTransactions &&
-        _firstUseActionPanelUserId == authenticatedUserId;
-    final showPrimaryActionPanel =
-        !isReadyActionsVariant || showFirstUseReadyPanel;
-    // Full-body dots only while wallets have never loaded.
-    // History loading must not replace the home with a second (higher) dots
-    // strip after the post-PIN TorNavigationLoadingScreen already finished.
-    final showHomeLoading = isWalletLoading;
-
+    // Thin shell: navigation callbacks only. No wallet/history/price watches.
+    // Each visual layer is an independent Consumer + RepaintBoundary
+    // (see presentation/layers/home_layers.dart).
     void openStatement() {
       unawaited(
         _pushFromBottom<void>(
@@ -543,30 +482,8 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       );
     }
 
-    // ── NOME DE USUÁRIO REAL E SEGURO ──
-    String userName = '';
-
-    if (authenticatedUserName.isNotEmpty) {
-      userName =
-          authenticatedUserName.split(' ').first; // Pega o primeiro nome para UI limpa
-    } else if (activeWallet != null) {
-      userName = activeWallet.name;
-    } else if (authIsLoading) {
-      userName = '...';
-    }
-
-    if (userName.isEmpty || userName == 'Not Found') {
-      userName = context.tr.homeFallbackUser;
-    }
-
-    final layout = ref.watch(homeSurfaceProvider.select((s) => s.layout));
-    final gapAfterHeader = homeSize(layout.sectionGapAfterHeader);
-    final gapBeforeFeed = homeSize(layout.sectionGapBeforeFeed);
-    // Scaffold paints this solid so pull-to-refresh overscroll matches the
-    // header (Flutter stretch-header pattern). Header itself scrolls away.
-    final scaffoldSolid = ref.watch(theaterScaffoldSolidColorProvider);
-    final pageTopPad =
-        responsive.isTinyPhone ? homeSize(8) : homeSize(16);
+    Wallet? activeWallet() =>
+        _resolveActiveWallet(ref.read(walletProvider));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -575,84 +492,26 @@ class HomeScreenState extends ConsumerState<HomeScreen>
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        // Same solid as header top → overscroll is continuous (no hard cut).
-        backgroundColor: scaffoldSolid,
+        backgroundColor: homeBackgroundColor,
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // Static aurora — own repaint layer (never dirty on scroll).
-            const Positioned.fill(
-              child: RepaintBoundary(child: HomeAuroraBackground()),
-            ),
+            const HomeAuroraLayer(),
             const HomeRealtimeBootstrap(),
             const HomeEducationHost(),
-            // Scroll content in its own layer — isolates list paint from aurora.
-            RepaintBoundary(
-              child: CustomScrollView(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
+            HomeScrollLayer(
+              onRefresh: _refreshHomeData,
+              onReceive: () => _openReceiveFlow(activeWallet()),
+              onSend: () => _openSend(activeWallet()),
+              onOpenStatement: openStatement,
+              onOpenWallets: () => AppPrimaryNavigationBar.navigateTo(
+                context,
+                AppPrimaryDestination.card,
               ),
-              slivers: [
-                BitcoinRefreshIndicator(onRefresh: _refreshHomeData),
-                // ── HEADER (scrolls away): wash only on theater row; balance on black
-                // KeroseneAppColumn forces full window width (not phone shrink-wrap).
-                SliverToBoxAdapter(
-                  child: KeroseneAppColumn(
-                    maxWidth: contentMaxWidth,
-                    child: showHomeLoading
-                        ? Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              pageHorizontalPadding,
-                              pageTopPad +
-                                  MediaQuery.paddingOf(context).top,
-                              pageHorizontalPadding,
-                              homeSize(8),
-                            ),
-                            child: const HomeLoadingContent()
-                                .animate()
-                                .fade(duration: 220.ms),
-                          )
-                        : HomeEntryTransition(
-                            child: HomeBalanceSection(
-                              userName: userName,
-                              walletState: ref.read(walletProvider),
-                              activeWallet: activeWallet,
-                              pageHorizontalPadding: pageHorizontalPadding,
-                              pageTopPad: pageTopPad,
-                              onReceive: () =>
-                                  _openReceiveFlow(activeWallet),
-                              onSend: () => _openSend(activeWallet),
-                              onViewStatement: openStatement,
-                              onOpenWallets: () =>
-                                  AppPrimaryNavigationBar.navigateTo(
-                                context,
-                                AppPrimaryDestination.card,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-                // Soft veil into black feed (no hard horizontal cut).
-                if (!showHomeLoading) ...[
-                  const SliverToBoxAdapter(child: _HomeFeedTopVeil()),
-                  ..._homeFeedSlivers(
-                    context: context,
-                    useWideLayout: useWideHomeLayout,
-                    contentMaxWidth: contentMaxWidth,
-                    pageHorizontalPadding: pageHorizontalPadding,
-                    navigationClearance: navigationClearance,
-                    gapAfterHeader: gapAfterHeader,
-                    gapBeforeFeed: gapBeforeFeed,
-                    showPrimaryActionPanel: showPrimaryActionPanel,
-                    hasWallet: hasWallet,
-                    hasBalance: hasBalance,
-                    hasTransactions: hasTransactions,
-                    walletState: ref.read(walletProvider),
-                    onOpenStatement: openStatement,
-                  ),
-                ],
-              ],
-            ),
+              onCreateWallet: _openCreateWallet,
+              onDepositWallet: _openDepositForWallet,
+              onOpenDeposit: () => _openDeposit(activeWallet()),
+              onOpenSendFromFeed: () => _openSend(activeWallet()),
             ),
             const HomeBottomNavigationOverlay(
               currentDestination: AppPrimaryDestination.home,
@@ -662,344 +521,8 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
-
-  List<Widget> _homeFeedSlivers({
-    required BuildContext context,
-    required bool useWideLayout,
-    required double contentMaxWidth,
-    required double pageHorizontalPadding,
-    required double navigationClearance,
-    required double gapAfterHeader,
-    required double gapBeforeFeed,
-    required bool showPrimaryActionPanel,
-    required bool hasWallet,
-    required bool hasBalance,
-    required bool hasTransactions,
-    required WalletState walletState,
-    required VoidCallback onOpenStatement,
-  }) {
-    Widget pad(Widget child) {
-      return ColoredBox(
-        color: homeBackgroundColor,
-        child: KeroseneAppColumn(
-          maxWidth: contentMaxWidth,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              pageHorizontalPadding,
-              0,
-              pageHorizontalPadding,
-              0,
-            ),
-            child: child,
-          ),
-        ),
-      );
-    }
-
-    if (useWideLayout) {
-      // Desktop: two columns stay in one adapter (RepaintBoundary isolates cost).
-      return [
-        // top gap after veil
-        SliverToBoxAdapter(
-          child: ColoredBox(
-            color: homeBackgroundColor,
-            child: SizedBox(
-              height: gapAfterHeader > 0 ? gapAfterHeader : homeSize(8),
-            ),
-          ),
-        ),
-        sliverToBoxAdapterRepaint(
-          pad(
-            _HomeFeedBody(
-              useWideLayout: true,
-              gapAfterHeader: gapAfterHeader,
-              gapBeforeFeed: gapBeforeFeed,
-              showPrimaryActionPanel: showPrimaryActionPanel,
-              hasWallet: hasWallet,
-              hasBalance: hasBalance,
-              hasTransactions: hasTransactions,
-              onOpenCreateWallet: _openCreateWallet,
-              onOpenDeposit: () => _openDeposit(
-                ref.read(walletProvider.select((w) => _resolveActiveWallet(w))),
-              ),
-              onOpenSend: () => _openSend(
-                ref.read(walletProvider.select((w) => _resolveActiveWallet(w))),
-              ),
-              onOpenStatement: onOpenStatement,
-              onDepositWallet: _openDepositForWallet,
-              walletState: walletState,
-            ),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: ColoredBox(
-            color: homeBackgroundColor,
-            child: SizedBox(height: navigationClearance),
-          ),
-        ),
-      ];
-    }
-
-    // Phone: virtualize transaction list so scroll only paints visible cards.
-    final setupNotice = showPrimaryActionPanel
-        ? HomeSetupNotice(
-            icon: !hasWallet
-                ? KeroseneIcons.wallet
-                : !hasBalance
-                    ? KeroseneIcons.download
-                    : KeroseneIcons.send,
-            title: !hasWallet
-                ? context.l10n.homePrimaryNoWalletTitle
-                : !hasBalance
-                    ? context.tr.homePrimaryReadyNoBalanceTitle
-                    : context.tr.homePrimaryReadyTitle,
-            subtitle: !hasWallet
-                ? context.tr.homePrimaryNoWalletSubtitle
-                : !hasBalance
-                    ? context.tr.homePrimaryReadyNoBalanceSubtitle
-                    : context.tr.homePrimaryReadySubtitle,
-            actionLabel: !hasWallet
-                ? context.l10n.homeCreateWalletAction
-                : !hasBalance
-                    ? context.tr.homeDepositFundsAction
-                    : context.l10n.homeSendBtcAction,
-            onAction: !hasWallet
-                ? _openCreateWallet
-                : !hasBalance
-                    ? () => _openDeposit(
-                          ref.read(
-                            walletProvider
-                                .select((w) => _resolveActiveWallet(w)),
-                          ),
-                        )
-                    : () => _openSend(
-                          ref.read(
-                            walletProvider
-                                .select((w) => _resolveActiveWallet(w)),
-                          ),
-                        ),
-          )
-        : null;
-
-    return [
-      SliverToBoxAdapter(
-        child: ColoredBox(
-          color: homeBackgroundColor,
-          child: SizedBox(
-            height: gapAfterHeader > 0 ? gapAfterHeader : homeSize(8),
-          ),
-        ),
-      ),
-      sliverToBoxAdapterRepaint(
-        pad(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const HomeOnboardingProgressCard(),
-              SizedBox(height: gapAfterHeader),
-              const RepaintBoundary(child: HomeBitcoinMarketChartCard()),
-              if (setupNotice != null) ...[
-                SizedBox(height: gapAfterHeader),
-                setupNotice,
-              ],
-              SizedBox(height: gapBeforeFeed),
-              const HomeEducationCarousel(),
-              SizedBox(height: homeSize(AppSpacing.md)),
-              SizedBox(height: homeSize(AppSpacing.xl)),
-              HomeFundsDistributionSection(
-                walletState: walletState,
-                onViewStatement: onOpenStatement,
-              ),
-              SizedBox(height: homeSize(AppSpacing.xl)),
-              HomeSectionHeader(
-                title: homeRecentActivitiesTitle(context),
-                onAction: onOpenStatement,
-                actionLabel: homeSeeYourStatementLabel(context),
-                actionTrailingChevron: true,
-                actionTooltip: context.tr.statementScreenTitle,
-              ),
-              SizedBox(height: homeSize(AppSpacing.md)),
-              if (hasTransactions) ...[
-                const HomeActivityFilterChips(),
-                SizedBox(height: homeSize(AppSpacing.md)),
-              ],
-            ],
-          ),
-        ),
-      ),
-      // Virtualized txs — the big scroll FPS win.
-      HomeTransactionsList(
-        asSliver: true,
-        onCreateWallet: _openCreateWallet,
-        onDepositWallet: _openDepositForWallet,
-      ),
-      SliverToBoxAdapter(
-        child: ColoredBox(
-          color: homeBackgroundColor,
-          child: SizedBox(height: navigationClearance),
-        ),
-      ),
-    ];
-  }
-}
-
-/// Soft black veil under the balance / over the feed.
-class _HomeFeedTopVeil extends StatelessWidget {
-  const _HomeFeedTopVeil();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: (MediaQuery.sizeOf(context).height * 0.12).clamp(72.0, 140.0),
-      child: const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0x00000000),
-              Color(0x66000000),
-              Color(0xCC000000),
-              Color(0xFF000000),
-            ],
-            stops: [0.0, 0.35, 0.72, 1.0],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 SliverToBoxAdapter sliverToBoxAdapterRepaint(Widget child) {
   return SliverToBoxAdapter(child: RepaintBoundary(child: child));
-}
-
-/// Home feed body — single column on phones/tablets, two columns on desktop.
-class _HomeFeedBody extends StatelessWidget {
-  final bool useWideLayout;
-  final double gapAfterHeader;
-  final double gapBeforeFeed;
-  final bool showPrimaryActionPanel;
-  final bool hasWallet;
-  final bool hasBalance;
-  final bool hasTransactions;
-  final VoidCallback onOpenCreateWallet;
-  final VoidCallback onOpenDeposit;
-  final VoidCallback onOpenSend;
-  final VoidCallback onOpenStatement;
-  final ValueChanged<Wallet> onDepositWallet;
-  final WalletState walletState;
-
-  const _HomeFeedBody({
-    required this.useWideLayout,
-    required this.gapAfterHeader,
-    required this.gapBeforeFeed,
-    required this.showPrimaryActionPanel,
-    required this.hasWallet,
-    required this.hasBalance,
-    required this.hasTransactions,
-    required this.onOpenCreateWallet,
-    required this.onOpenDeposit,
-    required this.onOpenSend,
-    required this.onOpenStatement,
-    required this.onDepositWallet,
-    required this.walletState,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final setupNotice = showPrimaryActionPanel
-        ? HomeSetupNotice(
-            icon: !hasWallet
-                ? KeroseneIcons.wallet
-                : !hasBalance
-                    ? KeroseneIcons.download
-                    : KeroseneIcons.send,
-            title: !hasWallet
-                ? context.l10n.homePrimaryNoWalletTitle
-                : !hasBalance
-                    ? context.tr.homePrimaryReadyNoBalanceTitle
-                    : context.tr.homePrimaryReadyTitle,
-            subtitle: !hasWallet
-                ? context.tr.homePrimaryNoWalletSubtitle
-                : !hasBalance
-                    ? context.tr.homePrimaryReadyNoBalanceSubtitle
-                    : context.tr.homePrimaryReadySubtitle,
-            actionLabel: !hasWallet
-                ? context.l10n.homeCreateWalletAction
-                : !hasBalance
-                    ? context.tr.homeDepositFundsAction
-                    : context.l10n.homeSendBtcAction,
-            onAction: !hasWallet
-                ? onOpenCreateWallet
-                : !hasBalance
-                    ? onOpenDeposit
-                    : onOpenSend,
-          )
-        : null;
-
-    final insightColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const HomeOnboardingProgressCard(),
-        SizedBox(height: gapAfterHeader),
-        const HomeBitcoinMarketChartCard(),
-        if (setupNotice != null) ...[
-          SizedBox(height: gapAfterHeader),
-          setupNotice,
-        ],
-        SizedBox(height: gapBeforeFeed),
-        const HomeEducationCarousel(),
-        SizedBox(height: homeSize(AppSpacing.md)),
-        SizedBox(height: homeSize(AppSpacing.xl)),
-        HomeFundsDistributionSection(
-          walletState: walletState,
-          onViewStatement: onOpenStatement,
-        ),
-      ],
-    );
-
-    final activityColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        HomeSectionHeader(
-          title: homeRecentActivitiesTitle(context),
-          onAction: onOpenStatement,
-          actionLabel: homeSeeYourStatementLabel(context),
-          actionTrailingChevron: true,
-          actionTooltip: context.tr.statementScreenTitle,
-        ),
-        SizedBox(height: homeSize(AppSpacing.md)),
-        if (hasTransactions) ...[
-          const HomeActivityFilterChips(),
-          SizedBox(height: homeSize(AppSpacing.md)),
-        ],
-        HomeTransactionsList(
-          onCreateWallet: onOpenCreateWallet,
-          onDepositWallet: onDepositWallet,
-        ),
-      ],
-    );
-
-    if (!useWideLayout) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          insightColumn,
-          SizedBox(height: homeSize(AppSpacing.xl)),
-          activityColumn,
-        ],
-      );
-    }
-
-    // Desktop / large Linux windows: market + education left, activity right.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(flex: 5, child: insightColumn),
-        SizedBox(width: homeSize(AppSpacing.xl)),
-        Expanded(flex: 4, child: activityColumn),
-      ],
-    );
-  }
 }
