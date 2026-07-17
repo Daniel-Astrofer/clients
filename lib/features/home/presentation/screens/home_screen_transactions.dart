@@ -303,11 +303,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       );
     }
 
-    final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    final glowStyle =
-        HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
-
-    // One shared glow behind the list (not per card). Cards stay paper white.
+    // No glow on black list background — only inside each card.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -328,11 +324,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
               ),
             ),
           ),
-        HomeActivityListGlow(
-          style: glowStyle,
-          phase: _cardGlowPhase,
-          child: body,
-        ),
+        body,
       ],
     );
   }
@@ -367,7 +359,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
     final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
-    // Paper only — glow is a single list layer behind all cards.
     final surface =
         HomeActivitySurfaceStyle.forLedgerViewName(ledgerView.name);
 
@@ -381,6 +372,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         mode: StatementTransactionCardMode.stacked,
         density: StatementTransactionCardDensity.home,
         homeSurface: surface,
+        // Same phase for all cards → one light; clip keeps black gaps clean.
+        interiorGlowPhase: _cardGlowPhase,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {

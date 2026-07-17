@@ -99,6 +99,10 @@ class StatementTransactionCard extends ConsumerWidget {
   /// Full home surface style (gradient card + ink).
   final HomeActivitySurfaceStyle? homeSurface;
 
+  /// Shared list phase — same for every card so the light feels like one glow.
+  /// Painted only inside the card clip; never on black gaps.
+  final Animation<double>? interiorGlowPhase;
+
   const StatementTransactionCard({
     super.key,
     required this.transaction,
@@ -109,6 +113,7 @@ class StatementTransactionCard extends ConsumerWidget {
     this.paperBackground,
     this.paperBorder,
     this.homeSurface,
+    this.interiorGlowPhase,
   });
 
   @override
@@ -323,9 +328,11 @@ class StatementTransactionCard extends ConsumerWidget {
     );
 
     final radius = BorderRadius.circular(isHome ? 20 : 28);
+    final showGlow = isHome &&
+        surface != null &&
+        interiorGlowPhase != null;
 
-    // Cards are semi-opaque paper only — list glow is a single shared layer
-    // behind the whole list (not per-card).
+    // Glow is ONLY inside the card (ClipRRect). Black between cards is untouched.
     return Semantics(
       button: onTap != null,
       label: a11yLabel,
@@ -336,12 +343,23 @@ class StatementTransactionCard extends ConsumerWidget {
           borderRadius: radius,
           child: ClipRRect(
             borderRadius: radius,
-            child: DecoratedBox(
-              decoration: decoration,
-              child: Padding(
-                padding: EdgeInsets.all(cardPadding),
-                child: body,
-              ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(decoration: decoration),
+                ),
+                if (showGlow)
+                  Positioned.fill(
+                    child: HomeActivityCardGlow(
+                      style: surface,
+                      phase: interiorGlowPhase!,
+                    ),
+                  ),
+                Padding(
+                  padding: EdgeInsets.all(cardPadding),
+                  child: body,
+                ),
+              ],
             ),
           ),
         ),
