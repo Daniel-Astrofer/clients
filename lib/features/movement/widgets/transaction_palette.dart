@@ -196,6 +196,8 @@ class TransactionCardColors {
     Transaction tx, {
     List<Wallet> wallets = const [],
     List<BitcoinAccount> accounts = const [],
+    Color? paperBackground,
+    Color? paperBorder,
   }) {
     final axes = TransactionAxes.classify(
       tx,
@@ -205,9 +207,10 @@ class TransactionCardColors {
     final surface = TransactionVisualTokens.legacySurfaceFor(axes.rail);
     final tone = TransactionPalette.toneFor(tx);
     return TransactionCardColors(
-      // Expanded paper fills (16 variants) instead of 3 rail-only colors.
-      background: TransactionVisualTokens.backgroundFor(axes.variant),
-      border: TransactionVisualTokens.borderFor(axes.variant),
+      // Prefer explicit paper (home ledger tab) — else quiet rail wash.
+      background:
+          paperBackground ?? TransactionVisualTokens.backgroundFor(axes.variant),
+      border: paperBorder ?? TransactionVisualTokens.borderFor(axes.variant),
       title: TransactionPalette.inkPrimary,
       subtitle: TransactionPalette.inkSecondary,
       meta: TransactionPalette.inkTertiary,
@@ -222,5 +225,30 @@ class TransactionCardColors {
       surface: surface,
       tone: tone,
     );
+  }
+}
+
+/// Quiet paper fills for home activity list (by balance tab).
+/// Static colors only — no per-row animation (home performance).
+abstract final class HomeActivityPaper {
+  /// Total / internal — soft warm grey paper.
+  static const Color total = Color(0xFFF3F3F4);
+  static const Color totalBorder = Color(0xFFDCDCE0);
+
+  /// On-chain tab — discreet orange wash.
+  static const Color onchain = Color(0xFFF8F1E8);
+  static const Color onchainBorder = Color(0xFFE2D4C4);
+
+  /// Cold tab — discreet blue wash.
+  static const Color cold = Color(0xFFEEF3F8);
+  static const Color coldBorder = Color(0xFFCBD8E4);
+
+  /// [viewName] is `HomeLedgerBalanceView.name` (total|platform|onChain|cold).
+  static (Color bg, Color border) forLedgerViewName(String viewName) {
+    return switch (viewName) {
+      'onChain' => (onchain, onchainBorder),
+      'cold' => (cold, coldBorder),
+      _ => (total, totalBorder), // total + platform (internal)
+    };
   }
 }

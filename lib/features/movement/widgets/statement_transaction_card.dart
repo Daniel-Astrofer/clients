@@ -25,12 +25,17 @@ import 'package:kerosene/features/movement/providers/transaction_provider.dart'
     hide transactionRepositoryProvider;
 import 'package:kerosene/features/movement/screens/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
-import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
 import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 
 enum StatementTransactionCardMode { stacked, separated }
+
+/// How much chrome the card carries.
+///
+/// - [home]: quick scan only — glyph + amount; expand is just actions + "details".
+/// - [full]: extrato — can show field table when expanded.
+enum StatementTransactionCardDensity { home, full }
 
 /// Vertical list of statement cards. Expansion only grows downward so cards
 /// below are pushed away; multiple cards may stay expanded at once.
@@ -84,6 +89,11 @@ class StatementTransactionCard extends ConsumerWidget {
   final bool expanded;
   final VoidCallback? onTap;
   final StatementTransactionCardMode mode;
+  final StatementTransactionCardDensity density;
+
+  /// Optional paper override (home ledger tab: onchain/cold/total).
+  final Color? paperBackground;
+  final Color? paperBorder;
 
   const StatementTransactionCard({
     super.key,
@@ -91,13 +101,17 @@ class StatementTransactionCard extends ConsumerWidget {
     this.expanded = false,
     this.onTap,
     this.mode = StatementTransactionCardMode.stacked,
+    this.density = StatementTransactionCardDensity.full,
+    this.paperBackground,
+    this.paperBorder,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visual = TransactionVisualSpec.fromTransaction(transaction);
     final money = ref.watch(moneyFormatConfigProvider);
     final selectedCurrency = money.currency;
+    // Home skips multi-fiat price watches when not needed for the primary label
+    // path — presentation still may need them for amount format.
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
@@ -107,6 +121,8 @@ class StatementTransactionCard extends ConsumerWidget {
       transaction,
       wallets: wallets,
       accounts: accounts,
+      paperBackground: paperBackground,
+      paperBorder: paperBorder,
     );
     final presentation = TransactionPresentation.fromTransaction(
       context,
@@ -123,11 +139,12 @@ class StatementTransactionCard extends ConsumerWidget {
     final title = presentation.title;
     final counterparty = presentation.subtitle;
     final timestampLabel = presentation.tertiary;
+    final isHome = density == StatementTransactionCardDensity.home;
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
-    final cardPadding = compact ? 16.0 : 20.0;
-    final iconSize = compact ? 42.0 : 48.0;
-    final titleFontSize = compact ? 15.0 : 17.0;
-    final counterpartyFontSize = compact ? 12.0 : 13.0;
+    final cardPadding = isHome ? 14.0 : (compact ? 16.0 : 20.0);
+    final iconSize = isHome ? 40.0 : (compact ? 42.0 : 48.0);
+    final titleFontSize = isHome ? 14.5 : (compact ? 15.0 : 17.0);
+    final counterpartyFontSize = isHome ? 11.5 : (compact ? 12.0 : 13.0);
 
     if (mode == StatementTransactionCardMode.separated) {
       return _BankStatementTransactionRow(
@@ -150,7 +167,6 @@ class StatementTransactionCard extends ConsumerWidget {
       );
     }
 
-    final motion = KeroseneMotion.duration(context, KeroseneMotion.medium);
     final a11yLabel = [
       title,
       counterparty,
@@ -159,143 +175,135 @@ class StatementTransactionCard extends ConsumerWidget {
       if (expanded) 'expandido',
     ].where((s) => s.trim().isNotEmpty).join('. ');
 
-    return Semantics(
-      button: onTap != null,
-      label: a11yLabel,
-      child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(28),
-        child: AnimatedContainer(
-          duration: motion,
-          curve: KeroseneMotion.standard,
-          padding: EdgeInsets.all(cardPadding),
-          decoration: BoxDecoration(
-            color: colors.background,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: colors.border),
-            boxShadow: [
+    // Home: no AnimatedContainer / heavy shadows — list scroll stays cheap.
+    final decoration = BoxDecoration(
+      color: colors.background,
+      borderRadius: BorderRadius.circular(isHome ? 20 : 28),
+      border: Border.all(color: colors.border),
+      boxShadow: isHome
+          ? null
+          : [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 24,
-                offset: const Offset(0, 14),
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
-          ),
-          // Grow only downward: top content stays put, details open below.
-          // Animações mais internas cuidarão da expansão
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _AnimatedRingIconWrapper(
-                      transaction: transaction,
-                      visual: visual,
-                      colors: colors,
-                      iconSize: iconSize,
-                      expanded: expanded,
-                      wallets: wallets,
-                      accounts: accounts,
-                      // Composite: rail primary + direction badge (status = ring).
-                      axes: presentation.axes,
+    );
+
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _ActivityStatusIcon(
+              transaction: transaction,
+              colors: colors,
+              iconSize: iconSize,
+              axes: presentation.axes,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.title,
+                      fontFamily: AppTypography.bodyFontFamily,
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: colors.title,
-                              fontFamily: AppTypography.bodyFontFamily,
-                              fontSize: titleFontSize,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            counterparty,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: colors.subtitle,
-                              fontFamily: AppTypography.bodyFontFamily,
-                              fontSize: counterpartyFontSize,
-                              fontWeight: FontWeight.w400,
-                              letterSpacing: 0,
-                              height: 1.25,
-                            ),
-                          ),
-                        ],
+                  ),
+                  if (!isHome || counterparty.trim().isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      counterparty,
+                      maxLines: isHome ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.subtitle,
+                        fontFamily: AppTypography.bodyFontFamily,
+                        fontSize: counterpartyFontSize,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0,
+                        height: 1.25,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          amountLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.financial(
-                            color: colors.title, // Ou TransactionPalette.inkPrimary se preferir
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Bottom-right yellow confirmation ball removed —
-                        // confirmation progress lives only on the top-left ring.
-                        Text(
-                          timestampLabel,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            color: colors.meta,
-                            fontFamily: AppTypography.bodyFontFamily,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  amountLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.financial(
+                    color: colors.title,
+                    fontSize: isHome ? 15 : 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 300),
-                  firstCurve: Curves.easeOutCubic,
-                  secondCurve: Curves.easeOutCubic,
-                  sizeCurve: Curves.easeOutCubic,
-                  alignment: Alignment.topCenter,
-                  crossFadeState: expanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  firstChild: const SizedBox(width: double.infinity, height: 0),
-                  secondChild: Padding(
-                    padding: const EdgeInsets.only(top: 22),
-                    child: _TransactionDetailsTable(
-                      transaction: transaction,
-                      presentation: presentation,
-                      colors: colors,
-                    ),
+                const SizedBox(height: 4),
+                Text(
+                  timestampLabel,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: colors.meta,
+                    fontFamily: AppTypography.bodyFontFamily,
+                    fontSize: isHome ? 11 : 12,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0,
                   ),
                 ),
               ],
             ),
+          ],
+        ),
+        if (expanded) ...[
+          const SizedBox(height: 14),
+          if (!isHome)
+            _TransactionDetailsTable(
+              transaction: transaction,
+              presentation: presentation,
+              colors: colors,
+            )
+          else
+            _HomeQuickExpand(
+              transaction: transaction,
+              colors: colors,
+            ),
+        ],
+      ],
+    );
+
+    return Semantics(
+      button: onTap != null,
+      label: a11yLabel,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(isHome ? 20 : 28),
+          child: Container(
+            padding: EdgeInsets.all(cardPadding),
+            decoration: decoration,
+            child: body,
+          ),
         ),
       ),
-    ),
     );
   }
-
 }
 
 List<Wallet> _walletsFromRef(WidgetRef ref) {
@@ -561,6 +569,29 @@ class _TransactionDetailsTable extends StatelessWidget {
   }
 }
 
+/// Home expand: only cancel/archive + open full dossier — no field dump.
+class _HomeQuickExpand extends StatelessWidget {
+  final Transaction transaction;
+  final TransactionCardColors colors;
+
+  const _HomeQuickExpand({
+    required this.transaction,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ActivityExpandedActions(transaction: transaction, dark: false),
+        const SizedBox(height: 4),
+        _SeeDetailsLink(transaction: transaction, dark: false),
+      ],
+    );
+  }
+}
+
 /// Cancel / Archive now on expanded home + extrato cards.
 class _ActivityExpandedActions extends ConsumerStatefulWidget {
   final Transaction transaction;
@@ -815,39 +846,27 @@ class _SeeDetailsLink extends StatelessWidget {
   }
 }
 
-class _AnimatedRingIconWrapper extends StatefulWidget {
+/// Status ring + glyph + corner badge (✓ / ✕ / 6). Never replaces glyph with "OK"/"0/6".
+class _ActivityStatusIcon extends StatefulWidget {
   final Transaction transaction;
-  final TransactionVisualSpec visual;
   final TransactionCardColors colors;
   final double iconSize;
-  final bool expanded;
-  final List<Wallet> wallets;
-  final List<BitcoinAccount> accounts;
   final TransactionAxes? axes;
 
-  const _AnimatedRingIconWrapper({
+  const _ActivityStatusIcon({
     required this.transaction,
-    required this.visual,
     required this.colors,
     required this.iconSize,
-    required this.expanded,
-    this.wallets = const [],
-    this.accounts = const [],
     this.axes,
   });
 
   @override
-  State<_AnimatedRingIconWrapper> createState() =>
-      _AnimatedRingIconWrapperState();
+  State<_ActivityStatusIcon> createState() => _ActivityStatusIconState();
 }
 
-class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
-    with TickerProviderStateMixin {
-  /// Yellow full-ring spin at 0 backend confirmations.
-  late final AnimationController _spinController;
-
-  /// Green "loading" pulse on the next confirmation segment.
-  late final AnimationController _loadController;
+class _ActivityStatusIconState extends State<_ActivityStatusIcon>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _spinController;
 
   static const Color _yellow = Color(0xFFE0A012);
   static const Color _green = Color(0xFF34C759);
@@ -856,111 +875,113 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
   @override
   void initState() {
     super.initState();
-    _spinController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    );
-    _loadController = AnimationController(
-      vsync: this,
-      duration: KeroseneMotion.loop,
-    );
     _syncAnimations();
   }
 
   @override
-  void didUpdateWidget(covariant _AnimatedRingIconWrapper oldWidget) {
+  void didUpdateWidget(covariant _ActivityStatusIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.transaction.confirmations !=
             widget.transaction.confirmations ||
         oldWidget.transaction.status != widget.transaction.status ||
-        oldWidget.transaction.isUnconfirmedExpired !=
-            widget.transaction.isUnconfirmedExpired) {
+        oldWidget.transaction.displayStatus !=
+            widget.transaction.displayStatus) {
       _syncAnimations();
     }
   }
 
   void _syncAnimations() {
     final mode = _ringMode(widget.transaction);
-    switch (mode) {
-      case _RingMode.yellowSpin:
-        if (!_spinController.isAnimating) _spinController.repeat();
-        _loadController
-          ..stop()
-          ..value = 0;
-      case _RingMode.greenProgress:
-        _spinController
-          ..stop()
-          ..value = 0;
-        if (!_loadController.isAnimating) _loadController.repeat(reverse: true);
-      case _RingMode.settled:
-      case _RingMode.failed:
-        _spinController
-          ..stop()
-          ..value = 0;
-        _loadController
-          ..stop()
-          ..value = 0;
+    final needsSpin =
+        mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
+    if (needsSpin) {
+      _spinController ??= AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1200),
+      )..repeat();
+      if (!(_spinController?.isAnimating ?? false)) {
+        _spinController?.repeat();
+      }
+    } else {
+      _spinController?.stop();
+      _spinController?.dispose();
+      _spinController = null;
     }
   }
 
   @override
   void dispose() {
-    _spinController.dispose();
-    _loadController.dispose();
+    _spinController?.dispose();
     super.dispose();
   }
 
-  /// On-chain confs = **backend only**. Lightning/internal never use N/6 confs.
   int _backendConfirmations(Transaction tx) {
     if (tx.isLightningEffective ||
         tx.isInternal ||
         !tx.showsOnchainConfirmations) {
       return 0;
     }
-    if (tx.isUnconfirmedExpired ||
+    if (tx.isCancelled ||
         tx.displayStatus == TransactionStatus.failed ||
-        tx.displayStatus == TransactionStatus.cancelled ||
-        tx.displayStatus == TransactionStatus.reconciling) {
+        tx.isUnconfirmedExpired) {
       return 0;
     }
     return tx.confirmations.clamp(0, tx.onchainConfirmationTarget);
   }
 
   _RingMode _ringMode(Transaction tx) {
-    if (tx.isUnconfirmedExpired ||
+    if (tx.isCancelled ||
         tx.displayStatus == TransactionStatus.failed ||
-        tx.displayStatus == TransactionStatus.cancelled) {
+        tx.isUnconfirmedExpired) {
       return _RingMode.failed;
     }
     if (tx.displayStatus == TransactionStatus.reconciling) {
       return _RingMode.yellowSpin;
     }
-    // Lightning / internal: no block-conf ring segments — settled or soft pending.
+    // Internal / Lightning: no N/6 ring — settled = green ring, pending = soft spin.
     if (tx.isLightningEffective ||
         tx.isInternal ||
         !tx.showsOnchainConfirmations) {
-      if (tx.displayStatus == TransactionStatus.confirmed) {
+      if (tx.displayStatus == TransactionStatus.confirmed || tx.isConfirmed) {
         return _RingMode.settled;
       }
       if (tx.displayStatus == TransactionStatus.pending ||
           tx.displayStatus == TransactionStatus.confirming) {
-        // Soft amber spin = "em processamento", never 0/6 conf UI.
         return _RingMode.yellowSpin;
       }
       return _RingMode.settled;
     }
     final conf = tx.confirmations;
     final target = tx.onchainConfirmationTarget;
-    if (conf <= 0 &&
-        (tx.displayStatus == TransactionStatus.pending ||
-            tx.displayStatus == TransactionStatus.confirming)) {
-      return _RingMode.yellowSpin;
-    }
-    if (conf >= target || tx.displayStatus == TransactionStatus.confirmed) {
+    if (conf >= target ||
+        tx.displayStatus == TransactionStatus.confirmed ||
+        tx.isConfirmed) {
       return _RingMode.settled;
     }
     if (conf > 0) return _RingMode.greenProgress;
+    if (tx.displayStatus == TransactionStatus.pending ||
+        tx.displayStatus == TransactionStatus.confirming) {
+      return _RingMode.yellowSpin;
+    }
     return _RingMode.settled;
+  }
+
+  Widget _cornerBadge({
+    required double size,
+    required Color color,
+    required Widget child,
+  }) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(color: Colors.white, width: 1.2),
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
   }
 
   @override
@@ -969,33 +990,42 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
     final mode = _ringMode(tx);
     final conf = _backendConfirmations(tx);
     final target = tx.onchainConfirmationTarget;
-    final isSettledVisual = mode == _RingMode.settled;
+    final spin = _spinController;
+    final size = widget.iconSize * 0.36;
+    final onchain = tx.showsOnchainConfirmations &&
+        !tx.isInternal &&
+        !tx.isLightningEffective;
+    final failed = mode == _RingMode.failed || tx.isCancelled;
+    final settled = mode == _RingMode.settled;
+    final fullOnchain =
+        settled && onchain && (conf >= target || tx.isConfirmed);
+
+    final ring = CustomPaint(
+      size: Size(widget.iconSize, widget.iconSize),
+      painter: _RingConfirmationPainter(
+        mode: mode,
+        confirmations: conf,
+        target: target,
+        yellowColor: _yellow,
+        greenColor: _green,
+        failedColor: _red,
+        inactiveColor: widget.colors.iconWellBorder,
+        spinValue: spin?.value ?? 0,
+        loadValue: spin?.value ?? 0,
+      ),
+    );
 
     return SizedBox(
       width: widget.iconSize,
       height: widget.iconSize,
       child: Stack(
+        clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          AnimatedBuilder(
-            animation: Listenable.merge([_spinController, _loadController]),
-            builder: (context, _) {
-              return CustomPaint(
-                size: Size(widget.iconSize, widget.iconSize),
-                painter: _RingConfirmationPainter(
-                  mode: mode,
-                  confirmations: conf,
-                  target: target,
-                  yellowColor: _yellow,
-                  greenColor: _green,
-                  failedColor: _red,
-                  inactiveColor: widget.colors.iconWellBorder,
-                  spinValue: _spinController.value,
-                  loadValue: _loadController.value,
-                ),
-              );
-            },
-          ),
+          if (spin != null)
+            AnimatedBuilder(animation: spin, builder: (_, __) => ring)
+          else
+            ring,
           Container(
             width: widget.iconSize * 0.78,
             height: widget.iconSize * 0.78,
@@ -1004,48 +1034,102 @@ class _AnimatedRingIconWrapperState extends State<_AnimatedRingIconWrapper>
               color: widget.colors.iconWell,
             ),
             alignment: Alignment.center,
-            child: AnimatedCrossFade(
-              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
-              crossFadeState: widget.expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              firstChild: ActivityGlyph(
-                spec: widget.axes != null
-                    ? ActivityGlyphSpec.fromAxes(widget.axes!)
-                    : ActivityGlyphSpec.fromTransaction(tx),
-                size: widget.iconSize * 0.72,
-                showWell: false,
-                iconColor: widget.colors.icon,
-                badgeWellColor: widget.colors.iconWellBorder,
-                badgeIconColor: widget.colors.icon,
-                wellBorder: widget.colors.iconWellBorder,
+            // Always keep the product/rail glyph — never swap for "OK" / "0/6".
+            child: ActivityGlyph(
+              spec: widget.axes != null
+                  ? ActivityGlyphSpec.fromAxes(widget.axes!)
+                  : ActivityGlyphSpec.fromTransaction(tx),
+              size: widget.iconSize * 0.72,
+              showWell: false,
+              iconColor: widget.colors.icon,
+              badgeWellColor: widget.colors.iconWellBorder,
+              badgeIconColor: widget.colors.icon,
+              wellBorder: widget.colors.iconWellBorder,
+            ),
+          ),
+          // Status corner on parent icon (bottom-right).
+          if (failed)
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: _cornerBadge(
+                size: size,
+                color: _red,
+                child: Icon(
+                  Icons.close_rounded,
+                  size: size * 0.62,
+                  color: Colors.white,
+                ),
               ),
-              secondChild: Text(
-                // Never show N/6 for Lightning or internal.
-                (tx.isLightningEffective ||
-                        tx.isInternal ||
-                        !tx.showsOnchainConfirmations)
-                    ? (tx.isUnconfirmedExpired ||
-                            tx.displayStatus == TransactionStatus.failed
-                        ? '!'
-                        : isSettledVisual
-                            ? 'OK'
-                            : '…')
-                    : isSettledVisual && conf <= 0
-                        ? 'OK'
-                        : tx.isUnconfirmedExpired
-                            ? '!'
-                            : '$conf/$target',
-                style: TextStyle(
-                  color: widget.colors.icon,
-                  fontFamily: AppTypography.bodyFontFamily,
-                  fontWeight: FontWeight.w600,
-                  fontSize: widget.iconSize * 0.28,
-                  letterSpacing: 0,
+            )
+          else if (fullOnchain) ...[
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: _cornerBadge(
+                size: size,
+                color: _green,
+                child: Icon(
+                  Icons.check_rounded,
+                  size: size * 0.62,
+                  color: Colors.white,
                 ),
               ),
             ),
-          ),
+            Positioned(
+              right: -4,
+              bottom: -12,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 3.5, vertical: 0.5),
+                decoration: BoxDecoration(
+                  color: _green,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                child: Text(
+                  '${target.clamp(1, 6)}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: size * 0.36,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (settled)
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: _cornerBadge(
+                size: size,
+                color: _green,
+                child: Icon(
+                  Icons.check_rounded,
+                  size: size * 0.62,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          else if (mode == _RingMode.greenProgress && onchain && conf > 0)
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: _cornerBadge(
+                size: size,
+                color: _green,
+                child: Text(
+                  '$conf',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: size * 0.42,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

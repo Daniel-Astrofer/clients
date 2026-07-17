@@ -6,6 +6,7 @@ import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_acc
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
+import 'package:kerosene/features/movement/widgets/transaction_palette.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -278,6 +279,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
+    final ledgerView = ref.watch(homeLedgerBalanceViewProvider);
+    final paper = HomeActivityPaper.forLedgerViewName(ledgerView.name);
 
     return Semantics(
       label: semanticLabel,
@@ -287,6 +290,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
         transaction: tx,
         expanded: expanded,
         mode: StatementTransactionCardMode.stacked,
+        density: StatementTransactionCardDensity.home,
+        paperBackground: paper.$1,
+        paperBorder: paper.$2,
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {
