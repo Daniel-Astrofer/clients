@@ -39,7 +39,7 @@ class HomeActivitySurfaceStyle {
     required this.glowTertiary,
   });
 
-  /// [viewName] is `HomeLedgerBalanceView.name`.
+  /// Fully opaque paper — never transparent (avoids black list showing through).
   static HomeActivitySurfaceStyle forLedgerViewName(String viewName) {
     return switch (viewName) {
       'onChain' => const HomeActivitySurfaceStyle(
@@ -55,9 +55,9 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF100600),
           action: Color(0xFF1A0C02),
           invertInk: true,
-          glowPrimary: Color(0xFFFFF6E0),
-          glowSecondary: Color(0xFFFFCC66),
-          glowTertiary: Color(0xFFFF9A2E),
+          glowPrimary: Color(0xFFFFF8E8),
+          glowSecondary: Color(0xFFFFD078),
+          glowTertiary: Color(0xFFFFA020),
         ),
       'cold' => const HomeActivitySurfaceStyle(
           cardTop: Color(0xFF8EC8F0),
@@ -72,9 +72,9 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF040C14),
           action: Color(0xFF061018),
           invertInk: true,
-          glowPrimary: Color(0xFFF2FAFF),
-          glowSecondary: Color(0xFF9FD0F5),
-          glowTertiary: Color(0xFF3D8FCB),
+          glowPrimary: Color(0xFFF5FBFF),
+          glowSecondary: Color(0xFFA8D8F8),
+          glowTertiary: Color(0xFF4A9AD4),
         ),
       'platform' => const HomeActivitySurfaceStyle(
           cardTop: Color(0xFFE8ECF2),
@@ -90,8 +90,8 @@ class HomeActivitySurfaceStyle {
           action: Color(0xFF0A0A0C),
           invertInk: false,
           glowPrimary: Color(0xFFFFFFFF),
-          glowSecondary: Color(0xFFD0D8E8),
-          glowTertiary: Color(0xFFA8B4C8),
+          glowSecondary: Color(0xFFD8DEE8),
+          glowTertiary: Color(0xFFB0BAC8),
         ),
       _ => const HomeActivitySurfaceStyle(
           cardTop: Color(0xFFFAFAFB),
@@ -107,17 +107,17 @@ class HomeActivitySurfaceStyle {
           action: Color(0xFF0A0A0C),
           invertInk: false,
           glowPrimary: Color(0xFFFFFFFF),
-          glowSecondary: Color(0xFFE8E8F0),
-          glowTertiary: Color(0xFFC8C8D4),
+          glowSecondary: Color(0xFFECECF2),
+          glowTertiary: Color(0xFFD0D0DA),
         ),
     };
   }
 }
 
-/// Single shared moving glow painted **only inside** each card (ClipRRect).
+/// Moving light **on top of the card paper**, clipped by the card itself.
 ///
-/// Same phase for every card → reads as one light drifting through the list.
-/// Black gaps between cards never receive paint.
+/// Must only be used as a child of a [Container] with opaque [BoxDecoration]
+/// and `clipBehavior: Clip.antiAlias`. Never place this on the list background.
 class HomeActivityCardGlow extends StatelessWidget {
   final HomeActivitySurfaceStyle style;
   final Animation<double> phase;
@@ -137,16 +137,18 @@ class HomeActivityCardGlow extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
-        if (w <= 0 || h <= 0) return const SizedBox.shrink();
+        if (!w.isFinite || !h.isFinite || w <= 0 || h <= 0) {
+          return const SizedBox.shrink();
+        }
 
         if (reduce) {
           return DecoratedBox(
             decoration: BoxDecoration(
               gradient: RadialGradient(
-                center: const Alignment(0, -0.2),
+                center: const Alignment(0.0, -0.25),
                 radius: 1.0,
                 colors: [
-                  style.glowPrimary.withValues(alpha: 0.45),
+                  style.glowPrimary.withValues(alpha: 0.5),
                   style.glowSecondary.withValues(alpha: 0.0),
                 ],
               ),
@@ -157,49 +159,54 @@ class HomeActivityCardGlow extends StatelessWidget {
         return AnimatedBuilder(
           animation: phase,
           builder: (context, _) {
-            // One coherent light path for all cards (same phase).
             final t = phase.value * 2 * math.pi;
-            final ax = 0.35 * math.sin(t);
-            final ay = -0.15 + 0.28 * math.cos(t * 0.85);
+            // Seamless drift — same phase for every card = one shared light path.
+            final ax = 0.42 * math.sin(t);
+            final ay = -0.2 + 0.32 * math.cos(t * 0.88);
             final pulse =
-                0.55 + 0.45 * (0.5 + 0.5 * math.sin(t * 1.1));
+                0.6 + 0.4 * (0.5 + 0.5 * math.sin(t * 1.05));
             final reach =
-                0.80 + 0.30 * (0.5 + 0.5 * math.cos(t * 0.75));
-            final dim = math.min(w, h) * 1.15 * reach;
+                0.85 + 0.25 * (0.5 + 0.5 * math.cos(t * 0.7));
+            final dim = math.min(w, h) * 1.2 * reach;
 
             return Stack(
               fit: StackFit.expand,
+              clipBehavior: Clip.hardEdge,
               children: [
-                // Soft fill so the card always has depth.
+                // Ambient depth on the paper.
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      center: Alignment(ax * 0.5, ay * 0.6 - 0.2),
-                      radius: 1.25,
+                      center: Alignment(ax * 0.4, ay * 0.5 - 0.15),
+                      radius: 1.15,
                       colors: [
-                        style.glowPrimary.withValues(alpha: 0.35 * pulse),
-                        style.glowSecondary.withValues(alpha: 0.10 * pulse),
-                        style.glowTertiary.withValues(alpha: 0),
+                        style.glowPrimary.withValues(alpha: 0.4 * pulse),
+                        style.glowSecondary.withValues(alpha: 0.12 * pulse),
+                        const Color(0x00000000),
                       ],
-                      stops: const [0.0, 0.5, 1.0],
+                      stops: const [0.0, 0.55, 1.0],
                     ),
                   ),
                 ),
-                // Main moving highlight (the “brilho”).
+                // Moving highlight — fully inside the card bounds via parent clip.
                 Align(
                   alignment: Alignment(ax, ay),
-                  child: Container(
-                    width: dim,
-                    height: dim,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          style.glowPrimary.withValues(alpha: 0.65 * pulse),
-                          style.glowSecondary.withValues(alpha: 0.35 * pulse),
-                          style.glowTertiary.withValues(alpha: 0),
-                        ],
-                        stops: const [0.0, 0.4, 1.0],
+                  child: OverflowBox(
+                    maxWidth: dim,
+                    maxHeight: dim,
+                    child: Container(
+                      width: dim,
+                      height: dim,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            style.glowPrimary.withValues(alpha: 0.7 * pulse),
+                            style.glowSecondary.withValues(alpha: 0.35 * pulse),
+                            const Color(0x00000000),
+                          ],
+                          stops: const [0.0, 0.38, 1.0],
+                        ),
                       ),
                     ),
                   ),

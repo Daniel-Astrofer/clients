@@ -191,7 +191,8 @@ class StatementTransactionCard extends ConsumerWidget {
       if (expanded) 'expandido',
     ].where((s) => s.trim().isNotEmpty).join('. ');
 
-    // Home: vertical card gradient; colored tabs use richer chroma + border.
+    // Opaque card paper only — never transparent (would show black list behind).
+    final radius = BorderRadius.circular(isHome ? 20 : 28);
     final decoration = BoxDecoration(
       gradient: surface != null
           ? LinearGradient(
@@ -201,7 +202,7 @@ class StatementTransactionCard extends ConsumerWidget {
             )
           : null,
       color: surface == null ? colors.background : null,
-      borderRadius: BorderRadius.circular(isHome ? 20 : 28),
+      borderRadius: radius,
       border: Border.all(
         color: surface?.border ?? colors.border,
         width: surface != null && surface.invertInk ? 1.4 : 1,
@@ -327,27 +328,27 @@ class StatementTransactionCard extends ConsumerWidget {
       ],
     );
 
-    final radius = BorderRadius.circular(isHome ? 20 : 28);
-    final showGlow = isHome &&
-        surface != null &&
-        interiorGlowPhase != null;
+    final showGlow =
+        isHome && surface != null && interiorGlowPhase != null;
 
-    // Glow is ONLY inside the card (ClipRRect). Black between cards is untouched.
+    // Critical: Container.decoration is the opaque card body.
+    // clipBehavior clips the glow to that shape — black list gaps get no paint.
     return Semantics(
       button: onTap != null,
       label: a11yLabel,
       child: Material(
         color: Colors.transparent,
+        clipBehavior: Clip.none,
         child: InkWell(
           onTap: onTap,
           borderRadius: radius,
-          child: ClipRRect(
-            borderRadius: radius,
+          child: Container(
+            decoration: decoration,
+            clipBehavior: Clip.antiAlias,
             child: Stack(
+              fit: StackFit.passthrough,
               children: [
-                Positioned.fill(
-                  child: DecoratedBox(decoration: decoration),
-                ),
+                // Glow is a child of the opaque decorated container → can't leave the card.
                 if (showGlow)
                   Positioned.fill(
                     child: HomeActivityCardGlow(
