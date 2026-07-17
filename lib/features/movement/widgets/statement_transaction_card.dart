@@ -203,6 +203,7 @@ class StatementTransactionCard extends ConsumerWidget {
               colors: colors,
               iconSize: iconSize,
               axes: presentation.axes,
+              expanded: expanded,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -296,7 +297,9 @@ class StatementTransactionCard extends ConsumerWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(isHome ? 20 : 28),
+          // Allow check / conf badges to paint outside the icon box.
           child: Container(
+            clipBehavior: Clip.none,
             padding: EdgeInsets.all(cardPadding),
             decoration: decoration,
             child: body,
@@ -531,40 +534,28 @@ class _TransactionDetailsTable extends StatelessWidget {
     final rows = presentation.expandedFields;
     final labelColor = dark ? TransactionPalette.inkTertiary : Colors.black;
     final valueColor = dark ? TransactionPalette.inkOnDark : Colors.black;
-    final divider = dark ? AppColors.hexFF222222 : colors.divider;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: divider)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 14),
-        child: Column(
-          children: [
-            for (var index = 0; index < rows.length; index++) ...[
-              if (index > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Divider(height: 1, color: divider),
-                ),
-              Padding(
-                padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
-                child: _PresentationFieldRow(
-                  field: rows[index],
-                  labelColor: labelColor,
-                  valueColor: valueColor,
-                ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        children: [
+          for (var index = 0; index < rows.length; index++)
+            Padding(
+              padding: EdgeInsets.only(top: index == 0 ? 0 : 10),
+              child: _PresentationFieldRow(
+                field: rows[index],
+                labelColor: labelColor,
+                valueColor: valueColor,
               ),
-            ],
-            const SizedBox(height: 16),
-            _ActivityExpandedActions(
-              transaction: transaction,
-              dark: dark,
             ),
-            const SizedBox(height: 8),
-            _SeeDetailsLink(transaction: transaction, dark: dark),
-          ],
-        ),
+          const SizedBox(height: 16),
+          _ActivityExpandedActions(
+            transaction: transaction,
+            dark: dark,
+          ),
+          const SizedBox(height: 8),
+          _SeeDetailsLink(transaction: transaction, dark: dark),
+        ],
       ),
     );
   }
@@ -589,33 +580,15 @@ class _HomeQuickExpand extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (rows.isNotEmpty) ...[
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: colors.divider)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Column(
-                children: [
-                  for (var i = 0; i < rows.length; i++) ...[
-                    if (i > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Divider(height: 1, color: colors.divider),
-                      ),
-                    Padding(
-                      padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
-                      child: _PresentationFieldRow(
-                        field: rows[i],
-                        labelColor: Colors.black.withValues(alpha: 0.55),
-                        valueColor: Colors.black,
-                      ),
-                    ),
-                  ],
-                ],
+          for (var i = 0; i < rows.length; i++)
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 4 : 10),
+              child: _PresentationFieldRow(
+                field: rows[i],
+                labelColor: Colors.black.withValues(alpha: 0.55),
+                valueColor: Colors.black,
               ),
             ),
-          ),
           const SizedBox(height: 12),
         ],
         _ActivityExpandedActions(transaction: transaction, dark: false),
@@ -886,12 +859,15 @@ class _ActivityStatusIcon extends StatefulWidget {
   final TransactionCardColors colors;
   final double iconSize;
   final TransactionAxes? axes;
+  /// When true, status badge is larger so ✓ is obvious on open cards.
+  final bool expanded;
 
   const _ActivityStatusIcon({
     required this.transaction,
     required this.colors,
     required this.iconSize,
     this.axes,
+    this.expanded = false,
   });
 
   @override
@@ -970,6 +946,29 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         !tx.showsOnchainConfirmations;
   }
 
+  bool _isConfirmedLike(Transaction tx) {
+    if (tx.isCancelled ||
+        tx.displayStatus == TransactionStatus.failed ||
+        tx.isUnconfirmedExpired) {
+      return false;
+    }
+    if (tx.displayStatus == TransactionStatus.confirmed || tx.isConfirmed) {
+      return true;
+    }
+    // Instant rails settle without block confs.
+    if (_isInstantRail(tx) &&
+        tx.displayStatus != TransactionStatus.pending &&
+        tx.displayStatus != TransactionStatus.confirming &&
+        tx.displayStatus != TransactionStatus.reconciling) {
+      return true;
+    }
+    if (!_isInstantRail(tx) &&
+        tx.confirmations >= tx.onchainConfirmationTarget) {
+      return true;
+    }
+    return false;
+  }
+
   _RingMode _ringMode(Transaction tx) {
     if (tx.isCancelled ||
         tx.displayStatus == TransactionStatus.failed ||
@@ -981,9 +980,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     }
     // Internal / Lightning: solid green when settled (not segmented 6-slice).
     if (_isInstantRail(tx)) {
-      if (tx.displayStatus == TransactionStatus.confirmed || tx.isConfirmed) {
-        return _RingMode.settledSolid;
-      }
+      if (_isConfirmedLike(tx)) return _RingMode.settledSolid;
       if (tx.displayStatus == TransactionStatus.pending ||
           tx.displayStatus == TransactionStatus.confirming) {
         return _RingMode.yellowSpin;
@@ -992,9 +989,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     }
     final conf = tx.confirmations;
     final target = tx.onchainConfirmationTarget;
-    if (conf >= target ||
-        tx.displayStatus == TransactionStatus.confirmed ||
-        tx.isConfirmed) {
+    if (_isConfirmedLike(tx) || conf >= target) {
       return _RingMode.settled;
     }
     if (conf > 0) return _RingMode.greenProgress;
@@ -1030,14 +1025,18 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     final conf = _backendConfirmations(tx);
     final target = tx.onchainConfirmationTarget;
     final spin = _spinController;
-    final size = widget.iconSize * 0.36;
+    // Larger badge when the card is open so ✓ is unmistakable.
+    final size = widget.iconSize * (widget.expanded ? 0.44 : 0.38);
     final onchain = !_isInstantRail(tx);
     final failed = mode == _RingMode.failed || tx.isCancelled;
-    // Keep check on all confirmed (solid internal + segmented on-chain).
-    final settled =
-        mode == _RingMode.settled || mode == _RingMode.settledSolid;
-    final fullOnchain =
-        mode == _RingMode.settled && onchain && (conf >= target || tx.isConfirmed);
+    final settled = mode == _RingMode.settled ||
+        mode == _RingMode.settledSolid ||
+        _isConfirmedLike(tx);
+    final fullOnchain = settled &&
+        onchain &&
+        (conf >= target ||
+            tx.isConfirmed ||
+            tx.displayStatus == TransactionStatus.confirmed);
 
     Widget buildRing({required double spinValue, required double loadValue}) {
       return CustomPaint(
@@ -1056,9 +1055,16 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
       );
     }
 
+    Widget statusBadge({
+      required Color color,
+      required Widget child,
+    }) {
+      return _cornerBadge(size: size, color: color, child: child);
+    }
+
     return SizedBox(
-      width: widget.iconSize,
-      height: widget.iconSize,
+      width: widget.iconSize + (widget.expanded ? 8 : 4),
+      height: widget.iconSize + (widget.expanded ? 10 : 4),
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
@@ -1082,7 +1088,6 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
               color: widget.colors.iconWell,
             ),
             alignment: Alignment.center,
-            // Always keep the product/rail glyph — never swap for "OK" / "0/6".
             child: ActivityGlyph(
               spec: widget.axes != null
                   ? ActivityGlyphSpec.fromAxes(widget.axes!)
@@ -1095,51 +1100,56 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
               wellBorder: widget.colors.iconWellBorder,
             ),
           ),
-          // Status corner on parent icon (bottom-right) — check stays when expanded.
+          // ✓ / ✕ always painted on top — larger when card is expanded.
           if (failed)
             Positioned(
-              right: -2,
-              bottom: -2,
-              child: _cornerBadge(
-                size: size,
+              right: 0,
+              bottom: 0,
+              child: statusBadge(
                 color: _red,
                 child: Icon(
                   Icons.close_rounded,
-                  size: size * 0.62,
+                  size: size * 0.65,
                   color: Colors.white,
                 ),
               ),
             )
           else if (fullOnchain) ...[
             Positioned(
-              right: -2,
-              bottom: -2,
-              child: _cornerBadge(
-                size: size,
+              right: 0,
+              bottom: widget.expanded ? 8 : 0,
+              child: statusBadge(
                 color: _green,
                 child: Icon(
                   Icons.check_rounded,
-                  size: size * 0.62,
+                  size: size * 0.65,
                   color: Colors.white,
                 ),
               ),
             ),
             Positioned(
-              right: -4,
-              bottom: -12,
+              right: 0,
+              bottom: 0,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 3.5, vertical: 0.5),
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   color: _green,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.white, width: 1),
+                  border: Border.all(color: Colors.white, width: 1.2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
                 ),
                 child: Text(
                   '${target.clamp(1, 6)}',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: size * 0.36,
+                    fontSize: size * 0.34,
                     fontWeight: FontWeight.w800,
                     height: 1.1,
                   ),
@@ -1148,24 +1158,22 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
             ),
           ] else if (settled)
             Positioned(
-              right: -2,
-              bottom: -2,
-              child: _cornerBadge(
-                size: size,
+              right: 0,
+              bottom: 0,
+              child: statusBadge(
                 color: _green,
                 child: Icon(
                   Icons.check_rounded,
-                  size: size * 0.62,
+                  size: size * 0.65,
                   color: Colors.white,
                 ),
               ),
             )
           else if (mode == _RingMode.greenProgress && onchain && conf > 0)
             Positioned(
-              right: -2,
-              bottom: -2,
-              child: _cornerBadge(
-                size: size,
+              right: 0,
+              bottom: 0,
+              child: statusBadge(
                 color: _green,
                 child: Text(
                   '$conf',
