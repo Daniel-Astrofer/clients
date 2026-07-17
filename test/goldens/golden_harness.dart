@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,8 @@ late SharedPreferences goldenSharedPreferences;
 
 Future<void> initializeGoldenHarness() async {
   GoogleFonts.config.allowRuntimeFetching = false;
+  // Prevent grey “text bars” — load fonts from the app FontManifest/assets.
+  await loadAppFonts();
   SharedPreferences.setMockInitialValues(const {});
   FlutterSecureStorage.setMockInitialValues({});
   goldenSharedPreferences = await SharedPreferences.getInstance();

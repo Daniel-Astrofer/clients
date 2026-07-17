@@ -1208,7 +1208,9 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
               ? 'Pagamento Lightning'
               : isInternal
                   ? 'transferencia interna'
-                  : 'saque para carteira externa'),
+                  // Backend may rewrite known platform addresses to the recipient's
+                  // custodial/cold sink so they get deposit notification + history.
+                  : 'Envio on-chain'),
       if (totpCode != null && totpCode.trim().isNotEmpty)
         'totpCode': totpCode.trim(),
       if (passkeyAssertionJson != null &&

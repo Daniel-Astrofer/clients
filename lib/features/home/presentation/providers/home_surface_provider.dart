@@ -15,6 +15,7 @@ import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/domain/entities/home_surface.dart';
 import 'package:kerosene/features/home/domain/home_stage_fingerprint.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
+import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
 /// Live home surface state (HTTP snapshot + WebSocket patches).
 final homeSurfaceProvider =
@@ -145,7 +146,38 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   }
 
   void applyEventJson(Map<String, dynamic> json) {
-    applyEvent(HomeUiEvent.fromJson(json));
+    final event = HomeUiEvent.fromJson(json);
+    applyEvent(event);
+
+    // Scene-Driven path: pure scene payloads + clear, without SDUI widgets.
+    try {
+      switch (event.type) {
+        case HomeUiEventType.scene:
+          if (event.payload.isNotEmpty) {
+            ref
+                .read(homeSceneProvider.notifier)
+                .presentFromJson(event.payload);
+          }
+        case HomeUiEventType.sceneClear:
+          ref.read(homeSceneProvider.notifier).clearOverride();
+        case HomeUiEventType.stageClear:
+          // Surface stage cleared — drop any pure-scene override too.
+          ref.read(homeSceneProvider.notifier).clearOverride();
+        case HomeUiEventType.snapshot:
+        case HomeUiEventType.patch:
+          // If snapshot/patch embeds a top-level `scene`, present it.
+          final embedded = event.payload['scene'];
+          if (embedded is Map) {
+            ref
+                .read(homeSceneProvider.notifier)
+                .presentFromJson(Map<String, dynamic>.from(embedded));
+          }
+        default:
+          break;
+      }
+    } catch (e, st) {
+      debugPrint('[homeSurface] scene event bridge failed: $e\n$st');
+    }
   }
 
   /// Hide stage immediately after the user finished reading (ONCE).

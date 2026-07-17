@@ -62,6 +62,7 @@ import 'package:kerosene/features/notifications/presentation/screens/notificatio
 
 import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
+import 'package:kerosene/features/home/presentation/widgets/home_aurora_background.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_greeting_slot.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_education_host.dart';
@@ -208,9 +209,14 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     homeRouteActiveController = ref.read(homeRouteActiveProvider.notifier);
-    Future.microtask(() => homeRouteActiveController.state = true);
+    // Post-frame (not raw microtask): avoids writing provider state while the
+    // element is still mounting, and skips work if we unmounted already
+    // (e.g. off-screen gallery capture).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      try {
+        homeRouteActiveController.state = true;
+      } catch (_) {}
       _refreshHomeData();
     });
   }
@@ -218,8 +224,16 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    Future.microtask(() => homeRouteActiveController.state = false);
+    // NEVER write providers synchronously in dispose during tree teardown
+    // (hot restart / route pop) — Riverpod notifies listeners that are already
+    // defunct → `_lifecycleState != defunct` crashes.
+    final routeActive = homeRouteActiveController;
     super.dispose();
+    Future<void>(() {
+      try {
+        routeActive.state = false;
+      } catch (_) {}
+    });
   }
 
   @override
@@ -561,15 +575,20 @@ class HomeScreenState extends ConsumerState<HomeScreen>
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        // Same solid as header top → overscroll is continuous (no black cut).
+        // Same solid as header top → overscroll is continuous (no hard cut).
         backgroundColor: scaffoldSolid,
         body: Stack(
           fit: StackFit.expand,
           children: [
+            // Static aurora — own repaint layer (never dirty on scroll).
+            const Positioned.fill(
+              child: RepaintBoundary(child: HomeAuroraBackground()),
+            ),
             const HomeRealtimeBootstrap(),
-            // Theater education / receive messages (Communication Stage).
             const HomeEducationHost(),
-            CustomScrollView(
+            // Scroll content in its own layer — isolates list paint from aurora.
+            RepaintBoundary(
+              child: CustomScrollView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
@@ -613,42 +632,27 @@ class HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                   ),
                 ),
-                // ── FEED: solid black covers scaffold so body stays black
-                SliverToBoxAdapter(
-                  child: ColoredBox(
-                    color: homeBackgroundColor,
-                    child: KeroseneAppColumn(
-                      maxWidth: contentMaxWidth,
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          pageHorizontalPadding,
-                          gapAfterHeader,
-                          pageHorizontalPadding,
-                          navigationClearance,
-                        ),
-                        child: showHomeLoading
-                            ? const SizedBox.shrink()
-                            : _HomeFeedBody(
-                                useWideLayout: useWideHomeLayout,
-                                gapAfterHeader: gapAfterHeader,
-                                gapBeforeFeed: gapBeforeFeed,
-                                showPrimaryActionPanel: showPrimaryActionPanel,
-                                hasWallet: hasWallet,
-                                hasBalance: hasBalance,
-                                hasTransactions: hasTransactions,
-                                onOpenCreateWallet: _openCreateWallet,
-                                onOpenDeposit: () =>
-                                    _openDeposit(activeWallet),
-                                onOpenSend: () => _openSend(activeWallet),
-                                onOpenStatement: openStatement,
-                                onDepositWallet: _openDepositForWallet,
-                                walletState: ref.read(walletProvider),
-                              ),
-                      ),
-                    ),
+                // Soft veil into black feed (no hard horizontal cut).
+                if (!showHomeLoading) ...[
+                  const SliverToBoxAdapter(child: _HomeFeedTopVeil()),
+                  ..._homeFeedSlivers(
+                    context: context,
+                    useWideLayout: useWideHomeLayout,
+                    contentMaxWidth: contentMaxWidth,
+                    pageHorizontalPadding: pageHorizontalPadding,
+                    navigationClearance: navigationClearance,
+                    gapAfterHeader: gapAfterHeader,
+                    gapBeforeFeed: gapBeforeFeed,
+                    showPrimaryActionPanel: showPrimaryActionPanel,
+                    hasWallet: hasWallet,
+                    hasBalance: hasBalance,
+                    hasTransactions: hasTransactions,
+                    walletState: ref.read(walletProvider),
+                    onOpenStatement: openStatement,
                   ),
-                ),
+                ],
               ],
+            ),
             ),
             const HomeBottomNavigationOverlay(
               currentDestination: AppPrimaryDestination.home,
@@ -658,6 +662,216 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
+
+  List<Widget> _homeFeedSlivers({
+    required BuildContext context,
+    required bool useWideLayout,
+    required double contentMaxWidth,
+    required double pageHorizontalPadding,
+    required double navigationClearance,
+    required double gapAfterHeader,
+    required double gapBeforeFeed,
+    required bool showPrimaryActionPanel,
+    required bool hasWallet,
+    required bool hasBalance,
+    required bool hasTransactions,
+    required WalletState walletState,
+    required VoidCallback onOpenStatement,
+  }) {
+    Widget pad(Widget child) {
+      return ColoredBox(
+        color: homeBackgroundColor,
+        child: KeroseneAppColumn(
+          maxWidth: contentMaxWidth,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              pageHorizontalPadding,
+              0,
+              pageHorizontalPadding,
+              0,
+            ),
+            child: child,
+          ),
+        ),
+      );
+    }
+
+    if (useWideLayout) {
+      // Desktop: two columns stay in one adapter (RepaintBoundary isolates cost).
+      return [
+        // top gap after veil
+        SliverToBoxAdapter(
+          child: ColoredBox(
+            color: homeBackgroundColor,
+            child: SizedBox(
+              height: gapAfterHeader > 0 ? gapAfterHeader : homeSize(8),
+            ),
+          ),
+        ),
+        sliverToBoxAdapterRepaint(
+          pad(
+            _HomeFeedBody(
+              useWideLayout: true,
+              gapAfterHeader: gapAfterHeader,
+              gapBeforeFeed: gapBeforeFeed,
+              showPrimaryActionPanel: showPrimaryActionPanel,
+              hasWallet: hasWallet,
+              hasBalance: hasBalance,
+              hasTransactions: hasTransactions,
+              onOpenCreateWallet: _openCreateWallet,
+              onOpenDeposit: () => _openDeposit(
+                ref.read(walletProvider.select((w) => _resolveActiveWallet(w))),
+              ),
+              onOpenSend: () => _openSend(
+                ref.read(walletProvider.select((w) => _resolveActiveWallet(w))),
+              ),
+              onOpenStatement: onOpenStatement,
+              onDepositWallet: _openDepositForWallet,
+              walletState: walletState,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: ColoredBox(
+            color: homeBackgroundColor,
+            child: SizedBox(height: navigationClearance),
+          ),
+        ),
+      ];
+    }
+
+    // Phone: virtualize transaction list so scroll only paints visible cards.
+    final setupNotice = showPrimaryActionPanel
+        ? HomeSetupNotice(
+            icon: !hasWallet
+                ? KeroseneIcons.wallet
+                : !hasBalance
+                    ? KeroseneIcons.download
+                    : KeroseneIcons.send,
+            title: !hasWallet
+                ? context.l10n.homePrimaryNoWalletTitle
+                : !hasBalance
+                    ? context.tr.homePrimaryReadyNoBalanceTitle
+                    : context.tr.homePrimaryReadyTitle,
+            subtitle: !hasWallet
+                ? context.tr.homePrimaryNoWalletSubtitle
+                : !hasBalance
+                    ? context.tr.homePrimaryReadyNoBalanceSubtitle
+                    : context.tr.homePrimaryReadySubtitle,
+            actionLabel: !hasWallet
+                ? context.l10n.homeCreateWalletAction
+                : !hasBalance
+                    ? context.tr.homeDepositFundsAction
+                    : context.l10n.homeSendBtcAction,
+            onAction: !hasWallet
+                ? _openCreateWallet
+                : !hasBalance
+                    ? () => _openDeposit(
+                          ref.read(
+                            walletProvider
+                                .select((w) => _resolveActiveWallet(w)),
+                          ),
+                        )
+                    : () => _openSend(
+                          ref.read(
+                            walletProvider
+                                .select((w) => _resolveActiveWallet(w)),
+                          ),
+                        ),
+          )
+        : null;
+
+    return [
+      SliverToBoxAdapter(
+        child: ColoredBox(
+          color: homeBackgroundColor,
+          child: SizedBox(
+            height: gapAfterHeader > 0 ? gapAfterHeader : homeSize(8),
+          ),
+        ),
+      ),
+      sliverToBoxAdapterRepaint(
+        pad(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const HomeOnboardingProgressCard(),
+              SizedBox(height: gapAfterHeader),
+              const RepaintBoundary(child: HomeBitcoinMarketChartCard()),
+              if (setupNotice != null) ...[
+                SizedBox(height: gapAfterHeader),
+                setupNotice,
+              ],
+              SizedBox(height: gapBeforeFeed),
+              const HomeEducationCarousel(),
+              SizedBox(height: homeSize(AppSpacing.md)),
+              SizedBox(height: homeSize(AppSpacing.xl)),
+              HomeFundsDistributionSection(
+                walletState: walletState,
+                onViewStatement: onOpenStatement,
+              ),
+              SizedBox(height: homeSize(AppSpacing.xl)),
+              HomeSectionHeader(
+                title: homeRecentActivitiesTitle(context),
+                onAction: onOpenStatement,
+                actionLabel: homeSeeYourStatementLabel(context),
+                actionTrailingChevron: true,
+                actionTooltip: context.tr.statementScreenTitle,
+              ),
+              SizedBox(height: homeSize(AppSpacing.md)),
+              if (hasTransactions) ...[
+                const HomeActivityFilterChips(),
+                SizedBox(height: homeSize(AppSpacing.md)),
+              ],
+            ],
+          ),
+        ),
+      ),
+      // Virtualized txs — the big scroll FPS win.
+      HomeTransactionsList(
+        asSliver: true,
+        onCreateWallet: _openCreateWallet,
+        onDepositWallet: _openDepositForWallet,
+      ),
+      SliverToBoxAdapter(
+        child: ColoredBox(
+          color: homeBackgroundColor,
+          child: SizedBox(height: navigationClearance),
+        ),
+      ),
+    ];
+  }
+}
+
+/// Soft black veil under the balance / over the feed.
+class _HomeFeedTopVeil extends StatelessWidget {
+  const _HomeFeedTopVeil();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: (MediaQuery.sizeOf(context).height * 0.12).clamp(72.0, 140.0),
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0x00000000),
+              Color(0x66000000),
+              Color(0xCC000000),
+              Color(0xFF000000),
+            ],
+            stops: [0.0, 0.35, 0.72, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+SliverToBoxAdapter sliverToBoxAdapterRepaint(Widget child) {
+  return SliverToBoxAdapter(child: RepaintBoundary(child: child));
 }
 
 /// Home feed body — single column on phones/tablets, two columns on desktop.

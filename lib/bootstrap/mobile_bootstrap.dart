@@ -54,6 +54,7 @@ import '../core/utils/snackbar_helper.dart';
 import '../features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import '../app/providers/price_alert_provider.dart';
 import '../core/services/notification_delivery_bootstrap.dart';
+import '../core/utils/native_screen_capture.dart';
 
 Future<void> bootstrapMobile() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +74,9 @@ Future<void> bootstrapMobile() async {
   );
 
   await initializeApp(container);
+
+  // Log whether the in-app camera control will mount (Linux debug = on).
+  ScreenCaptureConfig.logStatus();
 
   runApp(
     UncontrolledProviderScope(
@@ -256,7 +260,10 @@ class MyApp extends ConsumerWidget {
           child: current,
         );
         current = GlobalNotificationHost(child: current);
-        return _AppRealtimeBootstrap(child: current);
+        current = _AppRealtimeBootstrap(child: current);
+        // In-app capture control (desktop debug ON by default).
+        // Force: --dart-define=SCREEN_CAPTURE_UI=true|false
+        return ScreenCaptureHost(child: current);
       },
       home: const _MobileAppRoot(),
       routes: {

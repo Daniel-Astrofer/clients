@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "source": "test",
+  "capturedAt": "2026-07-17T00:00:00Z",
+  "user": {
+    "id": "1",
+    "username": "TestUser",
+    "createdAt": "2026-01-01T00:00:00Z"
+  },
+  "wallets": [
+    {
+      "id": "w1",
+      "name": "Principal",
+      "label": "Principal",
+      "walletName": "Principal",
+      "address": "bc1qtest",
+      "balance": 0.042,
+      "availableSats": 4200000,
+      "observedSats": 0,
+      "walletMode": "KEROSENE",
+      "spendable": true,
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "transactions": [],
+  "rates": {
+    "btcUsd": 67000,
+    "btcBrl": 335000,
+    "btcEur": 62000,
+    "usdBrl": 5
+  }
+}

@@ -1,7 +1,5 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
-import 'dart:ui';
-
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 
@@ -231,54 +229,48 @@ class HomeBalanceActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // No BackdropFilter — live blur on every scroll frame nukes FPS.
+    // Solid translucent fill keeps the frosted look without GPU filter cost.
     return BouncingButtonWrapper(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(homeSize(16)),
-        child: BackdropFilter(
-          filter: primary 
-              ? ImageFilter.blur(sigmaX: 0, sigmaY: 0)
-              : ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
-          child: Container(
-            constraints: BoxConstraints(minHeight: homeSize(52)),
-            padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
-            decoration: BoxDecoration(
-              color: primary 
-                  ? Colors.white 
-                  : Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(homeSize(16)),
-              border: Border.all(
-                color: primary 
-                    ? Colors.transparent 
-                    : Colors.white.withValues(alpha: 0.08),
-                width: 0.5,
+      child: Container(
+        constraints: BoxConstraints(minHeight: homeSize(52)),
+        padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
+        decoration: BoxDecoration(
+          color: primary
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(homeSize(16)),
+          border: Border.all(
+            color: primary
+                ? Colors.transparent
+                : Colors.white.withValues(alpha: 0.10),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: homeSize(20),
+              color: primary ? Colors.black : Colors.white,
+            ),
+            SizedBox(width: homeSize(8)),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: primary ? Colors.black : Colors.white,
+                  fontSize: homeFontSize(15),
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0,
+                ),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: homeSize(20),
-                  color: primary ? Colors.black : Colors.white,
-                ),
-                SizedBox(width: homeSize(8)),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: primary ? Colors.black : Colors.white,
-                      fontSize: homeFontSize(15),
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

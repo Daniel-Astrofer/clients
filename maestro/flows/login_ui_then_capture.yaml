@@ -1,0 +1,16 @@
+# Optional UI smoke: open app and screenshot whatever is visible.
+# For real authenticated balances, prefer:
+#   - integration_test/visual_real_screens_test.dart (JWT seed), or
+#   - capture_authenticated_screens.yaml after login.
+
+appId: com.kerosene.app
+---
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: ".*"
+    timeout: 120000
+
+- takeScreenshot:
+    path: maestro_app_open

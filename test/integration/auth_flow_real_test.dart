@@ -19,7 +19,7 @@ import 'totp_utils.dart';
 
 const _runRealOnionTests = bool.fromEnvironment('RUN_REAL_ONION_TESTS');
 
-// Helper de PoW
+// Helper de PoW (kept local; visual E2E uses integration_test/support/real_session.dart)
 String solvePoW(String challenge) {
   int nonce = 0;
   const prefix = '0000';

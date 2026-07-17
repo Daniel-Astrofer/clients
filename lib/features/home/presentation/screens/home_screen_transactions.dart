@@ -1,5 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
@@ -72,10 +73,15 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
   final VoidCallback onCreateWallet;
   final ValueChanged<Wallet> onDepositWallet;
 
+  /// When true, builds a [SliverList] (virtualized) for the home [CustomScrollView].
+  /// When false, embeds as a [Column] (wide two-column layout).
+  final bool asSliver;
+
   const HomeTransactionsList({
     super.key,
     required this.onCreateWallet,
     required this.onDepositWallet,
+    this.asSliver = false,
   });
 
   @override
@@ -83,30 +89,114 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
       _HomeTransactionsListState();
 }
 
-class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
+class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
+    with SingleTickerProviderStateMixin {
   /// Multiple cards may stay open; expansion only grows downward.
   final Set<String> _expandedTransactionIds = <String>{};
 
-  /// When true, next non-null history paints with a cheap L→R content wipe.
+  /// Skeleton → data: one shared cascade for **all** rows (not only first 3).
   bool _armEntranceReveal = true;
   bool _playEntranceReveal = false;
-  int _entranceRevealToken = 0;
 
-  void _scheduleEntranceReveal() {
+  /// Cached tiles for the entrance pass — avoids rebuilding heavy cards every
+  /// animation frame (only opacity/offset wrappers rebuild).
+  List<Widget>? _entranceTileCache;
+  List<String>? _entranceIdOrder;
+
+  AnimationController? _entrance;
+
+  static const _itemRevealMs = 520;
+  static const _staggerMs = 48;
+  static const _maxEntranceMs = 1800;
+
+  @override
+  void dispose() {
+    _entrance?.dispose();
+    super.dispose();
+  }
+
+  Duration _entranceDurationFor(int count) {
+    if (count <= 0) return Duration.zero;
+    final raw = _itemRevealMs + _staggerMs * (count - 1);
+    return Duration(milliseconds: raw.clamp(_itemRevealMs, _maxEntranceMs));
+  }
+
+  /// 0→1 progress for row [index] under shared controller value [t].
+  double _rowProgress(int index, double t, int count) {
+    if (count <= 0) return 1;
+    final totalMs = _entranceDurationFor(count).inMilliseconds.toDouble();
+    if (totalMs <= 0) return 1;
+    final start = (_staggerMs * index) / totalMs;
+    final end = (start + _itemRevealMs / totalMs).clamp(0.0, 1.0);
+    final span = (end - start).clamp(0.001, 1.0);
+    final local = ((t - start) / span).clamp(0.0, 1.0);
+    // Soft settle — less abrupt than easeOutCubic.
+    return Curves.easeOutQuart.transform(local);
+  }
+
+  void _scheduleEntranceReveal(int itemCount) {
     if (!_armEntranceReveal || _playEntranceReveal) return;
+    if (itemCount <= 0) {
+      _armEntranceReveal = false;
+      return;
+    }
     _armEntranceReveal = false;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() {
-        _playEntranceReveal = true;
-        _entranceRevealToken += 1;
+      if (KeroseneMotion.reduceMotion(context)) {
+        setState(() {
+          _playEntranceReveal = false;
+          _entranceTileCache = null;
+          _entranceIdOrder = null;
+        });
+        return;
+      }
+
+      _entrance?.dispose();
+      final duration = _entranceDurationFor(itemCount);
+      final ctrl = AnimationController(vsync: this, duration: duration);
+      _entrance = ctrl;
+      ctrl.addStatusListener((status) {
+        if (status != AnimationStatus.completed || !mounted) return;
+        // Drop wrappers + cache — steady state is plain tiles (zero anim cost).
+        setState(() {
+          _playEntranceReveal = false;
+          _entranceTileCache = null;
+          _entranceIdOrder = null;
+        });
+        ctrl.dispose();
+        if (identical(_entrance, ctrl)) _entrance = null;
       });
-      // Drop the reveal wrapper after the cascade finishes — zero ongoing cost.
-      Future<void>.delayed(const Duration(milliseconds: 720), () {
-        if (!mounted || !_playEntranceReveal) return;
-        setState(() => _playEntranceReveal = false);
-      });
+
+      setState(() => _playEntranceReveal = true);
+      ctrl.forward(from: 0);
     });
+  }
+
+  List<Widget> _ensureEntranceCache(
+    List<Transaction> filteredTxs,
+  ) {
+    final ids = [for (final tx in filteredTxs) tx.id];
+    final cached = _entranceTileCache;
+    final order = _entranceIdOrder;
+    if (cached != null &&
+        order != null &&
+        order.length == ids.length &&
+        listEquals(order, ids)) {
+      return cached;
+    }
+
+    final built = <Widget>[
+      for (var i = 0; i < filteredTxs.length; i++)
+        _buildTransactionTile(
+          filteredTxs[i],
+          expanded: _expandedTransactionIds.contains(filteredTxs[i].id),
+        ),
+    ];
+    _entranceTileCache = built;
+    _entranceIdOrder = ids;
+    return built;
   }
 
   @override
@@ -133,27 +223,37 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
     final hasError = transactionsAsync.hasError && txs == null;
 
     if (hasError) {
-      return Padding(
+      final err = Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: StateFeedbackView.networkError(
           context: context,
           onAction: () => ref.refresh(transactionHistoryProvider),
         ),
       );
+      return widget.asSliver ? SliverToBoxAdapter(child: err) : err;
     }
 
     if (txs == null) {
-      // Skeleton → data path should re-arm the L→R entrance once.
+      // Skeleton → data path should re-arm the entrance once.
       _armEntranceReveal = true;
-      return const _TransactionsSkeletonLoading();
+      _entranceTileCache = null;
+      _entranceIdOrder = null;
+      const skeleton = _TransactionsSkeletonLoading();
+      return widget.asSliver
+          ? const SliverToBoxAdapter(child: skeleton)
+          : skeleton;
     }
-
-    _scheduleEntranceReveal();
 
     final filteredTxs = ref.watch(filteredHomeTransactionsProvider);
     final filterIsAll = selectedFilter == HomeActivityFilter.all;
     final filterIsCancelled =
         selectedFilter == HomeActivityFilter.cancelled;
+
+    if (filteredTxs.isNotEmpty) {
+      _scheduleEntranceReveal(filteredTxs.length);
+    } else {
+      _armEntranceReveal = false;
+    }
 
     Widget body;
     if (filteredTxs.isEmpty) {
@@ -227,58 +327,105 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
         ),
       );
     } else {
-      body = StatementTransactionScrollStack(
-        itemCount: filteredTxs.length,
-        itemGap: homeSize(12),
-        itemBuilder: (context, index) {
-          final tx = filteredTxs[index];
+      body = _buildTxStack(
+        filteredTxs: filteredTxs,
+        animate: _playEntranceReveal && _entrance != null,
+      );
+    }
 
-          Widget? dateHeader;
-          if (index == 0) {
+    if (widget.asSliver) {
+      // Virtualized path for home CustomScrollView — only visible cards paint.
+      if (filteredTxs.isEmpty) {
+        return SliverToBoxAdapter(child: body);
+      }
+      final tiles = _playEntranceReveal
+          ? _ensureEntranceCache(filteredTxs)
+          : null;
+      final count = filteredTxs.length;
+      final AnimationController? entranceCtrl = _entrance;
+      final bool animate = _playEntranceReveal && entranceCtrl != null;
+      final AnimationController? liveCtrl = animate ? entranceCtrl : null;
+
+      Widget itemBuilder(BuildContext context, int index) {
+        final tx = filteredTxs[index];
+        final p = liveCtrl != null
+            ? _rowProgress(index, liveCtrl.value, count)
+            : 1.0;
+        final tile = tiles != null && index < tiles.length
+            ? tiles[index]
+            : _buildTransactionTile(
+                tx,
+                expanded: _expandedTransactionIds.contains(tx.id),
+              );
+
+        Widget? dateHeader;
+        if (index == 0) {
+          dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+        } else {
+          final previousTx = filteredTxs[index - 1];
+          if (!_isSameDay(
+            tx.timestamp.toLocal(),
+            previousTx.timestamp.toLocal(),
+          )) {
             dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-          } else {
-            final previousTx = filteredTxs[index - 1];
-            if (!_isSameDay(
-              tx.timestamp.toLocal(),
-              previousTx.timestamp.toLocal(),
-            )) {
-              dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-            }
           }
+        }
 
-          final tile = _buildTransactionTile(
-            tx,
-            expanded: _expandedTransactionIds.contains(tx.id),
-          );
-
-          // First three rows: sequential L→R paint of colors/data after load.
-          // Cheap one-shot; skipped under reduce-motion and after the cascade.
-          final revealed = (_playEntranceReveal && index < 3)
-              ? _LeftToRightContentReveal(
-                  key: ValueKey('reveal_${_entranceRevealToken}_$index'),
-                  delay: Duration(milliseconds: 70 * index),
+        final revealed = p <= 0
+            ? const SizedBox.shrink()
+            : Opacity(
+                opacity: p,
+                child: Transform.translate(
+                  offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
                   child: tile,
-                )
-              : tile;
+                ),
+              );
 
-          if (dateHeader != null) {
-            return Column(
+        final gap = index > 0 ? homeSize(12) : 0.0;
+        if (dateHeader != null) {
+          return Padding(
+            padding: EdgeInsets.only(top: gap),
+            child: Column(
               key: ValueKey('col_${tx.id}'),
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
-                dateHeader,
+                if (index > 0) SizedBox(height: homeSize(AppSpacing.base) - gap),
+                Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
                 SizedBox(height: homeSize(AppSpacing.sm)),
                 revealed,
               ],
-            );
-          }
-          return KeyedSubtree(
-            key: ValueKey(tx.id),
-            child: revealed,
+            ),
           );
-        },
+        }
+        return Padding(
+          padding: EdgeInsets.only(top: gap),
+          child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
+        );
+      }
+
+      if (liveCtrl != null) {
+        return AnimatedBuilder(
+          animation: liveCtrl,
+          builder: (context, _) {
+            return SliverList(
+              delegate: SliverChildBuilderDelegate(
+                itemBuilder,
+                childCount: count,
+                addAutomaticKeepAlives: false,
+                addRepaintBoundaries: true,
+              ),
+            );
+          },
+        );
+      }
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          itemBuilder,
+          childCount: count,
+          addAutomaticKeepAlives: false,
+          addRepaintBoundaries: true,
+        ),
       );
     }
 
@@ -304,6 +451,87 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList> {
           ),
         body,
       ],
+    );
+  }
+
+  Widget _buildTxStack({
+    required List<Transaction> filteredTxs,
+    required bool animate,
+  }) {
+    final count = filteredTxs.length;
+    final tiles = animate ? _ensureEntranceCache(filteredTxs) : null;
+    final ctrl = _entrance;
+
+    Widget itemBuilder(BuildContext context, int index) {
+      final tx = filteredTxs[index];
+      final p = animate && ctrl != null
+          ? _rowProgress(index, ctrl.value, count)
+          : 1.0;
+      final tile = tiles != null && index < tiles.length
+          ? tiles[index]
+          : _buildTransactionTile(
+              tx,
+              expanded: _expandedTransactionIds.contains(tx.id),
+            );
+
+      Widget? dateHeader;
+      if (index == 0) {
+        dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+      } else {
+        final previousTx = filteredTxs[index - 1];
+        if (!_isSameDay(
+          tx.timestamp.toLocal(),
+          previousTx.timestamp.toLocal(),
+        )) {
+          dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+        }
+      }
+
+      final revealed = p <= 0
+          ? const SizedBox.shrink()
+          : Opacity(
+              opacity: p,
+              child: Transform.translate(
+                offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
+                child: tile,
+              ),
+            );
+
+      if (dateHeader != null) {
+        return Column(
+          key: ValueKey('col_${tx.id}'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
+            Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
+            SizedBox(height: homeSize(AppSpacing.sm)),
+            revealed,
+          ],
+        );
+      }
+      return KeyedSubtree(
+        key: ValueKey(tx.id),
+        child: revealed,
+      );
+    }
+
+    if (animate && ctrl != null) {
+      return AnimatedBuilder(
+        animation: ctrl,
+        builder: (context, _) {
+          return StatementTransactionScrollStack(
+            itemCount: count,
+            itemGap: homeSize(12),
+            itemBuilder: itemBuilder,
+          );
+        },
+      );
+    }
+    return StatementTransactionScrollStack(
+      itemCount: count,
+      itemGap: homeSize(12),
+      itemBuilder: itemBuilder,
     );
   }
 
@@ -452,7 +680,7 @@ class _TransactionsSkeletonLoadingState
   }) {
     final span = (end - start).clamp(0.001, 1.0);
     final t = ((progress - start) / span).clamp(0.0, 1.0);
-    final eased = Curves.easeOutCubic.transform(t);
+    final eased = Curves.easeOutQuart.transform(t);
     if (eased <= 0) {
       return const SizedBox.shrink();
     }
@@ -554,96 +782,6 @@ class _SkeletonBone extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(borderRadius),
       ),
-    );
-  }
-}
-
-/// One-shot left→right reveal of real transaction content (colors + data).
-///
-/// Uses a single short [AnimationController] and [ShaderMask]; after finish
-/// the widget collapses to a plain [child] (no ongoing repaint).
-class _LeftToRightContentReveal extends StatefulWidget {
-  final Widget child;
-  final Duration delay;
-
-  const _LeftToRightContentReveal({
-    super.key,
-    required this.child,
-    this.delay = Duration.zero,
-  });
-
-  @override
-  State<_LeftToRightContentReveal> createState() =>
-      _LeftToRightContentRevealState();
-}
-
-class _LeftToRightContentRevealState extends State<_LeftToRightContentReveal>
-    with SingleTickerProviderStateMixin {
-  static const _duration = Duration(milliseconds: 380);
-
-  late final AnimationController _controller;
-  bool _done = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: _duration);
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        setState(() => _done = true);
-      }
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (KeroseneMotion.reduceMotion(context)) {
-        setState(() => _done = true);
-        return;
-      }
-      Future<void>.delayed(widget.delay, () {
-        if (mounted) _controller.forward();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_done) return widget.child;
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final t = Curves.easeOutCubic.transform(_controller.value);
-        // Soft L→R wipe: fully opaque left of edge, transparent to the right.
-        final edge = t.clamp(0.0, 1.0);
-        final feather = 0.14;
-        return ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: const [
-                Color(0xFFFFFFFF),
-                Color(0xFFFFFFFF),
-                Color(0x00FFFFFF),
-              ],
-              stops: [
-                0.0,
-                (edge - feather).clamp(0.0, 1.0),
-                edge.clamp(0.0, 1.0),
-              ],
-            ).createShader(bounds);
-          },
-          child: child,
-        );
-      },
-      child: widget.child,
     );
   }
 }

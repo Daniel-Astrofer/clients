@@ -69,3 +69,10 @@ app.*.map.json
 assets/env/
 android/key.properties
 ios/Flutter/Generated.xcconfig
+
+# Native visual E2E captures (generated)
+artifacts/visual_e2e/*.png
+.maestro/
+
+# Device session export (may contain real balances)
+test/goldens/real_data/fixtures/device_ui_snapshot.json

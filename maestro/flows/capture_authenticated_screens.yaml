@@ -1,0 +1,32 @@
+# Native device screenshots of the REAL app UI (fonts, colors, live data).
+# Precondition: session restored / logged in and past PIN on the device.
+#
+#   maestro test maestro/flows/capture_authenticated_screens.yaml
+#   bash tools/run-visual-e2e.sh --maestro
+
+appId: com.kerosene.app
+---
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: "Receber"
+    timeout: 180000
+
+- takeScreenshot:
+    path: maestro_01_home
+
+- tapOn: "Ajustes"
+- extendedWaitUntil:
+    visible: "Ajuste"
+    timeout: 60000
+- takeScreenshot:
+    path: maestro_02_settings
+
+- tapOn: "Histórico"
+- takeScreenshot:
+    path: maestro_03_activity
+
+- tapOn: "Cartão"
+- takeScreenshot:
+    path: maestro_04_accounts

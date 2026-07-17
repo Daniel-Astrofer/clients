@@ -38,6 +38,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
   TheaterSchedulerState _schedulerSession = const TheaterSchedulerState();
   DateTime? _stageIdleSince;
   Timer? _educationTimer;
+  Timer? _educationKickTimer;
 
   @override
   void initState() {
@@ -58,18 +59,26 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
   @override
   void dispose() {
     _educationTimer?.cancel();
+    _educationKickTimer?.cancel();
+    _educationTimer = null;
+    _educationKickTimer = null;
     super.dispose();
   }
 
   void _armEducationTimer() {
     _educationTimer?.cancel();
+    _educationKickTimer?.cancel();
     // Periodic tick: offer catalog tip when home is quiet.
     _educationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (mounted) _tryEnqueueEducation();
+      if (!mounted) return;
+      _tryEnqueueEducation();
     });
     // First attempt after a short quiet period (after TOTP window).
-    Future<void>.delayed(const Duration(seconds: 50), () {
-      if (mounted) _tryEnqueueEducation();
+    // Must be a cancelable [Timer] — bare Future.delayed survives dispose and
+    // can touch defunct elements on hot restart.
+    _educationKickTimer = Timer(const Duration(seconds: 50), () {
+      if (!mounted) return;
+      _tryEnqueueEducation();
     });
   }
 

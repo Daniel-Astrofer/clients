@@ -56,24 +56,37 @@ final financialPollAllowedProvider = Provider<bool>((ref) {
 mixin FinancialSurfaceMixin<T extends ConsumerStatefulWidget>
     on ConsumerState<T> {
   bool _financialSurfaceHeld = false;
+  /// Cached while the element is alive — never [ref.read] in [dispose].
+  FinancialSurfaceGateNotifier? _gate;
 
   @override
   void initState() {
     super.initState();
+    _gate = ref.read(financialSurfaceGateProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _financialSurfaceHeld) return;
-      ref.read(financialSurfaceGateProvider.notifier).acquire();
+      final gate = _gate;
+      if (gate == null) return;
+      gate.acquire();
       _financialSurfaceHeld = true;
     });
   }
 
   @override
   void dispose() {
-    if (_financialSurfaceHeld) {
-      // ref is still valid in dispose for ConsumerState.
-      ref.read(financialSurfaceGateProvider.notifier).release();
-      _financialSurfaceHeld = false;
-    }
+    final held = _financialSurfaceHeld;
+    final gate = _gate;
+    _financialSurfaceHeld = false;
+    _gate = null;
     super.dispose();
+    // Release after the unmount frame so we never notify defunct elements
+    // mid-finalizeTree (hot restart / rapid route changes).
+    if (held && gate != null) {
+      Future<void>(() {
+        try {
+          gate.release();
+        } catch (_) {}
+      });
+    }
   }
 }

@@ -888,6 +888,9 @@ enum HomeUiEventType {
   feedDelta,
   stage,
   stageClear,
+  /// Scene-Driven UI payload (layout/background/media/content — not widgets).
+  scene,
+  sceneClear,
   unknown,
 }
 
@@ -911,6 +914,8 @@ class HomeUiEvent {
       'HOME_UI_FEED_DELTA' => HomeUiEventType.feedDelta,
       'HOME_UI_STAGE' => HomeUiEventType.stage,
       'HOME_UI_STAGE_CLEAR' => HomeUiEventType.stageClear,
+      'HOME_UI_SCENE' => HomeUiEventType.scene,
+      'HOME_UI_SCENE_CLEAR' => HomeUiEventType.sceneClear,
       _ => HomeUiEventType.unknown,
     };
     final payloadRaw = json['payload'];
@@ -960,6 +965,26 @@ HomeSurface applyHomeUiEvent(HomeSurface current, HomeUiEvent event) {
             version: event.version.isNotEmpty ? event.version : current.version,
           );
     case HomeUiEventType.stageClear:
+      return current.clearStage().copyWith(
+            version: event.version.isNotEmpty ? event.version : current.version,
+          );
+    // Scene events update surface stage only when payload can bridge to stage;
+    // pure scene presentation is handled by HomeSceneNotifier (applyEventJson).
+    case HomeUiEventType.scene:
+      if (event.payload.isEmpty) return current;
+      // If payload looks like a legacy stage, keep surface.stage in sync.
+      if (event.payload.containsKey('kind') ||
+          event.payload.containsKey('playPolicy')) {
+        final stage = HomeStage.fromJson(event.payload);
+        return current.withStage(stage).copyWith(
+              version:
+                  event.version.isNotEmpty ? event.version : current.version,
+            );
+      }
+      return current.copyWith(
+        version: event.version.isNotEmpty ? event.version : current.version,
+      );
+    case HomeUiEventType.sceneClear:
       return current.clearStage().copyWith(
             version: event.version.isNotEmpty ? event.version : current.version,
           );

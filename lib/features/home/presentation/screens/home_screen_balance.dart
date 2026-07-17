@@ -13,6 +13,18 @@ import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
 
+/// Coarse quote so tiny websocket ticks don't rebuild the balance header.
+double? _coarseUsdQuote(double? price) {
+  if (price == null || price <= 0) return price;
+  return (price / 25).round() * 25.0;
+}
+
+/// Coarse daily-change percent (0.05 steps).
+double? _coarseChangePct(double? pct) {
+  if (pct == null) return null;
+  return (pct * 20).round() / 20.0;
+}
+
 class HomeBalanceSection extends ConsumerStatefulWidget {
   final String userName;
   final WalletState walletState;
@@ -86,11 +98,20 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
     final money = ref.watch(moneyFormatConfigProvider);
     final balanceSettings = ref.watch(balanceSettingsProvider);
     final priceFeedActive = ref.watch(homeRouteActiveProvider);
-    final btcUsd = priceFeedActive ? ref.watch(latestBtcPriceProvider) : null;
-    final btcEur = priceFeedActive ? ref.watch(btcEurPriceProvider) : null;
-    final btcBrl = priceFeedActive ? ref.watch(btcBrlPriceProvider) : null;
-    final btcDailyChangePercent =
-        priceFeedActive ? ref.watch(btcDailyChangePercentProvider) : null;
+    // Round quotes so minor tick churn doesn't rebuild the whole header
+    // (header rebuild mid-scroll is a common FPS cliff).
+    final btcUsd = priceFeedActive
+        ? ref.watch(latestBtcPriceProvider.select(_coarseUsdQuote))
+        : null;
+    final btcEur = priceFeedActive
+        ? ref.watch(btcEurPriceProvider.select(_coarseUsdQuote))
+        : null;
+    final btcBrl = priceFeedActive
+        ? ref.watch(btcBrlPriceProvider.select(_coarseUsdQuote))
+        : null;
+    final btcDailyChangePercent = priceFeedActive
+        ? ref.watch(btcDailyChangePercentProvider.select(_coarseChangePct))
+        : null;
     final selectedView = ref.watch(homeLedgerBalanceViewProvider);
     final wallets = widget.walletState is WalletLoaded
         ? (widget.walletState as WalletLoaded).wallets
@@ -231,9 +252,10 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
 
     final heroHeight = responsive.isTinyPhone ? homeSize(220) : homeSize(236);
     final playback = ref.watch(homeStagePlaybackProvider);
-    final bodyOffset = homeSize(playback.bodyOffsetPx);
+    // Match theater open curve (720ms easeOutCubic from HomeSceneHost).
+    final bodyOffset = playback.bodyOffsetPx;
     final bodyDuration = Duration(
-      milliseconds: playback.bodyShiftDurationMs.clamp(200, 2000),
+      milliseconds: playback.bodyShiftDurationMs.clamp(480, 1200),
     );
     final bodyCurve = resolveStageCurve(playback.bodyShiftCurve);
 
@@ -270,8 +292,8 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
     final hPad = widget.pageHorizontalPadding;
     final topPad = widget.pageTopPad;
 
-    // Wash ONLY around the theater (greeting/stage). Ends before SALDO TOTAL.
-    // Balance + Receber/Enviar sit on pure black — no upward glow under buttons.
+    // Fully transparent header+balance over the fixed aurora — no gradient
+    // slabs (they always left a faint horizontal seam when scrolling).
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -284,91 +306,87 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
             ),
           ),
         ),
-        ColoredBox(
-          color: homeBackgroundColor,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(hPad, homeSize(8), hPad, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AnimatedContainer(
-                  duration: bodyDuration,
-                  curve: bodyCurve,
-                  height: bodyOffset,
+        Padding(
+          padding: EdgeInsets.fromLTRB(hPad, homeSize(8), hPad, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AnimatedContainer(
+                duration: bodyDuration,
+                curve: bodyCurve,
+                height: bodyOffset,
+              ),
+              SizedBox(
+                height: heroHeight,
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: tabs.length,
+                  onPageChanged: onPageChanged,
+                  itemBuilder: (context, index) {
+                    final tab = tabs[index];
+                    return HomeBalanceHero(
+                      key: ValueKey('home-balance-hero-${tab.view.name}'),
+                      data: cardDataFor(tab.view),
+                      onOpenWallets: widget.onOpenWallets,
+                      suppressDigitRoll: suppressRoll,
+                      animateInitialValue: animateCeremony,
+                    );
+                  },
                 ),
-                SizedBox(
-                  height: heroHeight,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: tabs.length,
-                    onPageChanged: onPageChanged,
-                    itemBuilder: (context, index) {
-                      final tab = tabs[index];
-                      return HomeBalanceHero(
-                        key: ValueKey('home-balance-hero-${tab.view.name}'),
-                        data: cardDataFor(tab.view),
-                        onOpenWallets: widget.onOpenWallets,
-                        suppressDigitRoll: suppressRoll,
-                        animateInitialValue: animateCeremony,
-                      );
-                    },
-                  ),
-                ),
-                if (tabs.length > 1) ...[
-                  SizedBox(height: homeSize(10)),
-                  _HomeBalancePageDots(
-                    count: tabs.length,
-                    activeIndex: selectedIndex,
-                    accents: [for (final tab in tabs) tab.accent],
-                    onDotTap: (index) {
-                      if (!_pageController.hasClients) return;
-                      _lastSyncedIndex = index;
-                      HapticFeedback.selectionClick();
-                      _suppressRollForViewChange = true;
-                      _pageController.animateToPage(
-                        index,
-                        duration: KeroseneMotion.medium,
-                        curve: KeroseneMotion.standard,
-                      );
-                    },
-                  ),
-                ],
-                SizedBox(height: homeSize(20)),
-                // On desktop, cap button row so Receive/Send don't stretch wall-to-wall.
-                Align(
-                  alignment: Alignment.center,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: responsive.useWideHomeLayout
-                          ? homeSize(560)
-                          : double.infinity,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: HomeBalanceActionButton(
-                            icon: KeroseneIcons.down,
-                            label: context.tr.homeReceiveActionShort,
-                            onTap: widget.onReceive,
-                            primary: true,
-                          ),
-                        ),
-                        SizedBox(width: homeSize(12)),
-                        Expanded(
-                          child: HomeBalanceActionButton(
-                            icon: KeroseneIcons.up,
-                            label: context.tr.homeSendTitle,
-                            onTap: widget.onSend,
-                            primary: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              ),
+              if (tabs.length > 1) ...[
+                SizedBox(height: homeSize(10)),
+                _HomeBalancePageDots(
+                  count: tabs.length,
+                  activeIndex: selectedIndex,
+                  accents: [for (final tab in tabs) tab.accent],
+                  onDotTap: (index) {
+                    if (!_pageController.hasClients) return;
+                    _lastSyncedIndex = index;
+                    HapticFeedback.selectionClick();
+                    _suppressRollForViewChange = true;
+                    _pageController.animateToPage(
+                      index,
+                      duration: KeroseneMotion.medium,
+                      curve: KeroseneMotion.standard,
+                    );
+                  },
                 ),
               ],
-            ),
+              SizedBox(height: homeSize(20)),
+              Align(
+                alignment: Alignment.center,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: responsive.useWideHomeLayout
+                        ? homeSize(560)
+                        : double.infinity,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: HomeBalanceActionButton(
+                          icon: KeroseneIcons.down,
+                          label: context.tr.homeReceiveActionShort,
+                          onTap: widget.onReceive,
+                          primary: true,
+                        ),
+                      ),
+                      SizedBox(width: homeSize(12)),
+                      Expanded(
+                        child: HomeBalanceActionButton(
+                          icon: KeroseneIcons.up,
+                          label: context.tr.homeSendTitle,
+                          onTap: widget.onSend,
+                          primary: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

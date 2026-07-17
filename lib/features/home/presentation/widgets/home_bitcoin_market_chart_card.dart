@@ -23,8 +23,7 @@ class _HomeBitcoinMarketChartCardState
   /// Stroke was 2.4 → −30% ≈ 1.68
   static const double _lineStrokeWidth = 1.68;
   /// Glow stroke was 5 → −30% ≈ 3.5; alpha was 0.18 → −40% ≈ 0.108
-  static const double _lineGlowWidth = 3.5;
-  static const double _lineGlowAlpha = 0.108;
+
 
   int? _selectedIndex;
   DateTime? _lastSelectionHapticAt;
@@ -239,8 +238,6 @@ class _HomeBitcoinMarketChartCardState
                                   lineColor: trendColor,
                                   drawProgress: progress,
                                   lineStrokeWidth: _lineStrokeWidth,
-                                  lineGlowWidth: _lineGlowWidth,
-                                  lineGlowAlpha: _lineGlowAlpha,
                                   labelColor:
                                       Colors.white.withValues(alpha: 0.42),
                                   priceLabelFormatter: (value) => _compactPrice(
@@ -791,8 +788,6 @@ class _BitcoinMarketChartPainter extends CustomPainter {
   final Color lineColor;
   final double drawProgress;
   final double lineStrokeWidth;
-  final double lineGlowWidth;
-  final double lineGlowAlpha;
   final Color labelColor;
   final String Function(double value) priceLabelFormatter;
   final String Function(DateTime time) timeLabelFormatter;
@@ -804,8 +799,6 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     required this.lineColor,
     required this.drawProgress,
     required this.lineStrokeWidth,
-    required this.lineGlowWidth,
-    required this.lineGlowAlpha,
     required this.labelColor,
     required this.priceLabelFormatter,
     required this.timeLabelFormatter,
@@ -870,16 +863,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
           ).createShader(plotRect),
       );
 
-      // Soft glow (reduced)
-      canvas.drawPath(
-        extract,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = lineGlowWidth
-          ..strokeCap = StrokeCap.round
-          ..color = lineColor.withValues(alpha: lineGlowAlpha)
-          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 3),
-      );
+      // Soft glow skipped — MaskFilter.blur is too expensive under home scroll.
 
       canvas.drawPath(
         extract,
@@ -1007,7 +991,6 @@ class _BitcoinMarketChartPainter extends CustomPainter {
         oldDelegate.lineColor != lineColor ||
         oldDelegate.drawProgress != drawProgress ||
         oldDelegate.lineStrokeWidth != lineStrokeWidth ||
-        oldDelegate.lineGlowAlpha != lineGlowAlpha ||
         oldDelegate.labelColor != labelColor;
   }
 }

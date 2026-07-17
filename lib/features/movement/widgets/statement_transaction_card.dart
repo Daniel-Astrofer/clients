@@ -72,13 +72,18 @@ class StatementTransactionScrollStack extends StatelessWidget {
   Widget build(BuildContext context) {
     if (itemCount <= 0) return const SizedBox.shrink();
 
+    // Each row is its own repaint layer so scrolling only dirty-paints
+    // the cards that move into view (Column still lays out all children,
+    // but avoids full-stack recomposite on every tick).
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var index = 0; index < itemCount; index++) ...[
           if (index > 0) SizedBox(height: itemGap),
-          itemBuilder(context, index),
+          RepaintBoundary(
+            child: itemBuilder(context, index),
+          ),
         ],
       ],
     );
@@ -103,15 +108,21 @@ class StatementTransactionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isHome = density == StatementTransactionCardDensity.home;
     final money = ref.watch(moneyFormatConfigProvider);
     final selectedCurrency = money.currency;
-    // Home skips multi-fiat price watches when not needed for the primary label
-    // path — presentation still may need them for amount format.
-    final btcUsd = ref.watch(latestBtcPriceProvider);
-    final btcEur = ref.watch(btcEurPriceProvider);
-    final btcBrl = ref.watch(btcBrlPriceProvider);
-    final wallets = _walletsFromRef(ref);
-    final accounts = _accountsFromRef(ref);
+    // Home list: snapshot prices/wallets once — live watches rebuild every
+    // visible card on each BTC tick and destroy scroll FPS. Extrato keeps live.
+    final btcUsd = isHome
+        ? ref.read(latestBtcPriceProvider)
+        : ref.watch(latestBtcPriceProvider);
+    final btcEur =
+        isHome ? ref.read(btcEurPriceProvider) : ref.watch(btcEurPriceProvider);
+    final btcBrl =
+        isHome ? ref.read(btcBrlPriceProvider) : ref.watch(btcBrlPriceProvider);
+    final wallets = isHome ? _walletsFromRefRead(ref) : _walletsFromRef(ref);
+    final accounts =
+        isHome ? _accountsFromRefRead(ref) : _accountsFromRef(ref);
     final colors = TransactionCardColors.resolve(
       transaction,
       wallets: wallets,
@@ -132,7 +143,6 @@ class StatementTransactionCard extends ConsumerWidget {
     final title = presentation.title;
     final counterparty = presentation.subtitle;
     final timestampLabel = presentation.tertiary;
-    final isHome = density == StatementTransactionCardDensity.home;
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
     final cardPadding = isHome ? 14.0 : (compact ? 16.0 : 20.0);
     final iconSize = isHome ? 40.0 : (compact ? 42.0 : 48.0);
@@ -297,22 +307,38 @@ class StatementTransactionCard extends ConsumerWidget {
       ],
     );
 
-    return Semantics(
+    final card = Container(
+      decoration: decoration,
+      padding: EdgeInsets.all(cardPadding),
+      child: body,
+    );
+
+    // Home: GestureDetector only — Material/InkWell layers cost scroll FPS.
+    final tappable = onTap == null
+        ? card
+        : isHome
+            ? GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: card,
+              )
+            : Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: radius,
+                  child: card,
+                ),
+              );
+
+    final semantic = Semantics(
       button: onTap != null,
       label: a11yLabel,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: radius,
-          child: Container(
-            decoration: decoration,
-            padding: EdgeInsets.all(cardPadding),
-            child: body,
-          ),
-        ),
-      ),
+      child: tappable,
     );
+
+    // Isolate each home row so list scroll doesn't repaint neighbors.
+    return isHome ? RepaintBoundary(child: semantic) : semantic;
   }
 }
 
@@ -322,8 +348,19 @@ List<Wallet> _walletsFromRef(WidgetRef ref) {
   return const [];
 }
 
+List<Wallet> _walletsFromRefRead(WidgetRef ref) {
+  final state = ref.read(walletProvider);
+  if (state is WalletLoaded) return state.wallets;
+  return const [];
+}
+
 List<BitcoinAccount> _accountsFromRef(WidgetRef ref) {
   return ref.watch(bitcoinAccountsProvider).asData?.value ??
+      const <BitcoinAccount>[];
+}
+
+List<BitcoinAccount> _accountsFromRefRead(WidgetRef ref) {
+  return ref.read(bitcoinAccountsProvider).asData?.value ??
       const <BitcoinAccount>[];
 }
 
@@ -1097,6 +1134,8 @@ class _ActivityStatusIcon extends StatefulWidget {
 class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     with SingleTickerProviderStateMixin {
   AnimationController? _spinController;
+  ScrollPosition? _scrollPosition;
+  bool _needsSpin = false;
 
   static const Color _yellow = Color(0xFFE0A012);
   static const Color _green = Color(0xFF34C759);
@@ -1106,6 +1145,18 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
   void initState() {
     super.initState();
     _syncAnimations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final pos = Scrollable.maybeOf(context)?.position;
+    if (_scrollPosition != pos) {
+      _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
+      _scrollPosition = pos;
+      _scrollPosition?.isScrollingNotifier.addListener(_onScrollChanged);
+      _onScrollChanged();
+    }
   }
 
   @override
@@ -1121,16 +1172,29 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     }
   }
 
+  void _onScrollChanged() {
+    if (!mounted) return;
+    final scrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
+    final spin = _spinController;
+    if (spin == null) return;
+    if (scrolling) {
+      if (spin.isAnimating) spin.stop();
+    } else if (_needsSpin && !spin.isAnimating) {
+      spin.repeat();
+    }
+  }
+
   void _syncAnimations() {
     final mode = _ringMode(widget.transaction);
-    final needsSpin =
+    _needsSpin =
         mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
-    if (needsSpin) {
+    if (_needsSpin) {
       _spinController ??= AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 1100),
       );
-      if (!(_spinController!.isAnimating)) {
+      final scrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
+      if (!scrolling && !(_spinController!.isAnimating)) {
         _spinController!.repeat();
       }
     } else {
@@ -1143,6 +1207,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 
   @override
   void dispose() {
+    _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
     _spinController?.dispose();
     super.dispose();
   }

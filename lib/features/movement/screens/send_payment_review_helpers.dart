@@ -34,7 +34,7 @@ String sendReviewNote(
   if (destination.isOnChain) {
     return coldSource
         ? 'Você assina no aparelho · Kerosene só observa a blockchain'
-        : 'Envio on-chain';
+        : 'Envio on-chain · se o endereço for Kerosene, a entrega vai para a carteira on-chain (custodial/cold) do destinatário com notificação no app';
   }
   return 'Transferência interna Kerosene';
 }

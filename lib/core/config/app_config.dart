@@ -2,11 +2,13 @@
 class AppConfig {
   // ==================== Node Routing ====================
 
-  // Local-full Kubernetes onion currently persisted under
-  // /home/omega/.local/state/kerosene/tor/keys/local-full.
-  // Production builds should override this with KERO_NODE_*_URL.
+  // Local-full Kubernetes onion hostname is persisted under
+  // ~/.local/state/kerosene/tor/keys/local-full/hostname
+  // (see `infra/status.sh` → "tor onion:").
+  // When keys rotate / cluster recreates the HS, update this default or pass
+  // KERO_NODE_*_URL at build time. Production must always use --dart-define.
   static const String _localFullDefaultOnionUrl =
-      'http://exze5uokdpao4lwdodnlsd4pvfm25ntpkwh7xas5fefuzdmiisr4u7yd.onion';
+      'http://u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion';
   static const bool isReleaseBuild = bool.fromEnvironment('dart.vm.product');
   static const bool _hasNodeISDefine = bool.hasEnvironment('KERO_NODE_IS_URL');
   static const bool _hasNodeCHDefine = bool.hasEnvironment('KERO_NODE_CH_URL');

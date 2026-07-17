@@ -186,36 +186,11 @@ class HomeBitcoinChartAmbientPulse extends StatefulWidget {
 }
 
 class _HomeBitcoinChartAmbientPulseState
-    extends State<HomeBitcoinChartAmbientPulse>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: KeroseneMotion.loop,
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+    extends State<HomeBitcoinChartAmbientPulse> {
   @override
   Widget build(BuildContext context) {
-    if (KeroseneMotion.reduceMotion(context)) return widget.child;
-    return AnimatedBuilder(
-      animation: _controller,
-      child: widget.child,
-      builder: (context, child) {
-        final opacity = 0.74 + (_controller.value * 0.26);
-        return Opacity(opacity: opacity, child: child);
-      },
-    );
+    // Static — continuous opacity tickers kill home scroll FPS.
+    return widget.child;
   }
 }
 
@@ -234,47 +209,16 @@ class HomeBitcoinLiveDot extends StatefulWidget {
   State<HomeBitcoinLiveDot> createState() => _HomeBitcoinLiveDotState();
 }
 
-class _HomeBitcoinLiveDotState extends State<HomeBitcoinLiveDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _HomeBitcoinLiveDotState extends State<HomeBitcoinLiveDot> {
   @override
   Widget build(BuildContext context) {
-    if (KeroseneMotion.reduceMotion(context)) {
-      return CustomPaint(
-        painter: _LiveDotPainter(
-          offset: widget.offset,
-          color: widget.color,
-          t: 1,
-        ),
-      );
-    }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return CustomPaint(
-          painter: _LiveDotPainter(
-            offset: widget.offset,
-            color: widget.color,
-            t: _controller.value,
-          ),
-        );
-      },
+    // Static endpoint marker — no looping ticker during home scroll.
+    return CustomPaint(
+      painter: _LiveDotPainter(
+        offset: widget.offset,
+        color: widget.color,
+        t: 1,
+      ),
     );
   }
 }

@@ -1,0 +1,8 @@
+# Maestro workspace for Kerosene native visual capture.
+# https://docs.maestro.dev
+#
+# appId is also set per-flow. Default package:
+#   com.kerosene.app
+#
+# Run:
+#   maestro test maestro/flows/capture_authenticated_screens.yaml
