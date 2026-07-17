@@ -1,11 +1,9 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 /// Home activity list paper + ink for each ledger balance tab.
-///
-/// Colored tabs use stronger card gradients and high-contrast dark ink.
-/// Total (near-white) keeps standard dark ink — no invert needed.
 @immutable
 class HomeActivitySurfaceStyle {
   final Color gradientTop;
@@ -23,6 +21,8 @@ class HomeActivitySurfaceStyle {
   final Color detailValue;
   final Color action;
   final bool invertInk;
+  /// Soft highlight tint for ambient glimmers (low-alpha in the painter).
+  final Color glimmer;
 
   const HomeActivitySurfaceStyle({
     required this.gradientTop,
@@ -40,14 +40,15 @@ class HomeActivitySurfaceStyle {
     required this.detailValue,
     required this.action,
     required this.invertInk,
+    required this.glimmer,
   });
 
   /// [viewName] is `HomeLedgerBalanceView.name`.
   static HomeActivitySurfaceStyle forLedgerViewName(String viewName) {
     return switch (viewName) {
       'onChain' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x66FFB04A),
-          gradientMid: Color(0x33FF9A2E),
+          gradientTop: Color(0x55FFB04A),
+          gradientMid: Color(0x28FF9A2E),
           gradientBottom: Color(0x00FF9A2E),
           cardTop: Color(0xFFFFC878),
           cardBottom: Color(0xFFFFA940),
@@ -61,10 +62,11 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF100600),
           action: Color(0xFF1A0C02),
           invertInk: true,
+          glimmer: Color(0xFFFFF0D0),
         ),
       'cold' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x666BB3E8),
-          gradientMid: Color(0x334A9AD4),
+          gradientTop: Color(0x556BB3E8),
+          gradientMid: Color(0x284A9AD4),
           gradientBottom: Color(0x004A9AD4),
           cardTop: Color(0xFF8EC8F0),
           cardBottom: Color(0xFF5AADD9),
@@ -78,10 +80,11 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF040C14),
           action: Color(0xFF061018),
           invertInk: true,
+          glimmer: Color(0xFFE8F6FF),
         ),
       'platform' => const HomeActivitySurfaceStyle(
-          gradientTop: Color(0x44D8DDE4),
-          gradientMid: Color(0x22C8CED8),
+          gradientTop: Color(0x40D8DDE4),
+          gradientMid: Color(0x20C8CED8),
           gradientBottom: Color(0x00C8CED8),
           cardTop: Color(0xFFE8ECF2),
           cardBottom: Color(0xFFD2D8E2),
@@ -95,11 +98,11 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF0A0A0B),
           action: Color(0xFF0A0A0C),
           invertInk: false,
+          glimmer: Color(0xFFFFFFFF),
         ),
       _ => const HomeActivitySurfaceStyle(
-          // Total — near white, no invert.
-          gradientTop: Color(0x22F0F0F2),
-          gradientMid: Color(0x11E8E8EC),
+          gradientTop: Color(0x28F0F0F2),
+          gradientMid: Color(0x14E8E8EC),
           gradientBottom: Color(0x00E8E8EC),
           cardTop: Color(0xFFFAFAFB),
           cardBottom: Color(0xFFF0F0F3),
@@ -113,17 +116,17 @@ class HomeActivitySurfaceStyle {
           detailValue: Color(0xFF0A0A0B),
           action: Color(0xFF0A0A0C),
           invertInk: false,
+          glimmer: Color(0xFFFFFFFF),
         ),
     };
   }
 }
 
-/// Soft static gradient behind the transaction list only.
+/// Vertical wash + soft continuous glimmers, **clipped to the transaction list**.
 ///
-/// No sparkle circles, no looping blobs — just a vertical wash clipped to
-/// the list bounds so it never leaks into funds distribution or other home
-/// sections.
-class HomeActivityListWash extends StatelessWidget {
+/// Glimmers are soft radial fades (not hard circles), positions use sin/cos so
+/// the 0→1 loop is seamless (no jump when the ticker wraps).
+class HomeActivityListWash extends StatefulWidget {
   final HomeActivitySurfaceStyle style;
   final Widget child;
 
@@ -134,29 +137,178 @@ class HomeActivityListWash extends StatelessWidget {
   });
 
   @override
+  State<HomeActivityListWash> createState() => _HomeActivityListWashState();
+}
+
+class _HomeActivityListWashState extends State<HomeActivityListWash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _phase;
+
+  @override
+  void initState() {
+    super.initState();
+    _phase = AnimationController(
+      vsync: this,
+      // Long period — motion is almost imperceptible, seamless loop.
+      duration: const Duration(seconds: 18),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _phase.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final style = widget.style;
+    final reduce = MediaQuery.maybeOf(context)?.disableAnimations == true ||
+        MediaQuery.maybeOf(context)?.accessibleNavigation == true;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              style.gradientTop,
-              style.gradientMid,
-              style.gradientBottom,
-            ],
-            stops: const [0.0, 0.38, 1.0],
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          // Base wash: only paints where the list is, fades out downward.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      style.gradientTop,
+                      style.gradientMid,
+                      style.gradientBottom,
+                    ],
+                    stops: const [0.0, 0.35, 1.0],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        child: Padding(
-          // Slight inset so the wash reads as list backdrop, not full screen.
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
-          child: child,
-        ),
+          // Soft glimmers — seamless drift (no hard circle edges, no reset jump).
+          if (!reduce)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _phase,
+                    builder: (context, _) {
+                      return CustomPaint(
+                        painter: _SoftGlimmerPainter(
+                          phase: _phase.value,
+                          color: style.glimmer,
+                          accent: style.gradientTop,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
+            child: widget.child,
+          ),
+        ],
       ),
     );
+  }
+}
+
+/// Soft radial glimmers (NotebookLM-like). All motion is continuous via sin/cos.
+class _SoftGlimmerPainter extends CustomPainter {
+  final double phase;
+  final Color color;
+  final Color accent;
+
+  _SoftGlimmerPainter({
+    required this.phase,
+    required this.color,
+    required this.accent,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    // Full cycle in sin/cos → seamless when phase wraps 0↔1.
+    final t = phase * 2 * math.pi;
+
+    void softGlow({
+      required Offset center,
+      required double radius,
+      required Color c,
+      required double peakAlpha,
+    }) {
+      // Keep glows fully inside bounds so nothing “extrapolates” the list.
+      final r = radius.clamp(8.0, math.min(size.width, size.height) * 0.22);
+      final cx = center.dx.clamp(r, size.width - r);
+      final cy = center.dy.clamp(r, size.height - r);
+      final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+      final paint = Paint()
+        ..shader = ui.Gradient.radial(
+          Offset(cx, cy),
+          r,
+          [
+            c.withValues(alpha: peakAlpha),
+            c.withValues(alpha: peakAlpha * 0.35),
+            c.withValues(alpha: 0),
+          ],
+          const [0.0, 0.45, 1.0],
+        );
+      canvas.drawRect(rect, paint);
+    }
+
+    // Small, soft, slow — not solid disks.
+    softGlow(
+      center: Offset(
+        size.width * (0.22 + 0.05 * math.sin(t)),
+        size.height * (0.14 + 0.04 * math.cos(t * 0.85)),
+      ),
+      radius: size.width * 0.18,
+      c: color,
+      peakAlpha: 0.14,
+    );
+    softGlow(
+      center: Offset(
+        size.width * (0.72 + 0.04 * math.cos(t * 0.9 + 0.8)),
+        size.height * (0.22 + 0.05 * math.sin(t * 0.7 + 0.4)),
+      ),
+      radius: size.width * 0.15,
+      c: accent,
+      peakAlpha: 0.10,
+    );
+    softGlow(
+      center: Offset(
+        size.width * (0.48 + 0.06 * math.sin(t * 0.55 + 1.6)),
+        size.height * (0.48 + 0.04 * math.cos(t * 0.65 + 0.3)),
+      ),
+      radius: size.width * 0.16,
+      c: color,
+      peakAlpha: 0.09,
+    );
+    softGlow(
+      center: Offset(
+        size.width * (0.30 + 0.04 * math.cos(t * 0.75 + 2.1)),
+        size.height * (0.72 + 0.03 * math.sin(t * 0.5 + 1.1)),
+      ),
+      radius: size.width * 0.12,
+      c: color,
+      peakAlpha: 0.07,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SoftGlimmerPainter oldDelegate) {
+    // Only repaint when phase changes enough to be visible (~1°).
+    return (phase - oldDelegate.phase).abs() > 0.002 ||
+        color != oldDelegate.color ||
+        accent != oldDelegate.accent;
   }
 }
 
