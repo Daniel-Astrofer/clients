@@ -114,6 +114,7 @@ flutter:
     - 'assets/backgrounds/'
 
   shaders:
+    - 'assets/shaders/home_aurora.frag'
     - 'assets/shaders/bitcoin_hodl.frag'
     - 'assets/shaders/card_wood.frag'
     - 'assets/shaders/card_metal.frag'

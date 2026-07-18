@@ -146,6 +146,8 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
           body: SafeArea(
             child: Stack(
               children: [
+                // Must stay in the tree with Opacity 0 so autofocus / requestFocus
+                // open the keyboard. Visibility(visible: false) breaks input.
                 Opacity(
                   opacity: 0,
                   child: SizedBox(
@@ -196,11 +198,14 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                           final maxDotWidth = dotSize * 1.5;
                           final spacing = dotSize * 0.25;
                           final padding = dotSize * 0.8;
-                          final requiredWidth =
-                              widget.maxLength * maxDotWidth + (widget.maxLength - 1) * spacing + padding + 4.0;
+                          final requiredWidth = widget.maxLength * maxDotWidth +
+                              (widget.maxLength - 1) * spacing +
+                              padding +
+                              4.0;
                           if (requiredWidth > availableWidth) {
                             // Solves the equation: availableWidth = dotSize * (maxLength * 1.75 + 0.55) + 4.0
-                            dotSize = (availableWidth - 4.0) / (widget.maxLength * 1.75 + 0.55);
+                            dotSize = (availableWidth - 4.0) /
+                                (widget.maxLength * 1.75 + 0.55);
                             if (dotSize < 16) dotSize = 16;
                           }
 
@@ -242,8 +247,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                                           widget.error!,
                                           key: ValueKey(widget.error),
                                           textAlign: TextAlign.center,
-                                          style:
-                                              AppTypography.caption.copyWith(
+                                          style: AppTypography.caption.copyWith(
                                             color: Colors.red.shade400,
                                             height: 1.28,
                                             letterSpacing: 0,
@@ -352,18 +356,32 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
-    if (widget.busy) {
-      _rotationController.repeat();
-    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncSpin();
   }
 
   @override
   void didUpdateWidget(covariant LoadingErrorBorderWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.busy && !oldWidget.busy) {
-      _rotationController.repeat();
-    } else if (!widget.busy && oldWidget.busy) {
-      _rotationController.stop();
+    if (widget.busy != oldWidget.busy) {
+      _syncSpin();
+    }
+  }
+
+  void _syncSpin() {
+    final allow = widget.busy &&
+        TickerMode.valuesOf(context).enabled &&
+        !(MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+    if (allow) {
+      if (!_rotationController.isAnimating) {
+        _rotationController.repeat();
+      }
+    } else if (_rotationController.isAnimating) {
+      _rotationController.stop(canceled: false);
     }
   }
 
@@ -375,32 +393,42 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
 
   @override
   Widget build(BuildContext context) {
+    final allowSpin = widget.busy &&
+        TickerMode.valuesOf(context).enabled &&
+        !(MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+
+    if (!allowSpin) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color:
+                widget.hasError ? Colors.red.shade800 : monoBorderStrongColor,
+            width: 2,
+          ),
+        ),
+        child: widget.child,
+      );
+    }
+
     return AnimatedBuilder(
       animation: _rotationController,
       child: widget.child,
       builder: (context, childWidget) {
         return CustomPaint(
-          painter: widget.busy
-              ? SpinningBorderPainter(
-                  animationValue: _rotationController.value,
-                  color1: Colors.white,
-                  color2: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: 999,
-                  strokeWidth: 2,
-                )
-              : null,
+          painter: SpinningBorderPainter(
+            animationValue: _rotationController.value,
+            color1: Colors.white,
+            color2: Colors.white.withValues(alpha: 0.15),
+            borderRadius: 999,
+            strokeWidth: 2,
+          ),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              border: widget.busy
-                  ? Border.all(color: Colors.transparent, width: 2)
-                  : Border.all(
-                      color: widget.hasError
-                          ? Colors.red.shade800
-                          : monoBorderStrongColor,
-                      width: 2,
-                    ),
+              border: Border.all(color: Colors.transparent, width: 2),
             ),
             child: childWidget,
           ),

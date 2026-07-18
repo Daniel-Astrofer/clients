@@ -243,7 +243,10 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       _armEntranceReveal = true;
       _entranceTileCache = null;
       _entranceIdOrder = null;
-      const skeleton = _TransactionsSkeletonLoading();
+      const skeleton = ColoredBox(
+        color: homeBackgroundColor,
+        child: _TransactionsSkeletonLoading(),
+      );
       return widget.asSliver
           ? const SliverToBoxAdapter(child: skeleton)
           : skeleton;
@@ -386,8 +389,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
               );
 
         final gap = index > 0 ? homeSize(12) : 0.0;
+        Widget content;
         if (dateHeader != null) {
-          return Padding(
+          content = Padding(
             padding: EdgeInsets.only(top: gap),
             child: Column(
               key: ValueKey('col_${tx.id}'),
@@ -401,10 +405,16 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
               ],
             ),
           );
+        } else {
+          content = Padding(
+            padding: EdgeInsets.only(top: gap),
+            child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
+          );
         }
-        return Padding(
-          padding: EdgeInsets.only(top: gap),
-          child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
+
+        return ColoredBox(
+          color: homeBackgroundColor,
+          child: content,
         );
       }
 

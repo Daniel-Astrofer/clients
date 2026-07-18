@@ -292,6 +292,14 @@ final _scopedTransactionHistoryProvider =
   final ledgerSync = LocalLedgerSync(localStore);
   final localCached = await localStore.load(sessionScope);
 
+  if (localCached.isNotEmpty) {
+    Future.microtask(() {
+      if (ref.mounted) {
+        ref.read(lastTransactionHistoryProvider.notifier).set(localCached);
+      }
+    });
+  }
+
   // Incremental: only rows updated after last cursor when we already have local.
   final cursor = ref.read(transactionHistoryCursorProvider);
   DateTime? since;
@@ -318,9 +326,13 @@ final _scopedTransactionHistoryProvider =
     // ignore: unawaited_futures
     LedgerTelemetry.recordFullPull();
   }
+
+  final externalTransfersFuture = _loadExternalTransfersSafely(ref);
+  final paymentLinksFuture = _loadPaymentLinksSafely(ref);
+
   final result = await ledgerRepo.getHistory(page: 0, size: 100, since: since);
-  final externalTransfers = await _loadExternalTransfersSafely(ref);
-  final paymentLinks = await _loadPaymentLinksSafely(ref);
+  final externalTransfers = await externalTransfersFuture;
+  final paymentLinks = await paymentLinksFuture;
 
   return result.fold(
     (failure) async {

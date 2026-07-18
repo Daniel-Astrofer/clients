@@ -137,5 +137,43 @@ void main() {
       expect(tx.isOnChain, isFalse);
       expect(tx.showsOnchainConfirmations, isFalse);
     });
+
+    test('on-chain inbound receipt parses amount when receiverAmountSats is 0 or missing', () {
+      final tx = Transaction.fromJson({
+        'rail': 'ONCHAIN',
+        'direction': 'INBOUND',
+        'status': 'SETTLED',
+        'grossAmountSats': 50000,
+        'receiverAmountSats': 0,
+        'networkFeeSats': 0,
+        'confirmations': 6,
+        'blockchainTxid': 'deadbeef123',
+        'createdAt': '2026-07-01T12:00:00Z',
+      });
+
+      expect(tx.isCredit, isTrue);
+      expect(tx.isOnChain, isTrue);
+      expect(tx.amountSatoshis, 50000);
+      expect(tx.amountBTC, 0.0005);
+      expect(tx.signedDisplayAmountBTC, 0.0005);
+    });
+
+    test('on-chain inbound receipt parses amount from amountSats or amountBtc', () {
+      final tx = Transaction.fromJson({
+        'rail': 'ONCHAIN',
+        'direction': 'INBOUND',
+        'status': 'SETTLED',
+        'amountSats': 75000,
+        'networkFeeSats': 0,
+        'confirmations': 6,
+        'blockchainTxid': 'feedbeef',
+        'createdAt': '2026-07-01T12:00:00Z',
+      });
+
+      expect(tx.isCredit, isTrue);
+      expect(tx.isOnChain, isTrue);
+      expect(tx.amountSatoshis, 75000);
+      expect(tx.amountBTC, 0.00075);
+    });
   });
 }

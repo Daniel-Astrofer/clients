@@ -337,24 +337,30 @@ class _InfiniteWalletCardsState extends State<InfiniteWalletCards>
     required Widget child,
   }) {
     if (rank == 0 || isDragged) return child;
-    final double depthOpacity = (rank * 0.15).clamp(0.0, 0.5);
-
-    return ShaderMask(
-      shaderCallback: (Rect bounds) {
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Theme.of(context).colorScheme.onPrimary,
-            Theme.of(
-              context,
-            ).colorScheme.onPrimary.withValues(alpha: 1.0 - depthOpacity),
-          ],
-          stops: const [0.3, 1.0],
-        ).createShader(bounds);
-      },
-      blendMode: BlendMode.dstIn,
-      child: child,
+    // Depth fade without ShaderMask (dstIn forces saveLayer per stacked card).
+    final double depthDim = (rank * 0.15).clamp(0.0, 0.5);
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: depthDim * 0.15),
+                    Colors.black.withValues(alpha: depthDim),
+                  ],
+                  stops: const [0.3, 1.0],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

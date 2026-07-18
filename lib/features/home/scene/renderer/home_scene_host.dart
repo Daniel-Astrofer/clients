@@ -142,17 +142,26 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     _bodyCache.removeWhere((k, _) => !keep.contains(k));
   }
 
+  /// Structural cache key — **never** include streaming title/body text.
+  /// Text lives in [_TheaterBody] via a selective provider watch.
   String _sceneCacheKey(HomeScene scene) =>
-      '${scene.id}|${scene.content.title}|${scene.content.subtitle}|'
-      '${scene.content.body}|${scene.media.type.name}|${scene.media.asset}|'
-      '${scene.cta.label}|${scene.layout.name}';
+      '${scene.id}|${scene.layout.name}|${scene.media.type.name}|'
+      '${scene.media.asset}|${scene.media.url}|${scene.cta.label}|'
+      '${scene.cta.action}|${scene.content.textMode.name}|'
+      '${scene.lifecycle.showDurationMs}';
+
+  /// Open/swap identity — ignores token-by-token text growth.
+  String _structuralSessionId(HomeScene scene) =>
+      '${scene.id}|${scene.layout.name}|${scene.media.type.name}|'
+      '${scene.media.asset}|${scene.cta.action}|${scene.hasForegroundContent}';
 
   /// Build once, reuse under [RepaintBoundary] for the whole open/swap.
   Widget _cachedBody(
     HomeScene scene, {
     required bool interactive,
+    required bool liveContent,
   }) {
-    final key = _sceneCacheKey(scene);
+    final key = '${_sceneCacheKey(scene)}|live=$liveContent|i=$interactive';
     final hit = _bodyCache[key];
     if (hit != null) return hit;
 
@@ -160,6 +169,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       child: _TheaterBody(
         scene: scene,
         userName: widget.userName,
+        liveContent: liveContent,
         onAction: interactive ? _onAction : null,
       ),
     );
@@ -244,9 +254,16 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
   void _onSceneChanged(HomeScene scene) {
     final stage = ref.read(homeSurfaceProvider).stage;
-    final id = '${scene.id}|${scene.content.title}|${scene.layout.name}';
+    final id = _structuralSessionId(scene);
     final wantsOpen = scene.hasForegroundContent && !_finished;
     final reduce = KeroseneMotion.reduceMotion(context);
+
+    if (wantsOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _precacheSceneMedia(scene);
+      });
+    }
 
     if (!wantsOpen) {
       if (_sessionId.isEmpty && _displayScene == null) return;
@@ -268,9 +285,17 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       return;
     }
 
-    final wasOpen = _openCtrl.value > 0.05 ||
-        _openCtrl.status == AnimationStatus.completed;
+    final wasOpen =
+        _openCtrl.value > 0.05 || _openCtrl.status == AnimationStatus.completed;
     final isNewPiece = id != _sessionId;
+
+    // Same theater piece with growing SSE text: content layer watches the
+    // provider live — skip host setState / re-open / cache thrash.
+    if (!isNewPiece && wasOpen && _displayScene != null) {
+      _displayScene = scene;
+      return;
+    }
+
     _sessionId = id;
     _finished = false;
 
@@ -279,8 +304,8 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       final prevKey = _sceneCacheKey(prev);
       final nextKey = _sceneCacheKey(scene);
       // Warm both cache entries before the swap ticks.
-      _cachedBody(prev, interactive: false);
-      _cachedBody(scene, interactive: true);
+      _cachedBody(prev, interactive: false, liveContent: false);
+      _cachedBody(scene, interactive: true, liveContent: true);
       setState(() {
         _previousScene = prev;
         _previousCacheKey = prevKey;
@@ -298,7 +323,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     }
 
     final key = _sceneCacheKey(scene);
-    _cachedBody(scene, interactive: true);
+    _cachedBody(scene, interactive: true, liveContent: true);
     setState(() {
       _previousScene = null;
       _previousCacheKey = null;
@@ -314,6 +339,31 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       _swapCtrl.value = 1;
       _openCtrl.forward(from: 0);
     }
+  }
+
+  void _precacheSceneMedia(HomeScene scene) {
+    final media = scene.media;
+    if (!media.hasVisual) return;
+
+    // Target: reduce Raster spikes by moving image decode/upload off the
+    // critical frame where the theater opens/swaps.
+    if (media.type != SceneMediaType.image) return;
+
+    final url = media.url?.trim() ?? '';
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheHeight = (homeSize(100) * dpr).round().clamp(1, 4096);
+
+    ImageProvider provider;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      provider = ResizeImage(NetworkImage(url), height: cacheHeight);
+    } else {
+      final paths = SceneAssetCatalog.pathsFor(media);
+      if (paths.isEmpty) return;
+      provider = ResizeImage(AssetImage(paths.first), height: cacheHeight);
+    }
+
+    // ignore: discarded_futures
+    precacheImage(provider, context);
   }
 
   void _complete(HomeScene scene, HomeStage stage) {
@@ -376,7 +426,13 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(homeSceneProvider.select((s) => '${s.id}|${s.content.title}'));
+    // Structural only — streaming title/body must not rebuild the host shell.
+    ref.watch(
+      homeSceneProvider.select(
+        (s) =>
+            '${s.id}|${s.layout.name}|${s.hasForegroundContent}|${s.media.type.name}',
+      ),
+    );
     final resting =
         ref.watch(homeSurfaceProvider.select((s) => s.restingHeader));
     final screenH = MediaQuery.sizeOf(context).height;
@@ -411,7 +467,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
         (_previousScene == null || _swapCtrl.value >= 0.999) &&
         !_openCtrl.isAnimating &&
         !_swapCtrl.isAnimating) {
-      final body = _cachedBody(current, interactive: true);
+      final body = _cachedBody(current, interactive: true, liveContent: true);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -443,11 +499,11 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     // Warm cache for active scenes before ticks start painting.
     if (current != null) {
       _currentCacheKey = _sceneCacheKey(current);
-      _cachedBody(current, interactive: true);
+      _cachedBody(current, interactive: true, liveContent: true);
     }
     if (previous != null) {
       _previousCacheKey = _sceneCacheKey(previous);
-      _cachedBody(previous, interactive: false);
+      _cachedBody(previous, interactive: false, liveContent: false);
     }
 
     return AnimatedBuilder(
@@ -460,12 +516,14 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
         final showShell = open > 0.001 && current != null;
 
         final currentBody = current != null
-            ? _bodyCache[_sceneCacheKey(current)] ??
-                _cachedBody(current, interactive: true)
+            ? _bodyCache[
+                    '${_sceneCacheKey(current)}|live=true|i=true'] ??
+                _cachedBody(current, interactive: true, liveContent: true)
             : null;
         final previousBody = previous != null
-            ? _bodyCache[_sceneCacheKey(previous)] ??
-                _cachedBody(previous, interactive: false)
+            ? _bodyCache[
+                    '${_sceneCacheKey(previous)}|live=false|i=false'] ??
+                _cachedBody(previous, interactive: false, liveContent: false)
             : null;
 
         return Column(
@@ -556,37 +614,66 @@ class _CrossfadeCached extends StatelessWidget {
   }
 }
 
-class _TheaterBody extends StatelessWidget {
+/// Theater body shell. When [liveContent] is true, title/body stream from
+/// [homeSceneProvider] so SSE tokens never rebuild the host or media/CTA.
+class _TheaterBody extends ConsumerWidget {
   final HomeScene scene;
   final String userName;
+  final bool liveContent;
   final SceneActionHandler? onAction;
 
   const _TheaterBody({
     required this.scene,
     required this.userName,
+    this.liveContent = true,
     this.onAction,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final content = liveContent
+        ? ref.watch(
+            homeSceneProvider.select((s) {
+              if (s.id != scene.id) return scene.content;
+              return s.content;
+            }),
+          )
+        : scene.content;
+    final media = liveContent
+        ? ref.watch(
+            homeSceneProvider.select((s) {
+              if (s.id != scene.id) return scene.media;
+              return s.media;
+            }),
+          )
+        : scene.media;
+    final cta = liveContent
+        ? ref.watch(
+            homeSceneProvider.select((s) {
+              if (s.id != scene.id) return scene.cta;
+              return s.cta;
+            }),
+          )
+        : scene.cta;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (scene.media.hasVisual) ...[
-          SceneMediaLayer(media: scene.media, maxHeight: 100),
+        if (media.hasVisual) ...[
+          SceneMediaLayer(media: media, maxHeight: 100),
           SizedBox(height: homeSize(12)),
         ],
         SceneContentLayer(
-          content: scene.content,
+          content: content,
           userName: userName,
           showDurationMs: scene.lifecycle.showDurationMs,
         ),
-        if (scene.cta.isActive) ...[
+        if (cta.isActive) ...[
           SizedBox(height: homeSize(14)),
           Align(
             alignment: Alignment.centerLeft,
-            child: SceneActionLayer(cta: scene.cta, onAction: onAction),
+            child: SceneActionLayer(cta: cta, onAction: onAction),
           ),
         ],
       ],

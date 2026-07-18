@@ -3,10 +3,10 @@ import 'dart:ui' as ui;
 
 import 'package:intl/intl.dart' as intl;
 import 'package:kerosene/core/services/bitcoin_market_chart_service.dart';
+import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_bitcoin_market_chart_provider.dart';
 import 'home_bitcoin_market_chart_motion.dart';
 import '../screens/home_screen_dependencies.dart';
-import '../screens/home_screen.dart';
 import '../screens/home_screen_surface.dart';
 
 class HomeBitcoinMarketChartCard extends ConsumerStatefulWidget {
@@ -20,8 +20,10 @@ class HomeBitcoinMarketChartCard extends ConsumerStatefulWidget {
 class _HomeBitcoinMarketChartCardState
     extends ConsumerState<HomeBitcoinMarketChartCard> {
   static const EdgeInsets _chartPadding = EdgeInsets.fromLTRB(46, 10, 8, 24);
+
   /// Stroke was 2.4 → −30% ≈ 1.68
   static const double _lineStrokeWidth = 1.68;
+
   /// Glow stroke was 5 → −30% ≈ 3.5; alpha was 0.18 → −40% ≈ 0.108
   static const double _lineGlowWidth = 3.5;
   static const double _lineGlowAlpha = 0.108;
@@ -105,7 +107,6 @@ class _HomeBitcoinMarketChartCardState
     final isPositive = snapshot.isPositivePeriod;
     final trendColor = isPositive ? homePositiveColor : AppColors.hexFFFF5A67;
 
-
     final displayPrice = displayPoint?.price ?? snapshot.lastPrice;
     final money = ref.watch(moneyFormatConfigProvider);
 
@@ -154,7 +155,6 @@ class _HomeBitcoinMarketChartCardState
                       ),
                     ),
                     SizedBox(height: homeSize(8)),
-
                   ],
                 ),
               ),
@@ -173,7 +173,6 @@ class _HomeBitcoinMarketChartCardState
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-
                 ],
               ),
             ],
@@ -223,41 +222,46 @@ class _HomeBitcoinMarketChartCardState
                       children: [
                         Positioned.fill(
                           child: RepaintBoundary(
-                            child: HomeBitcoinChartDrawOn(
-                              seriesKey: Object.hash(
-                                snapshot.request.symbol,
-                                snapshot.request.rangeLabel,
-                                snapshot.request.customStart,
-                                points.length > 2 ? points.first.timeMillis : 0,
+                            child: TickerMode(
+                              enabled: !ref.watch(homeScrollBusyProvider),
+                              child: HomeBitcoinChartDrawOn(
+                                seriesKey: Object.hash(
+                                  snapshot.request.symbol,
+                                  snapshot.request.rangeLabel,
+                                  snapshot.request.customStart,
+                                  points.length > 2
+                                      ? points.first.timeMillis
+                                      : 0,
+                                ),
+                                builder: (context, progress) {
+                                  return CustomPaint(
+                                    painter: _BitcoinMarketChartPainter(
+                                      snapshot: snapshot,
+                                      selectedIndex:
+                                          _safeSelectedIndex(snapshot),
+                                      padding: _chartPadding,
+                                      lineColor: trendColor,
+                                      drawProgress: progress,
+                                      lineStrokeWidth: _lineStrokeWidth,
+                                      lineGlowWidth: _lineGlowWidth,
+                                      lineGlowAlpha: _lineGlowAlpha,
+                                      labelColor:
+                                          Colors.white.withValues(alpha: 0.42),
+                                      priceLabelFormatter: (value) =>
+                                          _compactPrice(
+                                        value,
+                                        snapshot.request.quoteCurrency,
+                                      ),
+                                      timeLabelFormatter: (time) => _timeLabel(
+                                        time,
+                                        snapshot.request.range,
+                                        locale: Localizations.localeOf(context)
+                                            .toLanguageTag(),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              builder: (context, progress) {
-                                return CustomPaint(
-                                  painter: _BitcoinMarketChartPainter(
-                                    snapshot: snapshot,
-                                    selectedIndex:
-                                        _safeSelectedIndex(snapshot),
-                                    padding: _chartPadding,
-                                    lineColor: trendColor,
-                                    drawProgress: progress,
-                                    lineStrokeWidth: _lineStrokeWidth,
-                                    lineGlowWidth: _lineGlowWidth,
-                                    lineGlowAlpha: _lineGlowAlpha,
-                                    labelColor:
-                                        Colors.white.withValues(alpha: 0.42),
-                                    priceLabelFormatter: (value) =>
-                                        _compactPrice(
-                                      value,
-                                      snapshot.request.quoteCurrency,
-                                    ),
-                                    timeLabelFormatter: (time) => _timeLabel(
-                                      time,
-                                      snapshot.request.range,
-                                      locale: Localizations.localeOf(context)
-                                          .toLanguageTag(),
-                                    ),
-                                  ),
-                                );
-                              },
                             ),
                           ),
                         ),
@@ -433,8 +437,7 @@ class _HomeBitcoinMarketChartCardState
   }
 
   Future<void> _openCustomDaysSheet(BuildContext context) async {
-    final current =
-        ref.read(homeBitcoinMarketChartCustomDaysProvider) ?? 90;
+    final current = ref.read(homeBitcoinMarketChartCustomDaysProvider) ?? 90;
     final picked = await showModalBottomSheet<int>(
       context: context,
       backgroundColor: AppColors.hexFF0E0E0E,
@@ -449,18 +452,17 @@ class _HomeBitcoinMarketChartCardState
     HapticFeedback.selectionClick();
     ref.read(homeBitcoinMarketChartCustomDaysProvider.notifier).state = picked;
     // Align preset chip to nearest window for label consistency.
-    ref.read(homeBitcoinMarketChartRangeProvider.notifier).state =
-        picked <= 3
-            ? BitcoinMarketChartRange.threeDays
-            : picked <= 7
-                ? BitcoinMarketChartRange.oneWeek
-                : picked <= 31
-                    ? BitcoinMarketChartRange.oneMonth
-                    : picked <= 90
-                        ? BitcoinMarketChartRange.ninetyDays
-                        : picked <= 366
-                            ? BitcoinMarketChartRange.oneYear
-                            : BitcoinMarketChartRange.all;
+    ref.read(homeBitcoinMarketChartRangeProvider.notifier).state = picked <= 3
+        ? BitcoinMarketChartRange.threeDays
+        : picked <= 7
+            ? BitcoinMarketChartRange.oneWeek
+            : picked <= 31
+                ? BitcoinMarketChartRange.oneMonth
+                : picked <= 90
+                    ? BitcoinMarketChartRange.ninetyDays
+                    : picked <= 366
+                        ? BitcoinMarketChartRange.oneYear
+                        : BitcoinMarketChartRange.all;
   }
 
   BitcoinMarketChartPoint? _selectedPoint(BitcoinMarketChartSnapshot snapshot) {
@@ -535,8 +537,6 @@ class _HomeBitcoinMarketChartCardState
   }
 }
 
-
-
 class _ChartCardShell extends StatelessWidget {
   final Widget child;
   const _ChartCardShell({super.key, required this.child});
@@ -583,7 +583,9 @@ class _RangeSelector extends ConsumerWidget {
           if (index == presets.length) {
             final selected = customDays != null;
             return _RangeChip(
-              label: customDays != null ? '${customDays}D' : context.tr.homeChartCustom,
+              label: customDays != null
+                  ? '${customDays}D'
+                  : context.tr.homeChartCustom,
               selected: selected,
               accent: accent,
               onTap: onCustomTap,
@@ -597,8 +599,9 @@ class _RangeSelector extends ConsumerWidget {
             accent: accent,
             onTap: () {
               HapticFeedback.selectionClick();
-              ref.read(homeBitcoinMarketChartCustomDaysProvider.notifier).state =
-                  null;
+              ref
+                  .read(homeBitcoinMarketChartCustomDaysProvider.notifier)
+                  .state = null;
               ref.read(homeBitcoinMarketChartRangeProvider.notifier).state =
                   range;
             },
@@ -638,7 +641,9 @@ class _RangeChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.white.withValues(alpha: 0.45),
+              color: selected
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.45),
               fontFamily: AppTypography.fontFamily,
               fontSize: homeFontSize(11),
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
@@ -746,45 +751,43 @@ class _ChartTooltip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(
-          horizontal: homeSize(9),
-          vertical: homeSize(7),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              price,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: AppTypography.financialFontFamily,
-                fontSize: homeFontSize(11),
-                fontWeight: FontWeight.w700,
-                height: 1,
-              ),
+        horizontal: homeSize(9),
+        vertical: homeSize(7),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            price,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: AppTypography.financialFontFamily,
+              fontSize: homeFontSize(11),
+              fontWeight: FontWeight.w700,
+              height: 1,
             ),
-            SizedBox(height: homeSize(4)),
-            Text(
-              time,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.52),
-                fontFamily: AppTypography.financialFontFamily,
-                fontSize: homeFontSize(9),
-                fontWeight: FontWeight.w500,
-                height: 1,
-              ),
+          ),
+          SizedBox(height: homeSize(4)),
+          Text(
+            time,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.52),
+              fontFamily: AppTypography.financialFontFamily,
+              fontSize: homeFontSize(9),
+              fontWeight: FontWeight.w500,
+              height: 1,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-
 
 class _BitcoinMarketChartPainter extends CustomPainter {
   final BitcoinMarketChartSnapshot snapshot;
@@ -870,15 +873,26 @@ class _BitcoinMarketChartPainter extends CustomPainter {
           ).createShader(plotRect),
       );
 
-      // Soft glow under the stroke.
+      // Soft halo without MaskFilter.blur (avoids saveLayer / GPU blur pass).
+      canvas.drawPath(
+        extract,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = lineGlowWidth * 1.65
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = lineColor.withValues(alpha: lineGlowAlpha * 0.45)
+          ..isAntiAlias = true,
+      );
       canvas.drawPath(
         extract,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = lineGlowWidth
           ..strokeCap = StrokeCap.round
-          ..color = lineColor.withValues(alpha: lineGlowAlpha)
-          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 3),
+          ..strokeJoin = StrokeJoin.round
+          ..color = lineColor.withValues(alpha: lineGlowAlpha * 0.75)
+          ..isAntiAlias = true,
       );
 
       canvas.drawPath(
@@ -922,7 +936,6 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     double bottom,
     double top,
   ) {
-
     final labelStyle = TextStyle(
       color: labelColor,
       fontFamily: AppTypography.financialFontFamily,
@@ -952,8 +965,6 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     }
   }
 
-
-
   List<_ChartTimeLabel> _timeLabels(double width) {
     final points = snapshot.points;
     if (points.isEmpty) return const [];
@@ -965,9 +976,8 @@ class _BitcoinMarketChartPainter extends CustomPainter {
       for (var index = 0; index < count; index++)
         _ChartTimeLabel(
           position: index / math.max(1, count - 1),
-          time: points[
-                  ((index / math.max(1, count - 1)) * (points.length - 1))
-                      .round()]
+          time: points[((index / math.max(1, count - 1)) * (points.length - 1))
+                  .round()]
               .time,
         ),
     ];

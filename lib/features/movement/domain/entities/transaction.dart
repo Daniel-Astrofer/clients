@@ -437,7 +437,12 @@ final class Transaction extends Equatable {
   factory Transaction.fromJson(Map<String, dynamic> json) {
     if (json.containsKey('grossAmountSats') ||
         json.containsKey('receiverAmountSats') ||
-        json.containsKey('totalDebitSats')) {
+        json.containsKey('totalDebitSats') ||
+        json.containsKey('amountSats') ||
+        json.containsKey('amountSatoshis') ||
+        json.containsKey('netAmountSats') ||
+        json.containsKey('creditedSats') ||
+        (json.containsKey('direction') && json.containsKey('rail'))) {
       return _fromKfeJson(json);
     }
 
@@ -742,9 +747,17 @@ final class Transaction extends Equatable {
     final externalReference = json['externalReference']?.toString();
     final grossAmountSats = _parseInt(json['grossAmountSats']) ??
         _parseInt(json['amountSats']) ??
-        0;
-    final receiverAmountSats =
-        _parseInt(json['receiverAmountSats']) ?? grossAmountSats;
+        _parseInt(json['amountSatoshis']) ??
+        _parseInt(json['netAmountSats']) ??
+        _parseInt(json['creditedSats']) ??
+        _parseInt(json['receivedSatoshis']) ??
+        _parseInt(json['receivedAmountSats']) ??
+        _parseInt(json['valueSats']) ??
+        _parseBtcToSats(json['amountBtc'] ?? json['amount_btc'] ?? json['amount']);
+    final rawReceiverSats = _parseInt(json['receiverAmountSats']);
+    final receiverAmountSats = (rawReceiverSats != null && rawReceiverSats > 0)
+        ? rawReceiverSats
+        : (grossAmountSats != 0 ? grossAmountSats : (rawReceiverSats ?? 0));
     final networkFeeSats = _parseInt(json['networkFeeSats']) ?? 0;
     final serviceFeeSats = _parseInt(json['keroseneFeeSats']) ??
         _parseInt(json['serviceFeeSats']) ??
@@ -961,6 +974,22 @@ final class Transaction extends Equatable {
       return null;
     }
     return double.tryParse(raw.replaceAll(',', '.'));
+  }
+
+  static int _parseBtcToSats(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) {
+      final d = value.toDouble();
+      if (d <= 0) return 0;
+      if (d >= 1000) return d.round();
+      return (d * 100000000).round();
+    }
+    final str = value.toString().trim();
+    if (str.isEmpty) return 0;
+    final d = double.tryParse(str.replaceAll(',', '.'));
+    if (d == null || d <= 0) return 0;
+    if (d >= 1000) return d.round();
+    return (d * 100000000).round();
   }
 
   static Object? _firstJsonValue(

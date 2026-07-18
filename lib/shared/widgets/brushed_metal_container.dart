@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/performance/app_interaction_busy.dart';
+import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
 import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/shader_provider.dart';
@@ -17,6 +19,9 @@ class BrushedMetalContainer extends ConsumerStatefulWidget {
   final double tiltY;
   final ui.Image? textTexture;
 
+  /// When false, freezes [iTime] (static metal look, no continuous GPU cost).
+  final bool animate;
+
   const BrushedMetalContainer({
     super.key,
     this.child,
@@ -28,6 +33,7 @@ class BrushedMetalContainer extends ConsumerStatefulWidget {
     this.tiltX = 0.0,
     this.tiltY = 0.0,
     this.textTexture,
+    this.animate = true,
   });
 
   @override
@@ -44,8 +50,7 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
   void initState() {
     super.initState();
     _controller =
-        AnimationController(vsync: this, duration: KeroseneMotion.ambient)
-          ..repeat();
+        AnimationController(vsync: this, duration: KeroseneMotion.ambient);
     _initFallback();
   }
 
@@ -59,6 +64,36 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncClock();
+  }
+
+  @override
+  void didUpdateWidget(covariant BrushedMetalContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate != widget.animate) {
+      _syncClock();
+    }
+  }
+
+  void _syncClock() {
+    final policy = ref.read(graphicsPolicyProvider);
+    final routeBusy = ref.read(routeTransitionBusyProvider);
+    final allow = widget.animate &&
+        policy.allowAmbientGpuLoops &&
+        !routeBusy &&
+        TickerMode.valuesOf(context).enabled &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        !KeroseneMotion.reduceMotion(context);
+    if (allow) {
+      if (!_controller.isAnimating) _controller.repeat();
+    } else if (_controller.isAnimating) {
+      _controller.stop(canceled: false);
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -67,7 +102,21 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
   @override
   Widget build(BuildContext context) {
     final shaderAsync = ref.watch(metalShaderProvider);
+    final policy = ref.watch(graphicsPolicyProvider);
+    final routeBusy = ref.watch(routeTransitionBusyProvider);
     final ui.Image? activeTexture = widget.textTexture ?? _fallbackTexture;
+    final animate = widget.animate &&
+        policy.allowAmbientGpuLoops &&
+        !routeBusy &&
+        TickerMode.valuesOf(context).enabled &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        !KeroseneMotion.reduceMotion(context);
+
+    if (animate != _controller.isAnimating) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _syncClock();
+      });
+    }
 
     return Container(
       width: widget.width,
@@ -91,11 +140,31 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
               return _MetalFallback(child: widget.child);
             }
 
+            if (!animate) {
+              return CustomPaint(
+                size: Size(widget.width, widget.height),
+                isComplex: true,
+                willChange: false,
+                painter: _MetalShaderPainter(
+                  program: program,
+                  time: _controller.value * 20.0,
+                  baseColor: widget.baseColor,
+                  materialId: widget.materialId,
+                  tiltX: widget.tiltX,
+                  tiltY: widget.tiltY,
+                  texture: activeTexture,
+                ),
+                child: widget.child,
+              );
+            }
+
             return AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
                 return CustomPaint(
                   size: Size(widget.width, widget.height),
+                  isComplex: true,
+                  willChange: true,
                   painter: _MetalShaderPainter(
                     program: program,
                     time: _controller.value * 20.0,

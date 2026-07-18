@@ -41,7 +41,11 @@ class SignupSuccessSceneState extends State<SignupSuccessScene>
     _controller = AnimationController(
       vsync: this,
       duration: AuthMotion.ceremonial,
-    );
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          setState(() {});
+        }
+      });
   }
 
   @override
@@ -62,12 +66,19 @@ class SignupSuccessSceneState extends State<SignupSuccessScene>
 
   @override
   Widget build(BuildContext context) {
+    // After ceremonial entrance settles, drop AnimatedBuilder + Opacity
+    // wrappers so the settled tree has zero saveLayer cost.
+    if (_controller.isCompleted || AuthMotion.reduce(context)) {
+      return _buildSettled(context);
+    }
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final badgeProgress = AuthMotion.reduce(context)
-            ? 1.0
-            : _easeInOut(_interval(_controller.value, 0, 0.32));
+        if (_controller.isCompleted) {
+          return _buildSettled(context);
+        }
+        final badgeProgress = _easeInOut(_interval(_controller.value, 0, 0.32));
         final headingProgress =
             _easeInOut(_interval(_controller.value, 0.18, 0.62));
         final bodyProgress =
@@ -75,110 +86,155 @@ class SignupSuccessSceneState extends State<SignupSuccessScene>
         final buttonProgress =
             _easeInOut(_interval(_controller.value, 0.56, 1));
 
-        return SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final horizontalPadding =
-                  context.responsive.isTinyPhone ? 24.0 : 32.0;
-
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: context.responsive.formConstraints,
-                    child: Semantics(
-                      label: widget.appTitle,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Spacer(flex: 2),
-                          Opacity(
-                            opacity: badgeProgress,
-                            child: Transform.scale(
-                              scale: 0.92 + (0.08 * badgeProgress),
-                              child: Container(
-                                width: 96,
-                                height: 96,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _signupPanel,
-                                  border: Border.all(color: _signupBorderSoft),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.hexFF63FEA7
-                                          .withValues(alpha: 0.15),
-                                      blurRadius: 60,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: AppColors.hexFF63FEA7
-                                            .withValues(alpha: 0.10),
-                                      ),
-                                    ),
-                                    const Icon(
-                                      KeroseneIcons.success,
-                                      color: AppColors.hexFF63FEA7,
-                                      size: 52,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 34),
-                          Opacity(
-                            opacity: headingProgress,
-                            child: Transform.translate(
-                              offset: Offset(0, 18 * (1 - headingProgress)),
-                              child: Text(
-                                _withSuccessBang(widget.title),
-                                textAlign: TextAlign.center,
-                                style: SignupTypography.successTitle(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Opacity(
-                            opacity: bodyProgress,
-                            child: Transform.translate(
-                              offset: Offset(0, 18 * (1 - bodyProgress)),
-                              child: Text(
-                                widget.subtitle,
-                                textAlign: TextAlign.center,
-                                style: SignupTypography.successSubtitle(),
-                              ),
-                            ),
-                          ),
-                          const Spacer(flex: 3),
-                          Opacity(
-                            opacity: buttonProgress,
-                            child: Transform.translate(
-                              offset: Offset(0, 12 * (1 - buttonProgress)),
-                              child: SignupPrimaryButton(
-                                text: widget.actionLabel,
-                                onPressed: widget.onContinue,
-                                borderRadius: 999,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+        return _buildScene(
+          context,
+          badgeProgress: badgeProgress,
+          headingProgress: headingProgress,
+          bodyProgress: bodyProgress,
+          buttonProgress: buttonProgress,
         );
       },
+    );
+  }
+
+  Widget _buildSettled(BuildContext context) {
+    return _buildScene(
+      context,
+      badgeProgress: 1,
+      headingProgress: 1,
+      bodyProgress: 1,
+      buttonProgress: 1,
+    );
+  }
+
+  Widget _buildScene(
+    BuildContext context, {
+    required double badgeProgress,
+    required double headingProgress,
+    required double bodyProgress,
+    required double buttonProgress,
+  }) {
+    final settled = badgeProgress >= 0.995 &&
+        headingProgress >= 0.995 &&
+        bodyProgress >= 0.995 &&
+        buttonProgress >= 0.995;
+
+    Widget reveal({
+      required double progress,
+      required Widget child,
+      double dy = 18,
+    }) {
+      if (settled || progress >= 0.995) return child;
+      // Prefer color-less transform; skip Opacity when fully shown.
+      if (progress <= 0.001) {
+        return const SizedBox.shrink();
+      }
+      return Opacity(
+        opacity: progress,
+        child: Transform.translate(
+          offset: Offset(0, dy * (1 - progress)),
+          child: child,
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontalPadding =
+              context.responsive.isTinyPhone ? 24.0 : 32.0;
+
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: context.responsive.formConstraints,
+                child: Semantics(
+                  label: widget.appTitle,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(flex: 2),
+                      if (badgeProgress > 0.001)
+                        Transform.scale(
+                          scale: 0.92 + (0.08 * badgeProgress),
+                          child: Opacity(
+                            opacity: settled ? 1 : badgeProgress,
+                            child: Container(
+                              width: 96,
+                              height: 96,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _signupPanel,
+                                border: Border.all(color: _signupBorderSoft),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.hexFF63FEA7.withValues(
+                                      alpha:
+                                          0.15 * (settled ? 1 : badgeProgress),
+                                    ),
+                                    blurRadius: 60,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.hexFF63FEA7
+                                          .withValues(alpha: 0.10),
+                                    ),
+                                  ),
+                                  const Icon(
+                                    KeroseneIcons.success,
+                                    color: AppColors.hexFF63FEA7,
+                                    size: 52,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 34),
+                      reveal(
+                        progress: headingProgress,
+                        child: Text(
+                          _withSuccessBang(widget.title),
+                          textAlign: TextAlign.center,
+                          style: SignupTypography.successTitle(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      reveal(
+                        progress: bodyProgress,
+                        child: Text(
+                          widget.subtitle,
+                          textAlign: TextAlign.center,
+                          style: SignupTypography.successSubtitle(),
+                        ),
+                      ),
+                      const Spacer(flex: 3),
+                      reveal(
+                        progress: buttonProgress,
+                        dy: 12,
+                        child: SignupPrimaryButton(
+                          text: widget.actionLabel,
+                          onPressed: widget.onContinue,
+                          borderRadius: 999,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

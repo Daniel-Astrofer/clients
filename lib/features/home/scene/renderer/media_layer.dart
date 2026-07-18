@@ -106,6 +106,9 @@ class _ImageMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheHeight = (height * dpr).round().clamp(1, 4096);
+
     final url = media.url?.trim() ?? '';
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return ClipRRect(
@@ -114,6 +117,9 @@ class _ImageMedia extends StatelessWidget {
           url,
           height: height,
           fit: BoxFit.cover,
+          cacheHeight: cacheHeight,
+          filterQuality: FilterQuality.low,
+          gaplessPlayback: true,
           errorBuilder: (_, __, ___) => const SizedBox.shrink(),
         ),
       );
@@ -126,6 +132,9 @@ class _ImageMedia extends StatelessWidget {
         paths.first,
         height: height,
         fit: BoxFit.cover,
+        cacheHeight: cacheHeight,
+        filterQuality: FilterQuality.low,
+        gaplessPlayback: true,
         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
       ),
     );
@@ -183,7 +192,9 @@ class _LottieMedia extends StatelessWidget {
         ),
       );
     }
-    if (paths.isEmpty) return SizedBox(height: height, child: Center(child: fallback));
+    if (paths.isEmpty) {
+      return SizedBox(height: height, child: Center(child: fallback));
+    }
 
     return SizedBox(
       height: height,

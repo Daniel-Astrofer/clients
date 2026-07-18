@@ -255,14 +255,12 @@ class SettingsNavigationTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                AnimatedOpacity(
-                  opacity: selected ? 1 : 0.45,
-                  duration: KeroseneMotion.short,
-                  child: Icon(
-                    KeroseneIcons.chevronRight,
-                    color: KeroseneBrandTokens.textSecondary,
-                    size: 18,
+                Icon(
+                  KeroseneIcons.chevronRight,
+                  color: KeroseneBrandTokens.textSecondary.withValues(
+                    alpha: selected ? 1.0 : 0.45,
                   ),
+                  size: 18,
                 ),
               ],
             ),

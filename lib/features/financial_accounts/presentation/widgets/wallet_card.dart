@@ -220,6 +220,8 @@ class _WalletCardState extends State<WalletCard>
                       child: BrushedMetalContainer(
                         width: width,
                         height: height,
+                        // Ambient metal time only when this card is selected.
+                        animate: widget.isSelected,
                         baseColor: Theme.of(context)
                             .colorScheme
                             .surface
@@ -415,18 +417,29 @@ class _NeonGlowPainter extends CustomPainter {
     final RRect rRect =
         RRect.fromRectAndRadius(rect, const Radius.circular(24));
 
-    final auraPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..color = color.withValues(alpha: 0.3 * intensity)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
-    canvas.drawRRect(rRect, auraPaint);
+    // Soft aura without MaskFilter.blur (avoids saveLayer / blur GPU pass).
+    canvas.drawRRect(
+      rRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 7.0
+        ..color = color.withValues(alpha: 0.12 * intensity)
+        ..isAntiAlias = true,
+    );
+    canvas.drawRRect(
+      rRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0
+        ..color = color.withValues(alpha: 0.28 * intensity)
+        ..isAntiAlias = true,
+    );
 
     final beamPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.0
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+      ..isAntiAlias = true;
 
     final Gradient beamGradient = SweepGradient(
       center: Alignment.center,
@@ -444,5 +457,9 @@ class _NeonGlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NeonGlowPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _NeonGlowPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.rotation != rotation ||
+        oldDelegate.intensity != intensity;
+  }
 }

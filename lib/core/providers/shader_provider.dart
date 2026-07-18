@@ -2,6 +2,15 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 
+final homeAuroraShaderProvider = FutureProvider<FragmentProgram>((ref) async {
+  try {
+    return await FragmentProgram.fromAsset('assets/shaders/home_aurora.frag');
+  } catch (error) {
+    debugPrint('Error loading home aurora shader: $error');
+    rethrow;
+  }
+});
+
 /// Central provider for loading and caching FragmentPrograms (Shaders)
 final woodShaderProvider = FutureProvider<FragmentProgram>((ref) async {
   try {

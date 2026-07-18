@@ -117,6 +117,9 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
           setState(() => _isExpanded = !_isExpanded);
         },
         child: GlassContainer(
+          // Scrollable list: solid glass only — BackdropFilter saveLayer
+          // per row destroys raster budget on mid/low GPUs.
+          enableBlur: false,
           borderRadius: BorderRadius.circular(AppSpacing.lg),
           padding: EdgeInsets.zero,
           border: Border.all(
@@ -233,7 +236,10 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                               .onPrimary
                               .withValues(alpha: 0.05)),
                       const SizedBox(height: AppSpacing.sm),
-                      _buildDetailRow('VALOR BASE', money.format(amount: t.amountBTC, currency: Currency.btc)),
+                      _buildDetailRow(
+                          'VALOR BASE',
+                          money.format(
+                              amount: t.amountBTC, currency: Currency.btc)),
                       if (t.showsNetworkFee) ...[
                         const SizedBox(height: AppSpacing.xs),
                         _buildDetailRow(
@@ -264,7 +270,8 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           currency: Currency.btc,
                         ),
                       ),
-                      if (t.showsOnchainConfirmations || t.isLightningEffective) ...[
+                      if (t.showsOnchainConfirmations ||
+                          t.isLightningEffective) ...[
                         const SizedBox(height: AppSpacing.xs),
                         _buildDetailRow(
                           'REDE',
@@ -304,7 +311,8 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                       const SizedBox(height: AppSpacing.xs),
                       _buildDetailRow(
                         'DATA E HORA',
-                        AppDateTime.formatRelativeWithClock(context, t.timestamp),
+                        AppDateTime.formatRelativeWithClock(
+                            context, t.timestamp),
                       ),
                     ],
                   ),

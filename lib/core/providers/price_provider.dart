@@ -70,18 +70,45 @@ class BackendBtcRates {
   });
 
   factory BackendBtcRates.fromJson(Map<String, dynamic> json) {
-    final btcUsd = (json['btcUsd'] as num?)?.toDouble() ?? 0;
-    final btcBrl = (json['btcBrl'] as num?)?.toDouble() ?? 0;
-    final btcEur = (json['btcEur'] as num?)?.toDouble() ?? 0;
-    final usdBrl = (json['usdBrl'] as num?)?.toDouble() ??
-        (btcUsd > 0 ? btcBrl / btcUsd : 0);
+    final root = json['data'] is Map<String, dynamic>
+        ? json['data'] as Map<String, dynamic>
+        : (json['rates'] is Map<String, dynamic>
+            ? json['rates'] as Map<String, dynamic>
+            : (json['prices'] is Map<String, dynamic>
+                ? json['prices'] as Map<String, dynamic>
+                : json));
+
+    final btcUsd = _parseNum(root, ['btcUsd', 'btc_usd', 'BTC_USD', 'usd', 'USD', 'priceUsd']);
+    final btcBrl = _parseNum(root, ['btcBrl', 'btc_brl', 'BTC_BRL', 'brl', 'BRL', 'priceBrl']);
+    final btcEur = _parseNum(root, ['btcEur', 'btc_eur', 'BTC_EUR', 'eur', 'EUR', 'priceEur']);
+    
+    double usdBrl = _parseNum(root, ['usdBrl', 'usd_brl', 'USD_BRL', 'usd_to_brl', 'usdBrlRate', 'brlUsd']);
+    if (usdBrl == 0 && btcUsd > 0 && btcBrl > 0) {
+      usdBrl = btcBrl / btcUsd;
+    }
+    
+    final finalBtcBrl = btcBrl > 0
+        ? btcBrl
+        : (btcUsd > 0 && usdBrl > 0 ? btcUsd * usdBrl : 0.0);
 
     return BackendBtcRates(
       btcUsd: btcUsd,
-      btcBrl: btcBrl,
+      btcBrl: finalBtcBrl,
       btcEur: btcEur,
       usdBrl: usdBrl,
     );
+  }
+
+  static double _parseNum(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final val = json[key];
+      if (val is num && val > 0) return val.toDouble();
+      if (val is String) {
+        final parsed = double.tryParse(val.replaceAll(',', '.'));
+        if (parsed != null && parsed > 0) return parsed;
+      }
+    }
+    return 0;
   }
 }
 
@@ -98,8 +125,10 @@ final backendBtcRatesProvider =
 });
 
 final usdBrlRateProvider = Provider.autoDispose<double?>((ref) {
-  final backendRates = ref.watch(backendBtcRatesProvider);
-  return backendRates.asData?.value?.usdBrl;
+  final backendRates = ref.watch(backendBtcRatesProvider).asData?.value;
+  final rate = backendRates?.usdBrl;
+  if (rate != null && rate > 0) return rate;
+  return null;
 });
 
 /// Provider for BTC/EUR exchange rate
@@ -121,7 +150,7 @@ final btcBrlPriceProvider = Provider.autoDispose<double?>((ref) {
   }
 
   final btcUsdPrice = ref.watch(latestBtcPriceProvider);
-  final brlUsdRate = backendRates?.usdBrl;
+  final brlUsdRate = ref.watch(usdBrlRateProvider);
   if (btcUsdPrice == null ||
       btcUsdPrice <= 0 ||
       brlUsdRate == null ||

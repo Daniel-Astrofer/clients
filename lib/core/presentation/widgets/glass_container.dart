@@ -1,7 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
 
-class GlassContainer extends StatelessWidget {
+/// Glass panel. Blur is optional and policy-gated so runtime degrade / low-tier
+/// fall back to solid glass (+0.05 opacity) without redesign.
+class GlassContainer extends ConsumerWidget {
   final double? width;
   final double? height;
   final Widget child;
@@ -12,6 +17,9 @@ class GlassContainer extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final BoxBorder? border;
+
+  /// When false, never blurs. When true (default), still requires
+  /// [KeroseneGraphicsPolicy.allowBackdropBlur] and !reduceMotion.
   final bool enableBlur;
 
   const GlassContainer({
@@ -21,7 +29,7 @@ class GlassContainer extends StatelessWidget {
     this.height,
     this.blur = 10.0,
     this.opacity = 0.1,
-    this.color = Colors.black, // Default to black for dark mode safety
+    this.color = Colors.black,
     this.borderRadius,
     this.padding,
     this.margin,
@@ -30,35 +38,41 @@ class GlassContainer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // When blur is disabled, slightly increase opacity to maintain visibility
-    final double effectiveOpacity =
-        enableBlur ? opacity : (opacity + 0.05).clamp(0.0, 1.0);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final policy = ref.watch(graphicsPolicyProvider);
+    final useBlur = enableBlur &&
+        policy.allowBackdropBlur &&
+        !KeroseneMotion.reduceMotion(context);
 
-    Widget content = Container(
+    final double effectiveOpacity =
+        useBlur ? opacity : (opacity + 0.05).clamp(0.0, 1.0);
+    final radius = borderRadius ?? BorderRadius.circular(20);
+
+    final content = Container(
       width: width,
       height: height,
       padding: padding,
       decoration: BoxDecoration(
         color: color.withValues(alpha: effectiveOpacity),
-        borderRadius: borderRadius ?? BorderRadius.circular(20),
+        borderRadius: radius,
         border: border ??
             Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimary
-                    .withValues(alpha: 0.2),
-                width: 1.5),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.2),
+              width: 1.5,
+            ),
       ),
       child: child,
     );
 
-    if (!enableBlur) {
+    if (!useBlur) {
       return RepaintBoundary(
         child: Container(
           margin: margin,
           child: ClipRRect(
-            borderRadius: borderRadius ?? BorderRadius.circular(20),
+            borderRadius: radius,
             clipBehavior: Clip.hardEdge,
             child: content,
           ),
@@ -70,7 +84,7 @@ class GlassContainer extends StatelessWidget {
       child: Container(
         margin: margin,
         child: ClipRRect(
-          borderRadius: borderRadius ?? BorderRadius.circular(20),
+          borderRadius: radius,
           clipBehavior: Clip.hardEdge,
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),

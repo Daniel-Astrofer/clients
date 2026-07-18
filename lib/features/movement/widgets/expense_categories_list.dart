@@ -42,6 +42,7 @@ class ExpenseCategoriesList extends ConsumerWidget {
     );
     return Expanded(
       child: GlassContainer(
+        enableBlur: false,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(AppSpacing.md),
         borderRadius: BorderRadius.circular(AppSpacing.lg),

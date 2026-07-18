@@ -442,23 +442,25 @@ class _ConnectionScene extends StatelessWidget {
         ),
         Align(
           alignment: Alignment(bubbleX, 0),
-          child: Opacity(
-            opacity: 0.18 + (pulseReveal * 0.82),
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.92),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.40),
-                    blurRadius: 18,
-                    spreadRadius: -2,
-                  ),
-                ],
-              ),
-            ),
+          child: Builder(
+            builder: (context) {
+              final bubbleAlpha = 0.18 + (pulseReveal * 0.82);
+              return Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.92 * bubbleAlpha),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.40 * bubbleAlpha),
+                      blurRadius: 18,
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
         Transform.translate(
@@ -549,12 +551,11 @@ class _FingerprintScene extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: Opacity(
-                opacity: 0.20 + (printReveal * 0.80),
-                child: Icon(
-                  KeroseneIcons.biometric,
-                  size: 58,
-                  color: color.withValues(alpha: 0.96),
+              child: Icon(
+                KeroseneIcons.biometric,
+                size: 58,
+                color: color.withValues(
+                  alpha: 0.96 * (0.20 + (printReveal * 0.80)),
                 ),
               ),
             ),
@@ -592,70 +593,64 @@ class _FingerprintScene extends StatelessWidget {
         Positioned(
           top: 26,
           right: 34,
-          child: Opacity(
-            opacity: 0.18 + (promptReveal * 0.82),
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
-                border: Border.all(color: color.withValues(alpha: 0.18)),
-              ),
-              child: Icon(
-                KeroseneIcons.touch,
-                size: 16,
-                color: color.withValues(alpha: 0.88),
-              ),
-            ),
+          child: Builder(
+            builder: (context) {
+              final a = 0.18 + (promptReveal * 0.82);
+              return Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06 * a),
+                  border: Border.all(color: color.withValues(alpha: 0.18 * a)),
+                ),
+                child: Icon(
+                  KeroseneIcons.touch,
+                  size: 16,
+                  color: color.withValues(alpha: 0.88 * a),
+                ),
+              );
+            },
           ),
         ),
         Positioned(
           left: 36,
           top: 18,
-          child: Opacity(
-            opacity: frameReveal,
-            child: _FrameCorner(
-              color: color,
-              top: true,
-              left: true,
-            ),
+          child: _FrameCorner(
+            color: color,
+            top: true,
+            left: true,
+            alpha: frameReveal,
           ),
         ),
         Positioned(
           right: 36,
           top: 18,
-          child: Opacity(
-            opacity: frameReveal,
-            child: _FrameCorner(
-              color: color,
-              top: true,
-              left: false,
-            ),
+          child: _FrameCorner(
+            color: color,
+            top: true,
+            left: false,
+            alpha: frameReveal,
           ),
         ),
         Positioned(
           left: 36,
           bottom: 18,
-          child: Opacity(
-            opacity: frameReveal,
-            child: _FrameCorner(
-              color: color,
-              top: false,
-              left: true,
-            ),
+          child: _FrameCorner(
+            color: color,
+            top: false,
+            left: true,
+            alpha: frameReveal,
           ),
         ),
         Positioned(
           right: 36,
           bottom: 18,
-          child: Opacity(
-            opacity: frameReveal,
-            child: _FrameCorner(
-              color: color,
-              top: false,
-              left: false,
-            ),
+          child: _FrameCorner(
+            color: color,
+            top: false,
+            left: false,
+            alpha: frameReveal,
           ),
         ),
       ],
@@ -769,42 +764,40 @@ class _RecoveryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.20 + (reveal * 0.80),
-      child: Transform.scale(
-        scale: 0.92 + (reveal * 0.08),
-        child: Container(
-          width: 82,
-          height: 96,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white.withValues(alpha: 0.04),
-            border: Border.all(color: color.withValues(alpha: alpha)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-            child: Column(
-              children: [
-                Icon(
-                  icon,
-                  size: 24,
-                  color: color.withValues(alpha: 0.92),
-                ),
-                const SizedBox(height: 14),
-                ...List.generate(
-                  2,
-                  (index) => Expanded(
-                    child: Container(
-                      margin: EdgeInsets.only(bottom: index == 1 ? 0 : 8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
+    final fade = 0.20 + (reveal * 0.80);
+    return Transform.scale(
+      scale: 0.92 + (reveal * 0.08),
+      child: Container(
+        width: 82,
+        height: 96,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: Colors.white.withValues(alpha: 0.04 * fade),
+          border: Border.all(color: color.withValues(alpha: alpha * fade)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: color.withValues(alpha: 0.92 * fade),
+              ),
+              const SizedBox(height: 14),
+              ...List.generate(
+                2,
+                (index) => Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(bottom: index == 1 ? 0 : 8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.16 * fade),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -898,25 +891,23 @@ class _SideGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.24 + (reveal * 0.76),
-      child: Transform.scale(
-        scale: 0.88 + (reveal * 0.12),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: filled
-                ? color.withValues(alpha: 0.14)
-                : Colors.white.withValues(alpha: 0.04),
-            border: Border.all(color: color.withValues(alpha: 0.18)),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: color.withValues(alpha: 0.90),
-          ),
+    final fade = 0.24 + (reveal * 0.76);
+    return Transform.scale(
+      scale: 0.88 + (reveal * 0.12),
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: filled
+              ? color.withValues(alpha: 0.14 * fade)
+              : Colors.white.withValues(alpha: 0.04 * fade),
+          border: Border.all(color: color.withValues(alpha: 0.18 * fade)),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: color.withValues(alpha: 0.90 * fade),
         ),
       ),
     );
@@ -927,17 +918,19 @@ class _FrameCorner extends StatelessWidget {
   final Color color;
   final bool top;
   final bool left;
+  final double alpha;
 
   const _FrameCorner({
     required this.color,
     required this.top,
     required this.left,
+    this.alpha = 1,
   });
 
   @override
   Widget build(BuildContext context) {
     final borderSide = BorderSide(
-      color: color.withValues(alpha: 0.44),
+      color: color.withValues(alpha: 0.44 * alpha),
       width: 2,
     );
 

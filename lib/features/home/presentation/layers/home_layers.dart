@@ -8,6 +8,7 @@ import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_shell_flags_provider.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
@@ -31,13 +32,31 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 /// Ambient aurora / theater glow — full-screen, own repaint boundary.
 /// Cached picture (no continuous ticker). Always visible; scroll does not
 /// strip the glow (that was an accidental visual regression).
-class HomeAuroraLayer extends StatelessWidget {
+class HomeAuroraLayer extends ConsumerWidget {
   const HomeAuroraLayer({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Positioned.fill(
-      child: RepaintBoundary(child: HomeAuroraBackground()),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final overscroll = ref.watch(homeOverscrollProvider);
+
+    Widget aurora = const HomeAuroraBackground();
+
+    if (overscroll > 0) {
+      // Reaja de forma explosiva/sólida no topo quando o utilizador puxa a tela
+      final scale = 1.0 + (overscroll / 100).clamp(0.0, 1.8);
+      final translateY = (overscroll / 3).clamp(0.0, 60.0);
+
+      aurora = Transform(
+        alignment: Alignment.topCenter,
+        transform: Matrix4.identity()
+          ..translate(0.0, translateY)
+          ..scale(scale, scale),
+        child: aurora,
+      );
+    }
+
+    return Positioned.fill(
+      child: RepaintBoundary(child: aurora),
     );
   }
 }
@@ -124,6 +143,20 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
           } else if (n is ScrollEndNotification) {
             busy.setBusy(false);
           }
+          
+          if (n.metrics.axis == Axis.vertical) {
+            final pixels = n.metrics.pixels;
+            final overscroll = pixels < 0 ? pixels.abs() : 0.0;
+            final currentOverscroll = ref.read(homeOverscrollProvider);
+            if ((currentOverscroll - overscroll).abs() > 0.5 || (overscroll == 0 && currentOverscroll != 0)) {
+              Future.microtask(() {
+                if (mounted) {
+                  ref.read(homeOverscrollProvider.notifier).state = overscroll;
+                }
+              });
+            }
+          }
+          
           return false;
         },
         child: CustomScrollView(
@@ -344,7 +377,9 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
         onCreateWallet: widget.onCreateWallet,
         onDepositWallet: widget.onDepositWallet,
       ),
-      SliverToBoxAdapter(
+      SliverFillRemaining(
+        hasScrollBody: false,
+        fillOverscroll: true,
         child: ColoredBox(
           color: homeBackgroundColor,
           child: SizedBox(height: navigationClearance),

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
@@ -36,8 +34,8 @@ class SceneContentLayer extends StatelessWidget {
             : '$title\n\n$body')
         : (subtitle.isNotEmpty ? '$title\n\n$subtitle' : title);
 
-    final titleStyle = (compact ? AppTypography.h3Small : AppTypography.h3)
-        .copyWith(
+    final titleStyle =
+        (compact ? AppTypography.h3Small : AppTypography.h3).copyWith(
       color: Colors.white,
       fontWeight: FontWeight.w500,
       height: 1.25,
@@ -105,8 +103,7 @@ class _StaticBlock extends StatelessWidget {
           : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (title.isNotEmpty)
-          Text(title, style: titleStyle, textAlign: align),
+        if (title.isNotEmpty) Text(title, style: titleStyle, textAlign: align),
         if (subtitle.isNotEmpty) ...[
           SizedBox(height: homeSize(6)),
           Text(
@@ -155,45 +152,99 @@ class _TypewriterReveal extends StatefulWidget {
   State<_TypewriterReveal> createState() => _TypewriterRevealState();
 }
 
-class _TypewriterRevealState extends State<_TypewriterReveal> {
-  Timer? _timer;
-  int _chars = 0;
+class _TypewriterRevealState extends State<_TypewriterReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  final ValueNotifier<int> _visibleCharacters = ValueNotifier<int>(0);
+  List<int> _runes = const [];
 
   @override
   void initState() {
     super.initState();
-    _start();
+    _controller = AnimationController(vsync: this)..addListener(_syncText);
+    _restart();
   }
 
   @override
   void didUpdateWidget(covariant _TypewriterReveal oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fullText != widget.fullText) {
-      _start();
+    if (oldWidget.fullText == widget.fullText &&
+        oldWidget.durationMs == widget.durationMs) {
+      return;
     }
+    // SSE growth: new text is a prefix extension of the old — keep progress.
+    if (widget.fullText.startsWith(oldWidget.fullText) &&
+        oldWidget.fullText.isNotEmpty) {
+      _extend(oldWidget.fullText);
+      return;
+    }
+    _restart();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _controller
+      ..removeListener(_syncText)
+      ..dispose();
+    _visibleCharacters.dispose();
     super.dispose();
   }
 
-  void _start() {
-    _timer?.cancel();
-    _chars = 0;
-    final total = widget.fullText.runes.length;
-    if (total == 0) return;
+  void _restart() {
+    _controller.stop();
+    _runes = widget.fullText.runes.toList(growable: false);
+    _visibleCharacters.value = 0;
+    if (_runes.isEmpty) return;
     final typeWindow = (widget.durationMs * 0.55).round().clamp(4000, 14000);
-    final stepMs = (typeWindow / total).round().clamp(18, 80);
-    _timer = Timer.periodic(Duration(milliseconds: stepMs), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
+    _controller.duration = Duration(milliseconds: typeWindow);
+    _controller.forward(from: 0);
+  }
+
+  /// Grow target text without flashing back to zero (token stream).
+  void _extend(String previousText) {
+    final kept = _visibleCharacters.value.clamp(0, previousText.runes.length);
+    _runes = widget.fullText.runes.toList(growable: false);
+    if (_runes.isEmpty) {
+      _visibleCharacters.value = 0;
+      _controller.stop();
+      return;
+    }
+    _visibleCharacters.value = kept.clamp(0, _runes.length);
+    if (kept >= _runes.length) {
+      _controller.value = 1;
+      return;
+    }
+    final typeWindow = (widget.durationMs * 0.55).round().clamp(4000, 14000);
+    _controller.duration = Duration(milliseconds: typeWindow);
+    // Resume from current visible fraction so append keeps typing forward.
+    final from = (kept / _runes.length).clamp(0.0, 1.0);
+    if (!_controller.isAnimating) {
+      _controller.forward(from: from);
+    } else {
+      // Re-target duration while mid-flight without resetting visible runes.
+      final t = _controller.value;
+      _controller
+        ..stop()
+        ..forward(from: t < from ? from : t);
+    }
+  }
+
+  void _syncText() {
+    if (_runes.isEmpty) {
+      if (_visibleCharacters.value != 0) {
+        _visibleCharacters.value = 0;
       }
-      setState(() => _chars = (_chars + 1).clamp(0, total));
-      if (_chars >= total) t.cancel();
-    });
+      return;
+    }
+    final next =
+        (_controller.value * _runes.length).floor().clamp(0, _runes.length);
+    // Never shrink during an extend (protects against mid-frame races).
+    if (next > _visibleCharacters.value) {
+      _visibleCharacters.value = next;
+    } else if (next == _runes.length &&
+        _visibleCharacters.value != _runes.length) {
+      _visibleCharacters.value = _runes.length;
+    }
   }
 
   Widget _paragraph(String text, {required bool caret}) {
@@ -247,8 +298,6 @@ class _TypewriterRevealState extends State<_TypewriterReveal> {
   @override
   Widget build(BuildContext context) {
     final full = widget.fullText;
-    final visible = String.fromCharCodes(full.runes.take(_chars));
-    final stillTyping = _chars < full.runes.length;
 
     // Ghost full text reserves height from the first frame — balance below
     // never shifts while characters appear.
@@ -265,7 +314,13 @@ class _TypewriterRevealState extends State<_TypewriterReveal> {
             ),
           ),
         ),
-        _paragraph(visible, caret: stillTyping),
+        ValueListenableBuilder<int>(
+          valueListenable: _visibleCharacters,
+          builder: (context, count, child) {
+            final visible = String.fromCharCodes(_runes.take(count));
+            return _paragraph(visible, caret: count < _runes.length);
+          },
+        ),
       ],
     );
   }
@@ -364,4 +419,3 @@ class _MarqueeLineState extends State<_MarqueeLine>
     );
   }
 }
-

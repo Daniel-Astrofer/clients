@@ -309,15 +309,19 @@ class StatementTransactionCard extends ConsumerWidget {
       ],
     );
 
+    // Opaque paper + hard clip: stage aurora / list black must never show
+    // through the card fill, and any future local glow stays inside the radius.
     return Semantics(
       button: onTap != null,
       label: a11yLabel,
       child: Material(
-        color: Colors.transparent,
+        color: colors.background,
+        borderRadius: radius,
+        clipBehavior: Clip.hardEdge,
         child: InkWell(
           onTap: onTap,
           borderRadius: radius,
-          child: Container(
+          child: Ink(
             decoration: decoration,
             padding: EdgeInsets.all(cardPadding),
             child: body,

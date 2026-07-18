@@ -10,6 +10,7 @@ import '../../domain/usecases/get_transactions_usecase.dart';
 import '../../domain/usecases/send_bitcoin_usecase.dart';
 import '../../domain/usecases/get_deposit_address_usecase.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/providers/transaction_provider.dart' show transactionHistoryProvider;
 
 import 'package:kerosene/features/financial_accounts/application/providers/wallet_data_providers.dart';
 
@@ -208,6 +209,10 @@ class WalletNotifier extends Notifier<WalletState> {
     }
 
     state = currentState.copyWith(wallets: updatedWallets);
+    
+    // As soon as the websocket pushes a balance update, invalidate the transaction
+    // history so it automatically fetches the new rows that generated this balance.
+    ref.invalidate(transactionHistoryProvider);
 
     debugPrint(
       'Wallet balance refreshed from realtime feed (bucket=$bucket context=$context).',

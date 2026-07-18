@@ -40,7 +40,7 @@ class SceneRepository {
       background: SceneBackground.aurora(
         primary: const Color(0xFF4D7EFF),
         secondary: const Color(0xFF9B7BFF),
-        intensity: 0.36,
+        intensity: 0.25,
       ),
       motion: const SceneMotion(
         preset: SceneMotionPreset.orbit,

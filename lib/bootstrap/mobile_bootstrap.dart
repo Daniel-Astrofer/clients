@@ -9,7 +9,9 @@ import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/core/theme/app_theme.dart';
 
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
+import 'package:kerosene/core/navigation/app_route_observer.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
+import 'package:kerosene/core/navigation/route_transition_observer.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import '../core/providers/shared_preferences_provider.dart';
@@ -46,8 +48,12 @@ import '../core/providers/tor_providers.dart';
 import '../core/providers/app_cold_start_provider.dart';
 import '../core/services/tor_network_bootstrap.dart';
 import '../core/services/tor_service.dart';
+import '../core/performance/app_interaction_busy.dart';
+import '../core/performance/graphics_runtime_degrade.dart';
+import '../core/performance/kerosene_graphics_policy.dart';
 import '../core/performance/kerosene_performance_boundary.dart';
 import '../core/presentation/widgets/kerosene_logo_loading_view.dart';
+import '../core/providers/shader_provider.dart';
 import '../core/utils/qr_payment_parser.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';
@@ -55,6 +61,9 @@ import '../features/financial_accounts/presentation/providers/balance_websocket_
 import '../app/providers/price_alert_provider.dart';
 import '../core/services/notification_delivery_bootstrap.dart';
 import '../core/utils/native_screen_capture.dart';
+
+/// Observes page transitions for [routeTransitionBusyProvider].
+RouteTransitionBusyObserver? _routeTransitionBusyObserver;
 
 Future<void> bootstrapMobile() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,11 +106,56 @@ Future<void> initializeApp(ProviderContainer container) async {
     return true;
   };
 
+  _routeTransitionBusyObserver = RouteTransitionBusyObserver(
+    onBusyChanged: (busy) {
+      final notifier = container.read(routeTransitionBusyProvider.notifier);
+      if (busy) {
+        notifier.begin();
+      } else {
+        notifier.end();
+      }
+    },
+  );
+
   unawaited(_bootstrapTor(container));
   unawaited(_bootstrapPeripheralServices());
+  unawaited(_bootstrapGraphics(container));
+}
 
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024;
-  PaintingBinding.instance.imageCache.maximumSize = 300;
+Future<void> _bootstrapGraphics(ProviderContainer container) async {
+  // Image cache caps from static tier (not runtime-degraded flags).
+  final policy = container.read(baseGraphicsPolicyProvider);
+  PaintingBinding.instance.imageCache.maximumSizeBytes =
+      policy.maxImageCacheBytes;
+  PaintingBinding.instance.imageCache.maximumSize = policy.maxImageCacheEntries;
+
+  // Arm FrameTiming monitor (builds notifier + timings callback).
+  container.read(graphicsRuntimeDegradeProvider);
+
+  // Warm fragment programs + prefetch deferred libs after first frame so
+  // navigation is not first-use of loadLibrary / SkSL on the gesture path.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(() async {
+      try {
+        await container.read(homeAuroraShaderProvider.future);
+      } catch (error, stack) {
+        debugPrint('home aurora shader warm-up failed: $error\n$stack');
+      }
+      try {
+        await container.read(metalShaderProvider.future);
+      } catch (error, stack) {
+        debugPrint('metal shader warm-up failed: $error\n$stack');
+      }
+      // Adjacent mobile surfaces — shared Future with DeferredPage.
+      prefetchDeferredLibraries([
+        home.loadLibrary,
+        settings.loadLibrary,
+        deposits.loadLibrary,
+        bitcoin_accounts.loadLibrary,
+        send_money.loadLibrary,
+      ]);
+    }());
+  });
 }
 
 Future<void> _bootstrapTor(ProviderContainer container) async {
@@ -160,7 +214,8 @@ class _MobileAppRoot extends ConsumerWidget {
       if (!next.torSettled || previous?.torSettled == true) return;
       final auth = ref.read(authControllerProvider);
       if (auth is AuthServerUnavailable) {
-        unawaited(ref.read(authControllerProvider.notifier).retrySessionCheck());
+        unawaited(
+            ref.read(authControllerProvider.notifier).retrySessionCheck());
       }
     });
 
@@ -236,6 +291,10 @@ class MyApp extends ConsumerWidget {
       scaffoldMessengerKey: SnackbarHelper.scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       scrollBehavior: const KeroseneScrollBehavior(),
+      navigatorObservers: [
+        appRouteObserver,
+        if (_routeTransitionBusyObserver != null) _routeTransitionBusyObserver!,
+      ],
       theme: AppTheme.themeFor(appearance.themeVariant),
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -407,8 +466,8 @@ class _PrivateMobileRoute extends ConsumerWidget {
     }
     if (authState is AuthAuthenticated) {
       // Never mount a second [AppEntryPinGate] after cold-start unlock.
-      final unlocked = ref.watch(appEntryPinUnlockedProvider) ||
-          AppEntryPinSession.unlocked;
+      final unlocked =
+          ref.watch(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked;
       if (unlocked) {
         if (!ref.read(appEntryPinUnlockedProvider)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {

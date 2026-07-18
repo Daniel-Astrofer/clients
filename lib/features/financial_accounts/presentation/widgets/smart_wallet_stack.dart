@@ -364,15 +364,23 @@ class _SmartWalletStackState extends State<SmartWalletStack>
           onTap: _openCarousel,
           child: Transform.translate(
             offset: Offset(0, dragOffsetY + swipeOffsetY),
-            child: Opacity(
-              opacity: swipeOpacity,
-              child: WalletCreditCard(
-                wallet: widget.wallets[_topIndex],
-                colorIndex: _topIndex,
-                isSelected: true,
-                onTap: _openCarousel,
-              ),
-            ),
+            // Skip Opacity when fully visible — Opacity ≠ 1 triggers saveLayer.
+            child: swipeOpacity >= 0.995
+                ? WalletCreditCard(
+                    wallet: widget.wallets[_topIndex],
+                    colorIndex: _topIndex,
+                    isSelected: true,
+                    onTap: _openCarousel,
+                  )
+                : Opacity(
+                    opacity: swipeOpacity,
+                    child: WalletCreditCard(
+                      wallet: widget.wallets[_topIndex],
+                      colorIndex: _topIndex,
+                      isSelected: true,
+                      onTap: _openCarousel,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -382,29 +390,28 @@ class _SmartWalletStackState extends State<SmartWalletStack>
   }
 
   Widget _buildCarousel(double progress) {
-    return Opacity(
-      opacity: progress,
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.wallets.length,
-        onPageChanged: (i) {
-          setState(() => _carouselPage = i);
-          HapticFeedback.selectionClick();
-        },
-        itemBuilder: (context, i) {
-          return GestureDetector(
-            onTap: () => _closeCarousel(i),
-            child: Center(
-              child: WalletCreditCard(
-                wallet: widget.wallets[i],
-                colorIndex: i,
-                isSelected: i == _carouselPage,
-                onTap: () => _closeCarousel(i),
-              ),
+    final pageView = PageView.builder(
+      controller: _pageController,
+      itemCount: widget.wallets.length,
+      onPageChanged: (i) {
+        setState(() => _carouselPage = i);
+        HapticFeedback.selectionClick();
+      },
+      itemBuilder: (context, i) {
+        return GestureDetector(
+          onTap: () => _closeCarousel(i),
+          child: Center(
+            child: WalletCreditCard(
+              wallet: widget.wallets[i],
+              colorIndex: i,
+              isSelected: i == _carouselPage,
+              onTap: () => _closeCarousel(i),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
+    if (progress >= 0.995) return pageView;
+    return Opacity(opacity: progress, child: pageView);
   }
 }

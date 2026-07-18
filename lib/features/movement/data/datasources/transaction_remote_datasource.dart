@@ -69,9 +69,14 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
   ) {
     final rail = payload['rail']?.toString().toUpperCase() ?? 'ONCHAIN';
     final direction = payload['direction']?.toString().toUpperCase() ?? '';
-    final amountSats = (payload['receiverAmountSats'] as num?)?.toInt() ??
-        (payload['grossAmountSats'] as num?)?.toInt() ??
+    final rawReceiverSats = (payload['receiverAmountSats'] as num?)?.toInt();
+    final rawGrossSats = (payload['grossAmountSats'] as num?)?.toInt() ??
+        (payload['amountSats'] as num?)?.toInt() ??
+        (payload['amountSatoshis'] as num?)?.toInt() ??
         0;
+    final amountSats = (rawReceiverSats != null && rawReceiverSats > 0)
+        ? rawReceiverSats
+        : (rawGrossSats > 0 ? rawGrossSats : (rawReceiverSats ?? 0));
     final networkFeeSats = (payload['networkFeeSats'] as num?)?.toInt() ?? 0;
     final keroseneFeeSats = (payload['keroseneFeeSats'] as num?)?.toInt() ?? 0;
     final totalDebitSats = (payload['totalDebitSats'] as num?)?.toInt() ?? 0;

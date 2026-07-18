@@ -120,9 +120,12 @@ class PaymentLink extends Equatable {
         : json;
     double amountBtc = (data['amountBtc'] as num?)?.toDouble() ?? 0;
     if (amountBtc == 0) {
+      final rawRec = (data['receiverAmountSats'] as num?)?.toDouble();
+      final rawGross = (data['grossAmountSats'] as num?)?.toDouble();
       final amountSats = (data['amountSats'] as num?)?.toDouble() ??
-          (data['receiverAmountSats'] as num?)?.toDouble() ??
-          (data['grossAmountSats'] as num?)?.toDouble();
+          (rawRec != null && rawRec > 0
+              ? rawRec
+              : (rawGross != null && rawGross > 0 ? rawGross : null));
       if (amountSats != null && amountSats > 0) {
         amountBtc = amountSats / 100000000.0;
       }

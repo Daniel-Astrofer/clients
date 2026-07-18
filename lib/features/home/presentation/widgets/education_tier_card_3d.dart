@@ -1,21 +1,21 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/theme/app_typography.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/widgets/wallet_card_appearance.dart';
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
+import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 
 /// Maps education feed items to the real platform card tier (not mock PNGs).
 WalletCardType? educationTierFromFeedItem(HomeFeedItem item) {
   final tag = item.tag.trim().toUpperCase();
   final id = item.id.toLowerCase();
   final campaign = (item.campaignId ?? '').toLowerCase();
-  if (tag == 'BRONZE' ||
-      id.contains('bronze') ||
-      campaign.contains('bronze')) {
+  if (tag == 'BRONZE' || id.contains('bronze') || campaign.contains('bronze')) {
     return WalletCardType.bronze;
   }
   if (tag == 'WHITE' ||
@@ -43,7 +43,7 @@ bool isEducationTierFeedItem(HomeFeedItem item) =>
 
 /// Compact credit-card face with subtle 3D tilt — same palettes as live wallets.
 /// Replaces mock PNG thumbs in the home education carousel.
-class EducationTierCard3D extends StatefulWidget {
+class EducationTierCard3D extends ConsumerStatefulWidget {
   final WalletCardType tier;
   final double width;
   final double height;
@@ -56,10 +56,11 @@ class EducationTierCard3D extends StatefulWidget {
   });
 
   @override
-  State<EducationTierCard3D> createState() => _EducationTierCard3DState();
+  ConsumerState<EducationTierCard3D> createState() =>
+      _EducationTierCard3DState();
 }
 
-class _EducationTierCard3DState extends State<EducationTierCard3D>
+class _EducationTierCard3DState extends ConsumerState<EducationTierCard3D>
     with SingleTickerProviderStateMixin {
   late final AnimationController _tilt;
 
@@ -72,11 +73,7 @@ class _EducationTierCard3DState extends State<EducationTierCard3D>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (KeroseneMotion.reduceMotion(context)) {
-        _tilt.value = 0.35;
-        return;
-      }
-      _tilt.repeat(reverse: true);
+      _syncTiltMotion(scrollBusy: ref.read(homeScrollBusyProvider));
     });
   }
 
@@ -86,8 +83,25 @@ class _EducationTierCard3DState extends State<EducationTierCard3D>
     super.dispose();
   }
 
+  void _syncTiltMotion({required bool scrollBusy}) {
+    if (!mounted) return;
+    if (KeroseneMotion.reduceMotion(context) || scrollBusy) {
+      if (_tilt.isAnimating) {
+        _tilt.stop(canceled: false);
+      }
+      return;
+    }
+    if (!_tilt.isAnimating) {
+      _tilt.repeat(reverse: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(homeScrollBusyProvider, (previous, next) {
+      _syncTiltMotion(scrollBusy: next);
+    });
+
     final appearance = WalletCardAppearance.fromCardType(widget.tier);
     final reduce = KeroseneMotion.reduceMotion(context);
 

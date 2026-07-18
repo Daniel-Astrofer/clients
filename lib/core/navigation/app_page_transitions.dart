@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
 
 const Duration kKerosenePageTransitionDuration = KeroseneMotion.medium;
 const Duration kKerosenePageReverseTransitionDuration = KeroseneMotion.short;
@@ -20,14 +21,19 @@ Route<T> keroseneHorizontalRoute<T>({
   RouteSettings? settings,
   bool fullscreenDialog = false,
 }) {
+  final policy = KeroseneGraphicsPolicy.resolve();
+  final isLow = policy.tier == GraphicsTier.low;
   return PageRouteBuilder<T>(
     settings: settings,
     fullscreenDialog: fullscreenDialog,
-    transitionDuration: kKerosenePageTransitionDuration,
-    reverseTransitionDuration: kKerosenePageReverseTransitionDuration,
+    transitionDuration:
+        isLow ? KeroseneMotion.fast : kKerosenePageTransitionDuration,
+    reverseTransitionDuration:
+        isLow ? KeroseneMotion.fast : kKerosenePageReverseTransitionDuration,
     pageBuilder: (context, animation, secondaryAnimation) => builder(context),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return buildKeroseneHorizontalTransition(
+      return buildKeroseneRouteTransition(
+        context: context,
         animation: animation,
         secondaryAnimation: secondaryAnimation,
         child: child,
@@ -111,6 +117,17 @@ Widget buildKeroseneRouteTransition({
 }) {
   if (KeroseneMotion.reduceMotion(context)) {
     return child;
+  }
+
+  // Low-tier: fade only — fewer layers than slide+scale stacks during nav.
+  final policy = KeroseneGraphicsPolicy.resolve();
+  if (policy.tier == GraphicsTier.low) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: KeroseneMotion.entrance,
+      reverseCurve: KeroseneMotion.exit,
+    );
+    return FadeTransition(opacity: curved, child: child);
   }
 
   return buildKeroseneHorizontalTransition(

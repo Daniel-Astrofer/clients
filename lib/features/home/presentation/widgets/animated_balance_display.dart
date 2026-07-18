@@ -96,7 +96,9 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
         widget.isHidden != oldWidget.isHidden ||
         widget.locale != oldWidget.locale;
 
-    if (balanceChanged || formatChanged || widget.suppressRoll != oldWidget.suppressRoll) {
+    if (balanceChanged ||
+        formatChanged ||
+        widget.suppressRoll != oldWidget.suppressRoll) {
       final delta = (widget.balance - _lastBalance).abs();
       final largeDelta = delta >= widget.largeDeltaThreshold;
       // Roll only on real large balance moves, never when suppressRoll (tab swipe).
@@ -114,7 +116,10 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
       _lastBalance = widget.balance;
       _refreshCharacterLayout();
 
-      if (widget.enableFlash && balanceChanged && largeDelta && !widget.isHidden) {
+      if (widget.enableFlash &&
+          balanceChanged &&
+          largeDelta &&
+          !widget.isHidden) {
         _flashColor = widget.balance > oldWidget.balance
             ? AppColors.hexFF00FF94
             : AppColors.hexFFFF0055;
@@ -497,28 +502,15 @@ class _RollingDigitState extends State<_RollingDigit>
 
             visibleDigits.sort((a, b) => b.distance.compareTo(a.distance));
 
+            // Edge fade comes from per-digit opacity/scale above — no ShaderMask
+            // (dstIn forces saveLayer every roll frame).
             return RepaintBoundary(
-              child: ShaderMask(
-                shaderCallback: (bounds) {
-                  return const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.white,
-                      Colors.white,
-                      Colors.transparent,
-                    ],
-                    stops: [0.0, 0.2, 0.8, 1.0],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.dstIn,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    for (final digit in visibleDigits) digit.child,
-                  ],
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.hardEdge,
+                children: [
+                  for (final digit in visibleDigits) digit.child,
+                ],
               ),
             );
           },

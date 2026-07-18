@@ -1,6 +1,5 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
@@ -42,6 +41,7 @@ class HomeBalanceSection extends ConsumerStatefulWidget {
   final VoidCallback onSend;
   final VoidCallback onViewStatement;
   final VoidCallback onOpenWallets;
+
   /// Horizontal inset for full-bleed wash vs padded content.
   final double pageHorizontalPadding;
   final double pageTopPad;
@@ -341,9 +341,12 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
         HomeTheaterHeaderWash(
           child: Padding(
             padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, homeSize(10)),
-            child: HomeCommunicationStage(
-              userName: widget.userName,
-              notificationButtonKey: _notificationButtonKey,
+            child: TickerMode(
+              enabled: !ref.watch(homeScrollBusyProvider),
+              child: HomeCommunicationStage(
+                userName: widget.userName,
+                notificationButtonKey: _notificationButtonKey,
+              ),
             ),
           ),
         ),
@@ -491,7 +494,6 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
       return sum + wallet.balance;
     });
   }
-
 }
 
 class _HomeBalanceTab {
@@ -552,7 +554,8 @@ class _HomeBalancePageDots extends StatelessWidget {
 
 /// Legacy single-glow widget. Prefer [HomeStageAtmosphereLayer] on the home
 /// Stack (classic fallback + backend multi-glow). Kept for reference / tests.
-@Deprecated('Use HomeStageAtmosphereLayer — classic recipe lives there as fallback')
+@Deprecated(
+    'Use HomeStageAtmosphereLayer — classic recipe lives there as fallback')
 class HomeTopAmbientGlow extends ConsumerWidget {
   const HomeTopAmbientGlow({super.key});
 
@@ -637,139 +640,42 @@ class HomeBalanceHero extends ConsumerWidget {
         padding: EdgeInsets.symmetric(horizontal: homeSize(4)),
         child: Semantics(
           container: true,
-          label: '$title. $walletName. Saldo: ${data.balanceHidden ? "Oculto" : "${data.balanceBtc} BTC, ou ${data.convertedBalanceLabel}"}. ${data.dailyChangeLabel}',
+          label:
+              '$title. $walletName. Saldo: ${data.balanceHidden ? "Oculto" : "${data.balanceBtc} BTC, ou ${data.convertedBalanceLabel}"}. ${data.dailyChangeLabel}',
           excludeSemantics: true,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedSwitcher(
-              duration: KeroseneMotion.short,
-              switchInCurve: KeroseneMotion.standard,
-              switchOutCurve: KeroseneMotion.exit,
-              child: Text(
-                title.toUpperCase(),
-                key: ValueKey('balance-title-${data.view.name}'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.label.copyWith(
-                  color: data.accent.withValues(alpha: 0.88),
-                  fontSize: homeFontSize(12),
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-            if (!isTotal && data.wallet != null) ...[
-              SizedBox(height: homeSize(6)),
+            children: [
               AnimatedSwitcher(
                 duration: KeroseneMotion.short,
+                switchInCurve: KeroseneMotion.standard,
+                switchOutCurve: KeroseneMotion.exit,
                 child: Text(
-                  walletName,
-                  key: ValueKey('wallet-$walletName'),
+                  title.toUpperCase(),
+                  key: ValueKey('balance-title-${data.view.name}'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: AppTypography.h3.copyWith(
-                    color: HomeColors.textPrimary.withValues(alpha: 0.75),
-                    fontSize: homeFontSize(13),
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 0,
+                  style: AppTypography.label.copyWith(
+                    color: data.accent.withValues(alpha: 0.88),
+                    fontSize: homeFontSize(12),
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
-            ],
-            SizedBox(height: homeSize(14)),
-            // Odometer for large deltas / session ceremony. Tab swipe uses
-            // suppressDigitRoll so it snaps instead of rolling.
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  AnimatedBalanceDisplay(
-                    key: const ValueKey('home-balance-amount'),
-                    balance: data.balanceBtc,
-                    decimalPlaces: data.decimalPlaces,
-                    locale:
-                        ref.watch(moneyFormatConfigProvider).numberLocaleTag,
-                    enableFlash: !suppressDigitRoll,
-                    isHidden: data.balanceHidden,
-                    digitWidthFactor: 0.72,
-                    characterSpacing: 0.1,
-                    decimalScaleFactor: 0.78,
-                    separatorScaleFactor: 0.78,
-                    animateInitialValue: animateInitialValue,
-                    suppressRoll: suppressDigitRoll,
-                    largeDeltaThreshold: kHomeBalanceLargeDeltaBtc,
-                    style: AppTypography.homeBalance(
-                      color: Colors.white,
-                    ).copyWith(
-                      fontSize: responsive.compactFontSize(
-                        tiny: homeFontSize(40),
-                        compact: homeFontSize(48),
-                        regular: homeFontSize(54),
-                      ),
-                      letterSpacing: -0.5,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: homeSize(8),
-                      bottom: homeSize(8),
-                    ),
-                    child: Text(
-                      'BTC',
-                      style: AppTypography.bodyLarge.copyWith(
-                        color: homeMutedTextColor,
-                        fontSize: homeFontSize(16),
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: homeSize(10)),
-            AnimatedSwitcher(
-              duration: KeroseneMotion.short,
-              child: Text(
-                data.convertedBalanceLabel,
-                key: ValueKey(data.convertedBalanceLabel),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: homeMutedTextColor,
-                  fontSize: homeFontSize(15),
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-            SizedBox(height: homeSize(8)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  data.dailyChangeColor == homePositiveColor
-                      ? KeroseneIcons.up
-                      : KeroseneIcons.down,
-                  color: data.dailyChangeColor,
-                  size: homeSize(12),
-                ),
-                SizedBox(width: homeSize(5)),
-                Flexible(
+              if (!isTotal && data.wallet != null) ...[
+                SizedBox(height: homeSize(6)),
+                AnimatedSwitcher(
+                  duration: KeroseneMotion.short,
                   child: Text(
-                    data.dailyChangeLabel,
+                    walletName,
+                    key: ValueKey('wallet-$walletName'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: data.dailyChangeColor,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.h3.copyWith(
+                      color: HomeColors.textPrimary.withValues(alpha: 0.75),
                       fontSize: homeFontSize(13),
                       fontWeight: FontWeight.w300,
                       letterSpacing: 0,
@@ -777,9 +683,113 @@ class HomeBalanceHero extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
+              SizedBox(height: homeSize(14)),
+              // Odometer for large deltas / session ceremony. Tab swipe uses
+              // suppressDigitRoll so it snaps instead of rolling.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    TickerMode(
+                      // Preserve the exact design, but avoid driving per-frame
+                      // animations while the user is actively scrolling.
+                      enabled: !ref.watch(homeScrollBusyProvider),
+                      child: AnimatedBalanceDisplay(
+                        key: const ValueKey('home-balance-amount'),
+                        balance: data.balanceBtc,
+                        decimalPlaces: data.decimalPlaces,
+                        locale: ref
+                            .watch(moneyFormatConfigProvider)
+                            .numberLocaleTag,
+                        enableFlash: !suppressDigitRoll,
+                        isHidden: data.balanceHidden,
+                        digitWidthFactor: 0.72,
+                        characterSpacing: 0.1,
+                        decimalScaleFactor: 0.78,
+                        separatorScaleFactor: 0.78,
+                        animateInitialValue: animateInitialValue,
+                        suppressRoll: suppressDigitRoll,
+                        largeDeltaThreshold: kHomeBalanceLargeDeltaBtc,
+                        style: AppTypography.homeBalance(
+                          color: Colors.white,
+                        ).copyWith(
+                          fontSize: responsive.compactFontSize(
+                            tiny: homeFontSize(40),
+                            compact: homeFontSize(48),
+                            regular: homeFontSize(54),
+                          ),
+                          letterSpacing: -0.5,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: homeSize(8),
+                        bottom: homeSize(8),
+                      ),
+                      child: Text(
+                        'BTC',
+                        style: AppTypography.bodyLarge.copyWith(
+                          color: homeMutedTextColor,
+                          fontSize: homeFontSize(16),
+                          fontWeight: FontWeight.w300,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: homeSize(10)),
+              AnimatedSwitcher(
+                duration: KeroseneMotion.short,
+                child: Text(
+                  data.convertedBalanceLabel,
+                  key: ValueKey(data.convertedBalanceLabel),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: homeMutedTextColor,
+                    fontSize: homeFontSize(15),
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              SizedBox(height: homeSize(8)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    data.dailyChangeColor == homePositiveColor
+                        ? KeroseneIcons.up
+                        : KeroseneIcons.down,
+                    color: data.dailyChangeColor,
+                    size: homeSize(12),
+                  ),
+                  SizedBox(width: homeSize(5)),
+                  Flexible(
+                    child: Text(
+                      data.dailyChangeLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: data.dailyChangeColor,
+                        fontSize: homeFontSize(13),
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -840,7 +850,6 @@ class HomeBalanceCardData {
     );
   }
 }
-
 
 /// Accent colors for each balance carousel page (glow + labels + dots).
 Color homeBalanceAccentFor(HomeLedgerBalanceView view) {

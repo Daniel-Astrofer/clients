@@ -6,6 +6,24 @@ import 'package:kerosene/design_system/icons.dart';
 
 typedef DeferredWidgetBuilder = Widget Function(BuildContext context);
 
+/// Dedupes [loadLibrary] so prefetch + first navigation share one Future.
+final Map<Future<void> Function(), Future<void>> _deferredLibraryCache = {};
+
+/// Load (or reuse) a deferred library. Safe to call from idle prefetch.
+Future<void> loadDeferredLibrary(Future<void> Function() loadLibrary) {
+  return _deferredLibraryCache.putIfAbsent(loadLibrary, loadLibrary);
+}
+
+/// Prefetch several deferred libs without blocking the UI isolate critically.
+void prefetchDeferredLibraries(
+  Iterable<Future<void> Function()> loaders,
+) {
+  for (final load in loaders) {
+    // Fire-and-forget; errors are ignored until real navigation surfaces them.
+    loadDeferredLibrary(load).ignore();
+  }
+}
+
 class DeferredPage extends StatefulWidget {
   final Future<void> Function() loadLibrary;
   final DeferredWidgetBuilder builder;
@@ -28,7 +46,7 @@ class _DeferredPageState extends State<DeferredPage> {
   @override
   void initState() {
     super.initState();
-    _libraryFuture = widget.loadLibrary();
+    _libraryFuture = loadDeferredLibrary(widget.loadLibrary);
   }
 
   @override

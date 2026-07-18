@@ -57,7 +57,13 @@ class TxStatus extends Equatable {
         .firstWhere((e) => e != null && e.isNotEmpty, orElse: () => null);
     final networkFeeSats = (data['networkFeeSats'] as num?)?.toInt();
     final keroseneFeeSats = (data['keroseneFeeSats'] as num?)?.toInt() ?? 0;
-    final receiverAmountSats = (data['receiverAmountSats'] as num?)?.toInt();
+    final rawReceiverAmountSats = (data['receiverAmountSats'] as num?)?.toInt();
+    final rawGrossAmountSats = (data['grossAmountSats'] as num?)?.toInt() ??
+        (data['amountSats'] as num?)?.toInt() ??
+        (data['amountSatoshis'] as num?)?.toInt();
+    final receiverAmountSats = (rawReceiverAmountSats != null && rawReceiverAmountSats > 0)
+        ? rawReceiverAmountSats
+        : (rawGrossAmountSats != null && rawGrossAmountSats > 0 ? rawGrossAmountSats : rawReceiverAmountSats);
     final totalDebitSats = (data['totalDebitSats'] as num?)?.toInt();
 
     return TxStatus(
@@ -71,7 +77,7 @@ class TxStatus extends Equatable {
           (networkFeeSats == null ? null : networkFeeSats + keroseneFeeSats) ??
           (((data['networkFeeBtc'] as num?)?.toDouble() ?? 0) * 100000000)
               .round(),
-      amountReceived: receiverAmountSats == null
+      amountReceived: (receiverAmountSats == null || receiverAmountSats <= 0)
           ? ((data['amount'] as num?)?.toDouble() ??
               (data['amountReceived'] as num?)?.toDouble() ??
               (data['amountBtc'] as num?)?.toDouble() ??

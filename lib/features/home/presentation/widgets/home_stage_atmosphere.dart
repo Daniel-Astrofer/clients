@@ -26,7 +26,7 @@ Color resolveStageColorToken(String token, {Color? fallback}) {
 Color restingWashAccentFor(HomeLedgerBalanceView view) {
   return switch (view) {
     HomeLedgerBalanceView.total => const Color(0xFF7DD3FC),
-    HomeLedgerBalanceView.platform => const Color(0xFFB8C4D4),
+    HomeLedgerBalanceView.platform => const Color(0xFF7DD3FC),
     HomeLedgerBalanceView.onChain => homeAmberColor,
     HomeLedgerBalanceView.cold => const Color(0xFF7DD3FC),
   };
@@ -35,7 +35,7 @@ Color restingWashAccentFor(HomeLedgerBalanceView view) {
 String restingWashTokenFor(HomeLedgerBalanceView view) {
   return switch (view) {
     HomeLedgerBalanceView.total => 'cold',
-    HomeLedgerBalanceView.platform => 'platform',
+    HomeLedgerBalanceView.platform => 'cold',
     HomeLedgerBalanceView.onChain => 'amber',
     HomeLedgerBalanceView.cold => 'cold',
   };
@@ -131,19 +131,21 @@ class HomeTheaterHeaderWash extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.paddingOf(context).top;
-    // Tiny tail only for safe-area spacing — no gradient paint.
-    final fadeTail = (MediaQuery.sizeOf(context).height * 0.02).clamp(8.0, 16.0);
+    final fadeTail =
+        (MediaQuery.sizeOf(context).height * 0.02).clamp(8.0, 16.0);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(top: topInset),
-          child: child,
-        ),
-        SizedBox(height: fadeTail),
-      ],
+    return RepaintBoundary(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: topInset),
+            child: child,
+          ),
+          SizedBox(height: fadeTail),
+        ],
+      ),
     );
   }
 }

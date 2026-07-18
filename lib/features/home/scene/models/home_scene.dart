@@ -280,6 +280,31 @@ class SceneMedia {
   bool get hasVisual =>
       type != SceneMediaType.none &&
       (asset.isNotEmpty || (url?.isNotEmpty ?? false) || (iconKey?.isNotEmpty ?? false));
+
+  @override
+  bool operator ==(Object other) {
+    return other is SceneMedia &&
+        other.type == type &&
+        other.asset == asset &&
+        other.url == url &&
+        other.state == state &&
+        other.iconKey == iconKey &&
+        other.aspectRatio == aspectRatio &&
+        other.autoplay == autoplay &&
+        other.loop == loop;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        type,
+        asset,
+        url,
+        state,
+        iconKey,
+        aspectRatio,
+        autoplay,
+        loop,
+      );
 }
 
 @immutable
@@ -378,6 +403,25 @@ class SceneContent {
       title.trim().isNotEmpty ||
       subtitle.trim().isNotEmpty ||
       (body?.trim().isNotEmpty ?? false);
+
+  @override
+  bool operator ==(Object other) {
+    return other is SceneContent &&
+        other.title == title &&
+        other.subtitle == subtitle &&
+        other.body == body &&
+        other.includeNamePlaceholder == includeNamePlaceholder &&
+        other.textMode == textMode;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        title,
+        subtitle,
+        body,
+        includeNamePlaceholder,
+        textMode,
+      );
 }
 
 @immutable
@@ -441,6 +485,14 @@ class SceneCta {
       };
 
   bool get isActive => label.trim().isNotEmpty && action.trim().isNotEmpty;
+
+  @override
+  bool operator ==(Object other) {
+    return other is SceneCta && other.label == label && other.action == action;
+  }
+
+  @override
+  int get hashCode => Object.hash(label, action);
 }
 
 /// One backend-described home scene. Pure data — no widgets.

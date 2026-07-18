@@ -1,9 +1,8 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
-import 'dart:ui';
+import 'dart:ui' as ui;
 
 import 'home_screen_dependencies.dart';
-import 'home_screen.dart';
 
 /// Pure OLED black body. Top accent color is owned solely by
 /// [HomeStageFixedAtmosphere] (fixed stack layer — does not scroll).
@@ -84,7 +83,8 @@ class HomeGlassPanel extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = EdgeInsets.zero,
-    this.borderRadius = const BorderRadius.all(Radius.circular(HomeRadius.panel)),
+    this.borderRadius =
+        const BorderRadius.all(Radius.circular(HomeRadius.panel)),
     this.backgroundColor,
   });
 
@@ -123,7 +123,6 @@ class HomeLoadingContent extends StatelessWidget {
   }
 }
 
-
 class HomeSkeletonBox extends StatelessWidget {
   final double? width;
   final double? height;
@@ -133,7 +132,8 @@ class HomeSkeletonBox extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    this.borderRadius = const BorderRadius.all(Radius.circular(HomeRadius.small)),
+    this.borderRadius =
+        const BorderRadius.all(Radius.circular(HomeRadius.small)),
   });
 
   @override
@@ -230,59 +230,102 @@ class HomeBalanceActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final borderRadius = BorderRadius.circular(homeSize(16));
+    final content = Container(
+      constraints: BoxConstraints(minHeight: homeSize(52)),
+      padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
+      decoration: BoxDecoration(
+        color: primary ? Colors.white : Colors.white.withValues(alpha: 0.04),
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: primary
+              ? Colors.transparent
+              : Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: homeSize(20),
+            color: primary ? Colors.black : Colors.white,
+          ),
+          SizedBox(width: homeSize(8)),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: primary ? Colors.black : Colors.white,
+                fontSize: homeFontSize(15),
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Local soft glow via radial gradients only — no ImageFiltered/BackdropFilter
+    // (both allocate offscreen layers / saveLayer on the raster thread).
+    final panel = primary
+        ? content
+        : Stack(
+            fit: StackFit.passthrough,
+            children: [
+              const Positioned.fill(
+                child: CustomPaint(painter: _ActionGlassGlowPainter()),
+              ),
+              content,
+            ],
+          );
 
     return BouncingButtonWrapper(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(homeSize(16)),
-        child: BackdropFilter(
-          filter: primary
-              ? ImageFilter.blur(sigmaX: 0, sigmaY: 0)
-              : ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
-          child: Container(
-            constraints: BoxConstraints(minHeight: homeSize(52)),
-            padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
-            decoration: BoxDecoration(
-              color: primary
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(homeSize(16)),
-              border: Border.all(
-                color: primary
-                    ? Colors.transparent
-                    : Colors.white.withValues(alpha: 0.08),
-                width: 0.5,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: homeSize(20),
-                  color: primary ? Colors.black : Colors.white,
-                ),
-                SizedBox(width: homeSize(8)),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: primary ? Colors.black : Colors.white,
-                      fontSize: homeFontSize(15),
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          clipBehavior: Clip.hardEdge,
+          child: panel,
         ),
       ),
     );
   }
+}
+
+class _ActionGlassGlowPainter extends CustomPainter {
+  const _ActionGlassGlowPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    void haze(Offset center, double radius, double peak) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            center,
+            radius,
+            [
+              Colors.white.withValues(alpha: peak),
+              Colors.white.withValues(alpha: peak * 0.35),
+              Colors.white.withValues(alpha: 0),
+            ],
+            const [0.0, 0.45, 1.0],
+          ),
+      );
+    }
+
+    haze(Offset(size.width * 0.18, 0), size.width * 0.34, 0.07);
+    haze(Offset(size.width * 0.86, size.height), size.width * 0.38, 0.04);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ActionGlassGlowPainter oldDelegate) => false;
 }
 
 class HomePaginationDots extends StatelessWidget {

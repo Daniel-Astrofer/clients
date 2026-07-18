@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/app/network/api_client_provider.dart';
 import 'package:kerosene/core/config/app_config.dart';
+import 'package:kerosene/core/performance/frame_coalescer.dart';
 import 'package:kerosene/core/providers/app_display_preferences_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
@@ -24,8 +25,17 @@ final homeSurfaceProvider =
 class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   int _loadGeneration = 0;
 
+  /// Batches high-frequency theater/scene WS tokens (~60Hz max).
+  late final FrameCoalescer<HomeUiEvent> _theaterCoalescer;
+
   @override
   HomeSurface build() {
+    _theaterCoalescer = FrameCoalescer<HomeUiEvent>(
+      interval: const Duration(milliseconds: 16),
+      onFlush: _applyEventNow,
+    );
+    ref.onDispose(_theaterCoalescer.dispose);
+
     ref.listen<AuthState>(authControllerProvider, (prev, next) {
       if (next is AuthAuthenticated) {
         unawaitedRefresh();
@@ -124,7 +134,61 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
     }
   }
 
+  /// Public ingress for realtime events. High-frequency stage/scene text
+  /// tokens are coalesced to ~one UI update per frame; clears/snapshots are
+  /// applied immediately so the stage never lags a structural change.
   void applyEvent(HomeUiEvent event) {
+    if (_isCoalescableTheaterEvent(event)) {
+      _theaterCoalescer.add(event);
+      return;
+    }
+    // Structural / urgent: drain any pending tokens first (order preserved),
+    // then apply this event immediately.
+    _theaterCoalescer.flushPending();
+    _applyEventNow(event);
+  }
+
+  bool _isCoalescableTheaterEvent(HomeUiEvent event) {
+    return switch (event.type) {
+      // Streaming theater text / atmosphere tokens (same id growth).
+      HomeUiEventType.stage => _isSameStageStream(event),
+      HomeUiEventType.scene => _isSameSceneStream(event),
+      // Patch that only mutates stage/scene fields can storm during LLM stream.
+      HomeUiEventType.patch => _patchIsTheaterOnly(event.payload),
+      _ => false,
+    };
+  }
+
+  /// Coalesce only while the same theater piece is streaming content.
+  /// A brand-new stage id must open immediately (no 16ms lag).
+  bool _isSameStageStream(HomeUiEvent event) {
+    final currentId = state.stage.id;
+    if (!state.stage.isActive || currentId.isEmpty) return false;
+    final nextId = (event.payload['id'] ?? '').toString();
+    return nextId.isNotEmpty && nextId == currentId;
+  }
+
+  bool _isSameSceneStream(HomeUiEvent event) {
+    final current = ref.read(homeSceneProvider);
+    if (!current.isActive || current.id.isEmpty) return false;
+    final nextId = (event.payload['id'] ?? '').toString();
+    return nextId.isNotEmpty && nextId == current.id;
+  }
+
+  bool _patchIsTheaterOnly(Map<String, dynamic> payload) {
+    if (payload.isEmpty) return false;
+    const theaterKeys = {
+      'stage',
+      'scene',
+      'version',
+      'schemaVersion',
+      'atmosphere',
+    };
+    return payload.keys.every(theaterKeys.contains);
+  }
+
+  void _applyEventNow(HomeUiEvent event) {
+    if (!ref.mounted) return;
     final auth = ref.read(authControllerProvider);
     final prevLocal = state.stage;
     var next = applyHomeUiEvent(state, event);
@@ -143,12 +207,14 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
         '[homeSurface] event ${event.type.name} version=${event.version}',
       );
     }
+    _bridgeSceneEvent(event);
   }
 
   void applyEventJson(Map<String, dynamic> json) {
-    final event = HomeUiEvent.fromJson(json);
-    applyEvent(event);
+    applyEvent(HomeUiEvent.fromJson(json));
+  }
 
+  void _bridgeSceneEvent(HomeUiEvent event) {
     // Scene-Driven path: pure scene payloads + clear, without SDUI widgets.
     try {
       switch (event.type) {
@@ -182,13 +248,18 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
 
   /// Hide stage immediately after the user finished reading (ONCE).
   void clearStage() {
+    // Drop any queued tokens — clear must win over a late SSE fragment.
+    _theaterCoalescer.cancelPending();
     if (!state.stage.isActive) return;
     state = state.clearStage();
+    ref.read(homeSceneProvider.notifier).clearOverride();
   }
 
   /// Inject a client-built theater piece (education / receive). Does not hit BE.
   void presentLocalStage(HomeStage stage) {
     if (!stage.isActive) return;
+    // Local pieces are user-facing now — never lag behind a pending WS token.
+    _theaterCoalescer.flushPending();
     state = state.withStage(stage);
     debugPrint(
       '[homeSurface] local stage=${stage.id} kind=${stage.kind.name}',
