@@ -378,10 +378,10 @@ class _SafeToSpendChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = selected
         ? AppColors.hexFF000000.withValues(alpha: 0.72)
-        : AppColors.hexFF4CAF50;
+        : const Color(0xFF4CAF50);
     final bg = selected
         ? AppColors.hexFF000000.withValues(alpha: 0.06)
-        : AppColors.hexFF4CAF50.withValues(alpha: 0.15);
+        : const Color(0xFF4CAF50).withValues(alpha: 0.15);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 10,
@@ -393,7 +393,7 @@ class _SafeToSpendChip extends StatelessWidget {
         border: Border.all(
           color: selected
               ? AppColors.hexFF000000.withValues(alpha: 0.10)
-              : AppColors.hexFF4CAF50.withValues(alpha: 0.3),
+              : const Color(0xFF4CAF50).withValues(alpha: 0.3),
         ),
       ),
       child: Row(

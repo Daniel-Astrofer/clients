@@ -12,6 +12,7 @@ import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/widgets/wallet_hold_selection_tile.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/movement/domain/payment_intent.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 
 class SendWalletSelectionStep extends StatelessWidget {
