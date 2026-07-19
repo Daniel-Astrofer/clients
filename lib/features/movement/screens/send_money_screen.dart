@@ -1105,6 +1105,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         }
       });
 
+      if (_liveResolvedIntent != null && _liveResolvedIntent!.alternatives.isNotEmpty) {
+        final selectedRail = await _showCapabilitiesBottomSheet(_liveResolvedIntent!, destination);
+        if (selectedRail == null) {
+          // User dismissed the bottom sheet
+          return;
+        }
+        setState(() {
+          _userSelectedRail = selectedRail;
+        });
+      }
+
       final nextStep = _hasPreselectedWallet ? 2 : 1;
       await _pageController.animateToPage(
         nextStep,
@@ -1118,6 +1129,140 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         setState(() => _destinationResolutionBusy = false);
       }
     }
+  }
+
+  Future<PaymentRail?> _showCapabilitiesBottomSheet(
+      ResolvedPaymentIntent resolvedIntent,
+      SendDestinationAnalysis destination) async {
+    return showModalBottomSheet<PaymentRail>(
+      context: context,
+      backgroundColor: SendMoneyScreenState.internalBlack,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Hero(
+                  tag: 'receiver_avatar_${destination.normalizedValue}',
+                  child: InternalRecentAvatar(
+                    title: destination.label ?? destination.normalizedValue,
+                    size: 80,
+                    fontSize: 32,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Como deseja enviar?',
+                  style: AppTypography.newsreader(
+                    color: SendMoneyScreenState.internalText,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Escolha o método de transferência compatível com este recebedor.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.inter(
+                    color: SendMoneyScreenState.internalMutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ...resolvedIntent.alternatives.map((option) {
+                  String title = 'Transferência Padrão';
+                  String subtitle = 'Pode levar alguns minutos';
+                  if (option.rail == PaymentRail.internal ||
+                      option.rail == PaymentRail.lightning) {
+                    title = 'Transferência Instantânea (Zero taxas)';
+                    subtitle = 'Chega na hora';
+                  }
+                  final isRecommended = option.rail == resolvedIntent.selectedRail;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Material(
+                      color: SendMoneyScreenState.internalSurfaceHigh,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context, option.rail),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: isRecommended
+                                ? Border.all(color: KeroseneBrandTokens.textPrimary, width: 2)
+                                : Border.all(color: Colors.transparent, width: 2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                option.rail == PaymentRail.onchain
+                                    ? KeroseneIcons.wallet
+                                    : KeroseneIcons.lightning,
+                                color: SendMoneyScreenState.internalText,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: AppTypography.inter(
+                                        color: SendMoneyScreenState.internalText,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      subtitle,
+                                      style: AppTypography.inter(
+                                        color: SendMoneyScreenState.internalMutedText,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isRecommended)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: KeroseneBrandTokens.textPrimary,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Recomendado',
+                                    style: AppTypography.inter(
+                                      color: KeroseneBrandTokens.background,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   SendDestinationAnalysis _currentDestinationAnalysis() {

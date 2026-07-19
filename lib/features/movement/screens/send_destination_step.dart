@@ -142,16 +142,7 @@ class SendDestinationStep extends StatelessWidget {
                         },
                       ),
                     ],
-                    if (resolvedIntent != null &&
-                        resolvedIntent!.alternatives.length > 1 &&
-                        onRailSelected != null) ...[
-                      const SizedBox(height: 16),
-                      _RailPicker(
-                        options: resolvedIntent!.alternatives,
-                        selected: resolvedIntent!.selectedRail,
-                        onSelected: onRailSelected!,
-                      ),
-                    ],
+
                     if (hasContacts) ...[
                       const SizedBox(height: 40),
                       _FrequentContactsSection(
@@ -276,10 +267,13 @@ class _ReceiverProfileCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          InternalRecentAvatar(
-            title: displayName,
-            size: 48,
-            fontSize: 20,
+          Hero(
+            tag: 'receiver_avatar_${analysis.normalizedValue}',
+            child: InternalRecentAvatar(
+              title: displayName,
+              size: 48,
+              fontSize: 20,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
