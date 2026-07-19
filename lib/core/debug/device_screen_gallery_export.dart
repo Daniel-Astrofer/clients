@@ -17,10 +17,18 @@ import 'package:kerosene/core/debug/device_ui_snapshot.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/wallet_setup_hub_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
 import 'package:kerosene/features/movement/screens/movement_hub_screen.dart';
+import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
+import 'package:kerosene/features/security/presentation/screens/notification_settings_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/security_totp_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/settings_backup_codes_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/settings_devices_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/settings_recovery_hub_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/sovereignty_status_screen.dart';
 
 /// One-tap: freeze session → paint full scrollable screens → PNG.
 ///
@@ -84,6 +92,14 @@ class DeviceScreenGalleryExport {
       _GalleryScreen('03_activity', const TransactionStatementScreen()),
       _GalleryScreen('04_receive', const MovementHubScreen()),
       _GalleryScreen('05_accounts', const BitcoinAccountsScreen()),
+      _GalleryScreen('06_notifications', const NotificationCenterScreen()),
+      _GalleryScreen('07_wallet_setup', const WalletSetupHubScreen()),
+      _GalleryScreen('08_security_totp', const SecurityTotpScreen()),
+      _GalleryScreen('09_recovery_hub', const SettingsRecoveryHubScreen()),
+      _GalleryScreen('10_devices', const SettingsDevicesScreen()),
+      _GalleryScreen('11_backup_codes', const SettingsBackupCodesScreen()),
+      _GalleryScreen('12_sovereignty', const SovereigntyStatusScreen()),
+      _GalleryScreen('13_notification_settings', const NotificationSettingsScreen()),
     ];
 
     final controller = _GalleryCaptureController(
