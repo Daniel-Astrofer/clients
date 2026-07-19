@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/core/security/secure_screen_guard.dart';
+import 'package:kerosene/core/security/rasp_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/icons.dart';
 import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
@@ -108,6 +110,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   late int _currentStep;
   late final PageController _pageController;
+  late final RaspGuard _raspGuard;
 
   bool get _hasPreselectedWallet =>
       widget.walletId != null && widget.walletId!.trim().isNotEmpty;
@@ -117,8 +120,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   @override
   void initState() {
     super.initState();
-    _currentStep = _firstStep;
+    _currentStep = 0;
     _pageController = PageController(initialPage: _currentStep);
+    _raspGuard = RaspGuard.instance;
+    _raspGuard.start();
     _selectedCurrency = Currency.btc;
     if (widget.initialAmountBtc != null) {
       _lockedAmountBtc = widget.initialAmountBtc!;
@@ -142,8 +147,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   @override
   void dispose() {
     _liveResolveTimer?.cancel();
-    _pageController.dispose();
     _receiverController.dispose();
+    _amount.dispose();
+    _pageController.dispose();
+    _raspGuard.stop();
     super.dispose();
   }
 
@@ -264,37 +271,45 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     _maybeHapticDestination(destinationAnalysis);
 
-    return Scaffold(
-      backgroundColor: internalBlack,
-      resizeToAvoidBottomInset: true,
-      body: Column(
-        children: [
-          if (!isOnline) _OfflineSendBanner(onRetry: _retryOnline),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                SafeArea(child: _buildDestinationStep(context)),
-                _buildWalletSelectionStep(context, walletState),
-                SafeArea(
-                  child: _buildAmountStep(
-                    context,
-                    btcUsd: btcUsd,
-                    btcEur: btcEur,
-                    btcBrl: btcBrl,
-                    amountBtc: amountBtc,
-                    wallet: currentWallet,
-                    destination: destinationAnalysis,
-                    feeQuote: feeQuote,
-                    isLoading: isLoading,
-                    isOnline: isOnline,
+    return SecureScreenScope(
+      child: Scaffold(
+        backgroundColor: internalBlack,
+        resizeToAvoidBottomInset: true,
+        body: Column(
+          children: [
+            if (!isOnline) _OfflineSendBanner(onRetry: _retryOnline),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  RepaintBoundary(
+                    child: SafeArea(child: _buildDestinationStep(context)),
                   ),
-                ),
-              ],
+                  RepaintBoundary(
+                    child: _buildWalletSelectionStep(context, walletState),
+                  ),
+                  RepaintBoundary(
+                    child: SafeArea(
+                      child: _buildAmountStep(
+                        context,
+                        btcUsd: btcUsd,
+                        btcEur: btcEur,
+                        btcBrl: btcBrl,
+                        amountBtc: amountBtc,
+                        wallet: currentWallet,
+                        destination: destinationAnalysis,
+                        feeQuote: feeQuote,
+                        isLoading: isLoading,
+                        isOnline: isOnline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
