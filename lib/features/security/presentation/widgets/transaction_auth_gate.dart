@@ -670,6 +670,36 @@ class _AuthorizationSheetBase extends StatelessWidget {
               height: 1.45,
             ),
           ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: KeroseneBrandTokens.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: KeroseneBrandTokens.success.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 14,
+                  color: KeroseneBrandTokens.success,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Conexão Criptografada Ponto a Ponta',
+                  style: AppTypography.inter(
+                    color: KeroseneBrandTokens.success,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: AppSpacing.xl),
           child,
         ],

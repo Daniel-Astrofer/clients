@@ -948,7 +948,7 @@ String _softCtaLabel(String raw) {
   return '${lower[0].toUpperCase()}${lower.substring(1)}';
 }
 
-class _CtaBar extends StatelessWidget {
+class _CtaBar extends StatefulWidget {
   final String label;
   final bool enabled;
   final bool isBusy;
@@ -962,44 +962,106 @@ class _CtaBar extends StatelessWidget {
   });
 
   @override
+  State<_CtaBar> createState() => _CtaBarState();
+}
+
+class _CtaBarState extends State<_CtaBar> with SingleTickerProviderStateMixin {
+  late final AnimationController _spinController;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    if (widget.isBusy) {
+      _spinController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CtaBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isBusy && !oldWidget.isBusy) {
+      _spinController.repeat();
+    } else if (!widget.isBusy && oldWidget.isBusy) {
+      _spinController.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spinController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final textStyle = AppTypography.inter(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
+      color: widget.enabled ? _C.bg : _C.muted,
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
-      child: SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: FilledButton(
-          onPressed: enabled && !isBusy ? onCta : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: _C.text,
-            foregroundColor: _C.bg,
-            disabledBackgroundColor: _C.chip,
-            disabledForegroundColor: _C.muted,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            width: widget.isBusy ? 54 : maxWidth,
+            height: 54,
+            decoration: BoxDecoration(
+              color: widget.enabled || widget.isBusy ? _C.text : _C.chip,
+              borderRadius: BorderRadius.circular(widget.isBusy ? 27 : 16),
             ),
-            textStyle: AppTypography.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.2,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(widget.isBusy ? 27 : 16),
+                onTap: widget.enabled && !widget.isBusy ? widget.onCta : null,
+                child: Center(
+                  child: widget.isBusy
+                      ? RepaintBoundary(
+                          child: AnimatedBuilder(
+                            animation: _spinController,
+                            builder: (context, child) {
+                              return Transform.rotate(
+                                angle: _spinController.value * 2 * 3.141592653589793,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: _C.bg.withValues(alpha: 0.2),
+                                      width: 2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _C.bg,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : Text(
+                          _softCtaLabel(widget.label),
+                          style: textStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+              ),
             ),
-          ),
-          child: AnimatedSwitcher(
-            duration: KeroseneMotion.fast,
-            child: isBusy
-                ? const CupertinoActivityIndicator(
-                    key: ValueKey('busy'),
-                    radius: 10,
-                    color: _C.muted,
-                  )
-                : Text(
-                    _softCtaLabel(label),
-                    key: ValueKey(label),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

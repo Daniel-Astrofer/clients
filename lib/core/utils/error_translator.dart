@@ -269,7 +269,7 @@ class ErrorTranslator {
       case 'V_SALDO_DISP':
       case 'INSUFFICIENT_AVAILABLE':
       case 'INSUFFICIENT_BALANCE':
-        return safeExtractedMessage ?? l10n.errLedgerInsufficientBalance;
+        return 'Saldo insuficiente na carteira escolhida.';
       case 'V_LIQUIDEZ':
       case 'INSUFFICIENT_FREE_OUTBOUND_CAPACITY':
       case 'INSUFFICIENT_OUTBOUND_CAPACITY':
