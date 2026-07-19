@@ -11,6 +11,7 @@ import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
 import 'package:kerosene/features/movement/widgets/transaction_value_entry_surface.dart';
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
+import 'package:flutter/services.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 
 class SendAmountStep extends StatelessWidget {
@@ -105,12 +106,12 @@ class SendAmountStep extends StatelessWidget {
           unitLabel: MoneyDisplay.tickerSymbolFor(selectedCurrency),
           currency: selectedCurrency,
           fiatReference: secondaryLabel,
-          configuration: destination.isOnChain && onFeeTierChanged != null
-              ? _FeeTierBar(
-                  selected: feeTier,
-                  onSelected: onFeeTierChanged!,
-                )
-              : null,
+          configuration: _TransparencyHierarchyPanel(
+            destination: destination,
+            feeQuote: feeQuote,
+            feeTier: feeTier,
+            onFeeTierChanged: onFeeTierChanged,
+          ),
           showKeypad: !amountLocked,
           onKeyTap: amountLocked
               ? null
@@ -132,7 +133,7 @@ class SendAmountStep extends StatelessWidget {
                   maxDecimalPlaces: 8,
                   appLocale: appLocale,
                 ),
-          feeLabel: feeLabel,
+          feeLabel: null, // Now handled by TransparencyHierarchyPanel
           warningLabel: warningLabel,
           quickActions: amountLocked || wallet == null
               ? const []
@@ -263,7 +264,10 @@ class _FeeTierBar extends StatelessWidget {
                     : KeroseneBrandTokens.surfaceHigh,
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
-                  onTap: () => onSelected(tier),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onSelected(tier);
+                  },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -285,6 +289,160 @@ class _FeeTierBar extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _TransparencyHierarchyPanel extends StatelessWidget {
+  final SendDestinationAnalysis destination;
+  final SendFeeQuote feeQuote;
+  final NetworkFeeTier feeTier;
+  final ValueChanged<NetworkFeeTier>? onFeeTierChanged;
+
+  const _TransparencyHierarchyPanel({
+    required this.destination,
+    required this.feeQuote,
+    required this.feeTier,
+    this.onFeeTierChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!feeQuote.hasAmount) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (destination.isOnChain && onFeeTierChanged != null) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Velocidade da Transação',
+                style: AppTypography.inter(
+                  color: KeroseneBrandTokens.textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Tooltip(
+                message: 'Taxas menores demoram um pouco mais para confirmar.',
+                triggerMode: TooltipTriggerMode.tap,
+                child: Icon(
+                  Icons.help_outline,
+                  size: 16,
+                  color: KeroseneBrandTokens.textMuted.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _FeeTierBar(
+            selected: feeTier,
+            onSelected: onFeeTierChanged!,
+          ),
+          const SizedBox(height: 24),
+        ],
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: KeroseneBrandTokens.surfaceHigh,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: KeroseneBrandTokens.border.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            children: [
+              _AnimatedBreakdownRow(
+                label: 'O que ele recebe',
+                amountBtc: feeQuote.receiverAmountBtc,
+                textColor: KeroseneBrandTokens.textPrimary,
+              ),
+              const SizedBox(height: 12),
+              _AnimatedBreakdownRow(
+                label: 'Taxas',
+                amountBtc: feeQuote.totalFeesBtc,
+                textColor: KeroseneBrandTokens.textMuted,
+                isLoading: feeQuote.isLoading ||
+                    (destination.isOnChain && feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Divider(color: KeroseneBrandTokens.border, height: 1),
+              ),
+              _AnimatedBreakdownRow(
+                label: 'Sairá da sua conta',
+                amountBtc: feeQuote.totalDebitedBtc,
+                textColor: KeroseneBrandTokens.textPrimary,
+                isTotal: true,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnimatedBreakdownRow extends StatelessWidget {
+  final String label;
+  final double amountBtc;
+  final Color textColor;
+  final bool isTotal;
+  final bool isLoading;
+
+  const _AnimatedBreakdownRow({
+    required this.label,
+    required this.amountBtc,
+    required this.textColor,
+    this.isTotal = false,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTypography.inter(
+            color: textColor,
+            fontSize: isTotal ? 15 : 14,
+            fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+        if (isLoading)
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: KeroseneBrandTokens.textMuted,
+            ),
+          )
+        else
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+            tween: Tween<double>(begin: amountBtc, end: amountBtc),
+            builder: (context, value, child) {
+              return RepaintBoundary(
+                child: Text(
+                  '${MoneyDisplay.formatCompact(amount: value, currency: Currency.btc, maxDecimalPlaces: 8)} BTC',
+                  style: AppTypography.inter(
+                    color: textColor,
+                    fontSize: isTotal ? 15 : 14,
+                    fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
     );
   }
 }
