@@ -22,6 +22,8 @@ class SendWalletSelectionStep extends StatelessWidget {
   final ValueChanged<Wallet> onWalletSelected;
   final ValueChanged<Wallet> onWalletConfirmed;
 
+  final PaymentRail? selectedRail;
+
   const SendWalletSelectionStep({
     super.key,
     required this.walletState,
@@ -30,6 +32,7 @@ class SendWalletSelectionStep extends StatelessWidget {
     required this.onBack,
     required this.onWalletSelected,
     required this.onWalletConfirmed,
+    this.selectedRail,
   });
 
   static const internalBlack = KeroseneBrandTokens.background;
@@ -82,6 +85,7 @@ class SendWalletSelectionStep extends StatelessWidget {
       return _WalletList(
         walletState: state,
         selectedWallet: selectedWallet,
+        selectedRail: selectedRail,
         onWalletSelected: onWalletSelected,
         onWalletConfirmed: onWalletConfirmed,
       );
@@ -241,22 +245,53 @@ class _WalletLoadError extends StatelessWidget {
   }
 }
 
-class _WalletList extends StatelessWidget {
+class _WalletList extends StatefulWidget {
   final WalletLoaded walletState;
   final Wallet? selectedWallet;
+  final PaymentRail? selectedRail;
   final ValueChanged<Wallet> onWalletSelected;
   final ValueChanged<Wallet> onWalletConfirmed;
 
   const _WalletList({
     required this.walletState,
     required this.selectedWallet,
+    required this.selectedRail,
     required this.onWalletSelected,
     required this.onWalletConfirmed,
   });
 
   @override
+  State<_WalletList> createState() => _WalletListState();
+}
+
+class _WalletListState extends State<_WalletList> with SingleTickerProviderStateMixin {
+  late final AnimationController _staggerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _staggerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _staggerController.forward();
+  }
+
+  @override
+  void dispose() {
+    _staggerController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final walletsList = walletState.wallets.toList();
+    var walletsList = widget.walletState.wallets.where((w) {
+      if (!w.spendable) return false;
+      if (widget.selectedRail == PaymentRail.lightning && w.isColdWallet) {
+        return false;
+      }
+      return true;
+    }).toList();
     if (walletsList.length == 3) {
       final insuredIndex = walletsList.indexWhere((w) => w.isInternalCustody);
       if (insuredIndex != -1 && insuredIndex != 1) {
@@ -294,22 +329,74 @@ class _WalletList extends StatelessWidget {
                 ? 10.0
                 : 14.0;
 
-        Widget itemBuilder(Wallet wallet, {required bool fill}) {
-          final selected = selectedWallet?.id == wallet.id;
+        Widget itemBuilder(Wallet wallet, int index, {required bool fill}) {
+          final selected = widget.selectedWallet?.id == wallet.id;
+          final isRecommended = widget.selectedRail != null &&
+              ((widget.selectedRail == PaymentRail.internal && wallet.isInternalCustody) ||
+               (widget.selectedRail == PaymentRail.onchain && wallet.isCustodialOnchain));
+
           final tile = WalletHoldSelectionTile(
             wallet: wallet,
             selected: selected,
             compact: compact,
-            onSelect: onWalletSelected,
-            onConfirmed: onWalletConfirmed,
+            onSelect: widget.onWalletSelected,
+            onConfirmed: widget.onWalletConfirmed,
           );
+
+          final animation = CurvedAnimation(
+            parent: _staggerController,
+            curve: Interval(
+              (index * 0.1).clamp(0.0, 1.0),
+              (index * 0.1 + 0.4).clamp(0.0, 1.0),
+              curve: Curves.easeOutCubic,
+            ),
+          );
+
+          Widget animatedTile = SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: FadeTransition(
+              opacity: animation,
+              child: tile,
+            ),
+          );
+
+          if (isRecommended) {
+            animatedTile = ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: _staggerController,
+                  curve: Curves.elasticOut,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.5),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.1),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: animatedTile,
+              ),
+            );
+          }
 
           return AnimatedContainer(
             key: ValueKey('send-wallet-option-${wallet.id}'),
             duration: KeroseneMotion.medium,
             curve: KeroseneMotion.entrance,
             width: maxWidth,
-            child: fill ? SizedBox.expand(child: tile) : tile,
+            child: fill ? SizedBox.expand(child: animatedTile) : animatedTile,
           );
         }
 
@@ -319,8 +406,8 @@ class _WalletList extends StatelessWidget {
               children: [
                 for (var index = 0; index < walletsList.length; index++) ...[
                   Expanded(
-                    flex: selectedWallet?.id == walletsList[index].id ? 2 : 1,
-                    child: itemBuilder(walletsList[index], fill: true),
+                    flex: widget.selectedWallet?.id == walletsList[index].id ? 2 : 1,
+                    child: itemBuilder(walletsList[index], index, fill: true),
                   ),
                   if (gap > 0 && index < walletsList.length - 1)
                     SizedBox(height: gap),
@@ -343,7 +430,7 @@ class _WalletList extends StatelessWidget {
           itemCount: walletsList.length,
           separatorBuilder: (_, __) => SizedBox(height: gap),
           itemBuilder: (context, index) =>
-              itemBuilder(walletsList[index], fill: false),
+              itemBuilder(walletsList[index], index, fill: false),
         );
       },
     );

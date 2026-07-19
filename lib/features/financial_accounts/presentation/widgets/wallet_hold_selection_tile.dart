@@ -226,7 +226,7 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    _displayName(widget.wallet.name),
+                    _displayName(widget.wallet),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     softWrap: false,
@@ -257,7 +257,23 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                 ),
                 if (_supportsLightning(widget.wallet)) ...[
                   SizedBox(height: compact ? 10 : 12),
-                  _LightningCapabilityChip(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _LightningCapabilityChip(
+                        selected: selected,
+                        compact: compact,
+                      ),
+                      const SizedBox(width: 8),
+                      _SafeToSpendChip(
+                        selected: selected,
+                        compact: compact,
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  SizedBox(height: compact ? 10 : 12),
+                  _SafeToSpendChip(
                     selected: selected,
                     compact: compact,
                   ),
@@ -285,9 +301,16 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
     return KeroseneIcons.wallet;
   }
 
-  static String _displayName(String value) {
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? 'Wallet' : trimmed;
+  static String _displayName(Wallet wallet) {
+    if (wallet.isInternalCustody) {
+      return 'Carteira Dia a Dia';
+    } else if (wallet.isCustodialOnchain) {
+      return 'Carteira Padrão';
+    } else if (wallet.isColdWallet) {
+      return 'Cofre (Frio)';
+    }
+    final trimmed = wallet.name.trim();
+    return trimmed.isEmpty ? 'Carteira' : trimmed;
   }
 }
 
@@ -329,6 +352,57 @@ class _LightningCapabilityChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             'Lightning',
+            style: AppTypography.inter(
+              color: fg,
+              fontSize: compact ? 10 : 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SafeToSpendChip extends StatelessWidget {
+  final bool selected;
+  final bool compact;
+
+  const _SafeToSpendChip({
+    required this.selected,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected
+        ? AppColors.hexFF000000.withValues(alpha: 0.72)
+        : AppColors.hexFF4CAF50;
+    final bg = selected
+        ? AppColors.hexFF000000.withValues(alpha: 0.06)
+        : AppColors.hexFF4CAF50.withValues(alpha: 0.15);
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 5,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: selected
+              ? AppColors.hexFF000000.withValues(alpha: 0.10)
+              : AppColors.hexFF4CAF50.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(KeroseneIcons.security, size: compact ? 11 : 12, color: fg),
+          const SizedBox(width: 5),
+          Text(
+            'Seguro para gastar',
             style: AppTypography.inter(
               color: fg,
               fontSize: compact ? 10 : 11,
