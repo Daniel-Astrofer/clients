@@ -112,7 +112,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   bool get _hasPreselectedWallet =>
       widget.walletId != null && widget.walletId!.trim().isNotEmpty;
 
-  int get _firstStep => _hasPreselectedWallet ? 1 : 0;
+  int get _firstStep => 0;
 
   @override
   void initState() {
@@ -275,8 +275,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _buildWalletSelectionStep(context, walletState),
                 SafeArea(child: _buildDestinationStep(context)),
+                _buildWalletSelectionStep(context, walletState),
                 SafeArea(
                   child: _buildAmountStep(
                     context,
@@ -326,12 +326,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   }
 
   void _handleBack() {
-    if (_currentStep > _firstStep) {
-      _pageController.previousPage(
+    if (_currentStep > 0) {
+      int previousStep = _currentStep - 1;
+      if (_currentStep == 2 && _hasPreselectedWallet) {
+        previousStep = 0; // Skip wallet selection
+      }
+      _pageController.animateToPage(
+        previousStep,
         duration: KeroseneMotion.medium,
         curve: KeroseneMotion.standard,
       );
-      setState(() => _currentStep -= 1);
+      setState(() => _currentStep = previousStep);
       return;
     }
 
@@ -839,7 +844,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         ref.read(walletProvider.notifier).selectWallet(wallet);
         setState(() {
           _selectedWallet = wallet;
-          _currentStep = 1;
+          _currentStep = 2;
         });
         _pageController.nextPage(
           duration: KeroseneMotion.medium,
@@ -1100,12 +1105,14 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         }
       });
 
-      await _pageController.nextPage(
+      final nextStep = _hasPreselectedWallet ? 2 : 1;
+      await _pageController.animateToPage(
+        nextStep,
         duration: KeroseneMotion.medium,
         curve: KeroseneMotion.standard,
       );
       if (!mounted) return;
-      setState(() => _currentStep = 2);
+      setState(() => _currentStep = nextStep);
     } finally {
       if (mounted && _destinationResolutionBusy) {
         setState(() => _destinationResolutionBusy = false);

@@ -116,9 +116,27 @@ class SendDestinationStep extends StatelessWidget {
                           }
                           return Padding(
                             padding: const EdgeInsets.only(top: 12),
-                            child: _DestinationFeedback(
-                              analysis: analysis,
-                              message: message,
+                            child: Column(
+                              children: [
+                                _DestinationFeedback(
+                                  analysis: analysis,
+                                  message: message,
+                                ),
+                                if (resolvedIntent != null || analysis.isValid)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 24),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 300),
+                                      switchInCurve: Curves.easeIn,
+                                      switchOutCurve: Curves.easeOut,
+                                      child: _ReceiverProfileCard(
+                                        key: ValueKey(destination),
+                                        analysis: analysis,
+                                        resolved: resolvedIntent,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           );
                         },
@@ -208,6 +226,88 @@ class SendDestinationStep extends StatelessWidget {
       // Prefer blockers only; skip generic explainWhy noise as a label.
     }
     return null;
+  }
+}
+
+class _ReceiverProfileCard extends StatelessWidget {
+  final SendDestinationAnalysis analysis;
+  final ResolvedPaymentIntent? resolved;
+
+  const _ReceiverProfileCard({
+    super.key,
+    required this.analysis,
+    this.resolved,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    String displayName = '';
+    String subtext = '';
+
+    if (analysis.isInternal) {
+      displayName = analysis.label ?? analysis.normalizedValue;
+      subtext = 'Kerosene User';
+    } else if (analysis.isOnChain) {
+      displayName = 'Endereço On-chain';
+      final address = analysis.normalizedValue;
+      if (address.length > 12) {
+        subtext = '${address.substring(0, 6)}...${address.substring(address.length - 6)}';
+      } else {
+        subtext = address;
+      }
+    } else if (analysis.isLightning) {
+      displayName = 'Fatura Lightning';
+      subtext = 'Lightning Network';
+    } else if (analysis.isPaymentLink) {
+      displayName = 'Link de Pagamento';
+      subtext = analysis.normalizedValue;
+    } else {
+      displayName = analysis.normalizedValue;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SendDestinationStep.internalSurfaceHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: SendDestinationStep.internalBorder.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          InternalRecentAvatar(
+            title: displayName,
+            size: 48,
+            fontSize: 20,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  style: AppTypography.inter(
+                    color: SendDestinationStep.internalText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtext,
+                  style: AppTypography.inter(
+                    color: SendDestinationStep.internalMutedText,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -341,7 +441,7 @@ class _DestinationHeader extends StatelessWidget {
         ),
         SizedBox(height: hasContacts ? 18 : 20),
         Text(
-          SendMoneyCopy.destinationTitle(context),
+          'Para quem você quer enviar dinheiro?',
           textAlign: TextAlign.left,
           style: AppTypography.newsreader(
             color: SendDestinationStep.internalText,
