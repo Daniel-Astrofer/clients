@@ -164,13 +164,15 @@ class _AnimatedTxIconState extends State<AnimatedTxIcon>
     return AnimatedBuilder(
       animation: Listenable.merge([_primary, _secondary]),
       builder: (_, __) {
-        return CustomPaint(
-          size: Size(widget.size, widget.size),
-          painter: _painterFor(
-            widget.kind,
-            widget.color,
-            _primary.value,
-            _secondary.value,
+        return RepaintBoundary(
+          child: CustomPaint(
+            size: Size(widget.size, widget.size),
+            painter: _painterFor(
+              widget.kind,
+              widget.color,
+              _primary.value,
+              _secondary.value,
+            ),
           ),
         );
       },

@@ -355,15 +355,17 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
       Widget itemBuilder(BuildContext context, int index) {
         final tx = filteredTxs[index];
-        final p = liveCtrl != null
-            ? _rowProgress(index, liveCtrl.value, count)
-            : 1.0;
+        
         final tile = tiles != null && index < tiles.length
             ? tiles[index]
             : _buildTransactionTile(
                 tx,
                 expanded: _expandedTransactionIds.contains(tx.id),
               );
+
+        // Envolve o tile num RepaintBoundary isolado para que a animação de opacidade 
+        // e translação não invalide a renderização pesada do card.
+        final cachedTile = RepaintBoundary(child: tile);
 
         Widget? dateHeader;
         if (index == 0) {
@@ -378,61 +380,60 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           }
         }
 
-        final revealed = p <= 0
-            ? const SizedBox.shrink()
-            : Opacity(
-                opacity: p,
-                child: Transform.translate(
-                  offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
-                  child: tile,
-                ),
-              );
+        Widget buildContent(double p) {
+          final revealed = p <= 0
+              ? const SizedBox.shrink()
+              : Opacity(
+                  opacity: p,
+                  child: Transform.translate(
+                    offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
+                    child: cachedTile,
+                  ),
+                );
 
-        final gap = index > 0 ? homeSize(12) : 0.0;
-        Widget content;
-        if (dateHeader != null) {
-          content = Padding(
-            padding: EdgeInsets.only(top: gap),
-            child: Column(
-              key: ValueKey('col_${tx.id}'),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (index > 0) SizedBox(height: homeSize(AppSpacing.base) - gap),
-                Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
-                SizedBox(height: homeSize(AppSpacing.sm)),
-                revealed,
-              ],
-            ),
-          );
-        } else {
-          content = Padding(
-            padding: EdgeInsets.only(top: gap),
-            child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
+          final gap = index > 0 ? homeSize(12) : 0.0;
+          Widget content;
+          if (dateHeader != null) {
+            content = Padding(
+              padding: EdgeInsets.only(top: gap),
+              child: Column(
+                key: ValueKey('col_${tx.id}'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (index > 0) SizedBox(height: homeSize(AppSpacing.base) - gap),
+                  Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
+                  SizedBox(height: homeSize(AppSpacing.sm)),
+                  revealed,
+                ],
+              ),
+            );
+          } else {
+            content = Padding(
+              padding: EdgeInsets.only(top: gap),
+              child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
+            );
+          }
+
+          return ColoredBox(
+            color: homeBackgroundColor,
+            child: content,
           );
         }
 
-        return ColoredBox(
-          color: homeBackgroundColor,
-          child: content,
-        );
+        if (liveCtrl != null) {
+          return AnimatedBuilder(
+            animation: liveCtrl,
+            builder: (context, _) {
+              final p = _rowProgress(index, liveCtrl.value, count);
+              return buildContent(p);
+            },
+          );
+        }
+
+        return buildContent(1.0);
       }
 
-      if (liveCtrl != null) {
-        return AnimatedBuilder(
-          animation: liveCtrl,
-          builder: (context, _) {
-            return SliverList(
-              delegate: SliverChildBuilderDelegate(
-                itemBuilder,
-                childCount: count,
-                addAutomaticKeepAlives: false,
-                addRepaintBoundaries: true,
-              ),
-            );
-          },
-        );
-      }
       return SliverList(
         delegate: SliverChildBuilderDelegate(
           itemBuilder,
@@ -478,15 +479,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
     Widget itemBuilder(BuildContext context, int index) {
       final tx = filteredTxs[index];
-      final p = animate && ctrl != null
-          ? _rowProgress(index, ctrl.value, count)
-          : 1.0;
       final tile = tiles != null && index < tiles.length
           ? tiles[index]
           : _buildTransactionTile(
               tx,
               expanded: _expandedTransactionIds.contains(tx.id),
             );
+      
+      final cachedTile = RepaintBoundary(child: tile);
 
       Widget? dateHeader;
       if (index == 0) {
@@ -501,47 +501,48 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         }
       }
 
-      final revealed = p <= 0
-          ? const SizedBox.shrink()
-          : Opacity(
-              opacity: p,
-              child: Transform.translate(
-                offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
-                child: tile,
-              ),
-            );
+      Widget buildContent(double p) {
+        final revealed = p <= 0
+            ? const SizedBox.shrink()
+            : Opacity(
+                opacity: p,
+                child: Transform.translate(
+                  offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
+                  child: cachedTile,
+                ),
+              );
 
-      if (dateHeader != null) {
-        return Column(
-          key: ValueKey('col_${tx.id}'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
-            Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
-            SizedBox(height: homeSize(AppSpacing.sm)),
-            revealed,
-          ],
+        if (dateHeader != null) {
+          return Column(
+            key: ValueKey('col_${tx.id}'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
+              Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
+              SizedBox(height: homeSize(AppSpacing.sm)),
+              revealed,
+            ],
+          );
+        }
+        return KeyedSubtree(
+          key: ValueKey(tx.id),
+          child: revealed,
         );
       }
-      return KeyedSubtree(
-        key: ValueKey(tx.id),
-        child: revealed,
-      );
+
+      if (animate && ctrl != null) {
+        return AnimatedBuilder(
+          animation: ctrl,
+          builder: (context, _) {
+            final p = _rowProgress(index, ctrl.value, count);
+            return buildContent(p);
+          },
+        );
+      }
+      return buildContent(1.0);
     }
 
-    if (animate && ctrl != null) {
-      return AnimatedBuilder(
-        animation: ctrl,
-        builder: (context, _) {
-          return StatementTransactionScrollStack(
-            itemCount: count,
-            itemGap: homeSize(12),
-            itemBuilder: itemBuilder,
-          );
-        },
-      );
-    }
     return StatementTransactionScrollStack(
       itemCount: count,
       itemGap: homeSize(12),

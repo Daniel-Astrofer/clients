@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
 import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
-import 'package:kerosene/features/home/presentation/widgets/education_tier_card_3d.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -220,18 +219,6 @@ class _HomeFeedMediaThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Platform tier education → live 3D card (never mock PNG).
-    final tier = feedItem != null ? educationTierFromFeedItem(feedItem!) : null;
-    if (tier != null) {
-      final w = homeSize(108);
-      final h = homeSize(68);
-      return SizedBox(
-        width: w,
-        height: h,
-        child: EducationTierCard3D(tier: tier, width: w, height: h),
-      );
-    }
-
     final accent = switch (kind) {
       HomeFeedKind.promo => homeAmberColor,
       HomeFeedKind.announcement => Colors.white70,
