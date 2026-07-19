@@ -306,9 +306,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                     child: SafeArea(child: _buildDestinationStep(context)),
                   ),
                   RepaintBoundary(
-                    child: _buildWalletSelectionStep(context, walletState),
-                  ),
-                  RepaintBoundary(
                     child: SafeArea(
                       child: _buildAmountStep(
                         context,
@@ -362,9 +359,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   void _handleBack() {
     if (_currentStep > 0) {
       int previousStep = _currentStep - 1;
-      if (_currentStep == 2 && _hasPreselectedWallet) {
-        previousStep = 0; // Skip wallet selection
-      }
+
       _pageController.animateToPage(
         previousStep,
         duration: KeroseneMotion.medium,
@@ -858,35 +853,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     );
   }
 
-  Widget _buildWalletSelectionStep(
-    BuildContext context,
-    WalletState walletState,
-  ) {
-    final selectedWallet = _resolveWallet(walletState);
 
-    return SendWalletSelectionStep(
-      walletState: walletState,
-      selectedWallet: selectedWallet,
-      onRefresh: () => ref.read(walletProvider.notifier).refresh(),
-      onBack: _handleBack,
-      onWalletSelected: (wallet) {
-        HapticFeedback.selectionClick();
-        setState(() => _selectedWallet = wallet);
-      },
-      onWalletConfirmed: (wallet) {
-        HapticFeedback.selectionClick();
-        ref.read(walletProvider.notifier).selectWallet(wallet);
-        setState(() {
-          _selectedWallet = wallet;
-        });
-        ref.read(sendMoneyFlowProvider.notifier).setStep(2);
-        _pageController.nextPage(
-          duration: KeroseneMotion.medium,
-          curve: KeroseneMotion.standard,
-        );
-      },
-    );
-  }
 
   bool _isColdSource(Wallet? wallet) =>
       wallet != null && (wallet.isColdWallet || wallet.isSelfCustody);
@@ -1150,14 +1117,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         });
       }
 
-      final nextStep = _hasPreselectedWallet ? 2 : 1;
       await _pageController.animateToPage(
-        nextStep,
+        1,
         duration: KeroseneMotion.medium,
         curve: KeroseneMotion.standard,
       );
       if (!mounted) return;
-      ref.read(sendMoneyFlowProvider.notifier).setStep(nextStep);
+      ref.read(sendMoneyFlowProvider.notifier).setStep(1);
     } finally {
       if (mounted && _destinationResolutionBusy) {
         setState(() => _destinationResolutionBusy = false);
