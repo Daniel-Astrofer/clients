@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:kerosene/features/movement/domain/payment_intent.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
