@@ -264,14 +264,16 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                         selected: selected,
                         compact: compact,
                       ),
-                      const SizedBox(width: 8),
-                      _SafeToSpendChip(
-                        selected: selected,
-                        compact: compact,
-                      ),
+                      if (widget.wallet.spendable && widget.wallet.balance > 0) ...[
+                        const SizedBox(width: 8),
+                        _SafeToSpendChip(
+                          selected: selected,
+                          compact: compact,
+                        ),
+                      ],
                     ],
                   ),
-                ] else ...[
+                ] else if (widget.wallet.spendable && widget.wallet.balance > 0) ...[
                   SizedBox(height: compact ? 10 : 12),
                   _SafeToSpendChip(
                     selected: selected,
