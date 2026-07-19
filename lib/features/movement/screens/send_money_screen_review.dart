@@ -152,11 +152,19 @@ class InternalTransferReviewScreenState<T>
       final receipt = widget.receiptBuilder?.call(result);
       if (receipt != null) {
         final receiptResult = await Navigator.of(context).push<T>(
-          MaterialPageRoute<T>(
-            builder: (_) => SendPaymentReceiptScreen<T>(
+          PageRouteBuilder<T>(
+            transitionDuration: const Duration(milliseconds: 600),
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                SendPaymentReceiptScreen<T>(
               data: receipt,
               result: result,
             ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return ClipPath(
+                clipper: _CircularRevealClipper(fraction: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic).value),
+                child: child,
+              );
+            },
           ),
         );
         if (!mounted) return;
@@ -269,6 +277,24 @@ class InternalTransferReviewScreenState<T>
       ),
     );
   }
+}
+
+class _CircularRevealClipper extends CustomClipper<Path> {
+  final double fraction;
+  _CircularRevealClipper({required this.fraction});
+
+  @override
+  Path getClip(Size size) {
+    // Start from bottom-center where the button is
+    final center = Offset(size.width / 2, size.height - 80);
+    final maxRadius = size.height * 1.5;
+    return Path()
+      ..addOval(Rect.fromCircle(center: center, radius: maxRadius * fraction));
+  }
+
+  @override
+  bool shouldReclip(_CircularRevealClipper oldClipper) =>
+      oldClipper.fraction != fraction;
 }
 
 class SendPaymentReceiptScreen<T> extends StatefulWidget {
@@ -717,22 +743,123 @@ class _ReceiptBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MovementConfirmationSurface(
-      title: title,
-      amountLabel: amountLabel,
-      supportingLabel: subtitle,
-      leading: const _ReceiptSuccessMark(),
-      rows: [
-        for (final row in rows)
-          MovementConfirmationRow(
-            label: row.label,
-            value: row.value,
-            numeric: row.numeric,
-            technical: row.technical,
-          ),
-      ],
+    return CustomPaint(
+      painter: _SkeuomorphicReceiptPainter(),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _ReceiptSuccessMark(),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                color: Colors.black87,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: AppTypography.inter(
+                  color: Colors.black54,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            Text(
+              amountLabel,
+              textAlign: TextAlign.center,
+              style: AppTypography.inter(
+                color: Colors.black,
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Divider(color: Colors.black12, height: 1, thickness: 1),
+            const SizedBox(height: 24),
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        row.label,
+                        style: AppTypography.inter(
+                          color: Colors.black54,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        row.value,
+                        textAlign: TextAlign.right,
+                        style: AppTypography.inter(
+                          color: Colors.black87,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: row.numeric
+                              ? const [FontFeature.tabularFigures()]
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 32), // space for jagged edge
+          ],
+        ),
+      ),
     );
   }
+}
+
+class _SkeuomorphicReceiptPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFF9F6F0) // Paper color
+      ..style = PaintingStyle.fill;
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.1)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width, 0);
+
+    // Jagged bottom edge
+    const segmentWidth = 12.0;
+    final segments = (size.width / segmentWidth).ceil();
+    for (int i = 0; i <= segments; i++) {
+      final x = (i * segmentWidth).clamp(0.0, size.width);
+      final y = (i % 2 == 0) ? size.height : size.height - 8;
+      path.lineTo(x, y);
+    }
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, shadowPaint);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SendFlowHeader extends StatelessWidget {
