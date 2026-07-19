@@ -58,6 +58,7 @@ import 'package:kerosene/features/movement/screens/send_amount_step.dart';
 import 'package:kerosene/features/movement/screens/send_destination_step.dart';
 import 'package:kerosene/features/movement/widgets/internal_recent_avatar.dart';
 import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
+import 'package:kerosene/features/movement/flow/send_money_flow_notifier.dart';
 
 class SendMoneyScreen extends ConsumerStatefulWidget {
   final String? walletId;
@@ -85,13 +86,29 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   static const Color internalMutedText = KeroseneBrandTokens.textMuted;
   static const Color internalOutline = KeroseneBrandTokens.borderStrong;
   String? _pendingPaymentLinkId;
-  NetworkFeeTier _selectedFeeTier = NetworkFeeTier.standard;
+  NetworkFeeTier get _selectedFeeTier => ref.read(sendMoneyFlowProvider).value?.selectedFeeTier ?? NetworkFeeTier.standard;
+  set _selectedFeeTier(NetworkFeeTier value) => ref.read(sendMoneyFlowProvider.notifier).setFeeTier(value);
   SendDestinationType? _lastHapticDestinationType;
-  String _lockedRecipientAddress = '';
+  String get _lockedRecipientAddress => ref.read(sendMoneyFlowProvider).value?.lockedRecipientAddress ?? '';
+  set _lockedRecipientAddress(String value) => ref.read(sendMoneyFlowProvider.notifier).updateDestination(
+    ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+    lockedAddress: value,
+  );
   String? _recentDestinationAddressForSave;
-  double _lockedAmountBtc = 0.0;
-  String? _lockedRecipientLabel;
-  Wallet? _selectedWallet;
+  double get _lockedAmountBtc => ref.read(sendMoneyFlowProvider).value?.lockedAmountBtc ?? 0.0;
+  set _lockedAmountBtc(double value) => ref.read(sendMoneyFlowProvider.notifier).updateDestination(
+    ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+    lockedAmount: value,
+  );
+  String? get _lockedRecipientLabel => ref.read(sendMoneyFlowProvider).value?.lockedRecipientLabel;
+  set _lockedRecipientLabel(String? value) => ref.read(sendMoneyFlowProvider.notifier).updateDestination(
+    ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+    lockedLabel: value,
+  );
+  Wallet? get _selectedWallet => ref.read(sendMoneyFlowProvider).value?.selectedWallet;
+  set _selectedWallet(Wallet? value) {
+    if (value != null) ref.read(sendMoneyFlowProvider.notifier).selectWallet(value);
+  }
   bool _destinationResolutionBusy = false;
   int _destinationEditVersion = 0;
 
@@ -108,9 +125,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   final ValueNotifier<String> _amount = ValueNotifier<String>('0');
   late Currency _selectedCurrency;
 
-  late int _currentStep;
   late final PageController _pageController;
   late final RaspGuard _raspGuard;
+
+  int get _currentStep => ref.read(sendMoneyFlowProvider).value?.currentStep ?? 0;
 
   bool get _hasPreselectedWallet =>
       widget.walletId != null && widget.walletId!.trim().isNotEmpty;
@@ -120,8 +138,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   @override
   void initState() {
     super.initState();
-    _currentStep = 0;
-    _pageController = PageController(initialPage: _currentStep);
+    _pageController = PageController(initialPage: 0);
     _raspGuard = RaspGuard.instance;
     _raspGuard.start();
     _selectedCurrency = Currency.btc;
@@ -228,9 +245,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   @override
   Widget build(BuildContext context) {
+    final currentStepWatch = ref.watch(sendMoneyFlowProvider).value?.currentStep ?? 0;
     ref.watch(balanceWebSocketServiceProvider);
     var isLoading = false;
-    if (_currentStep == 2) {
+    if (currentStepWatch == 2) {
       final isSending = ref.watch(
         sendTransactionProvider.select((state) => state.isLoading),
       );
@@ -250,7 +268,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     );
     final walletState = ref.watch(walletProvider);
 
-    if (_currentStep != 0 &&
+    if (currentStepWatch != 0 &&
         (walletState is WalletInitial || walletState is WalletLoading)) {
       return const Center(child: TorLoadingDots());
     }
@@ -351,7 +369,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         duration: KeroseneMotion.medium,
         curve: KeroseneMotion.standard,
       );
-      setState(() => _currentStep = previousStep);
+      ref.read(sendMoneyFlowProvider.notifier).setStep(previousStep);
       return;
     }
 
@@ -859,8 +877,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         ref.read(walletProvider.notifier).selectWallet(wallet);
         setState(() {
           _selectedWallet = wallet;
-          _currentStep = 2;
         });
+        ref.read(sendMoneyFlowProvider.notifier).setStep(2);
         _pageController.nextPage(
           duration: KeroseneMotion.medium,
           curve: KeroseneMotion.standard,
@@ -1138,7 +1156,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         curve: KeroseneMotion.standard,
       );
       if (!mounted) return;
-      setState(() => _currentStep = nextStep);
+      ref.read(sendMoneyFlowProvider.notifier).setStep(nextStep);
     } finally {
       if (mounted && _destinationResolutionBusy) {
         setState(() => _destinationResolutionBusy = false);
