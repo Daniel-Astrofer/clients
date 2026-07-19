@@ -46,13 +46,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
       view: view,
       remote: remote,
     );
-    // Tier education needs a bit more height for the 3D card face.
-    final hasTierCards = cards.any(isEducationTierFeedItem);
-    final feedHeight = homeSize(
-      hasTierCards
-          ? math.max(surfaceFeed.resolvedHeight, 132)
-          : surfaceFeed.resolvedHeight,
-    );
+    final feedHeight = homeSize(surfaceFeed.resolvedHeight);
     final cardPadding = homeSize(surfaceFeed.cardPadding);
     final gap = homeSize(surfaceFeed.gap);
 
