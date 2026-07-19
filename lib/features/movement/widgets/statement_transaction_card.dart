@@ -967,30 +967,34 @@ class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
               children: [
                 // Remaining track — solid grey + sliding shimmer while open.
                 if (!_isComplete)
-                  AnimatedBuilder(
-                    animation: _shimmer,
-                    builder: (context, _) {
-                      final t = _shimmer.value;
-                      return CustomPaint(
-                        painter: _GreyLoadingTrackPainter(
-                          base: trackBase,
-                          highlight: trackHi,
-                          phase: t,
-                        ),
-                      );
-                    },
+                  RepaintBoundary(
+                    child: AnimatedBuilder(
+                      animation: _shimmer,
+                      builder: (context, _) {
+                        final t = _shimmer.value;
+                        return CustomPaint(
+                          painter: _GreyLoadingTrackPainter(
+                            base: trackBase,
+                            highlight: trackHi,
+                            phase: t,
+                          ),
+                        );
+                      },
+                    ),
                   )
                 else
                   ColoredBox(color: trackBase),
                 // Primary yellow (or green when complete) progress.
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutCubic,
-                    width: filledW,
-                    height: 5,
-                    color: fill,
+                  child: RepaintBoundary(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
+                      width: filledW,
+                      height: 5,
+                      color: fill,
+                    ),
                   ),
                 ),
               ],
@@ -1345,11 +1349,13 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         alignment: Alignment.center,
         children: [
           if (spin != null)
-            AnimatedBuilder(
-              animation: spin,
-              builder: (_, __) => buildRing(
-                spinValue: spin.value,
-                loadValue: spin.value,
+            RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: spin,
+                builder: (_, __) => buildRing(
+                  spinValue: spin.value,
+                  loadValue: spin.value,
+                ),
               ),
             )
           else
