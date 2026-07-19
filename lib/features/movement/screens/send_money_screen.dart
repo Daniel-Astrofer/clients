@@ -373,7 +373,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       return;
     }
 
-    Navigator.pop(context);
+    context.pop();
   }
 
   Widget _buildInternalTopBar(BuildContext context) {
