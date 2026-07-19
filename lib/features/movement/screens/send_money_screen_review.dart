@@ -755,7 +755,7 @@ class _ReceiptBody extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: AppTypography.inter(
+              style: AppTypography.financial(
                 color: Colors.black87,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -766,7 +766,7 @@ class _ReceiptBody extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: AppTypography.inter(
+                style: AppTypography.financial(
                   color: Colors.black54,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -777,7 +777,7 @@ class _ReceiptBody extends StatelessWidget {
             Text(
               amountLabel,
               textAlign: TextAlign.center,
-              style: AppTypography.inter(
+              style: AppTypography.financial(
                 color: Colors.black,
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
@@ -795,7 +795,7 @@ class _ReceiptBody extends StatelessWidget {
                     Expanded(
                       child: Text(
                         row.label,
-                        style: AppTypography.inter(
+                        style: AppTypography.financial(
                           color: Colors.black54,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -807,10 +807,11 @@ class _ReceiptBody extends StatelessWidget {
                       child: Text(
                         row.value,
                         textAlign: TextAlign.right,
-                        style: AppTypography.inter(
+                        style: AppTypography.financial(
                           color: Colors.black87,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                        ).copyWith(
                           fontFeatures: row.numeric
                               ? const [FontFeature.tabularFigures()]
                               : null,
@@ -840,18 +841,27 @@ class _SkeuomorphicReceiptPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
     final path = Path();
-    path.moveTo(0, 0);
-    path.lineTo(size.width, 0);
 
-    // Jagged bottom edge
     const segmentWidth = 12.0;
     final segments = (size.width / segmentWidth).ceil();
+    
+    // Jagged top edge
+    path.moveTo(0, 0);
     for (int i = 0; i <= segments; i++) {
+      final x = (i * segmentWidth).clamp(0.0, size.width);
+      final y = (i % 2 == 0) ? 0.0 : 8.0;
+      path.lineTo(x, y);
+    }
+
+    path.lineTo(size.width, size.height);
+
+    // Jagged bottom edge
+    for (int i = segments; i >= 0; i--) {
       final x = (i * segmentWidth).clamp(0.0, size.width);
       final y = (i % 2 == 0) ? size.height : size.height - 8;
       path.lineTo(x, y);
     }
-    path.lineTo(0, size.height);
+    path.lineTo(0, 0);
     path.close();
 
     canvas.drawPath(path, shadowPaint);

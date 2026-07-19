@@ -360,14 +360,25 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                 amountBtc: feeQuote.receiverAmountBtc,
                 textColor: KeroseneBrandTokens.textPrimary,
               ),
-              const SizedBox(height: 12),
-              _AnimatedBreakdownRow(
-                label: 'Taxas',
-                amountBtc: feeQuote.totalFeesBtc,
-                textColor: KeroseneBrandTokens.textMuted,
-                isLoading: feeQuote.isLoading ||
-                    (destination.isOnChain && feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading),
-              ),
+              if (feeQuote.platformFeeBtc > 0) ...[
+                const SizedBox(height: 12),
+                _AnimatedBreakdownRow(
+                  label: 'Taxa Kerosene',
+                  amountBtc: feeQuote.platformFeeBtc,
+                  textColor: KeroseneBrandTokens.textMuted,
+                  isLoading: feeQuote.isLoading,
+                ),
+              ],
+              if (feeQuote.networkFeeBtc > 0 || destination.isOnChain) ...[
+                const SizedBox(height: 12),
+                _AnimatedBreakdownRow(
+                  label: 'Taxa da Rede (Mineradores)',
+                  amountBtc: feeQuote.networkFeeBtc,
+                  textColor: KeroseneBrandTokens.textMuted,
+                  isLoading: feeQuote.isLoading ||
+                      (destination.isOnChain && feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading),
+                ),
+              ],
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Divider(color: KeroseneBrandTokens.border, height: 1),
