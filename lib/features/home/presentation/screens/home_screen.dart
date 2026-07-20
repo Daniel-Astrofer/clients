@@ -320,14 +320,11 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     String? initialAddress,
     double? initialAmountBtc,
   }) async {
-    final result = await _pushWalletSelectorFlow<dynamic>(
-      title: context.tr.send,
-      subtitle: context.tr.walletSelectorSendSubtitle,
-      initialWallet: wallet,
-      destinationBuilder: (selectedWallet) => DeferredPage(
+    final result = await _pushDirectFlow<dynamic>(
+      builder: () => DeferredPage(
         loadLibrary: send_money.loadLibrary,
         builder: (_) => send_money.SendMoneyScreen(
-          walletId: selectedWallet.id,
+          walletId: wallet.id,
           initialAddress: initialAddress,
           initialAmountBtc: initialAmountBtc,
         ),
@@ -337,26 +334,10 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     await _presentFinancialActionResult(result);
   }
 
-  Future<T?> _pushWalletSelectorFlow<T>({
-    required String title,
-    required String subtitle,
-    required Wallet initialWallet,
-    required Widget Function(Wallet wallet) destinationBuilder,
+  Future<T?> _pushDirectFlow<T>({
+    required Widget Function() builder,
   }) {
-    return _pushFromBottom<T>(
-      (selectorContext) => WalletFlowSelector(
-        title: title,
-        subtitle: subtitle,
-        initialWallet: initialWallet,
-        onContinue: (selectedWallet) {
-          Navigator.of(selectorContext).pushReplacement<T, void>(
-            _buildBottomUpRoute<T>(
-              builder: (_) => destinationBuilder(selectedWallet),
-            ),
-          );
-        },
-      ),
-    );
+    return _pushFromBottom<T>((context) => builder());
   }
 
   void _openSend(Wallet? wallet) {
@@ -379,14 +360,11 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     }
 
     unawaited(
-      _pushWalletSelectorFlow<void>(
-        title: context.tr.receive,
-        subtitle: context.tr.walletSelectorReceiveSubtitle,
-        initialWallet: wallet,
-        destinationBuilder: (selectedWallet) => DeferredPage(
+      _pushDirectFlow<void>(
+        builder: () => DeferredPage(
           loadLibrary: deposits.loadLibrary,
           builder: (_) =>
-              deposits.MovementHubScreen(initialWallet: selectedWallet),
+              deposits.MovementHubScreen(initialWallet: wallet),
         ),
       ),
     );
@@ -406,14 +384,11 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     HapticFeedback.lightImpact();
 
     unawaited(
-      _pushWalletSelectorFlow<void>(
-        title: context.tr.depositFlowDepositTitle,
-        subtitle: context.tr.walletSelectorDepositSubtitle,
-        initialWallet: wallet,
-        destinationBuilder: (selectedWallet) => DeferredPage(
+      _pushDirectFlow<void>(
+        builder: () => DeferredPage(
           loadLibrary: deposits.loadLibrary,
           builder: (_) =>
-              deposits.MovementHubScreen(initialWallet: selectedWallet),
+              deposits.MovementHubScreen(initialWallet: wallet),
         ),
       ),
     );

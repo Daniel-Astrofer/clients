@@ -334,6 +334,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
           ],
         ),
       ),
+      ),
     );
   }
 

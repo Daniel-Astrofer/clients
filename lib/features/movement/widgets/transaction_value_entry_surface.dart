@@ -138,6 +138,7 @@ class TransactionValueEntrySurface extends StatelessWidget {
                         ],
                       ),
                     ),
+                    ),
                   );
                 },
               ),
