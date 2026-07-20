@@ -79,14 +79,16 @@ class TransactionValueEntrySurface extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final compact = constraints.maxHeight < 640;
-                  return SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.xl2,
-                      compact ? 8 : 16,
-                      AppSpacing.xl2,
-                      12,
-                    ),
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.center,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.xl2,
+                        compact ? 8 : 16,
+                        AppSpacing.xl2,
+                        12,
+                      ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight - 24,
@@ -123,11 +125,11 @@ class TransactionValueEntrySurface extends StatelessWidget {
                             ),
                           ],
                           if (configuration != null) ...[
-                            const SizedBox(height: 20),
+                            SizedBox(height: compact ? 8 : 20),
                             configuration!,
                           ],
                           if (quickActions.isNotEmpty && showKeypad) ...[
-                            const SizedBox(height: 18),
+                            SizedBox(height: compact ? 8 : 18),
                             _QuickActions(
                               actions: quickActions,
                               onTap: onQuickAction,
@@ -140,7 +142,13 @@ class TransactionValueEntrySurface extends StatelessWidget {
                 },
               ),
             ),
-            if (showKeypad && onKeyTap != null) _Keypad(onKeyTap: onKeyTap!),
+            if (showKeypad && onKeyTap != null)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = MediaQuery.sizeOf(context).height < 640;
+                  return _Keypad(onKeyTap: onKeyTap!, compact: compact);
+                }
+              ),
             _CtaBar(
               label: ctaLabel,
               enabled: ctaEnabled,
@@ -814,8 +822,9 @@ class _QuickActions extends StatelessWidget {
 
 class _Keypad extends StatelessWidget {
   final ValueChanged<String> onKeyTap;
+  final bool compact;
 
-  const _Keypad({required this.onKeyTap});
+  const _Keypad({required this.onKeyTap, this.compact = false});
 
   static const _rows = [
     ['1', '2', '3'],
@@ -827,7 +836,7 @@ class _Keypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      padding: EdgeInsets.fromLTRB(20, compact ? 0 : 4, 20, compact ? 0 : 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -838,6 +847,7 @@ class _Keypad extends StatelessWidget {
                   Expanded(
                     child: _Key(
                       label: key,
+                      compact: compact,
                       onTap: () {
                         HapticFeedback.selectionClick();
                         onKeyTap(key);
@@ -856,8 +866,9 @@ class _Keypad extends StatelessWidget {
 class _Key extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
+  final bool compact;
 
-  const _Key({required this.label, required this.onTap});
+  const _Key({required this.label, required this.onTap, this.compact = false});
 
   @override
   State<_Key> createState() => _KeyState();
@@ -911,19 +922,19 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
           child: ScaleTransition(
             scale: _scale,
             child: SizedBox(
-              height: 56,
+              height: widget.compact ? 44 : 56,
               child: Center(
                 child: isBackspace
-                    ? const Icon(
+                    ? Icon(
                         KeroseneIcons.backspace,
                         color: _C.text,
-                        size: 22,
+                        size: widget.compact ? 20 : 22,
                       )
                     : Text(
                         widget.label,
                         style: AppTypography.inter(
                           color: _C.text,
-                          fontSize: 26,
+                          fontSize: widget.compact ? 22 : 26,
                           fontWeight: FontWeight.w400,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),

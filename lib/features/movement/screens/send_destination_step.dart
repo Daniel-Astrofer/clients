@@ -826,46 +826,48 @@ class _FrequentContact extends StatelessWidget {
     final title = recentInternalDestinationTitle(destination);
     final subtitle = recentInternalDestinationSubtitle(destination);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => onSelected(destination),
-        child: SizedBox(
-          width: 104,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Column(
-              children: [
-                InternalRecentAvatar(title: title, size: 64, fontSize: 18),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SendDestinationStep.internalText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
-                        letterSpacing: 0,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SendDestinationStep.internalMutedText,
-                        fontSize: 11,
-                        height: 1.2,
-                        letterSpacing: 0,
-                      ),
-                ),
-              ],
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => onSelected(destination),
+          child: SizedBox(
+            width: 104,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Column(
+                children: [
+                  InternalRecentAvatar(title: title, size: 64, fontSize: 18),
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SendDestinationStep.internalText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SendDestinationStep.internalMutedText,
+                          fontSize: 11,
+                          height: 1.2,
+                          letterSpacing: 0,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -918,39 +920,41 @@ class _RecentDestinationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = recentInternalDestinationTitle(destination);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: SendDestinationStep.internalText.withValues(alpha: 0.10),
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: SendDestinationStep.internalText.withValues(alpha: 0.10),
+            ),
           ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => onSelected(destination),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Row(
-              children: [
-                InternalRecentAvatar(title: title, size: 48, fontSize: 14),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.newsreader(
-                      color: SendDestinationStep.internalText,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                      letterSpacing: 0,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => onSelected(destination),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                children: [
+                  InternalRecentAvatar(title: title, size: 48, fontSize: 14),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.newsreader(
+                        color: SendDestinationStep.internalText,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                        letterSpacing: 0,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

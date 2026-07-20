@@ -51,7 +51,7 @@ import 'package:kerosene/features/movement/screens/send_payment_review_helpers.d
 import 'package:kerosene/features/movement/screens/send_payment_request_flow.dart';
 import 'package:kerosene/features/movement/screens/send_security_profile_resolver.dart';
 import 'package:kerosene/features/movement/screens/send_wallet_resolver.dart';
-import 'package:kerosene/features/movement/screens/send_wallet_selection_step.dart';
+
 
 import 'package:kerosene/features/movement/screens/send_destination_models.dart';
 import 'package:kerosene/features/movement/screens/send_destination_analyzer.dart';
@@ -291,9 +291,16 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     _maybeHapticDestination(destinationAnalysis);
 
     return SecureScreenScope(
-      child: Scaffold(
-        backgroundColor: internalBlack,
-        resizeToAvoidBottomInset: true,
+      child: PopScope(
+        canPop: _currentStep == 0,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) {
+            _handleBack();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: internalBlack,
+          resizeToAvoidBottomInset: true,
         body: Column(
           children: [
             if (!isOnline) _OfflineSendBanner(onRetry: _retryOnline),
@@ -369,7 +376,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       return;
     }
 
-    context.pop();
+    Navigator.of(context).maybePop();
   }
 
   Widget _buildInternalTopBar(BuildContext context) {
