@@ -28,7 +28,8 @@ ActivityFilter _mapHomeActivityFilter(HomeActivityFilter filter) {
 }
 
 final filteredHomeTransactionsProvider =
-    Provider.autoDispose<List<Transaction>>((ref) {
+    Provider<List<Transaction>>((ref) {
+  ref.keepAlive();
   final transactionsAsync = ref.watch(transactionHistoryProvider);
   final lastHistory = ref.watch(lastTransactionHistoryProvider);
   final txs = transactionsAsync.asData?.value ??
@@ -102,6 +103,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   /// animation frame (only opacity/offset wrappers rebuild).
   List<Widget>? _entranceTileCache;
   List<String>? _entranceIdOrder;
+
+  /// Steady-state tile cache — scroll reuses built cards instead of recomputing.
+  final Map<String, Widget> _steadyTileCache = <String, Widget>{};
 
   AnimationController? _entrance;
 
@@ -199,6 +203,35 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     return built;
   }
 
+  String _steadyTileCacheKey(Transaction tx, bool expanded) {
+    return [
+      tx.id,
+      expanded,
+      tx.status.name,
+      tx.displayStatus.name,
+      tx.confirmations,
+      tx.amountSatoshis,
+    ].join('|');
+  }
+
+  void _pruneSteadyTileCache(List<Transaction> txs) {
+    final live = <String>{
+      for (final tx in txs) ...[
+        _steadyTileCacheKey(tx, false),
+        _steadyTileCacheKey(tx, true),
+      ],
+    };
+    _steadyTileCache.removeWhere((key, _) => !live.contains(key));
+  }
+
+  Widget _steadyTile(Transaction tx, {required bool expanded}) {
+    final key = _steadyTileCacheKey(tx, expanded);
+    return _steadyTileCache.putIfAbsent(
+      key,
+      () => _buildTransactionTile(tx, expanded: expanded),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedFilter = ref.watch(homeActivityFilterProvider);
@@ -257,9 +290,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         selectedFilter == HomeActivityFilter.cancelled;
 
     if (filteredTxs.isNotEmpty) {
+      _pruneSteadyTileCache(filteredTxs);
       _scheduleEntranceReveal(filteredTxs.length);
     } else {
       _armEntranceReveal = false;
+      _steadyTileCache.clear();
     }
 
     Widget body;
@@ -356,15 +391,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       Widget itemBuilder(BuildContext context, int index) {
         final tx = filteredTxs[index];
         
+        final expanded = _expandedTransactionIds.contains(tx.id);
         final tile = tiles != null && index < tiles.length
             ? tiles[index]
-            : _buildTransactionTile(
-                tx,
-                expanded: _expandedTransactionIds.contains(tx.id),
-              );
+            : _playEntranceReveal
+                ? _buildTransactionTile(tx, expanded: expanded)
+                : _steadyTile(tx, expanded: expanded);
 
-        // Envolve o tile num RepaintBoundary isolado para que a animação de opacidade 
-        // e translação não invalide a renderização pesada do card.
+        // RepaintBoundary isolates opacity/translate from card paint during entrance.
         final cachedTile = RepaintBoundary(child: tile);
 
         Widget? dateHeader;
@@ -380,14 +414,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           }
         }
 
-        Widget buildContent(double p) {
+        Widget buildContent(double p, Widget child) {
           final revealed = p <= 0
               ? const SizedBox.shrink()
               : Opacity(
                   opacity: p,
                   child: Transform.translate(
                     offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
-                    child: cachedTile,
+                    child: child,
                   ),
                 );
 
@@ -424,21 +458,22 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         if (liveCtrl != null) {
           return AnimatedBuilder(
             animation: liveCtrl,
-            builder: (context, _) {
+            child: cachedTile,
+            builder: (context, child) {
               final p = _rowProgress(index, liveCtrl.value, count);
-              return buildContent(p);
+              return buildContent(p, child ?? cachedTile);
             },
           );
         }
 
-        return buildContent(1.0);
+        return buildContent(1.0, cachedTile);
       }
 
       return SliverList(
         delegate: SliverChildBuilderDelegate(
           itemBuilder,
           childCount: count,
-          addAutomaticKeepAlives: false,
+          addAutomaticKeepAlives: true,
           addRepaintBoundaries: true,
         ),
       );
@@ -479,12 +514,12 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
     Widget itemBuilder(BuildContext context, int index) {
       final tx = filteredTxs[index];
+      final expanded = _expandedTransactionIds.contains(tx.id);
       final tile = tiles != null && index < tiles.length
           ? tiles[index]
-          : _buildTransactionTile(
-              tx,
-              expanded: _expandedTransactionIds.contains(tx.id),
-            );
+          : animate
+              ? _buildTransactionTile(tx, expanded: expanded)
+              : _steadyTile(tx, expanded: expanded);
       
       final cachedTile = RepaintBoundary(child: tile);
 
@@ -501,14 +536,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         }
       }
 
-      Widget buildContent(double p) {
+      Widget buildContent(double p, Widget child) {
         final revealed = p <= 0
             ? const SizedBox.shrink()
             : Opacity(
                 opacity: p,
                 child: Transform.translate(
                   offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
-                  child: cachedTile,
+                  child: child,
                 ),
               );
 
@@ -534,13 +569,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       if (animate && ctrl != null) {
         return AnimatedBuilder(
           animation: ctrl,
-          builder: (context, _) {
+          child: cachedTile,
+          builder: (context, child) {
             final p = _rowProgress(index, ctrl.value, count);
-            return buildContent(p);
+            return buildContent(p, child ?? cachedTile);
           },
         );
       }
-      return buildContent(1.0);
+      return buildContent(1.0, cachedTile);
     }
 
     return StatementTransactionScrollStack(

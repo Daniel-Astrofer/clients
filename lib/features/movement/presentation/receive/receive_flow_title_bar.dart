@@ -100,12 +100,17 @@ class ReceiveFlowTitleBar extends StatelessWidget {
 
 /// Full-screen receive step: body fills the viewport; H1 floats at a fixed
 /// height without pushing content below.
+///
+/// When [embeddedInSheet] is true (wallet picker → hub expand), use a simple
+/// column so layout tracks the animated sheet height instead of 25% of the
+/// full display.
 class ReceiveFlowScreenShell extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
   final String title;
   final String? subtitle;
   final TextStyle? titleStyle;
+  final bool embeddedInSheet;
 
   const ReceiveFlowScreenShell({
     super.key,
@@ -114,10 +119,40 @@ class ReceiveFlowScreenShell extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.titleStyle,
+    this.embeddedInSheet = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (embeddedInSheet) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SafeArea(
+                bottom: false,
+                child: ReceiveFlowTitleBar(
+                  onBack: onBack,
+                  title: title,
+                  subtitle: subtitle,
+                  titleStyle: titleStyle,
+                  compact: true,
+                  alignLeft: true,
+                ),
+              ),
+              Expanded(
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: child,
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
     return Stack(
       clipBehavior: Clip.none,
       children: [

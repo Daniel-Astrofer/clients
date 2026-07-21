@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/security/device_credential_capabilities.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -546,10 +547,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             TextButton(
                               onPressed: isLoading
                                   ? null
-                                  : () => Navigator.pushNamed(
-                                        context,
-                                        '/recovery/emergency',
-                                      ),
+                                  : () => context.push('/recovery/emergency'),
                               child: Text(
                                 context.tr.loginLostAccessButton,
                               ),
@@ -558,8 +556,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             LoginSignupLink(
                               onTap: isLoading
                                   ? null
-                                  : () =>
-                                      Navigator.pushNamed(context, '/signup'),
+                                  : () => context.push('/signup'),
                               lead: context.tr.loginNewHere,
                               action: context.tr.loginCreateAccount,
                             ),

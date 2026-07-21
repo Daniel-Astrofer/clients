@@ -116,7 +116,9 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
+    final topInset = MediaQuery.paddingOf(context).top;
     final contentHeight = _contentHeight(context);
+    final expandedHeight = screenHeight - topInset;
 
     return PopScope(
       canPop: _selectedWallet == null,
@@ -128,15 +130,17 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
         animation: _transitionController,
         builder: (context, _) {
           final expand = _selectedWallet == null ? 0.0 : _expand.value;
-          final sheetHeight =
-              contentHeight + (screenHeight - contentHeight) * expand;
+          final sheetHeight = contentHeight +
+              (expandedHeight - contentHeight) * expand;
           final sheetOpacity =
               _selectedWallet == null ? 1.0 : (1 - _sheetFade.value);
 
-          return SizedBox(
-            height: sheetHeight,
-            width: double.infinity,
-            child: DecoratedBox(
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: SizedBox(
+              height: sheetHeight,
+              width: double.infinity,
+              child: DecoratedBox(
               decoration: BoxDecoration(
                 color: KeroseneBrandTokens.background,
                 borderRadius: BorderRadius.vertical(
@@ -185,6 +189,7 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
                           top: 0,
                           left: 0,
                           right: 0,
+                          height: contentHeight,
                           child: IgnorePointer(
                             ignoring: _selectedWallet != null && expand > 0.2,
                             child: Opacity(
@@ -203,6 +208,7 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
                 ),
               ),
             ),
+          ),
           );
         },
       ),

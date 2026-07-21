@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -92,6 +93,7 @@ class HomeScrollLayer extends ConsumerStatefulWidget {
 
 class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
   String? _firstUseActionPanelUserId;
+  int _lastOverscrollPublishMs = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +150,14 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             final pixels = n.metrics.pixels;
             final overscroll = pixels < 0 ? pixels.abs() : 0.0;
             final currentOverscroll = ref.read(homeOverscrollProvider);
-            if ((currentOverscroll - overscroll).abs() > 0.5 || (overscroll == 0 && currentOverscroll != 0)) {
+            final now = DateTime.now().millisecondsSinceEpoch;
+            final delta = (currentOverscroll - overscroll).abs();
+            final shouldPublish = n is ScrollEndNotification ||
+                delta > 2.0 ||
+                (now - _lastOverscrollPublishMs) > 32;
+            if (shouldPublish &&
+                (delta > 0.5 || (overscroll == 0 && currentOverscroll != 0))) {
+              _lastOverscrollPublishMs = now;
               Future.microtask(() {
                 if (mounted) {
                   ref.read(homeOverscrollProvider.notifier).state = overscroll;
@@ -160,6 +169,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
           return false;
         },
         child: CustomScrollView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(720),
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),

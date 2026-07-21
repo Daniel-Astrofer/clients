@@ -170,6 +170,8 @@ final class TransactionPresentation {
     required double? btcEur,
     required double? btcBrl,
     Locale? appLocale,
+    /// When false, skips dossier / expand field lists (home row scan path).
+    bool includeExpandPayload = true,
   }) {
     final copy = TransactionPresentationCopy.of(context);
     final axes = TransactionAxes.classify(
@@ -245,6 +247,69 @@ final class TransactionPresentation {
       languageCode: Localizations.localeOf(context).languageCode,
     );
 
+    final expanded = includeExpandPayload
+        ? _buildExpandedFields(
+            context: context,
+            copy: copy,
+            tx: tx,
+            axes: axes,
+            from: from,
+            to: to,
+            own: own,
+            principalLabel: principalLabel,
+            amount: amount,
+            includeFeesInDebit: includeFeesInDebit,
+          )
+        : const <PresentationField>[];
+
+    final technical = includeExpandPayload
+        ? _buildTechnicalFields(copy: copy, tx: tx)
+        : const <PresentationField>[];
+
+    final listExpand = includeExpandPayload
+        ? _listExpandFields(
+            context: context,
+            copy: copy,
+            tx: tx,
+            axes: axes,
+            from: from,
+            to: to,
+            own: own,
+            principalLabel: principalLabel,
+            totalLabel: amount,
+            includeFeesInDebit: includeFeesInDebit,
+          )
+        : const <PresentationField>[];
+
+    return TransactionPresentation(
+      id: tx.id,
+      axes: axes,
+      title: title,
+      subtitle: subtitle,
+      tertiary: AppDateTime.formatRelative(context, tx.timestamp),
+      statusLabel: copy.lifecycleLabel(axes.lifecycle),
+      icon: TransactionVisualTokens.iconFor(axes),
+      cardBackground: TransactionVisualTokens.backgroundFor(axes.variant),
+      cardBorder: TransactionVisualTokens.borderFor(axes.variant),
+      primaryAmountLabel: amount,
+      expandedFields: expanded,
+      technicalFields: technical,
+      listExpandFields: listExpand,
+    );
+  }
+
+  static List<PresentationField> _buildExpandedFields({
+    required BuildContext context,
+    required TransactionPresentationCopy copy,
+    required Transaction tx,
+    required TransactionAxes axes,
+    required String from,
+    required String to,
+    required String own,
+    required String principalLabel,
+    required String amount,
+    required bool includeFeesInDebit,
+  }) {
     final expanded = <PresentationField>[
       PresentationField(
         key: 'when',
@@ -329,6 +394,13 @@ final class TransactionPresentation {
       );
     }
 
+    return expanded;
+  }
+
+  static List<PresentationField> _buildTechnicalFields({
+    required TransactionPresentationCopy copy,
+    required Transaction tx,
+  }) {
     final technical = <PresentationField>[];
     final txid = (tx.blockchainTxid ?? tx.id).trim();
     if (txid.isNotEmpty) {
@@ -364,35 +436,7 @@ final class TransactionPresentation {
         ),
       );
     }
-
-    final listExpand = _listExpandFields(
-      context: context,
-      copy: copy,
-      tx: tx,
-      axes: axes,
-      from: from,
-      to: to,
-      own: own,
-      principalLabel: principalLabel,
-      totalLabel: amount,
-      includeFeesInDebit: includeFeesInDebit,
-    );
-
-    return TransactionPresentation(
-      id: tx.id,
-      axes: axes,
-      title: title,
-      subtitle: subtitle,
-      tertiary: AppDateTime.formatRelative(context, tx.timestamp),
-      statusLabel: copy.lifecycleLabel(axes.lifecycle),
-      icon: TransactionVisualTokens.iconFor(axes),
-      cardBackground: TransactionVisualTokens.backgroundFor(axes.variant),
-      cardBorder: TransactionVisualTokens.borderFor(axes.variant),
-      primaryAmountLabel: amount,
-      expandedFields: expanded,
-      technicalFields: technical,
-      listExpandFields: listExpand,
-    );
+    return technical;
   }
 
   /// Curated rows for Home/list expand (not the full dossier).

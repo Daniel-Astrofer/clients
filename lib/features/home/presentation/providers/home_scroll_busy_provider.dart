@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// True while the home [CustomScrollView] is actively scrolling.
 ///
-/// Ambient layers (aurora) pause so scroll stays at 60fps.
+/// Ambient layers pause heavy tickers so scroll can hold 120 Hz.
 final homeScrollBusyProvider = NotifierProvider<HomeScrollBusyNotifier, bool>(
   HomeScrollBusyNotifier.new,
 );

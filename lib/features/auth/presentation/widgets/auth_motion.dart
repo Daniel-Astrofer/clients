@@ -49,21 +49,31 @@ class _AuthMotionEntranceState extends State<AuthMotionEntrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
+  Duration get _totalDuration =>
+      widget.duration + AuthMotion.staggerDelay(widget.index);
+
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this);
+    _controller = AnimationController(
+      vsync: this,
+      duration: _totalDuration,
+    );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final reduce = KeroseneMotion.reduceMotion(context);
-    final delay = AuthMotion.staggerDelay(widget.index);
-    _controller.duration = reduce ? Duration.zero : widget.duration + delay;
-    if (reduce) {
+    final total = reduce ? Duration.zero : _totalDuration;
+    if (_controller.duration != total) {
+      _controller.duration = total;
+    }
+    if (reduce || total == Duration.zero) {
       _controller.value = 1;
-    } else if (_controller.status == AnimationStatus.dismissed) {
+      return;
+    }
+    if (_controller.status == AnimationStatus.dismissed) {
       _controller.forward();
     }
   }
@@ -81,8 +91,11 @@ class _AuthMotionEntranceState extends State<AuthMotionEntrance>
     }
 
     final delay = AuthMotion.staggerDelay(widget.index);
-    final totalMs = (widget.duration + delay).inMilliseconds;
-    final start = totalMs == 0 ? 0.0 : delay.inMilliseconds / totalMs;
+    final total = _totalDuration;
+    if (total == Duration.zero) {
+      return widget.child;
+    }
+    final start = (delay.inMicroseconds / total.inMicroseconds).clamp(0.0, 0.98);
     final curved = CurvedAnimation(
       parent: _controller,
       curve: Interval(start, 1, curve: KeroseneMotion.entrance),

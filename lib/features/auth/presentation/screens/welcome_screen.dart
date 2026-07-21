@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -94,11 +95,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         return;
       }
       if (next is AuthAuthenticated && mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home_loading',
-          (route) => false,
-        );
+        context.go('/home_loading');
       }
     });
 
@@ -133,10 +130,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           ),
                           const SizedBox(height: 34),
                           _WelcomeActions(
-                            onCreateAccount: () =>
-                                Navigator.pushNamed(context, '/signup'),
-                            onSignIn: () =>
-                                Navigator.pushNamed(context, '/login'),
+                            onCreateAccount: () => context.push('/signup'),
+                            onSignIn: () => context.push('/login'),
                           ),
                         ],
                       ),

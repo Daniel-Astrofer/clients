@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
@@ -60,6 +61,7 @@ RouteTransitionBusyObserver? _routeTransitionBusyObserver;
 
 Future<void> bootstrapMobile() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Make dual Linux profiles obvious in logs (primary_ vs secondary_).
   if (kDebugMode) {
@@ -92,6 +94,9 @@ Future<void> initializeApp(ProviderContainer container) async {
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     debugPrint('🚨 GLOBAL FLUTTER ERROR CAUGHT: ${details.exception}');
+    if (details.stack != null) {
+      debugPrint(details.stack.toString());
+    }
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {

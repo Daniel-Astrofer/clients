@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
@@ -224,10 +225,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
 
   void _startAppAfterSuccess() {
     AppScreenFeedbackBus.clear();
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      '/home',
-      (route) => false,
-    );
+    context.go('/home');
   }
 
   String? _usernameError(BuildContext context, String value) {

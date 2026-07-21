@@ -38,6 +38,88 @@ enum StatementTransactionCardMode { stacked, separated }
 /// - [full]: extrato — can show field table when expanded.
 enum StatementTransactionCardDensity { home, full }
 
+/// Cached home-row presentation — avoids recomputing labels on every scroll frame.
+final class _HomeStatementSnapshot {
+  final TransactionPresentation presentation;
+  final TransactionCardColors colors;
+
+  const _HomeStatementSnapshot({
+    required this.presentation,
+    required this.colors,
+  });
+}
+
+const _homeStatementSnapshotCacheMax = 96;
+final _homeStatementSnapshotCache = <String, _HomeStatementSnapshot>{};
+
+String _homeSnapshotKey(
+  Transaction tx,
+  Currency currency,
+  Locale locale,
+  double? btcUsd,
+) {
+  return [
+    tx.id,
+    tx.status.name,
+    tx.displayStatus.name,
+    tx.confirmations,
+    tx.amountSatoshis,
+    currency.name,
+    locale.toLanguageTag(),
+    btcUsd?.round(),
+  ].join('|');
+}
+
+void _pruneHomeSnapshotCache() {
+  while (_homeStatementSnapshotCache.length > _homeStatementSnapshotCacheMax) {
+    _homeStatementSnapshotCache.remove(_homeStatementSnapshotCache.keys.first);
+  }
+}
+
+_HomeStatementSnapshot _resolveHomeSnapshot({
+  required BuildContext context,
+  required Transaction transaction,
+  required List<Wallet> wallets,
+  required List<BitcoinAccount> accounts,
+  required Currency currency,
+  required Locale locale,
+  required double? btcUsd,
+  required double? btcEur,
+  required double? btcBrl,
+}) {
+  final key = _homeSnapshotKey(transaction, currency, locale, btcUsd);
+  final hit = _homeStatementSnapshotCache.remove(key);
+  if (hit != null) {
+    _homeStatementSnapshotCache[key] = hit;
+    return hit;
+  }
+
+  final presentation = TransactionPresentation.fromTransaction(
+    context,
+    transaction,
+    wallets: wallets,
+    accounts: accounts,
+    displayCurrency: currency,
+    btcUsd: btcUsd,
+    btcEur: btcEur,
+    btcBrl: btcBrl,
+    appLocale: locale,
+    includeExpandPayload: false,
+  );
+  final colors = TransactionCardColors.resolve(
+    transaction,
+    wallets: wallets,
+    accounts: accounts,
+  );
+  final snap = _HomeStatementSnapshot(
+    presentation: presentation,
+    colors: colors,
+  );
+  _homeStatementSnapshotCache[key] = snap;
+  _pruneHomeSnapshotCache();
+  return snap;
+}
+
 /// Vertical list of statement cards. Expansion only grows downward so cards
 /// below are pushed away; multiple cards may stay expanded at once.
 class StatementTransactionScrollStack extends StatelessWidget {
@@ -125,22 +207,42 @@ class StatementTransactionCard extends ConsumerWidget {
     final wallets = isHome ? _walletsFromRefRead(ref) : _walletsFromRef(ref);
     final accounts =
         isHome ? _accountsFromRefRead(ref) : _accountsFromRef(ref);
-    final colors = TransactionCardColors.resolve(
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-    );
-    final presentation = TransactionPresentation.fromTransaction(
-      context,
-      transaction,
-      wallets: wallets,
-      accounts: accounts,
-      displayCurrency: selectedCurrency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      appLocale: money.locale,
-    );
+
+    final TransactionPresentation presentation;
+    final TransactionCardColors colors;
+    if (isHome && !expanded) {
+      final snap = _resolveHomeSnapshot(
+        context: context,
+        transaction: transaction,
+        wallets: wallets,
+        accounts: accounts,
+        currency: selectedCurrency,
+        locale: money.locale,
+        btcUsd: btcUsd,
+        btcEur: btcEur,
+        btcBrl: btcBrl,
+      );
+      presentation = snap.presentation;
+      colors = snap.colors;
+    } else {
+      presentation = TransactionPresentation.fromTransaction(
+        context,
+        transaction,
+        wallets: wallets,
+        accounts: accounts,
+        displayCurrency: selectedCurrency,
+        btcUsd: btcUsd,
+        btcEur: btcEur,
+        btcBrl: btcBrl,
+        appLocale: money.locale,
+        includeExpandPayload: !isHome || expanded,
+      );
+      colors = TransactionCardColors.resolve(
+        transaction,
+        wallets: wallets,
+        accounts: accounts,
+      );
+    }
     final amountLabel = presentation.primaryAmountLabel;
     final title = presentation.title;
     final counterparty = presentation.subtitle;
@@ -213,6 +315,7 @@ class StatementTransactionCard extends ConsumerWidget {
               iconSize: iconSize,
               axes: presentation.axes,
               expanded: expanded,
+              pauseWhileScrolling: isHome,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -251,40 +354,39 @@ class StatementTransactionCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      amountLabel,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: AppTypography.financial(
-                        color: amountColor,
-                        fontSize: isHome ? 15 : 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    timestampLabel,
-                    textAlign: TextAlign.right,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    amountLabel,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: metaColor,
-                      fontFamily: AppTypography.bodyFontFamily,
-                      fontSize: isHome ? 11 : 12,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0,
+                    softWrap: false,
+                    style: AppTypography.financial(
+                      color: amountColor,
+                      fontSize: isHome ? 15 : 16,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timestampLabel,
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: metaColor,
+                    fontFamily: AppTypography.bodyFontFamily,
+                    fontSize: isHome ? 11 : 12,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -305,6 +407,13 @@ class StatementTransactionCard extends ConsumerWidget {
                           transaction: transaction,
                           presentation: presentation,
                           colors: colors,
+                          wallets: wallets,
+                          accounts: accounts,
+                          displayCurrency: selectedCurrency,
+                          btcUsd: btcUsd,
+                          btcEur: btcEur,
+                          btcBrl: btcBrl,
+                          appLocale: money.locale,
                         )
                       : _TransactionDetailsTable(
                           transaction: transaction,
@@ -611,20 +720,67 @@ class _TransactionDetailsTable extends StatelessWidget {
 }
 
 /// Home expand: curated fields by rail/product + cancel + full dossier link.
-class _HomeQuickExpand extends StatelessWidget {
+class _HomeQuickExpand extends StatefulWidget {
   final Transaction transaction;
   final TransactionPresentation presentation;
   final TransactionCardColors colors;
+  final List<Wallet> wallets;
+  final List<BitcoinAccount> accounts;
+  final Currency displayCurrency;
+  final double? btcUsd;
+  final double? btcEur;
+  final double? btcBrl;
+  final Locale appLocale;
 
   const _HomeQuickExpand({
     required this.transaction,
     required this.presentation,
     required this.colors,
+    required this.wallets,
+    required this.accounts,
+    required this.displayCurrency,
+    required this.btcUsd,
+    required this.btcEur,
+    required this.btcBrl,
+    required this.appLocale,
   });
 
   @override
+  State<_HomeQuickExpand> createState() => _HomeQuickExpandState();
+}
+
+class _HomeQuickExpandState extends State<_HomeQuickExpand> {
+  List<PresentationField>? _rows;
+
+  List<PresentationField> get _expandRows {
+    final cached = _rows;
+    if (cached != null) return cached;
+
+    final fromPresentation = widget.presentation.listExpandFields;
+    if (fromPresentation.isNotEmpty) {
+      _rows = fromPresentation;
+      return fromPresentation;
+    }
+
+    final computed = TransactionPresentation.fromTransaction(
+      context,
+      widget.transaction,
+      wallets: widget.wallets,
+      accounts: widget.accounts,
+      displayCurrency: widget.displayCurrency,
+      btcUsd: widget.btcUsd,
+      btcEur: widget.btcEur,
+      btcBrl: widget.btcBrl,
+      appLocale: widget.appLocale,
+      includeExpandPayload: true,
+    ).listExpandFields;
+    _rows = computed;
+    return computed;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final rows = presentation.listExpandFields;
+    final rows = _expandRows;
     const labelColor = Color(0xFF1C1C1F);
     const valueColor = Color(0xFF0A0A0B);
     const lineColor = Color(0xFFD0D0D4);
@@ -649,9 +805,9 @@ class _HomeQuickExpand extends StatelessWidget {
           ],
           const SizedBox(height: 12),
         ],
-        _ActivityExpandedActions(transaction: transaction, dark: false),
+        _ActivityExpandedActions(transaction: widget.transaction, dark: false),
         const SizedBox(height: 4),
-        _SeeDetailsLink(transaction: transaction, dark: false),
+        _SeeDetailsLink(transaction: widget.transaction, dark: false),
       ],
     );
   }
@@ -1120,6 +1276,8 @@ class _ActivityStatusIcon extends StatefulWidget {
   final TransactionAxes? axes;
   /// When true, status badge is larger so ✓ is obvious on open cards.
   final bool expanded;
+  /// Pause ring spinners while the home list scrolls (120 Hz scroll path).
+  final bool pauseWhileScrolling;
 
   const _ActivityStatusIcon({
     required this.transaction,
@@ -1127,6 +1285,7 @@ class _ActivityStatusIcon extends StatefulWidget {
     required this.iconSize,
     this.axes,
     this.expanded = false,
+    this.pauseWhileScrolling = false,
   });
 
   @override
@@ -1136,6 +1295,8 @@ class _ActivityStatusIcon extends StatefulWidget {
 class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     with SingleTickerProviderStateMixin {
   AnimationController? _spinController;
+  ScrollPosition? _scrollPosition;
+  bool _scrollPaused = false;
 
   static const Color _yellow = Color(0xFFE0A012);
   static const Color _green = Color(0xFF34C759);
@@ -1145,6 +1306,41 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
   void initState() {
     super.initState();
     _syncAnimations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!widget.pauseWhileScrolling) return;
+    final scrollable = Scrollable.maybeOf(context);
+    final pos = scrollable?.position;
+    if (_scrollPosition != pos) {
+      _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
+      _scrollPosition = pos;
+      _scrollPosition?.isScrollingNotifier.addListener(_onScrollChanged);
+      _onScrollChanged();
+    }
+  }
+
+  void _onScrollChanged() {
+    if (!mounted || !widget.pauseWhileScrolling) return;
+    final scrolling = _scrollPosition?.isScrollingNotifier.value ?? false;
+    if (scrolling == _scrollPaused) return;
+    _scrollPaused = scrolling;
+    if (scrolling) {
+      _spinController?.stop();
+    } else {
+      _resumeSpinIfNeeded();
+    }
+  }
+
+  void _resumeSpinIfNeeded() {
+    final mode = _ringMode(widget.transaction);
+    final needsSpin =
+        mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
+    if (needsSpin && _spinController != null && !(_spinController!.isAnimating)) {
+      _spinController!.repeat();
+    }
   }
 
   @override
@@ -1158,6 +1354,10 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         oldWidget.expanded != widget.expanded) {
       _syncAnimations();
     }
+    if (oldWidget.pauseWhileScrolling != widget.pauseWhileScrolling &&
+        widget.pauseWhileScrolling) {
+      _onScrollChanged();
+    }
   }
 
   void _syncAnimations() {
@@ -1169,7 +1369,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         vsync: this,
         duration: const Duration(milliseconds: 1100),
       );
-      if (!(_spinController!.isAnimating)) {
+      if (!_scrollPaused && !(_spinController!.isAnimating)) {
         _spinController!.repeat();
       }
     } else {
@@ -1182,6 +1382,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 
   @override
   void dispose() {
+    _scrollPosition?.isScrollingNotifier.removeListener(_onScrollChanged);
     _spinController?.dispose();
     super.dispose();
   }

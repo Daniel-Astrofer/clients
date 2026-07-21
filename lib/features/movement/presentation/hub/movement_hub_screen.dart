@@ -306,6 +306,24 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
         widget.initialWallet == null &&
         (walletState is WalletInitial || walletState is WalletLoading);
 
+    final methodSelection = _buildMethodSelection(
+      selectedWallet,
+      canShowNfc: canShowNfc,
+      isLoading: isWalletLoading,
+    );
+
+    if (_amountFirstFlow) {
+      return ColoredBox(
+        color: _receiveBackground,
+        child: AnimatedSwitcher(
+          duration: KeroseneMotion.medium,
+          switchInCurve: KeroseneMotion.standard,
+          switchOutCurve: KeroseneMotion.exit,
+          child: methodSelection,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: _receiveBackground,
       body: SafeArea(
@@ -319,11 +337,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
                     duration: KeroseneMotion.medium,
                     switchInCurve: KeroseneMotion.standard,
                     switchOutCurve: KeroseneMotion.exit,
-                    child: _buildMethodSelection(
-                      selectedWallet,
-                      canShowNfc: canShowNfc,
-                      isLoading: isWalletLoading,
-                    ),
+                    child: methodSelection,
                   ),
                 ),
               ],
@@ -365,29 +379,64 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
         onBack: onBack,
         title: receiveMethodLabel,
         subtitle: subtitle,
-        child: SizedBox.expand(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                child: _ReceiveActionList(
-                  children: [
-                    for (var index = 0; index < actions.length; index++)
-                      _actionTileFor(
-                        context,
-                        actions[index],
-                        showDivider: index < actions.length - 1,
-                        isLoading: isLoading,
+        embeddedInSheet: _amountFirstFlow,
+        child: _amountFirstFlow
+            ? Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
                       ),
-                  ],
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: _ReceiveActionList(
+                            children: [
+                              for (var index = 0;
+                                  index < actions.length;
+                                  index++)
+                                _actionTileFor(
+                                  context,
+                                  actions[index],
+                                  showDivider: index < actions.length - 1,
+                                  isLoading: isLoading,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              )
+            : SizedBox.expand(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Center(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      child: _ReceiveActionList(
+                        children: [
+                          for (var index = 0; index < actions.length; index++)
+                            _actionTileFor(
+                              context,
+                              actions[index],
+                              showDivider: index < actions.length - 1,
+                              isLoading: isLoading,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
