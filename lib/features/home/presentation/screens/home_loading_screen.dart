@@ -16,6 +16,8 @@ import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     deferred as home;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
+import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'
+    deferred as receive;
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
@@ -49,11 +51,15 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
   void initState() {
     super.initState();
 
-    // Preload home + send while dots are up so first Enviar never loads mid-slide.
+    // Preload home + send/receive while dots are up so first taps never load mid-slide.
     unawaited(_preloadHomeLibrary());
     unawaited(loadDeferredLibrary(
       send_money.loadLibrary,
       key: DeferredLibraryKeys.sendMoney,
+    ));
+    unawaited(loadDeferredLibrary(
+      receive.loadLibrary,
+      key: DeferredLibraryKeys.receive,
     ));
 
     _timeoutTimer = Timer(KeroseneMotion.loadingTimeout, () {

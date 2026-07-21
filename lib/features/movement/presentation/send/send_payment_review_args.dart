@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_screen_review.dart';
 
 /// Structured payload for the send review confirmation card.
@@ -59,6 +60,11 @@ class InternalTransferReviewArgs<T> {
   final Future<T?> Function(BuildContext context) onConfirm;
   final SendPaymentReceiptData? Function(T result)? receiptBuilder;
 
+  /// Locked payment-request flows: show speed chips; amount stays fixed.
+  final bool showFeeTierControls;
+  final NetworkFeeTier? feeTier;
+  final ValueChanged<NetworkFeeTier>? onFeeTierChanged;
+
   InternalTransferReviewArgs({
     this.title = '',
     required this.amountBtcLabel,
@@ -76,6 +82,9 @@ class InternalTransferReviewArgs<T> {
     this.authNextStepLabel,
     required this.onConfirm,
     this.receiptBuilder,
+    this.showFeeTierControls = false,
+    this.feeTier,
+    this.onFeeTierChanged,
   });
 }
 

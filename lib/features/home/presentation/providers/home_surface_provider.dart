@@ -261,6 +261,8 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
     // Local pieces are user-facing now — never lag behind a pending WS token.
     _theaterCoalescer.flushPending();
     state = state.withStage(stage);
+    // Ensure aurora follows this stage's atmosphere (drop stale scene overrides).
+    ref.read(homeSceneProvider.notifier).clearOverride();
     debugPrint(
       '[homeSurface] local stage=${stage.id} kind=${stage.kind.name}',
     );

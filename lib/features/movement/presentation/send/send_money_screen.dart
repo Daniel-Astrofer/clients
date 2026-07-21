@@ -142,6 +142,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   /// Inline Detalhes confirmation phase (amount → explicit review → authorize).
   InternalTransferReviewArgs<dynamic>? _detailsPhase;
   Completer<dynamic>? _detailsPhaseCompleter;
+  _LockedPaymentReviewSession? _detailsSession;
   late final AnimationController _detailsSlideController;
   late final Animation<Offset> _detailsSlide;
 
@@ -228,6 +229,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     }
     _detailsPhaseCompleter = null;
     _detailsPhase = null;
+    _detailsSession = null;
     _detailsSlideController.dispose();
     _stepSlideController.dispose();
     _liveResolveTimer?.cancel();
@@ -469,6 +471,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                 receiptBuilder: detailsArgs.receiptBuilder,
                 onDismiss: _closeDetailsPhase,
                 onCompleted: _completeDetailsPhase,
+                showFeeTierControls: detailsArgs.showFeeTierControls,
+                feeTier: detailsArgs.feeTier,
+                onFeeTierChanged: detailsArgs.onFeeTierChanged,
               ),
             ),
           ),
@@ -619,6 +624,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     setState(() {
       _detailsPhase = null;
       _detailsPhaseCompleter = null;
+      _detailsSession = null;
       _destinationResolutionBusy = false;
     });
     if (completer != null && !completer.isCompleted) {
@@ -1013,10 +1019,18 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         setState(() {
           _selectedWallet = wallet;
         });
-        unawaited(_navigateToStep(2));
+        // Payment link / QR with fixed amount → skip amount entry, open review.
+        if (_hasLockedPaymentAmount) {
+          unawaited(_handleContinue());
+        } else {
+          unawaited(_navigateToStep(2));
+        }
       },
     );
   }
+
+  /// True when paste/QR/payment-link fixed the send amount.
+  bool get _hasLockedPaymentAmount => _lockedAmountBtc > 0;
 
   bool _isColdSource(Wallet? wallet) =>
       wallet != null && (wallet.isColdWallet || wallet.isSelfCustody);
@@ -1260,10 +1274,12 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       }
 
       if (destination.hasLockedAmount) {
-        _amount.value = destination.amountBtc!
+        final locked = destination.amountBtc!;
+        _amount.value = locked
             .toStringAsFixed(8)
             .replaceAll(RegExp(r'0+$'), '')
             .replaceAll(RegExp(r'\.$'), '');
+        _lockedAmountBtc = locked;
       }
 
       if (!mounted) return;
@@ -1799,6 +1815,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     final btcBrl = ref.read(btcBrlPriceProvider);
     final isPaymentLink =
         destination.isPaymentLink || _pendingPaymentLinkId != null;
+    final amountLocked = _hasLockedPaymentAmount;
+    final showFeeTiers = amountLocked && destination.isOnChain;
 
     final args = await prepareSendPaymentReview(
       context: context,
@@ -1826,9 +1844,46 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     );
     if (!mounted || args == null) return;
 
+    final reviewArgs = InternalTransferReviewArgs<dynamic>(
+      title: args.title,
+      amountBtcLabel: args.amountBtcLabel,
+      fiatAmountLabel: args.fiatAmountLabel,
+      confirmLabel: args.confirmLabel,
+      submittingLabel: args.submittingLabel,
+      destinationLabel: args.destinationLabel,
+      networkLabel: args.networkLabel,
+      fromWalletLabel: args.fromWalletLabel,
+      rows: args.rows,
+      card: args.card,
+      requiresFirstSendAck: args.requiresFirstSendAck,
+      firstSendAddressPreview: args.firstSendAddressPreview,
+      firstSendAddress: args.firstSendAddress,
+      authNextStepLabel: args.authNextStepLabel,
+      onConfirm: args.onConfirm,
+      receiptBuilder: args.receiptBuilder,
+      showFeeTierControls: showFeeTiers,
+      feeTier: showFeeTiers ? _selectedFeeTier : null,
+      onFeeTierChanged: showFeeTiers
+          ? (tier) {
+              if (tier == _selectedFeeTier) return;
+              HapticFeedback.selectionClick();
+              setState(() => _selectedFeeTier = tier);
+              unawaited(_refreshLockedPaymentReviewFees());
+            }
+          : null,
+    );
+
     final completer = Completer<dynamic>();
     setState(() {
-      _detailsPhase = args;
+      _detailsSession = _LockedPaymentReviewSession(
+        wallet: wallet,
+        destination: destination,
+        amount: amount,
+        requestedAmount: requestedAmount,
+        toAddress: toAddress,
+        amountLocked: amountLocked,
+      );
+      _detailsPhase = reviewArgs;
       _detailsPhaseCompleter = completer;
       _destinationResolutionBusy = false;
     });
@@ -1843,6 +1898,89 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         context.go('/home');
       }
     }
+  }
+
+  /// Re-quote + rebuild confirmation when fee speed changes (locked amount).
+  Future<void> _refreshLockedPaymentReviewFees() async {
+    final session = _detailsSession;
+    final completer = _detailsPhaseCompleter;
+    if (session == null || completer == null || !mounted) return;
+
+    final feeQuote = await _resolveSubmitFeeQuote(
+      wallet: session.wallet,
+      destination: session.destination,
+      amountBtc: session.requestedAmount,
+    );
+    if (!mounted || feeQuote == null) return;
+
+    final amount = session.destination.isExternal
+        ? feeQuote.receiverAmountBtc
+        : session.amount;
+    final btcUsd = ref.read(latestBtcPriceProvider);
+    final btcEur = ref.read(btcEurPriceProvider);
+    final btcBrl = ref.read(btcBrlPriceProvider);
+    final isPaymentLink = session.destination.isPaymentLink ||
+        _pendingPaymentLinkId != null;
+    final showFeeTiers =
+        session.amountLocked && session.destination.isOnChain;
+
+    final args = await prepareSendPaymentReview(
+      context: context,
+      wallet: session.wallet,
+      destination: session.destination,
+      requestedAmount: session.requestedAmount,
+      feeQuote: feeQuote,
+      toAddress: session.toAddress,
+      recipientLabel: _currentRecipientLabel(),
+      btcUsd: btcUsd,
+      btcEur: btcEur,
+      btcBrl: btcBrl,
+      isPaymentLink: isPaymentLink,
+      onConfirm: (confirmationContext,
+              {required firstSendAcknowledgedInReview}) =>
+          _confirmPayment(
+        confirmationContext: confirmationContext,
+        wallet: session.wallet,
+        destination: session.destination,
+        amount: amount,
+        feeQuote: feeQuote,
+        toAddress: session.toAddress,
+        firstSendAcknowledgedInReview: firstSendAcknowledgedInReview,
+      ),
+    );
+    if (!mounted || args == null) return;
+
+    setState(() {
+      _detailsSession = session.copyWith(amount: amount);
+      _detailsPhase = InternalTransferReviewArgs<dynamic>(
+        title: args.title,
+        amountBtcLabel: args.amountBtcLabel,
+        fiatAmountLabel: args.fiatAmountLabel,
+        confirmLabel: args.confirmLabel,
+        submittingLabel: args.submittingLabel,
+        destinationLabel: args.destinationLabel,
+        networkLabel: args.networkLabel,
+        fromWalletLabel: args.fromWalletLabel,
+        rows: args.rows,
+        card: args.card,
+        requiresFirstSendAck: args.requiresFirstSendAck,
+        firstSendAddressPreview: args.firstSendAddressPreview,
+        firstSendAddress: args.firstSendAddress,
+        authNextStepLabel: args.authNextStepLabel,
+        onConfirm: args.onConfirm,
+        receiptBuilder: args.receiptBuilder,
+        showFeeTierControls: showFeeTiers,
+        feeTier: showFeeTiers ? _selectedFeeTier : null,
+        onFeeTierChanged: showFeeTiers
+            ? (tier) {
+                if (tier == _selectedFeeTier) return;
+                HapticFeedback.selectionClick();
+                setState(() => _selectedFeeTier = tier);
+                unawaited(_refreshLockedPaymentReviewFees());
+              }
+            : null,
+      );
+    });
   }
 
   Future<void> _showSentTransactionNotification({
@@ -1997,6 +2135,36 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     HapticFeedback.selectionClick();
     await _parsePaymentRequest(value);
+  }
+}
+
+/// Snapshot used to rebuild confirmation fees without reopening the overlay.
+class _LockedPaymentReviewSession {
+  final Wallet wallet;
+  final SendDestinationAnalysis destination;
+  final double amount;
+  final double requestedAmount;
+  final String toAddress;
+  final bool amountLocked;
+
+  const _LockedPaymentReviewSession({
+    required this.wallet,
+    required this.destination,
+    required this.amount,
+    required this.requestedAmount,
+    required this.toAddress,
+    required this.amountLocked,
+  });
+
+  _LockedPaymentReviewSession copyWith({double? amount}) {
+    return _LockedPaymentReviewSession(
+      wallet: wallet,
+      destination: destination,
+      amount: amount ?? this.amount,
+      requestedAmount: requestedAmount,
+      toAddress: toAddress,
+      amountLocked: amountLocked,
+    );
   }
 }
 

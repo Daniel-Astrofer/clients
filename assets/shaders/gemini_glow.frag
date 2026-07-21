@@ -77,52 +77,53 @@ void main() {
     float edge = abs(uv.x - 0.5) * 2.0;
     float tall = 0.30 + 0.70 * (edge * edge);
 
-    // Faster traveling fronts while pulling.
-    float speed = 1.0 + 1.4 * pull;
-    float leftTravel = fract(t * 0.08 * speed + 0.12);
-    float rightTravel = fract(t * 0.07 * speed + 0.61);
-    float leftFront = exp(-pow((uv.x - leftTravel * 0.85) * 3.2, 2.0));
-    float rightFront = exp(-pow(((1.0 - uv.x) - rightTravel * 0.85) * 3.2, 2.0));
-    float travel = 0.35 + 0.65 * max(leftFront, rightFront);
-    travel = mix(travel, 0.45 + 0.55 * max(leftFront, rightFront), theater * 0.5);
-    // Pull: keep more field even between crests so the upper screen fills.
-    travel = mix(travel, max(travel, 0.72), pull);
+    // Pull: slower, longer fronts — one soft sweep, not rapid multi-wave passes.
+    float speed = mix(1.0, 0.55, pull);
+    float leftTravel = fract(t * 0.035 * speed + 0.12);
+    float rightTravel = fract(t * 0.028 * speed + 0.61);
+    // Wider lobes → fewer distinct crests crossing the screen.
+    float leftFront = exp(-pow((uv.x - leftTravel * 0.85) * 1.55, 2.0));
+    float rightFront = exp(-pow(((1.0 - uv.x) - rightTravel * 0.85) * 1.55, 2.0));
+    float travel = 0.42 + 0.58 * max(leftFront, rightFront);
+    travel = mix(travel, 0.50 + 0.50 * max(leftFront, rightFront), theater * 0.5);
+    // Pull fills gently without snapping travel to a hard floor (that strobes).
+    travel = mix(travel, max(travel, 0.55), pull * 0.45);
 
-    float n = fbm(vec2(uv.x * 2.4 + t * 0.18 * speed, uv.y * 3.5 - t * 0.12 * speed));
-    float n2 = fbm(vec2(uv.x * 3.8 - t * 0.14 * speed, uv.y * 2.2 + t * 0.09 * speed + 4.0));
+    float n = fbm(vec2(uv.x * 2.4 + t * 0.09 * speed, uv.y * 3.5 - t * 0.06 * speed));
+    float n2 = fbm(vec2(uv.x * 3.8 - t * 0.07 * speed, uv.y * 2.2 + t * 0.045 * speed + 4.0));
 
-    float amp = (0.050 + 0.055 * pull + 0.025 * theater) * tall * travel;
-    float y0 = mix(0.34, 0.42, pull) + 0.04 * theater;
+    float amp = (0.050 + 0.035 * pull + 0.025 * theater) * tall * travel;
+    float y0 = mix(0.34, 0.40, pull) + 0.04 * theater;
 
-    float thickBoost = 0.090 + 0.06 * pull;
-    float r1 = ribbon(uv, y0 + n * 0.04, amp * 1.15, 1.05, t * 0.55 * speed, thickBoost);
-    float r2 = ribbon(uv, y0 + 0.06 + n2 * 0.035, amp * 0.95, 0.82, -t * 0.42 * speed + 1.7, thickBoost * 0.9);
-    float r3 = ribbon(uv, y0 - 0.05 + n * 0.03, amp * 0.80, 1.45, t * 0.72 * speed + 2.4, thickBoost * 0.7);
-    float r4 = ribbon(uv, y0 + 0.10, amp * 1.25, 0.70, t * 0.33 * speed + 4.1, thickBoost * 1.1);
+    float thickBoost = 0.090 + 0.04 * pull;
+    float r1 = ribbon(uv, y0 + n * 0.04, amp * 1.15, 0.85, t * 0.28 * speed, thickBoost);
+    float r2 = ribbon(uv, y0 + 0.06 + n2 * 0.035, amp * 0.95, 0.68, -t * 0.22 * speed + 1.7, thickBoost * 0.9);
+    float r3 = ribbon(uv, y0 - 0.05 + n * 0.03, amp * 0.80, 1.05, t * 0.34 * speed + 2.4, thickBoost * 0.7);
+    float r4 = ribbon(uv, y0 + 0.10, amp * 1.25, 0.58, t * 0.18 * speed + 4.1, thickBoost * 1.1);
 
-    vec2 leftC = vec2(0.08 + 0.04 * sin(t * 0.4), y0 + 0.02 * cos(t * 0.35));
-    vec2 rightC = vec2(0.92 + 0.04 * cos(t * 0.38), y0 + 0.02 * sin(t * 0.31));
-    float leftRad = mix(0.42, 0.58, pull);
-    float rightRad = mix(0.22, 0.36, pull);
+    vec2 leftC = vec2(0.08 + 0.03 * sin(t * 0.22), y0 + 0.015 * cos(t * 0.20));
+    vec2 rightC = vec2(0.92 + 0.03 * cos(t * 0.20), y0 + 0.015 * sin(t * 0.18));
+    float leftRad = mix(0.42, 0.52, pull);
+    float rightRad = mix(0.22, 0.30, pull);
     float leftGlow = exp(-dot((uv - leftC) / vec2(leftRad, rightRad), (uv - leftC) / vec2(leftRad, rightRad)));
     float rightGlow = exp(-dot((uv - rightC) / vec2(leftRad, rightRad), (uv - rightC) / vec2(leftRad, rightRad)));
 
-    vec2 crown = vec2(0.50 + 0.06 * sin(t * 0.25), mix(0.12, 0.22, pull) + 0.03 * theater);
+    vec2 crown = vec2(0.50 + 0.04 * sin(t * 0.14), mix(0.12, 0.18, pull) + 0.03 * theater);
     float crownGlow = exp(-dot(
-        (uv - crown) / vec2(mix(0.55, 0.75, pull), mix(0.20, 0.38, pull)),
-        (uv - crown) / vec2(mix(0.55, 0.75, pull), mix(0.20, 0.38, pull))
+        (uv - crown) / vec2(mix(0.55, 0.68, pull), mix(0.20, 0.30, pull)),
+        (uv - crown) / vec2(mix(0.55, 0.68, pull), mix(0.20, 0.30, pull))
     ));
 
-    // Pull wash — softer / shorter reach (−30%) so it doesn't hit the floor.
-    float pullWash = pull * 0.70 * exp(-pow((uv.y - 0.22) / 0.42, 2.0)) * (0.55 + 0.45 * n);
+    // Slow pull wash — intensity, not frantic noise churn.
+    float pullWash = pull * 0.55 * exp(-pow((uv.y - 0.22) / 0.42, 2.0)) * (0.65 + 0.35 * n);
 
     float field = r1 * 0.90 + r2 * 0.75 + r3 * 0.55 + r4 * 0.65;
     field += leftGlow * 0.55 * tall + rightGlow * 0.55 * tall;
-    field += crownGlow * (0.70 + 0.45 * theater + 0.55 * surge + 0.55 * pull);
+    field += crownGlow * (0.70 + 0.45 * theater + 0.55 * surge + 0.40 * pull);
     field += pullWash;
-    field *= inBand * mix(travel, 1.0, pull * 0.65);
+    field *= inBand * mix(travel, 0.85 + 0.15 * travel, pull * 0.5);
 
-    float topBias = 1.0 + (0.75 + 0.45 * pull) * pow(1.0 - smoothstep(0.0, 0.55, uv.y), 1.25);
+    float topBias = 1.0 + (0.75 + 0.30 * pull) * pow(1.0 - smoothstep(0.0, 0.55, uv.y), 1.25);
     field *= topBias;
 
     vec3 blue = vec3(0.25, 0.47, 0.95);
@@ -132,14 +133,21 @@ void main() {
     vec3 primary = uPrimary.rgb;
     vec3 secondary = uSecondary.rgb;
 
-    float mixT = clamp(uv.x + 0.25 * sin(t * 0.5 + uv.y * 4.0) + (n - 0.5) * 0.35, 0.0, 1.0);
+    float mixT = clamp(uv.x + 0.18 * sin(t * 0.28 + uv.y * 3.0) + (n - 0.5) * 0.28, 0.0, 1.0);
     vec3 gemini = mix(blue, mix(purple, pink, mixT), clamp(edge * 0.85 + n2 * 0.25, 0.0, 1.0));
     gemini = mix(gemini, mint, r3 * 0.35);
-    float accentMix = 0.38 + 0.22 * theater + 0.12 * pull;
-    gemini = mix(gemini, mix(primary, secondary, 0.5 + 0.5 * sin(t * 0.3)), accentMix);
+    // Rest: soft Gemini palette. Theater: stage/BE colors dominate (green receive,
+    // amber lightning, etc.) so backend atmosphere tokens remain visible.
+    float accentMix = 0.38 + 0.10 * pull;
+    float warm = smoothstep(0.35, 0.75, primary.r - primary.b);
+    float green = smoothstep(0.18, 0.52, primary.g - max(primary.r, primary.b) * 0.85);
+    accentMix = mix(accentMix, min(accentMix + 0.42, 0.90), warm);
+    accentMix = mix(accentMix, min(accentMix + 0.50, 0.94), green);
+    accentMix = mix(accentMix, min(max(accentMix, 0.72) + 0.18, 0.96), theater);
+    gemini = mix(gemini, mix(primary, secondary, 0.5 + 0.5 * sin(t * 0.18)), accentMix);
 
-    float glow = pow(clamp(field, 0.0, 1.8), mix(1.08, 0.92, pull)) * energy * (0.95 + 0.20 * pull);
-    glow = glow / (1.0 + glow * mix(0.55, 0.40, pull));
+    float glow = pow(clamp(field, 0.0, 1.8), mix(1.08, 0.96, pull)) * energy * (0.95 + 0.12 * pull);
+    glow = glow / (1.0 + glow * mix(0.55, 0.45, pull));
 
     vec3 color = gemini * glow;
     fragColor = vec4(color, glow);

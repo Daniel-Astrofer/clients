@@ -201,6 +201,8 @@ final balanceWebSocketServiceProvider =
 
   // Watch the reactive Tor API URL
   final baseUrl = ref.watch(torApiUrlProvider);
+  // Rebuild socket when HTTP silently refreshes the access token.
+  ref.watch(sessionCredentialVersionProvider);
 
   final userId = authState.user.id;
   if (kDebugMode) {
@@ -209,19 +211,15 @@ final balanceWebSocketServiceProvider =
 
   // Obter token JWT do armazenamento seguro
   String? token;
+  var credentialLookupFailed = false;
   try {
     token = await ref.read(authLocalDataSourceProvider).getToken();
     if (kDebugMode) {
       debugPrint('BalanceWebSocket: session credential lookup completed.');
     }
     token = _normalizeSessionToken(token);
-    if (token != null && token.length < 10) {
-      if (kDebugMode) {
-        debugPrint(
-            'BalanceWebSocket: session credential was rejected locally.');
-      }
-    }
   } catch (_) {
+    credentialLookupFailed = true;
     if (kDebugMode) {
       debugPrint('BalanceWebSocket: session credential unavailable.');
     }
@@ -237,6 +235,15 @@ final balanceWebSocketServiceProvider =
     userId: userId.toString(),
     authToken: token,
     deviceHash: deviceHash,
+    resolveAuthToken: () async {
+      try {
+        final fresh =
+            await ref.read(authLocalDataSourceProvider).getToken();
+        return _normalizeSessionToken(fresh);
+      } catch (_) {
+        return null;
+      }
+    },
     onSessionInvalidated: () {
       if (kDebugMode) {
         debugPrint(
@@ -305,6 +312,7 @@ final balanceWebSocketServiceProvider =
         context: update.context,
         kind: update.kind,
         bucket: update.bucket,
+        read: ref.read,
       );
       if (creditPayload != null && ref.mounted) {
         presentIncomingTheater(
@@ -331,6 +339,8 @@ final balanceWebSocketServiceProvider =
       final alertPreferences = ref.read(alertPreferencesProvider);
       final keepForAlerts =
           _shouldKeepNotification(notification, alertPreferences);
+      final isIncoming = isIncomingTransactionNotification(notification);
+      final appInForeground = ref.read(appForegroundProvider);
 
       // In-app feed + financial refresh + theater must not depend on OS alert
       // preferences. Prefs only gate system notifications.
@@ -342,8 +352,12 @@ final balanceWebSocketServiceProvider =
       _scheduleFinancialRefreshForEvent(ref, scope: FinancialRefreshScope.full);
 
       // Theater for receives (independent of OS alert prefs).
-      if (isIncomingTransactionNotification(notification)) {
-        final theater = payloadFromNotification(notification);
+      // When the user is in the app, theater is the primary surface — not shade.
+      if (isIncoming) {
+        final theater = payloadFromNotification(
+          notification,
+          read: ref.read,
+        );
         if (theater != null) {
           presentIncomingTheater(
             ref.read(homeEducationQueueProvider.notifier),
@@ -354,12 +368,18 @@ final balanceWebSocketServiceProvider =
       }
 
       // Native Android/iOS shade: financial + security when prefs allow.
+      // Skip shade for incoming while foreground — home theater owns that UX.
+      final suppressNativeShade = isIncoming && appInForeground;
       if (keepForAlerts &&
+          !suppressNativeShade &&
           NativeNotificationPresenter.isNativeAlertKind(notification.kind)) {
         unawaited(
           NotificationService().showSessionNotification(notification),
         );
         // Mark seen in BG isolate so the next REST poll does not re-alert.
+        unawaited(markBackgroundNotificationsSeen([notification.id]));
+      } else if (suppressNativeShade) {
+        // Still mark seen so a later poll does not re-fire shade after leave.
         unawaited(markBackgroundNotificationsSeen([notification.id]));
       }
     },
@@ -371,8 +391,16 @@ final balanceWebSocketServiceProvider =
     },
   );
 
-  // Conectar ao WebSocket
-  await service.connect();
+  // Conectar ao WebSocket (soft-defer if credential lookup failed).
+  if (credentialLookupFailed && token == null) {
+    if (kDebugMode) {
+      debugPrint(
+        'BalanceWebSocket: deferring first connect until credential is ready.',
+      );
+    }
+  } else {
+    await service.connect();
+  }
   if (!ref.mounted) {
     service.disconnect();
     return null;
@@ -449,6 +477,9 @@ String? _normalizeSessionToken(String? token) {
   }
   if (normalized.contains('eyJ')) {
     normalized = normalized.substring(normalized.indexOf('eyJ'));
+  }
+  if (normalized.isEmpty || normalized.length < 10) {
+    return null;
   }
   return normalized;
 }

@@ -39,6 +39,8 @@ import '../features/movement/presentation/hub/movement_hub_screen.dart'
     deferred as deposits;
 import '../features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
+import '../features/movement/presentation/receive/receive_amount_entry_screen.dart'
+    deferred as receive;
 import '../core/providers/tor_providers.dart';
 import '../core/providers/app_cold_start_provider.dart';
 import '../core/services/tor_network_bootstrap.dart';
@@ -134,8 +136,8 @@ Future<void> _bootstrapGraphics(ProviderContainer container) async {
 
   // Warm fragment programs + prefetch deferred libs after first frame so
   // navigation is not first-use of loadLibrary / SkSL on the gesture path.
-  // Prefetch send/home/etc in parallel with shaders — never wait on SkSL
-  // before loading the send deferred unit (first Enviar tap hitch).
+  // Prefetch adjacent surfaces in parallel with shaders — never wait on SkSL
+  // before loading send/receive deferred units (first-tap transition hitch).
   WidgetsBinding.instance.addPostFrameCallback((_) {
     prefetchDeferredLibraries([
       (load: home.loadLibrary, key: DeferredLibraryKeys.home),
@@ -146,6 +148,7 @@ Future<void> _bootstrapGraphics(ProviderContainer container) async {
         key: DeferredLibraryKeys.bitcoinAccounts
       ),
       (load: send_money.loadLibrary, key: DeferredLibraryKeys.sendMoney),
+      (load: receive.loadLibrary, key: DeferredLibraryKeys.receive),
     ]);
     unawaited(() async {
       try {
@@ -407,6 +410,8 @@ class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
     if (state == AppLifecycleState.resumed) {
       // Pull balance/extrato if WS marked dirty while backgrounded.
       unawaited(refreshFinancialProjectionIfDirty(ref));
+      // Rearm STOMP after OS kills / exhausted backoff — poll alone is not enough.
+      unawaited(_rearmBalanceRealtimeIfNeeded(ref));
     }
   }
 
@@ -436,6 +441,29 @@ class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
   }
 }
 
+Future<void> _rearmBalanceRealtimeIfNeeded(WidgetRef ref) async {
+  try {
+    final auth = ref.read(authControllerProvider);
+    if (auth is! AuthAuthenticated) return;
+
+    final asyncService = ref.read(balanceWebSocketServiceProvider);
+    final service = asyncService.asData?.value;
+    if (service == null) {
+      // Provider may still be loading — invalidate so a fresh connect is attempted.
+      if (asyncService.isLoading) return;
+      ref.invalidate(balanceWebSocketServiceProvider);
+      return;
+    }
+    if (!service.isConnected || service.stoppedReconnecting) {
+      await service.ensureConnected(force: service.stoppedReconnecting);
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('RealtimeBootstrap: rearm balance WS failed: $e');
+    }
+  }
+}
+
 class KeroseneScrollBehavior extends ScrollBehavior {
   const KeroseneScrollBehavior();
 
@@ -448,5 +476,15 @@ class KeroseneScrollBehavior extends ScrollBehavior {
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
     return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    // No Material glow / edge band — home aurora owns the pull highlight.
+    return child;
   }
 }

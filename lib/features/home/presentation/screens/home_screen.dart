@@ -39,6 +39,8 @@ import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.
     deferred as deposits;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
+import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'
+    deferred as receive;
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
@@ -363,8 +365,23 @@ class HomeScreenState extends ConsumerState<HomeScreen>
 
   void _openReceiveFlow() {
     HapticFeedback.lightImpact();
+    unawaited(_openReceiveFlowAsync());
+  }
+
+  Future<void> _openReceiveFlowAsync() async {
+    // Ensure the deferred receive unit is loaded before the slide starts —
+    // otherwise the first Receber animates a placeholder and swaps mid-transition.
+    try {
+      await loadDeferredLibrary(
+        receive.loadLibrary,
+        key: DeferredLibraryKeys.receive,
+      );
+    } catch (_) {
+      // DeferredPage on the route will surface the error if load still fails.
+    }
+    if (!mounted) return;
     // Amount-first receive — wallet is chosen in-flow, never from home.
-    unawaited(context.push('/receive'));
+    await context.push('/receive');
   }
 
   void _openDepositForWallet(Wallet _) {

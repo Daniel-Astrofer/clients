@@ -43,12 +43,30 @@ Future<void> parseSendPaymentRequest({
     incrementDestinationEditVersion();
     setReceiverText(normalized);
     setLockedRecipientAddress(normalized);
-    if (parsed.amountBtc != null && parsed.amountBtc! > 0) {
-      setLockedAmountBtc(parsed.amountBtc!);
-      setAmountText(_amountText(parsed.amountBtc!));
+    // BIP-21 amount OR BOLT11-embedded amount from the unified analyzer.
+    final lockAmount = parsed.amountBtc ?? analysis.amountBtc;
+    if (lockAmount != null && lockAmount > 0) {
+      setLockedAmountBtc(lockAmount);
+      setAmountText(_amountText(lockAmount));
     }
     if (parsed.label != null && parsed.label!.isNotEmpty) {
       setLockedRecipientLabel(parsed.label);
+    }
+    HapticFeedback.lightImpact();
+    SnackbarHelper.showSuccess(context.tr.sendMoneyRequestDataLoaded);
+    return;
+  }
+
+  // Raw BOLT11 / amountful invoice that QrPaymentParser did not mark complete.
+  final analysis = analyzeSendDestination(data);
+  if (analysis.isValid && analysis.hasLockedAmount) {
+    incrementDestinationEditVersion();
+    setReceiverText(analysis.normalizedValue);
+    setLockedRecipientAddress(analysis.normalizedValue);
+    setLockedAmountBtc(analysis.amountBtc!);
+    setAmountText(_amountText(analysis.amountBtc!));
+    if (analysis.label != null && analysis.label!.trim().isNotEmpty) {
+      setLockedRecipientLabel(analysis.label);
     }
     HapticFeedback.lightImpact();
     SnackbarHelper.showSuccess(context.tr.sendMoneyRequestDataLoaded);

@@ -34,12 +34,10 @@ class SceneContentLayer extends StatelessWidget {
             : '$title\n\n$body')
         : (subtitle.isNotEmpty ? '$title\n\n$subtitle' : title);
 
-    final titleStyle =
-        (compact ? AppTypography.h3Small : AppTypography.h3).copyWith(
+    final titleStyle = AppTypography.h1.copyWith(
       color: Colors.white,
-      fontWeight: FontWeight.w500,
-      height: 1.25,
-      fontSize: compact ? homeFontSize(18) : homeFontSize(22),
+      height: 1.12,
+      fontSize: compact ? homeFontSize(28) : homeFontSize(36),
       fontFamilyFallback: const [
         'Noto Color Emoji',
         'Segoe UI Emoji',
@@ -47,8 +45,15 @@ class SceneContentLayer extends StatelessWidget {
       ],
     );
 
+    final subtitleStyle = AppTypography.h2.copyWith(
+      color: Colors.white.withValues(alpha: 0.88),
+      height: 1.22,
+      fontSize: compact ? homeFontSize(18) : homeFontSize(22),
+      fontWeight: FontWeight.w600,
+    );
+
     final bodyStyle = AppTypography.bodyMedium.copyWith(
-      color: Colors.white.withValues(alpha: 0.86),
+      color: Colors.white.withValues(alpha: 0.72),
       height: 1.4,
       fontSize: homeFontSize(15),
     );
@@ -57,7 +62,9 @@ class SceneContentLayer extends StatelessWidget {
       SceneTextMode.typewriter => _TypewriterReveal(
           fullText: full,
           titleStyle: titleStyle,
-          bodyStyle: bodyStyle,
+          bodyStyle: subtitle.isNotEmpty || body.isNotEmpty
+              ? subtitleStyle
+              : bodyStyle,
           durationMs: showDurationMs,
           align: align,
         ),
@@ -71,6 +78,7 @@ class SceneContentLayer extends StatelessWidget {
           subtitle: subtitle,
           body: body,
           titleStyle: titleStyle,
+          subtitleStyle: subtitleStyle,
           bodyStyle: bodyStyle,
           align: align,
         ),
@@ -83,6 +91,7 @@ class _StaticBlock extends StatelessWidget {
   final String subtitle;
   final String body;
   final TextStyle titleStyle;
+  final TextStyle subtitleStyle;
   final TextStyle bodyStyle;
   final TextAlign align;
 
@@ -91,6 +100,7 @@ class _StaticBlock extends StatelessWidget {
     required this.subtitle,
     required this.body,
     required this.titleStyle,
+    required this.subtitleStyle,
     required this.bodyStyle,
     required this.align,
   });
@@ -105,12 +115,10 @@ class _StaticBlock extends StatelessWidget {
       children: [
         if (title.isNotEmpty) Text(title, style: titleStyle, textAlign: align),
         if (subtitle.isNotEmpty) ...[
-          SizedBox(height: homeSize(6)),
+          SizedBox(height: homeSize(8)),
           Text(
             subtitle,
-            style: bodyStyle.copyWith(
-              color: Colors.white.withValues(alpha: 0.78),
-            ),
+            style: subtitleStyle,
             textAlign: align,
           ),
         ],
@@ -118,9 +126,7 @@ class _StaticBlock extends StatelessWidget {
           SizedBox(height: homeSize(8)),
           Text(
             body,
-            style: bodyStyle.copyWith(
-              color: Colors.white.withValues(alpha: 0.62),
-            ),
+            style: bodyStyle,
             textAlign: align,
             maxLines: 8,
             overflow: TextOverflow.ellipsis,

@@ -1,12 +1,20 @@
+import 'package:kerosene/core/providers/money_format_provider.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
+import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
 /// Pure helpers that turn financial events into home-theater receive pieces.
 ///
 /// The theater used to depend only on STOMP notification kinds. Extrato/balance
 /// can advance via REST poll without those notifications, so receives must also
 /// be derivable from ledger rows and balance credits.
+
+/// Compatible with both [Ref.read] and [WidgetRef.read].
+typedef IncomingTheaterRead = T Function<T>(ProviderListenable<T> provider);
 
 class IncomingTheaterPayload {
   final String id;
@@ -42,6 +50,39 @@ String formatBtcAmountLabelFromBtc(double amountBtc) {
   if (amountBtc <= 0) return 'fundos';
   final sats = (amountBtc * 100000000).round();
   return formatBtcAmountLabel(sats);
+}
+
+/// Fiat-first label for in-app receive theater (e.g. `R$ 1.200,00`).
+///
+/// When the user prefers BTC, still show BRL so the description reads like
+/// a bank credit — matches product copy for the home theater.
+String formatIncomingTheaterAmount({
+  required double amountBtc,
+  required IncomingTheaterRead read,
+}) {
+  if (amountBtc <= 0) return 'fundos';
+  final money = read(moneyFormatConfigProvider);
+  final currency =
+      money.currency == Currency.btc ? Currency.brl : money.currency;
+  return MoneyDisplay.formatAmountFromBtc(
+    btcAmount: amountBtc,
+    currency: currency,
+    btcUsd: read(latestBtcPriceProvider),
+    btcEur: read(btcEurPriceProvider),
+    btcBrl: read(btcBrlPriceProvider),
+    withSymbol: true,
+    appLocale: money.locale,
+  );
+}
+
+String formatIncomingTheaterAmountFromSats({
+  required int amountSatoshis,
+  required IncomingTheaterRead read,
+}) {
+  return formatIncomingTheaterAmount(
+    amountBtc: amountSatoshis / 100000000.0,
+    read: read,
+  );
 }
 
 String _trimTrailingZeros(String amount) {
@@ -157,12 +198,23 @@ bool isIncomingTransactionNotification(SessionNotificationItem notification) {
 }
 
 IncomingTheaterPayload? payloadFromNotification(
-  SessionNotificationItem notification,
-) {
+  SessionNotificationItem notification, {
+  IncomingTheaterRead? read,
+}) {
   if (!isIncomingTransactionNotification(notification)) return null;
 
-  final amount = extractNotificationAmount(notification);
-  final amountLabel = amount.isNotEmpty ? '$amount BTC' : 'fundos';
+  final amountRaw = extractNotificationAmount(notification);
+  String amountLabel;
+  if (read != null && amountRaw.isNotEmpty) {
+    final asBtc = double.tryParse(amountRaw.replaceAll(',', '.'));
+    amountLabel = asBtc != null && asBtc > 0
+        ? formatIncomingTheaterAmount(amountBtc: asBtc, read: read)
+        : (amountRaw.contains(RegExp(r'[A-Za-z$€]'))
+            ? amountRaw
+            : '$amountRaw BTC');
+  } else {
+    amountLabel = amountRaw.isNotEmpty ? '$amountRaw BTC' : 'fundos';
+  }
   // Prefer entityId (transaction UUID) so extrato path can dedupe the same receive.
   final entityId = (notification.entityId ?? '').trim();
   final id = entityId.isNotEmpty
@@ -176,11 +228,14 @@ IncomingTheaterPayload? payloadFromNotification(
     amountLabel: amountLabel,
     walletName: extractNotificationWalletName(notification),
     networkLabel: extractNotificationNetworkLabel(notification),
-    subtitle: notification.body,
+    subtitle: null,
   );
 }
 
-IncomingTheaterPayload? payloadFromTransaction(Transaction tx) {
+IncomingTheaterPayload? payloadFromTransaction(
+  Transaction tx, {
+  IncomingTheaterRead? read,
+}) {
   if (!tx.isCredit || tx.isCancelled) return null;
   if (tx.amountSatoshis <= 0) return null;
 
@@ -201,12 +256,19 @@ IncomingTheaterPayload? payloadFromTransaction(Transaction tx) {
           '')
       .trim();
 
+  final amountLabel = read != null
+      ? formatIncomingTheaterAmountFromSats(
+          amountSatoshis: tx.amountSatoshis,
+          read: read,
+        )
+      : formatBtcAmountLabel(tx.amountSatoshis);
+
   return IncomingTheaterPayload(
     id: tx.id,
-    amountLabel: formatBtcAmountLabel(tx.amountSatoshis),
+    amountLabel: amountLabel,
     walletName: wallet.isNotEmpty ? wallet : 'Principal',
     networkLabel: network,
-    subtitle: (tx.description ?? '').trim().isEmpty ? null : tx.description,
+    subtitle: null,
   );
 }
 
@@ -245,6 +307,7 @@ IncomingTheaterPayload? payloadFromBalanceCredit({
   required String context,
   String? kind,
   String? bucket,
+  IncomingTheaterRead? read,
 }) {
   if (!isInboundBalanceCredit(amountBtc: amountBtc, context: context)) {
     return null;
@@ -272,12 +335,16 @@ IncomingTheaterPayload? payloadFromBalanceCredit({
   final amountKey = amountBtc.toStringAsFixed(8);
   final id = 'bal|$idSeed|$amountKey|${context.trim().toLowerCase()}';
 
+  final amountLabel = read != null
+      ? formatIncomingTheaterAmount(amountBtc: amountBtc, read: read)
+      : formatBtcAmountLabelFromBtc(amountBtc);
+
   return IncomingTheaterPayload(
     id: id,
-    amountLabel: formatBtcAmountLabelFromBtc(amountBtc),
+    amountLabel: amountLabel,
     walletName: name,
     networkLabel: network,
-    subtitle: context.trim().isEmpty ? null : context.trim(),
+    subtitle: null,
   );
 }
 

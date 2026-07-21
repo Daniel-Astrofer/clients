@@ -235,9 +235,17 @@ class _EdgeWaveAuroraPainter extends CustomPainter {
     final ampBoost = 1.0 + 0.35 * pull;
 
     final cyan = Color.lerp(primary, const Color(0xFF5EC8E8), 0.58)!;
-    final violet = Color.lerp(secondary, const Color(0xFFC4B5FD), 0.45)!;
-    final mint = Color.lerp(secondary, const Color(0xFF5EEAD4), 0.42)!;
-    final rose = Color.lerp(primary, const Color(0xFFF0ABFC), 0.35)!;
+    // Warm onchain wash: keep companions orange/gold, not violet/rose.
+    final warmPrimary = (primary.r - primary.b) > 0.35;
+    final violet = warmPrimary
+        ? Color.lerp(secondary, const Color(0xFFFFB347), 0.40)!
+        : Color.lerp(secondary, const Color(0xFFC4B5FD), 0.45)!;
+    final mint = warmPrimary
+        ? Color.lerp(secondary, const Color(0xFFFFCC66), 0.35)!
+        : Color.lerp(secondary, const Color(0xFF5EEAD4), 0.42)!;
+    final rose = warmPrimary
+        ? Color.lerp(primary, const Color(0xFFFF8C42), 0.40)!
+        : Color.lerp(primary, const Color(0xFFF0ABFC), 0.35)!;
     final sky = Color.lerp(cyan, const Color(0xFF7DD3FC), 0.4)!;
 
     final hazeColors = List<Color>.filled(6, const Color(0x00000000));

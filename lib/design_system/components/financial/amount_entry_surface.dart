@@ -1,4 +1,7 @@
+import 'dart:ui' show FontFeature, lerpDouble;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -22,6 +25,7 @@ class TransactionValueEntrySurface extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final TextStyle? titleStyle;
+  final TextStyle? subtitleStyle;
 
   /// When true, back + [title] share one top row; amount stays vertically centered.
   final bool inlineHeroTitle;
@@ -67,6 +71,12 @@ class TransactionValueEntrySurface extends StatelessWidget {
   /// Hides the top currency chip (independent of [showCurrencyPrefix]).
   final bool showCurrencyChip;
 
+  /// Soft calculator expression above the amount (e.g. `100 +`).
+  final String? expressionLabel;
+
+  /// Triggers a short count-up morph when the amount resolves (`=`).
+  final bool resolveAmount;
+
   final String ctaLabel;
   final bool ctaEnabled;
   final bool isBusy;
@@ -78,6 +88,7 @@ class TransactionValueEntrySurface extends StatelessWidget {
     this.title,
     this.subtitle,
     this.titleStyle,
+    this.subtitleStyle,
     this.inlineHeroTitle = false,
     this.titleTopInset,
     this.titleViewportFraction,
@@ -101,6 +112,8 @@ class TransactionValueEntrySurface extends StatelessWidget {
     this.centerInlineTitle = false,
     this.showCurrencyPrefix = false,
     this.showCurrencyChip = true,
+    this.expressionLabel,
+    this.resolveAmount = false,
     required this.ctaLabel,
     required this.ctaEnabled,
     required this.isBusy,
@@ -132,7 +145,9 @@ class TransactionValueEntrySurface extends StatelessWidget {
             ? _InlineHeroLayout(
                 onBack: onBack,
                 title: title!,
+                subtitle: subtitle,
                 titleStyle: titleStyle,
+                subtitleStyle: subtitleStyle,
                 titleTopInset: titleTopInset,
                 titleViewportFraction: titleViewportFraction,
                 centerInlineTitle: centerInlineTitle,
@@ -149,6 +164,8 @@ class TransactionValueEntrySurface extends StatelessWidget {
                 showKeypad: showKeypad,
                 showCurrencyChip: showCurrencyChip && !showCurrencyPrefix,
                 showCurrencyPrefix: showCurrencyPrefix,
+                expressionLabel: expressionLabel,
+                resolveAmount: resolveAmount,
                 availableLabel: availableLabel,
                 feeLabel: feeLabel,
                 warningLabel: warningLabel,
@@ -311,7 +328,9 @@ class TransactionValueEntrySurface extends StatelessWidget {
 class _InlineHeroLayout extends StatelessWidget {
   final VoidCallback onBack;
   final String title;
+  final String? subtitle;
   final TextStyle? titleStyle;
+  final TextStyle? subtitleStyle;
   final double? titleTopInset;
   final double? titleViewportFraction;
   final bool centerInlineTitle;
@@ -328,6 +347,8 @@ class _InlineHeroLayout extends StatelessWidget {
   final bool showKeypad;
   final bool showCurrencyChip;
   final bool showCurrencyPrefix;
+  final String? expressionLabel;
+  final bool resolveAmount;
   final String? availableLabel;
   final String? feeLabel;
   final String? warningLabel;
@@ -344,7 +365,9 @@ class _InlineHeroLayout extends StatelessWidget {
   const _InlineHeroLayout({
     required this.onBack,
     required this.title,
+    this.subtitle,
     this.titleStyle,
+    this.subtitleStyle,
     this.titleTopInset,
     this.titleViewportFraction,
     this.centerInlineTitle = false,
@@ -361,6 +384,8 @@ class _InlineHeroLayout extends StatelessWidget {
     required this.showKeypad,
     this.showCurrencyChip = true,
     this.showCurrencyPrefix = false,
+    this.expressionLabel,
+    this.resolveAmount = false,
     this.availableLabel,
     this.feeLabel,
     this.warningLabel,
@@ -409,6 +434,8 @@ class _InlineHeroLayout extends StatelessWidget {
                     currency: currency,
                     hasWarning: hasWarning,
                     showCurrencyPrefix: showCurrencyPrefix,
+                    expressionLabel: expressionLabel,
+                    resolveAmount: resolveAmount,
                     onChanged: onAmountTextChanged!,
                   ),
                 )
@@ -455,7 +482,9 @@ class _InlineHeroLayout extends StatelessWidget {
         _InlineTitleHeader(
           onBack: onBack,
           title: title,
+          subtitle: subtitle,
           titleStyle: titleStyle,
+          subtitleStyle: subtitleStyle,
           centerTitle: centerInlineTitle,
         ),
         Expanded(
@@ -569,20 +598,72 @@ class _Header extends StatelessWidget {
 class _InlineTitleHeader extends StatelessWidget {
   final VoidCallback onBack;
   final String title;
+  final String? subtitle;
   final TextStyle? titleStyle;
+  final TextStyle? subtitleStyle;
   final bool centerTitle;
 
   const _InlineTitleHeader({
     required this.onBack,
     required this.title,
+    this.subtitle,
     this.titleStyle,
+    this.subtitleStyle,
     this.centerTitle = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final style = titleStyle ?? AppTypography.h1.copyWith(color: _C.text);
+    final subStyle = subtitleStyle ??
+        AppTypography.inter(
+          color: _C.muted,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          letterSpacing: -0.1,
+        );
+    final hasSubtitle = subtitle != null && subtitle!.trim().isNotEmpty;
     final back = _BackArrowButton(onPressed: onBack);
+
+    Widget titleBlock({required TextAlign align}) {
+      return AnimatedSwitcher(
+        duration: KeroseneMotion.duration(
+          context,
+          const Duration(milliseconds: 200),
+        ),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        child: Column(
+          key: ValueKey<String>('$title|${subtitle ?? ''}'),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: align == TextAlign.center
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: style,
+              textAlign: align,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (hasSubtitle) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle!.trim(),
+                style: subStyle,
+                textAlign: align,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
 
     if (!centerTitle) {
       return Padding(
@@ -591,48 +672,22 @@ class _InlineTitleHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             back,
-            Expanded(
-              child: Text(
-                title,
-                style: style,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            Expanded(child: titleBlock(align: TextAlign.start)),
           ],
         ),
       );
     }
 
-    // Back aligned to the vertical center of the H1 row; title truly centered.
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
       child: SizedBox(
-        height: 48,
+        height: hasSubtitle ? 58 : 48,
         child: Stack(
           alignment: Alignment.center,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 56),
-              child: AnimatedSwitcher(
-                duration: KeroseneMotion.duration(
-                  context,
-                  const Duration(milliseconds: 200),
-                ),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                child: Text(
-                  title,
-                  key: ValueKey<String>(title),
-                  style: style,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              child: titleBlock(align: TextAlign.center),
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -790,6 +845,8 @@ class _NativeAmountField extends StatefulWidget {
   final Currency currency;
   final bool hasWarning;
   final bool showCurrencyPrefix;
+  final String? expressionLabel;
+  final bool resolveAmount;
   final ValueChanged<String> onChanged;
 
   const _NativeAmountField({
@@ -797,6 +854,8 @@ class _NativeAmountField extends StatefulWidget {
     required this.currency,
     required this.hasWarning,
     this.showCurrencyPrefix = false,
+    this.expressionLabel,
+    this.resolveAmount = false,
     required this.onChanged,
   });
 
@@ -804,53 +863,321 @@ class _NativeAmountField extends StatefulWidget {
   State<_NativeAmountField> createState() => _NativeAmountFieldState();
 }
 
-class _NativeAmountFieldState extends State<_NativeAmountField> {
+class _NativeAmountFieldState extends State<_NativeAmountField>
+    with TickerProviderStateMixin {
+  static const _expressionSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 220,
+    damping: 18,
+  );
+
   late final TextEditingController _controller;
   late final FocusNode _focus;
+  late final AnimationController _countUp;
+  late final AnimationController _expression;
+  late final AnimationController _cursorBlink;
+
   bool _syncing = false;
-  int _digitGen = 0;
+  /// Last value we pushed upstream — avoids fighting the TextField/IME.
+  String _lastEmitted = '0';
+  double _countFrom = 0;
+  double _countTo = 0;
+  bool _counting = false;
+
+  /// Stable glyph identities — remount only when a digit is born.
+  final List<_AmountGlyph> _glyphs = <_AmountGlyph>[];
+  int _nextGlyphId = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: _rawOrZero(widget.amountInput));
+    final initial = _rawOrZero(widget.amountInput);
+    _lastEmitted = initial;
+    _controller = TextEditingController(text: initial);
     _focus = FocusNode();
+    _expression = AnimationController.unbounded(vsync: this)..value = 0;
+    _countUp = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _cursorBlink = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 530),
+    )..repeat(reverse: true);
+    _countUp.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() => _counting = false);
+      }
+    });
+    final hasExpr = (widget.expressionLabel ?? '').trim().isNotEmpty;
+    _expression.value = hasExpr ? 1 : 0;
+    _syncGlyphs(
+      MoneyDisplay.formatEditableInput(
+        rawValue: initial,
+        currency: widget.currency,
+        withSymbol: false,
+      ),
+      animate: false,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _focus.requestFocus();
-      final text = _controller.text;
-      _controller.selection = TextSelection.collapsed(offset: text.length);
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
     });
   }
 
   @override
   void didUpdateWidget(covariant _NativeAmountField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldExpr = (oldWidget.expressionLabel ?? '').trim();
+    final newExpr = (widget.expressionLabel ?? '').trim();
+    if (oldExpr != newExpr) {
+      _expression.animateWith(
+        SpringSimulation(
+          _expressionSpring,
+          _expression.value,
+          newExpr.isEmpty ? 0.0 : 1.0,
+          newExpr.isEmpty ? -1.0 : 1.5,
+        ),
+      );
+    }
+
     if (oldWidget.amountInput != widget.amountInput ||
         oldWidget.currency != widget.currency) {
       final next = _rawOrZero(widget.amountInput);
-      if (_controller.text != next) {
-        if (next.length > _controller.text.length) _digitGen++;
-        _syncing = true;
-        _controller.value = TextEditingValue(
-          text: next,
-          selection: TextSelection.collapsed(offset: next.length),
+      // Ignore echo of our own emit — never clobber the TextField mid-typing.
+      if (next == _lastEmitted && oldWidget.currency == widget.currency) {
+        return;
+      }
+      if (_controller.text == next && oldWidget.currency == widget.currency) {
+        _lastEmitted = next;
+        return;
+      }
+
+      final grew = next.length > _controller.text.length;
+      if (widget.resolveAmount && !oldWidget.resolveAmount) {
+        _countFrom = MoneyDisplay.parseEditableInput(oldWidget.amountInput);
+        _countTo = MoneyDisplay.parseEditableInput(next);
+        _counting = true;
+        _countUp.forward(from: 0);
+      } else if (grew &&
+          !_counting &&
+          !KeroseneMotion.reduceMotion(context)) {
+        HapticFeedback.selectionClick();
+      }
+      _syncing = true;
+      _controller.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+      _syncing = false;
+      _lastEmitted = next;
+      _syncGlyphs(
+        MoneyDisplay.formatEditableInput(
+          rawValue: next,
+          currency: widget.currency,
+          withSymbol: false,
+          appLocale: Localizations.localeOf(context),
+        ),
+        animate: !_counting && oldWidget.currency == widget.currency,
+      );
+      setState(() {});
+    }
+  }
+
+  static bool _isAmountSep(String char) {
+    if (char.isEmpty) return false;
+    final c = char.characters.first;
+    // Decimal / grouping separators across locales (., ‚ ' thin space, etc.).
+    return c == '.' ||
+        c == ',' ||
+        c == ' ' ||
+        c == '\u00A0' ||
+        c == '\u202F' ||
+        c == '\u2009' ||
+        c == "'" ||
+        c == '’';
+  }
+
+  void _syncGlyphs(String display, {required bool animate}) {
+    final chars = display.characters.toList(growable: false);
+    if (chars.isEmpty) {
+      _glyphs
+        ..clear()
+        ..add(
+          _AmountGlyph(
+            id: _nextGlyphId++,
+            char: '0',
+            enter: false,
+            expandWidth: false,
+            exiting: false,
+          ),
         );
-        _syncing = false;
+      return;
+    }
+
+    if (!animate) {
+      _glyphs
+        ..clear()
+        ..addAll([
+          for (final c in chars)
+            _AmountGlyph(
+              id: _nextGlyphId++,
+              char: c,
+              enter: false,
+              expandWidth: false,
+              exiting: false,
+            ),
+        ]);
+      return;
+    }
+
+    final active = _glyphs.where((g) => !g.exiting).toList(growable: false);
+    final activeStr = active.map((g) => g.char).join();
+    final nextStr = chars.join();
+    if (nextStr == activeStr) return;
+
+    final prevDigits =
+        active.where((g) => !_isAmountSep(g.char)).toList(growable: false);
+    final prevSeps =
+        active.where((g) => _isAmountSep(g.char)).toList(growable: false);
+    final nextDigitChars =
+        chars.where((c) => !_isAmountSep(c)).toList(growable: false);
+    final nextSepCount = chars.length - nextDigitChars.length;
+
+    final sharedDigits = prevDigits.length < nextDigitChars.length
+        ? prevDigits.length
+        : nextDigitChars.length;
+    final insertedDigits = nextDigitChars.length - sharedDigits;
+    final removedDigits = prevDigits.length - sharedDigits;
+
+    final nextDigitGlyphs = <_AmountGlyph>[];
+    final exitingFront = <_AmountGlyph>[];
+
+    for (var i = 0; i < insertedDigits; i++) {
+      nextDigitGlyphs.add(
+        _AmountGlyph(
+          id: _nextGlyphId++,
+          char: nextDigitChars[i],
+          enter: true,
+          expandWidth: true,
+          exiting: false,
+        ),
+      );
+    }
+
+    for (var i = 0; i < sharedDigits; i++) {
+      final prev = prevDigits[prevDigits.length - sharedDigits + i];
+      nextDigitGlyphs.add(
+        _AmountGlyph(
+          id: prev.id,
+          char: nextDigitChars[insertedDigits + i],
+          enter: false,
+          expandWidth: false,
+          exiting: false,
+        ),
+      );
+    }
+
+    for (var i = 0; i < removedDigits; i++) {
+      final prev = prevDigits[i];
+      exitingFront.add(
+        _AmountGlyph(
+          id: prev.id,
+          char: prev.char,
+          enter: false,
+          expandWidth: true,
+          exiting: true,
+        ),
+      );
+    }
+
+    final nextSepGlyphs = <_AmountGlyph>[];
+    for (var i = 0; i < nextSepCount; i++) {
+      if (i < prevSeps.length) {
+        nextSepGlyphs.add(
+          _AmountGlyph(
+            id: prevSeps[i].id,
+            char: chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
+            enter: false,
+            expandWidth: false,
+            exiting: false,
+          ),
+        );
+      } else {
+        nextSepGlyphs.add(
+          _AmountGlyph(
+            id: _nextGlyphId++,
+            char: chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
+            enter: true,
+            expandWidth: true,
+            exiting: false,
+          ),
+        );
       }
     }
+
+    final exitingSeps = <_AmountGlyph>[];
+    for (var i = nextSepCount; i < prevSeps.length; i++) {
+      final prev = prevSeps[i];
+      exitingSeps.add(
+        _AmountGlyph(
+          id: prev.id,
+          char: prev.char,
+          enter: false,
+          expandWidth: true,
+          exiting: true,
+        ),
+      );
+    }
+
+    final rebuilt = <_AmountGlyph>[...exitingFront, ...exitingSeps];
+    var digitIndex = 0;
+    var sepIndex = 0;
+    for (final c in chars) {
+      if (_isAmountSep(c)) {
+        rebuilt.add(nextSepGlyphs[sepIndex++]);
+      } else {
+        rebuilt.add(nextDigitGlyphs[digitIndex++]);
+      }
+    }
+
+    _glyphs
+      ..clear()
+      ..addAll(rebuilt);
+  }
+
+  void _onGlyphExitComplete(int id) {
+    if (!mounted) return;
+    final idx = _glyphs.indexWhere((g) => g.id == id);
+    if (idx < 0) return;
+    setState(() => _glyphs.removeAt(idx));
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _focus.dispose();
+    _countUp.dispose();
+    _expression.dispose();
+    _cursorBlink.dispose();
     super.dispose();
   }
 
   String _rawOrZero(String raw) {
     final trimmed = raw.trim();
     return trimmed.isEmpty ? '0' : trimmed;
+  }
+
+  String _displayFor(String raw) {
+    return MoneyDisplay.formatEditableInput(
+      rawValue: raw,
+      currency: widget.currency,
+      withSymbol: false,
+      appLocale: Localizations.localeOf(context),
+    );
   }
 
   void _onChanged(String value) {
@@ -861,17 +1188,36 @@ class _NativeAmountFieldState extends State<_NativeAmountField> {
       currency: widget.currency,
       maxLength: maxLength,
     );
-    if (sanitized.length > _controller.text.length) {
-      _digitGen++;
-    }
-    if (_controller.text != sanitized) {
+    final previous = _lastEmitted;
+    final changed = sanitized != previous;
+
+    // Only rewrite when sanitize mutates the raw IME string.
+    if (sanitized != value) {
       _syncing = true;
       _controller.value = TextEditingValue(
         text: sanitized,
         selection: TextSelection.collapsed(offset: sanitized.length),
+        composing: TextRange.empty,
       );
       _syncing = false;
     }
+
+    if (!changed) return;
+
+    final nextDisplay = _displayFor(sanitized);
+    final prevDisplay = _displayFor(previous);
+    final lenDelta =
+        nextDisplay.characters.length - prevDisplay.characters.length;
+
+    _lastEmitted = sanitized;
+    if (lenDelta != 0 && !KeroseneMotion.reduceMotion(context)) {
+      HapticFeedback.selectionClick();
+    }
+
+    _syncGlyphs(
+      nextDisplay,
+      animate: !KeroseneMotion.reduceMotion(context),
+    );
     widget.onChanged(sanitized);
     setState(() {});
   }
@@ -881,34 +1227,40 @@ class _NativeAmountFieldState extends State<_NativeAmountField> {
       color: color,
       fontSize: fontSize,
       height: 1.05,
-      letterSpacing: -1.2,
+      letterSpacing: -1.4,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
 
-  /// Keeps very large amounts on one line without overflowing the viewport.
-  double _fontSizeFor({
-    required double base,
-    required int charCount,
-    required double maxWidth,
-  }) {
-    // Rough advance width for tabular amount figures.
-    final estimated = charCount * base * 0.62 +
-        (widget.showCurrencyPrefix ? base * 1.1 : 0);
-    if (estimated <= maxWidth || charCount <= 1) return base;
-    final scaled = base * (maxWidth / estimated);
-    return scaled.clamp(22.0, base);
-  }
-
-  ({String prefix, String tail}) _split(String display) {
-    if (display.isEmpty) return (prefix: '', tail: '0');
-    final chars = display.characters;
-    if (chars.length == 1) return (prefix: '', tail: display);
-    return (
-      prefix: chars.skipLast(1).toString(),
-      tail: chars.last,
+  String _formatCount(double value) {
+    final maxDecimals = widget.currency == Currency.btc ? 8 : 2;
+    var text = value.toStringAsFixed(maxDecimals);
+    if (text.contains('.')) {
+      text = text.replaceFirst(RegExp(r'\.?0+$'), '');
+    }
+    if (text.isEmpty || text == '-') text = '0';
+    return MoneyDisplay.formatEditableInput(
+      rawValue: text,
+      currency: widget.currency,
+      withSymbol: false,
+      appLocale: Localizations.localeOf(context),
     );
   }
+
+  static const _bareInputDecoration = InputDecoration(
+    isDense: true,
+    filled: false,
+    fillColor: Colors.transparent,
+    hoverColor: Colors.transparent,
+    focusColor: Colors.transparent,
+    contentPadding: EdgeInsets.zero,
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    disabledBorder: InputBorder.none,
+    errorBorder: InputBorder.none,
+    focusedErrorBorder: InputBorder.none,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -916,151 +1268,292 @@ class _NativeAmountFieldState extends State<_NativeAmountField> {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 40;
     final baseSize = keyboardOpen ? 40.0 : 56.0;
     final symbol = MoneyDisplay.tickerSymbolFor(widget.currency);
-    final display = MoneyDisplay.formatEditableInput(
-      rawValue: _controller.text,
-      currency: widget.currency,
-      withSymbol: false,
-      appLocale: Localizations.localeOf(context),
-    );
     final reduce = KeroseneMotion.reduceMotion(context);
-    final parts = _split(display);
+    final expression = widget.expressionLabel?.trim() ?? '';
+    final hasExpression = expression.isNotEmpty;
+    final style = _amountStyle(color, fontSize: baseSize);
+    final symbolStyle = style.copyWith(
+      color: _C.muted,
+      fontSize: baseSize * 0.72,
+      fontWeight:
+          widget.currency == Currency.btc ? FontWeight.w300 : style.fontWeight,
+    );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxW = constraints.maxWidth.isFinite && constraints.maxWidth > 0
-            ? constraints.maxWidth
-            : MediaQuery.sizeOf(context).width - 48;
-        final fontSize = _fontSizeFor(
-          base: baseSize,
-          charCount: display.characters.length +
-              (widget.showCurrencyPrefix ? 2 : 0),
-          maxWidth: maxW,
-        );
-        final style = _amountStyle(color, fontSize: fontSize);
-        // Only the BTC mark is lighter; fiat symbols keep the amount weight.
-        final symbolStyle = widget.currency == Currency.btc
-            ? style.copyWith(
-                fontWeight: FontWeight.lerp(
-                  style.fontWeight ?? FontWeight.w600,
-                  FontWeight.w100,
-                  0.4,
-                ),
+    return AnimatedBuilder(
+      animation: Listenable.merge([_countUp, _expression, _cursorBlink]),
+      builder: (context, _) {
+        final display = _counting
+            ? _formatCount(
+                lerpDouble(_countFrom, _countTo, _countUp.value) ?? _countTo,
               )
-            : style;
-        final digitDuration = KeroseneMotion.duration(
-          context,
-          // 35% slower than 140ms → ~215ms.
-          const Duration(milliseconds: 215),
-        );
+            : MoneyDisplay.formatEditableInput(
+                rawValue: _controller.text,
+                currency: widget.currency,
+                withSymbol: false,
+                appLocale: Localizations.localeOf(context),
+              );
+        final exprT = _expression.value.clamp(0.0, 1.15);
 
-        final amountVisual = Row(
+        final amountRow = Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            if (parts.prefix.isNotEmpty) Text(parts.prefix, style: style),
-            if (reduce)
-              Text(parts.tail, style: style)
-            else
-              AnimatedSwitcher(
-                duration: digitDuration,
-                switchInCurve: Curves.easeInCubic,
-                switchOutCurve: Curves.easeOutCubic,
-                transitionBuilder: (child, animation) {
-                  final curved = CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeInCubic,
-                    reverseCurve: Curves.easeOutCubic,
-                  );
-                  final scale = Tween<double>(begin: 0.75, end: 1).animate(
-                    curved,
-                  );
-                  return FadeTransition(
-                    opacity: curved,
-                    child: ScaleTransition(scale: scale, child: child),
-                  );
-                },
-                child: Text(
-                  parts.tail,
-                  key: ValueKey<String>(
-                    '$_digitGen-${widget.currency.name}-${parts.prefix}-${parts.tail}',
+            if (widget.showCurrencyPrefix) ...[
+              // Never animated — keeps ₿ / R$ rock-steady while typing.
+              Text(symbol, style: symbolStyle),
+              const SizedBox(width: 8),
+            ],
+            reduce || _counting
+                ? Text(display, style: style)
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      for (final g in _glyphs)
+                        _RevolutDigit(
+                          key: ValueKey<int>(g.id),
+                          char: g.char,
+                          style: style,
+                          enter: g.enter,
+                          expandWidth: g.expandWidth,
+                          exiting: g.exiting,
+                          onExitComplete: () => _onGlyphExitComplete(g.id),
+                        ),
+                    ],
                   ),
-                  style: style,
+            const SizedBox(width: 3),
+            FadeTransition(
+              opacity: _cursorBlink,
+              child: Baseline(
+                baseline: baseSize * 0.92,
+                baselineType: TextBaseline.alphabetic,
+                child: Container(
+                  width: 2.5,
+                  height: baseSize * 0.92,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
                 ),
               ),
+            ),
           ],
         );
 
         return Semantics(
           liveRegion: true,
           label: '$symbol $display',
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (widget.showCurrencyPrefix) ...[
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 160),
-                  switchInCurve: Curves.easeInCubic,
-                  switchOutCurve: Curves.easeOutCubic,
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  child: Text(
-                    symbol,
-                    key: ValueKey<String>(symbol),
-                    style: symbolStyle,
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  IgnorePointer(child: amountVisual),
-                  Positioned.fill(
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focus,
-                      autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+              ClipRect(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  heightFactor: exprT.clamp(0.0, 1.0),
+                  child: Opacity(
+                    opacity: exprT.clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: Offset(
+                        6.3 * (1 - exprT.clamp(0.0, 1.0)),
+                        4.9 * (1 - exprT.clamp(0.0, 1.0)),
                       ),
-                      textAlign: TextAlign.center,
-                      textInputAction: TextInputAction.done,
-                      style: style.copyWith(color: Colors.transparent),
-                      cursorColor: color,
-                      cursorWidth: 2,
-                      showCursor: true,
-                      decoration: const InputDecoration(
-                        filled: false,
-                        fillColor: Colors.transparent,
-                        hoverColor: Colors.transparent,
-                        focusColor: Colors.transparent,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[0-9.,]'),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          hasExpression ? expression : ' ',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.inter(
+                            color: _C.muted,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.4,
+                          ),
                         ),
-                      ],
-                      onChanged: _onChanged,
+                      ),
                     ),
                   ),
-                ],
+                ),
+              ),
+              // Visual layer is animated; TextField stays unscaled so IME works.
+              SizedBox(
+                width: double.infinity,
+                height: baseSize * 1.35,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    IgnorePointer(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: amountRow,
+                      ),
+                    ),
+                    // Full-bleed invisible editor — never inside Transform.
+                    Positioned.fill(
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focus,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textAlign: TextAlign.center,
+                        textInputAction: TextInputAction.done,
+                        style: style.copyWith(
+                          color: Colors.transparent,
+                          height: 1.35,
+                        ),
+                        // Native caret misaligns vs prefixed visual digits —
+                        // we paint a custom caret at the trailing edge instead.
+                        cursorColor: Colors.transparent,
+                        cursorWidth: 0,
+                        showCursor: false,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        smartDashesType: SmartDashesType.disabled,
+                        smartQuotesType: SmartQuotesType.disabled,
+                        decoration: _bareInputDecoration,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'[0-9.,]'),
+                          ),
+                        ],
+                        onChanged: _onChanged,
+                        onTap: () {
+                          // Always edit at the trailing edge.
+                          _controller.selection = TextSelection.collapsed(
+                            offset: _controller.text.length,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _AmountGlyph {
+  final int id;
+  final String char;
+  final bool enter;
+  /// Layout width animates with the glyph (insert → grow, delete → shrink).
+  final bool expandWidth;
+  final bool exiting;
+
+  const _AmountGlyph({
+    required this.id,
+    required this.char,
+    required this.enter,
+    required this.expandWidth,
+    required this.exiting,
+  });
+}
+
+/// Digit / decimal / grouping sep — insert & delete share the same motion.
+class _RevolutDigit extends StatefulWidget {
+  final String char;
+  final TextStyle style;
+  final bool enter;
+  final bool expandWidth;
+  final bool exiting;
+  final VoidCallback? onExitComplete;
+
+  const _RevolutDigit({
+    super.key,
+    required this.char,
+    required this.style,
+    required this.enter,
+    this.expandWidth = false,
+    this.exiting = false,
+    this.onExitComplete,
+  });
+
+  @override
+  State<_RevolutDigit> createState() => _RevolutDigitState();
+}
+
+class _RevolutDigitState extends State<_RevolutDigit>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _t;
+  late final Animation<double> _appear;
+
+  @override
+  void initState() {
+    super.initState();
+    _t = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _appear = CurvedAnimation(parent: _t, curve: Curves.easeOutCubic);
+    if (widget.exiting) {
+      _t.value = 1;
+      _runExit();
+    } else if (widget.enter) {
+      _t.forward();
+    } else {
+      _t.value = 1;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _RevolutDigit oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.exiting && !oldWidget.exiting) {
+      _runExit();
+    } else if (widget.enter && !oldWidget.enter && !widget.exiting) {
+      // Grouping side-change (insert or delete) — pulse only this digit.
+      _t.forward(from: 0);
+    }
+  }
+
+  void _runExit() {
+    _t.reverse().whenComplete(() {
+      if (mounted) widget.onExitComplete?.call();
+    });
+  }
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _appear,
+      builder: (context, child) {
+        final t = _appear.value;
+        final scale = 0.72 + 0.28 * t;
+        Widget glyph = Transform.scale(
+          scale: scale,
+          alignment: Alignment.center,
+          filterQuality: FilterQuality.medium,
+          child: child,
+        );
+        // Width grow/shrink pushes neighbors (digits, `.`, `,`) smoothly.
+        if (widget.expandWidth || widget.exiting) {
+          glyph = ClipRect(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              widthFactor: t <= 0 ? 0.001 : t,
+              child: glyph,
+            ),
+          );
+        }
+        return glyph;
+      },
+      child: Text(widget.char, style: widget.style),
     );
   }
 }
@@ -1252,22 +1745,19 @@ class _AmountHeroState extends State<_AmountHero>
             duration: digitDuration,
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            layoutBuilder: (current, previous) {
-              return Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  ...previous,
-                  if (current != null) current,
-                ],
-              );
-            },
+            layoutBuilder: (current, _) =>
+                current ?? const SizedBox.shrink(),
             transitionBuilder: (child, animation) {
               final fade = CurvedAnimation(
                 parent: animation,
-                curve: Curves.easeInCubic,
-                reverseCurve: Curves.easeOutCubic,
+                curve: Curves.easeOutCubic,
               );
-              final scale = Tween<double>(begin: 0.75, end: 1).animate(fade);
+                  final scale = Tween<double>(begin: 0.80, end: 1).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.elasticOut,
+                    ),
+                  );
               return FadeTransition(
                 opacity: fade,
                 child: ScaleTransition(scale: scale, child: child),

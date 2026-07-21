@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
@@ -90,12 +91,13 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     _openT = CurvedAnimation(
       parent: _openCtrl,
       curve: Curves.easeOutQuart,
-      reverseCurve: Curves.easeInCubic,
+      // Curve-out on dismiss so copy settles away (no ease-in snap at end).
+      reverseCurve: Curves.easeOutCubic,
     );
     _swapT = CurvedAnimation(
       parent: _swapCtrl,
       curve: Curves.easeOutQuart,
-      reverseCurve: Curves.easeInCubic,
+      reverseCurve: Curves.easeOutCubic,
     );
 
     void onAnimTick() {
@@ -185,7 +187,10 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
   void _applyBodyShift({required bool open}) {
     final playback = ref.read(homeStagePlaybackProvider.notifier);
     if (!open) {
-      playback.clear();
+      playback.close(
+        durationMs: _openMs,
+        curve: HomeStageCurveToken.easeOutCubic,
+      );
       return;
     }
     final scene = _displayScene;
@@ -372,7 +377,10 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     _lifecycleTimer?.cancel();
 
     if (scene.lifecycle.restoreOnComplete) {
-      ref.read(homeStagePlaybackProvider.notifier).clear();
+      ref.read(homeStagePlaybackProvider.notifier).close(
+            durationMs: _openMs,
+            curve: HomeStageCurveToken.easeOutCubic,
+          );
     }
 
     if (stage.isActive &&
@@ -720,10 +728,7 @@ class _HeaderChrome extends ConsumerWidget {
           icon: KeroseneIcons.settings,
           onTap: () {
             HapticFeedback.selectionClick();
-            AppPrimaryNavigationBar.navigateTo(
-              context,
-              AppPrimaryDestination.settings,
-            );
+            context.push('/settings');
           },
         ),
       ],

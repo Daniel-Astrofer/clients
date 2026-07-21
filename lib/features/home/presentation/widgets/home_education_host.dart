@@ -300,7 +300,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
       if (_seenCreditIds.contains(tx.id)) continue;
       _seenCreditIds.add(tx.id);
 
-      final payload = payloadFromTransaction(tx);
+      final payload = payloadFromTransaction(tx, read: ref.read);
       if (payload == null) continue;
 
       presentIncomingTheater(

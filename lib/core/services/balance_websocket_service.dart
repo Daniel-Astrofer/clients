@@ -41,17 +41,20 @@ class BalanceWebSocketReconnectPolicy {
   }
 }
 
+typedef BalanceAuthTokenResolver = Future<String?> Function();
+
 /// Serviço para WebSocket de atualizações de saldo em tempo real
 class BalanceWebSocketService {
   StompClient? _stompClient;
   final String baseUrl;
   final String userId;
-  final String? authToken;
+  String? _authToken;
   final String? deviceHash;
   final Function(BalanceUpdate) onBalanceUpdate;
   final Function(RealtimeNotificationEvent)? onNotification;
   final Function(Map<String, dynamic> event)? onHomeUiEvent;
   final VoidCallback? onSessionInvalidated;
+  final BalanceAuthTokenResolver? resolveAuthToken;
   final BalanceWebSocketReconnectPolicy _reconnectPolicy;
   final BalanceStompClientFactory _stompClientFactory;
   Timer? _reconnectTimer;
@@ -59,6 +62,9 @@ class BalanceWebSocketService {
   bool _manualDisconnect = false;
   bool _sessionInvalidated = false;
   bool _reconnectExhausted = false;
+  bool _connectInFlight = false;
+  bool _ignoreCloseEvents = false;
+  bool _closeHandling = false;
 
   /// Prefer raw STOMP (`/ws/raw-balance`) on IO; SockJS as fallback.
   bool _preferRawWebSocket = !kIsWeb;
@@ -70,20 +76,30 @@ class BalanceWebSocketService {
   BalanceWebSocketService({
     required this.baseUrl,
     required this.userId,
-    this.authToken,
+    String? authToken,
     this.deviceHash,
     required this.onBalanceUpdate,
     this.onNotification,
     this.onHomeUiEvent,
     this.onSessionInvalidated,
+    this.resolveAuthToken,
     BalanceWebSocketReconnectPolicy? reconnectPolicy,
     BalanceStompClientFactory? stompClientFactory,
-  })  : _reconnectPolicy = reconnectPolicy ?? BalanceWebSocketReconnectPolicy(),
+  })  : _authToken = authToken,
+        _reconnectPolicy = reconnectPolicy ?? BalanceWebSocketReconnectPolicy(),
         _stompClientFactory =
             stompClientFactory ?? ((config) => StompClient(config: config));
 
   bool get isConnected => _isConnected;
   bool get stoppedReconnecting => _sessionInvalidated || _reconnectExhausted;
+
+  /// Last known access token (may be refreshed via [resolveAuthToken]).
+  String? get authToken => _authToken;
+
+  /// Replace the JWT used on the next handshake (e.g. after silent refresh).
+  void updateAuthToken(String? token) {
+    _authToken = normalizeAuthToken(token);
+  }
 
   void addConnectionListener(void Function(bool connected) listener) {
     _connectionListeners.add(listener);
@@ -145,98 +161,138 @@ class BalanceWebSocketService {
     await _connectOnce();
   }
 
+  /// Rearm after background / exhausted backoff. Safe to call on every resume.
+  Future<void> ensureConnected({bool force = false}) async {
+    if (_sessionInvalidated || _manualDisconnect) {
+      return;
+    }
+    if (!force && _isConnected && (_stompClient?.isActive ?? false)) {
+      return;
+    }
+    if (!force && _connectInFlight) {
+      return;
+    }
+    if (!force && (_reconnectTimer?.isActive ?? false) && !_reconnectExhausted) {
+      return;
+    }
+
+    _manualDisconnect = false;
+    _reconnectExhausted = false;
+    _reconnectPolicy.reset();
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _triedSockJsFallback = false;
+    _preferRawWebSocket = !kIsWeb;
+
+    if (force || _stompClient != null) {
+      _closeCurrentClient();
+    }
+    await _connectOnce();
+  }
+
   Future<void> _connectOnce() async {
-    if (_manualDisconnect || _sessionInvalidated) {
+    if (_manualDisconnect || _sessionInvalidated || _connectInFlight) {
       return;
     }
 
-    final token = _normalizedAuthToken;
-    if (token == null) {
-      _stopForInvalidSession('session credential missing');
-      return;
-    }
-
-    final useRaw = _preferRawWebSocket;
-    final fullUrl = resolveConnectUrl(baseUrl, useRaw: useRaw);
-
-    if (kDebugMode) {
-      debugPrint(
-        'BalanceWebSocketService: connecting '
-        '(${useRaw ? "raw" : "sockjs"}) → $fullUrl',
-      );
-    }
-
-    final headers = <String, String>{
-      'Authorization': 'Bearer $token',
-      if (deviceHash != null) 'X-Device-Hash': deviceHash!,
-    };
-
-    final config = useRaw
-        ? StompConfig(
-            url: fullUrl,
-            onConnect: _onConnect,
-            onWebSocketError: _handleWebSocketError,
-            onStompError: _handleStompError,
-            onDisconnect: (_) {
-              if (kDebugMode) {
-                debugPrint('BalanceWebSocketService: disconnected.');
-              }
-              _handleConnectionClosed('stomp disconnect');
-            },
-            beforeConnect: () async {
-              if (kDebugMode) {
-                debugPrint('BalanceWebSocketService: starting handshake.');
-              }
-            },
-            onWebSocketDone: () {
-              if (kDebugMode) {
-                debugPrint('BalanceWebSocketService: socket closed.');
-              }
-              _handleConnectionClosed('socket closed');
-            },
-            webSocketConnectHeaders: headers,
-            stompConnectHeaders: {
-              'Authorization': 'Bearer $token',
-            },
-            reconnectDelay: Duration.zero,
-            connectionTimeout: const Duration(seconds: 12),
-            heartbeatIncoming: const Duration(seconds: 10),
-            heartbeatOutgoing: const Duration(seconds: 10),
-          )
-        : StompConfig.sockJS(
-            url: fullUrl,
-            onConnect: _onConnect,
-            onWebSocketError: _handleWebSocketError,
-            onStompError: _handleStompError,
-            onDisconnect: (_) {
-              if (kDebugMode) {
-                debugPrint('BalanceWebSocketService: disconnected.');
-              }
-              _handleConnectionClosed('stomp disconnect');
-            },
-            beforeConnect: () async {
-              if (kDebugMode) {
-                debugPrint('BalanceWebSocketService: starting handshake.');
-              }
-            },
-            onWebSocketDone: () {
-              if (kDebugMode) {
-                debugPrint('BalanceWebSocketService: socket closed.');
-              }
-              _handleConnectionClosed('socket closed');
-            },
-            webSocketConnectHeaders: headers,
-            stompConnectHeaders: {
-              'Authorization': 'Bearer $token',
-            },
-            reconnectDelay: Duration.zero,
-            connectionTimeout: const Duration(seconds: 12),
-            heartbeatIncoming: const Duration(seconds: 10),
-            heartbeatOutgoing: const Duration(seconds: 10),
+    _connectInFlight = true;
+    try {
+      final token = await _currentAuthToken();
+      if (token == null) {
+        // Soft fail: missing/transient storage must not log the user out.
+        // Resume / credential bump will call [ensureConnected] again.
+        if (kDebugMode) {
+          debugPrint(
+            'BalanceWebSocketService: credential unavailable — deferring connect.',
           );
+        }
+        return;
+      }
 
-    _stompClient = _stompClientFactory(config);
-    _stompClient?.activate();
+      final useRaw = _preferRawWebSocket;
+      final fullUrl = resolveConnectUrl(baseUrl, useRaw: useRaw);
+
+      if (kDebugMode) {
+        debugPrint(
+          'BalanceWebSocketService: connecting '
+          '(${useRaw ? "raw" : "sockjs"}) → $fullUrl',
+        );
+      }
+
+      final headers = <String, String>{
+        'Authorization': 'Bearer $token',
+        if (deviceHash != null) 'X-Device-Hash': deviceHash!,
+      };
+
+      final config = useRaw
+          ? StompConfig(
+              url: fullUrl,
+              onConnect: _onConnect,
+              onWebSocketError: _handleWebSocketError,
+              onStompError: _handleStompError,
+              onDisconnect: (_) {
+                if (kDebugMode) {
+                  debugPrint('BalanceWebSocketService: disconnected.');
+                }
+                _handleConnectionClosed('stomp disconnect');
+              },
+              beforeConnect: () async {
+                if (kDebugMode) {
+                  debugPrint('BalanceWebSocketService: starting handshake.');
+                }
+              },
+              onWebSocketDone: () {
+                if (kDebugMode) {
+                  debugPrint('BalanceWebSocketService: socket closed.');
+                }
+                _handleConnectionClosed('socket closed');
+              },
+              webSocketConnectHeaders: headers,
+              stompConnectHeaders: {
+                'Authorization': 'Bearer $token',
+              },
+              reconnectDelay: Duration.zero,
+              connectionTimeout: const Duration(seconds: 12),
+              heartbeatIncoming: const Duration(seconds: 10),
+              heartbeatOutgoing: const Duration(seconds: 10),
+            )
+          : StompConfig.sockJS(
+              url: fullUrl,
+              onConnect: _onConnect,
+              onWebSocketError: _handleWebSocketError,
+              onStompError: _handleStompError,
+              onDisconnect: (_) {
+                if (kDebugMode) {
+                  debugPrint('BalanceWebSocketService: disconnected.');
+                }
+                _handleConnectionClosed('stomp disconnect');
+              },
+              beforeConnect: () async {
+                if (kDebugMode) {
+                  debugPrint('BalanceWebSocketService: starting handshake.');
+                }
+              },
+              onWebSocketDone: () {
+                if (kDebugMode) {
+                  debugPrint('BalanceWebSocketService: socket closed.');
+                }
+                _handleConnectionClosed('socket closed');
+              },
+              webSocketConnectHeaders: headers,
+              stompConnectHeaders: {
+                'Authorization': 'Bearer $token',
+              },
+              reconnectDelay: Duration.zero,
+              connectionTimeout: const Duration(seconds: 12),
+              heartbeatIncoming: const Duration(seconds: 10),
+              heartbeatOutgoing: const Duration(seconds: 10),
+            );
+
+      _stompClient = _stompClientFactory(config);
+      _stompClient?.activate();
+    } finally {
+      _connectInFlight = false;
+    }
   }
 
   /// Callback quando conectado ao WebSocket
@@ -335,6 +391,7 @@ class BalanceWebSocketService {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _reconnectPolicy.reset();
+    _connectInFlight = false;
 
     if (_stompClient == null) {
       if (_isConnected) {
@@ -347,8 +404,7 @@ class BalanceWebSocketService {
     if (kDebugMode) {
       debugPrint('BalanceWebSocketService: disconnecting.');
     }
-    _stompClient?.deactivate();
-    _stompClient = null;
+    _closeCurrentClient();
     if (_isConnected) {
       _isConnected = false;
       _notifyConnectionListeners();
@@ -356,6 +412,9 @@ class BalanceWebSocketService {
   }
 
   void _handleWebSocketError(dynamic error) {
+    if (_ignoreCloseEvents || _manualDisconnect || _sessionInvalidated) {
+      return;
+    }
     if (kDebugMode) {
       debugPrint('BalanceWebSocketService: socket error.');
     }
@@ -372,6 +431,9 @@ class BalanceWebSocketService {
   }
 
   void _handleStompError(StompFrame frame) {
+    if (_ignoreCloseEvents || _manualDisconnect || _sessionInvalidated) {
+      return;
+    }
     if (kDebugMode) {
       debugPrint('BalanceWebSocketService: protocol error.');
     }
@@ -390,27 +452,39 @@ class BalanceWebSocketService {
   }
 
   void _handleConnectionClosed(String reason) {
-    final wasConnected = _isConnected;
-    _isConnected = false;
-    if (wasConnected) {
-      _notifyConnectionListeners();
-    }
-    // One-shot fallback: if raw WS fails on this network, try SockJS once.
-    if (_preferRawWebSocket && !_triedSockJsFallback) {
-      _triedSockJsFallback = true;
-      _preferRawWebSocket = false;
-      if (kDebugMode) {
-        debugPrint(
-          'BalanceWebSocketService: raw WS failed ($reason) — falling back to SockJS.',
-        );
-      }
-      _closeCurrentClient();
-      if (!_manualDisconnect && !_sessionInvalidated) {
-        unawaited(_connectOnce());
-      }
+    if (_ignoreCloseEvents || _manualDisconnect || _sessionInvalidated) {
       return;
     }
-    _scheduleReconnect(reason);
+    // onDisconnect + onWebSocketDone often fire together — handle once.
+    if (_closeHandling) {
+      return;
+    }
+    _closeHandling = true;
+    try {
+      final wasConnected = _isConnected;
+      _isConnected = false;
+      if (wasConnected) {
+        _notifyConnectionListeners();
+      }
+      // One-shot fallback: if raw WS fails on this network, try SockJS once.
+      if (_preferRawWebSocket && !_triedSockJsFallback) {
+        _triedSockJsFallback = true;
+        _preferRawWebSocket = false;
+        if (kDebugMode) {
+          debugPrint(
+            'BalanceWebSocketService: raw WS failed ($reason) — falling back to SockJS.',
+          );
+        }
+        _closeCurrentClient();
+        if (!_manualDisconnect && !_sessionInvalidated) {
+          unawaited(_connectOnce());
+        }
+        return;
+      }
+      _scheduleReconnect(reason);
+    } finally {
+      _closeHandling = false;
+    }
   }
 
   void _scheduleReconnect(String reason) {
@@ -421,12 +495,6 @@ class BalanceWebSocketService {
       return;
     }
 
-    final token = _normalizedAuthToken;
-    if (token == null) {
-      _stopForInvalidSession('session credential missing');
-      return;
-    }
-
     final delay = _reconnectPolicy.nextDelay();
     if (delay == null) {
       _reconnectExhausted = true;
@@ -434,7 +502,7 @@ class BalanceWebSocketService {
       if (kDebugMode) {
         debugPrint(
           'BalanceWebSocketService: max reconnect attempts reached after '
-          '$reason. Stopping.',
+          '$reason. Stopping until ensureConnected/rearm.',
         );
       }
       return;
@@ -481,15 +549,58 @@ class BalanceWebSocketService {
   void _closeCurrentClient() {
     final client = _stompClient;
     _stompClient = null;
-    client?.deactivate();
+    if (client == null) {
+      return;
+    }
+    _ignoreCloseEvents = true;
+    try {
+      client.deactivate();
+    } catch (_) {
+      // Client may already be torn down by the peer.
+    } finally {
+      scheduleMicrotask(() {
+        _ignoreCloseEvents = false;
+      });
+    }
   }
 
-  String? get _normalizedAuthToken {
-    final token = authToken?.trim();
-    if (token == null || token.isEmpty) {
+  Future<String?> _currentAuthToken() async {
+    final resolver = resolveAuthToken;
+    if (resolver != null) {
+      try {
+        final fresh = normalizeAuthToken(await resolver());
+        if (fresh != null) {
+          _authToken = fresh;
+          return fresh;
+        }
+      } catch (_) {
+        // Transient secure-storage failure — fall through to cached token.
+      }
+    }
+    return _normalizedAuthToken;
+  }
+
+  String? get _normalizedAuthToken => normalizeAuthToken(_authToken);
+
+  @visibleForTesting
+  static String? normalizeAuthToken(String? token) {
+    if (token == null) {
       return null;
     }
-    return token;
+    var normalized = token.trim();
+    if (normalized.startsWith('"') && normalized.endsWith('"')) {
+      normalized = normalized.substring(1, normalized.length - 1).trim();
+    }
+    if (normalized.startsWith('Bearer ')) {
+      normalized = normalized.substring(7).trim();
+    }
+    if (normalized.contains('eyJ')) {
+      normalized = normalized.substring(normalized.indexOf('eyJ'));
+    }
+    if (normalized.isEmpty || normalized.length < 10) {
+      return null;
+    }
+    return normalized;
   }
 
   @visibleForTesting

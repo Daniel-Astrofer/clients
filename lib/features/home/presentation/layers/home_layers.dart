@@ -30,14 +30,37 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 // one layer must NOT rebuild siblings. HomeScreen itself watches almost nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Debug-only A/B chip for aurora renderer. Glow itself lives in the
-/// scrollable header so it moves with the balance.
+/// Viewport-pinned aurora behind the scroll body + debug A/B chip.
+///
+/// Lives outside the [CustomScrollView] so pull-to-refresh never exposes the
+/// black scaffold above the header. The header itself stays transparent and
+/// does not host a second aurora (that caused vibration when chasing overscroll).
 class HomeAuroraLayer extends StatelessWidget {
   const HomeAuroraLayer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const HomeAuroraRendererDebugToggle();
+    final screenH = MediaQuery.sizeOf(context).height;
+    // Covers status bar + balance theater; feed veil fades into OLED black.
+    final bandHeight = (screenH * 0.62).clamp(280.0, 720.0);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: bandHeight,
+          child: const IgnorePointer(
+            child: RepaintBoundary(
+              child: HomeAuroraBackground(),
+            ),
+          ),
+        ),
+        const HomeAuroraRendererDebugToggle(),
+      ],
+    );
   }
 }
 
@@ -131,15 +154,20 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             final currentOverscroll = ref.read(homeOverscrollProvider);
             final now = DateTime.now().millisecondsSinceEpoch;
             final delta = (currentOverscroll - overscroll).abs();
+            // Responsive enough for shader pull bloom; coarse enough to avoid
+            // provider thrash (aurora layout is viewport-pinned, not rebuilt here).
             final shouldPublish = n is ScrollEndNotification ||
-                delta > 1.2 ||
-                (now - _lastOverscrollPublishMs) > 16;
+                delta > 4.0 ||
+                (now - _lastOverscrollPublishMs) > 32;
             if (shouldPublish &&
-                (delta > 0.5 || (overscroll == 0 && currentOverscroll != 0))) {
+                (delta > 2.0 || (overscroll == 0 && currentOverscroll != 0))) {
               _lastOverscrollPublishMs = now;
+              final quantized = overscroll <= 1
+                  ? 0.0
+                  : (overscroll / 3.0).round() * 3.0;
               Future.microtask(() {
                 if (mounted) {
-                  ref.read(homeOverscrollProvider.notifier).state = overscroll;
+                  ref.read(homeOverscrollProvider.notifier).state = quantized;
                 }
               });
             }

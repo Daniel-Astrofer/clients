@@ -1,5 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'home_screen_dependencies.dart';
@@ -232,69 +233,185 @@ class HomeBalanceActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final borderRadius = BorderRadius.circular(homeSize(16));
-    final content = Container(
-      constraints: BoxConstraints(minHeight: homeSize(52)),
-      padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
-      decoration: BoxDecoration(
-        color: primary ? Colors.white : Colors.white.withValues(alpha: 0.04),
-        borderRadius: borderRadius,
-        border: Border.all(
-          color: primary
-              ? Colors.transparent
-              : Colors.white.withValues(alpha: 0.08),
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: homeSize(20),
-            color: primary ? Colors.black : Colors.white,
-          ),
-          SizedBox(width: homeSize(8)),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: primary ? Colors.black : Colors.white,
-                fontSize: homeFontSize(15),
-                fontWeight: FontWeight.w400,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final labelStyle = theme.textTheme.labelLarge?.copyWith(
+      color: Colors.white,
+      fontSize: homeFontSize(15),
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0,
     );
 
-    // Local soft glow via radial gradients only — no ImageFiltered/BackdropFilter
-    // (both allocate offscreen layers / saveLayer on the raster thread).
-    final panel = primary
-        ? content
-        : Stack(
-            fit: StackFit.passthrough,
-            children: [
-              const Positioned.fill(
-                child: CustomPaint(painter: _ActionGlassGlowPainter()),
+    final Widget panel;
+    if (primary) {
+      // Receber: solid white chrome with live glyph cutouts — text/icon expose
+      // exactly whatever is scrolling behind the button (aurora / stage glow).
+      panel = ClipRRect(
+        borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          height: homeSize(52),
+          width: double.infinity,
+          child: CustomPaint(
+            painter: _ReceiveLiveGlassCutoutPainter(
+              icon: icon,
+              label: label,
+              iconSize: homeSize(20),
+              gap: homeSize(8),
+              fontSize: homeFontSize(15),
+              fontWeight: FontWeight.w600,
+              fontFamily: labelStyle?.fontFamily,
+              fontFamilyFallback: labelStyle?.fontFamilyFallback,
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+    } else {
+      final content = Container(
+        constraints: BoxConstraints(minHeight: homeSize(52)),
+        padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: homeSize(20), color: Colors.white),
+            SizedBox(width: homeSize(8)),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
               ),
-              content,
-            ],
-          );
+            ),
+          ],
+        ),
+      );
+      panel = ClipRRect(
+        borderRadius: borderRadius,
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            const Positioned.fill(
+              child: CustomPaint(painter: _ActionGlassGlowPainter()),
+            ),
+            content,
+          ],
+        ),
+      );
+    }
 
     return BouncingButtonWrapper(
       onTap: onTap,
-      child: RepaintBoundary(
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          clipBehavior: Clip.hardEdge,
-          child: panel,
+      child: RepaintBoundary(child: panel),
+    );
+  }
+}
+
+/// White button fill with punched-through glyphs.
+///
+/// Transparent letterforms composite over the home stack, so aurora / stage
+/// glow scrolling behind is visible live through the text and icon — not a
+/// baked ShaderMask gradient.
+class _ReceiveLiveGlassCutoutPainter extends CustomPainter {
+  final IconData icon;
+  final String label;
+  final double iconSize;
+  final double gap;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final String? fontFamily;
+  final List<String>? fontFamilyFallback;
+
+  const _ReceiveLiveGlassCutoutPainter({
+    required this.icon,
+    required this.label,
+    required this.iconSize,
+    required this.gap,
+    required this.fontSize,
+    required this.fontWeight,
+    required this.fontFamily,
+    required this.fontFamilyFallback,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    canvas.saveLayer(bounds, Paint());
+
+    canvas.drawRect(bounds, Paint()..color = const Color(0xFFFFFFFF));
+
+    // Punch opaque glyphs out of the white fill → live backdrop shows through.
+    canvas.saveLayer(bounds, Paint()..blendMode = BlendMode.dstOut);
+
+    final iconPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: iconSize,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: const Color(0xFF000000),
+          height: 1,
         ),
       ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+
+    final labelPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontFamily: fontFamily,
+          fontFamilyFallback: fontFamilyFallback,
+          color: const Color(0xFF000000),
+          height: 1.1,
+          letterSpacing: 0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: math.max(0.0, size.width - iconSize - gap - 32));
+
+    final totalWidth = iconPainter.width + gap + labelPainter.width;
+    final startX = (size.width - totalWidth) / 2;
+    iconPainter.paint(
+      canvas,
+      Offset(startX, (size.height - iconPainter.height) / 2),
     );
+    labelPainter.paint(
+      canvas,
+      Offset(
+        startX + iconPainter.width + gap,
+        (size.height - labelPainter.height) / 2,
+      ),
+    );
+
+    canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ReceiveLiveGlassCutoutPainter oldDelegate) {
+    return oldDelegate.icon != icon ||
+        oldDelegate.label != label ||
+        oldDelegate.iconSize != iconSize ||
+        oldDelegate.gap != gap ||
+        oldDelegate.fontSize != fontSize ||
+        oldDelegate.fontWeight != fontWeight ||
+        oldDelegate.fontFamily != fontFamily;
   }
 }
 

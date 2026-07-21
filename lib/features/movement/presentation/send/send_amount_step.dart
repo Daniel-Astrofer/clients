@@ -207,6 +207,26 @@ class _FeeTierBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return SendFeeTierBar(
+      selected: selected,
+      onSelected: onSelected,
+    );
+  }
+}
+
+/// Shared fee-speed chips (amount step + locked-amount confirmation).
+class SendFeeTierBar extends StatelessWidget {
+  final NetworkFeeTier selected;
+  final ValueChanged<NetworkFeeTier> onSelected;
+
+  const SendFeeTierBar({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final tokens = SendFlowTheme.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.spaceSm),

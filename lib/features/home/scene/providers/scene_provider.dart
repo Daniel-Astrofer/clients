@@ -42,10 +42,13 @@ class HomeSceneNotifier extends Notifier<HomeScene> {
       homeSurfaceProvider.select((s) => s.stage),
       (prev, next) {
         if (_override != null) {
-          // Drop override when a higher-priority remote stage arrives.
-          if (next.isActive &&
+          // Local receive/education owns the aurora over a pure-scene override.
+          if (next.isActive && next.id.startsWith('local-')) {
+            _override = null;
+          } else if (next.isActive &&
               !next.id.startsWith('local-') &&
               next.id != _override!.id) {
+            // Drop override when a higher-priority remote stage arrives.
             _override = null;
           } else if (!next.isActive && _override!.local && next.id.isEmpty) {
             // Stage cleared — keep override only if still local active.
@@ -84,10 +87,11 @@ class HomeSceneNotifier extends Notifier<HomeScene> {
     try {
       final view = ref.read(homeLedgerBalanceViewProvider);
       final accent = restingWashAccentFor(view);
+      final secondary = restingWashSecondaryFor(view);
       return resting.copyWith(
         background: SceneBackground.aurora(
           primary: accent,
-          secondary: resting.background.secondary,
+          secondary: secondary,
           intensity: resting.background.intensity,
         ),
       );

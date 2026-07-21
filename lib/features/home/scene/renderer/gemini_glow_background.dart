@@ -7,17 +7,18 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/shader_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    show homeLedgerBalanceViewProvider;
+    show HomeLedgerBalanceView, homeLedgerBalanceViewProvider;
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
 import 'package:kerosene/features/home/scene/models/home_scene.dart';
 import 'package:kerosene/features/home/scene/providers/aurora_interaction_provider.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
-/// GPU Gemini edge-glow — painted behind the balance header.
+/// GPU Gemini edge-glow — ambient aurora behind the home header.
 ///
-/// Lives inside the scrollable header stack so it shares the saldo's scroll
-/// offset (moves together, no viewport pinning). Colors / intensity / theater
-/// energy are continuously lerped so enter/exit never flick.
+/// Viewport-pinned via [HomeAuroraLayer] (not inside the scrollable header),
+/// so pull-to-refresh never shears a black scaffold bar above the content.
+/// Colors / intensity / theater energy are continuously lerped so enter/exit
+/// never flick.
 class SceneGeminiGlowBackground extends ConsumerStatefulWidget {
   const SceneGeminiGlowBackground({super.key});
 
@@ -107,38 +108,50 @@ class _SceneGeminiGlowBackgroundState
     final dt = ((elapsed - last).inMicroseconds / 1e6).clamp(0.0, 1 / 30);
     if (dt <= 0) return;
 
-    _seconds += dt;
+    // During pull, advance the aurora clock slower so waves don't thrash.
+    final timeScale = (1.0 - 0.40 * _pullVisual).clamp(0.55, 1.0);
+    _seconds += dt * timeScale;
 
-    // Smooth follow — slower on release so exit never flicks.
+    // Critically soft follow (dt-based) — kills frenetic vibration on bounce.
     final risingPull = _pullTarget > _pullVisual;
-    _pullVisual +=
-        (_pullTarget - _pullVisual) * (risingPull ? 0.34 : 0.12);
+    final pullK = risingPull ? 2.2 : 1.5; // 1/s — calmer than before
+    final pullAlpha = (1.0 - _expNeg(pullK * dt)).clamp(0.0, 1.0);
+    _pullVisual += (_pullTarget - _pullVisual) * pullAlpha;
 
     final risingTheater = _theaterTarget > _theater;
-    _theater +=
-        (_theaterTarget - _theater) * (risingTheater ? 0.16 : 0.09);
+    final theaterK = risingTheater ? 2.4 : 1.6;
+    final theaterAlpha = (1.0 - _expNeg(theaterK * dt)).clamp(0.0, 1.0);
+    _theater += (_theaterTarget - _theater) * theaterAlpha;
 
-    _intensity += (_intensityTarget - _intensity) * 0.10;
-    _primary = _lerpColor(_primary, _primaryTarget, 0.09);
-    _secondary = _lerpColor(_secondary, _secondaryTarget, 0.09);
+    _intensity += (_intensityTarget - _intensity) * (1.0 - _expNeg(1.8 * dt));
+    _primary = _lerpColor(_primary, _primaryTarget, 1.0 - _expNeg(1.6 * dt));
+    _secondary =
+        _lerpColor(_secondary, _secondaryTarget, 1.0 - _expNeg(1.6 * dt));
 
     // Soft exponential surge decay (enter bloom).
     if (_surge > 0.001) {
-      _surge *= mathExpDecay(dt, halfLife: 0.55);
+      _surge *= mathExpDecay(dt, halfLife: 0.7);
       if (_surge < 0.004) _surge = 0;
     }
 
-    if ((_pullTarget - _pullVisual).abs() < 0.002) {
+    if ((_pullTarget - _pullVisual).abs() < 0.004) {
       _pullVisual = _pullTarget;
     }
-    if ((_theaterTarget - _theater).abs() < 0.002) {
+    if ((_theaterTarget - _theater).abs() < 0.004) {
       _theater = _theaterTarget;
     }
-    if ((_intensityTarget - _intensity).abs() < 0.002) {
+    if ((_intensityTarget - _intensity).abs() < 0.004) {
       _intensity = _intensityTarget;
     }
 
     if (mounted) setState(() {});
+  }
+
+  double _expNeg(double x) {
+    // Fast approx for e^-x in the small-x regime used here.
+    final t = x.clamp(0.0, 8.0);
+    return 1.0 /
+        (1.0 + t + (t * t) / 2.0 + (t * t * t) / 6.0 + (t * t * t * t) / 24.0);
   }
 
   /// Approx. exp decay via half-life (seconds).
@@ -149,7 +162,10 @@ class _SceneGeminiGlowBackgroundState
 
   void _syncPull(double overscrollPx) {
     final raw = ((overscrollPx - _deadZonePx) / _fullBloomPx).clamp(0.0, 1.0);
-    _pullTarget = raw <= 0 ? 0.0 : Curves.easeOutCubic.transform(raw);
+    // Ease the target itself so bounce chatter never spikes the shader.
+    final eased = raw <= 0 ? 0.0 : Curves.easeOutCubic.transform(raw);
+    _pullTarget = _pullTarget + (eased - _pullTarget) * 0.35;
+    if (eased == 0 && _pullTarget < 0.02) _pullTarget = 0;
   }
 
   void _applySceneTargets(HomeScene scene) {
@@ -173,9 +189,15 @@ class _SceneGeminiGlowBackgroundState
         if (bg.primary == null || scene.id == 'resting' || scene.id == 'idle') {
           _primaryTarget = wash;
         }
-        _secondaryTarget = bg.secondary ??
-            (Color.lerp(_primaryTarget, const Color(0xFF9B7BFF), 0.4) ??
-                const Color(0xFF9B7BFF));
+        // Onchain: warm orange companion — never purple (reads pink on amber).
+        if (view == HomeLedgerBalanceView.onChain) {
+          _primaryTarget = wash;
+          _secondaryTarget = restingWashSecondaryFor(view);
+        } else {
+          _secondaryTarget = bg.secondary ??
+              (Color.lerp(_primaryTarget, const Color(0xFF9B7BFF), 0.4) ??
+                  const Color(0xFF9B7BFF));
+        }
       } catch (_) {
         _primaryTarget = bg.primary ?? const Color(0xFF4D7EFF);
         _secondaryTarget = bg.secondary ?? const Color(0xFF9B7BFF);

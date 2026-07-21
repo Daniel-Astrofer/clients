@@ -12,7 +12,6 @@ import 'package:socks5_proxy/socks_client.dart';
 import '../config/app_config.dart';
 import '../security/secure_storage_service.dart';
 import 'background_network_bridge.dart';
-import 'balance_websocket_service.dart';
 import 'native_notification_presenter.dart';
 import 'notification_service.dart';
 
@@ -169,9 +168,7 @@ void onStart(ServiceInstance service) async {
   }
 
   final seenNotificationIds = await BackgroundNetworkBridge.loadSeenIds();
-  final lastBalances = <String, double>{};
   Timer? pollTimer;
-  BalanceWebSocketService? wsService;
   // First successful poll only seeds IDs so we don't re-alert historical items.
   var seededNotificationHistory = seenNotificationIds.isNotEmpty;
 
@@ -268,53 +265,17 @@ void onStart(ServiceInstance service) async {
   });
   unawaited(pollNotifications());
 
-  // Clearnet or SOCKS-ready onion: also keep balance websocket for near-real-time.
+  // Main isolate owns the live STOMP socket. A second clearnet BalanceWebSocket
+  // here duplicated sessions and raced reconnect/auth. Background relies on
+  // REST poll above (same path onion already used).
   final routing = await BackgroundNetworkBridge.readRouting();
-  final canWs = !routing.isOnionApi || routing.shouldUseSocks;
-  if (canWs) {
-    // BalanceWebSocketService uses SockJS/stomp over baseUrl — onion still needs
-    // main-app Tor for full WS; only attach when not pure-onion without SOCKS.
-    if (!routing.isOnionApi) {
-      wsService = BalanceWebSocketService(
-        baseUrl: routing.apiBaseUrl,
-        userId: userId,
-        authToken: token,
-        onBalanceUpdate: (update) async {
-          lastBalances[update.walletName] = update.newBalance;
-        },
-        onNotification: (event) async {
-          final id = event.id;
-          if (id.isEmpty || seenNotificationIds.contains(id)) return;
-          rememberId(id);
-          final kind = event.kind;
-          if (!NativeNotificationPresenter.isNativeAlertKind(kind)) return;
-          final alertPrefs = await BackgroundNetworkBridge.readAlertPrefs();
-          if (!alertPrefs.allowsKind(kind)) return;
-          await NotificationService().showFromBackendEvent(
-            id: id,
-            kind: kind,
-            title: event.title,
-            body: event.body,
-            metadata: event.metadata,
-            deeplink: event.deeplink,
-            entityType: event.entityType,
-            entityId: event.entityId,
-            severity: event.severity,
-          );
-          unawaited(
-            BackgroundNetworkBridge.rememberSeenIds(seenNotificationIds),
-          );
-        },
-      );
-      unawaited(wsService.connect());
-    } else {
-      debugPrint(
-        'BackgroundService: onion mode — REST poll via SOCKS (no STOMP in isolate).',
-      );
-    }
-  } else {
+  if (routing.isOnionApi && !routing.shouldUseSocks) {
     debugPrint(
       'BackgroundService: waiting for main isolate to publish Tor SOCKS for onion API.',
+    );
+  } else {
+    debugPrint(
+      'BackgroundService: notification poll only (no isolate STOMP).',
     );
   }
 
@@ -338,7 +299,6 @@ void onStart(ServiceInstance service) async {
 
   service.on('stopService').listen((event) {
     pollTimer?.cancel();
-    wsService?.disconnect();
     service.stopSelf();
   });
 }

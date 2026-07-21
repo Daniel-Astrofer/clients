@@ -276,6 +276,11 @@ class TokenInterceptor extends QueuedInterceptor {
         cleanToken = cleanToken.substring(7).trim();
       }
       await localDataSource.saveToken(cleanToken);
+      try {
+        apiClient.ref
+            .read(sessionCredentialVersionProvider.notifier)
+            .bump();
+      } catch (_) {}
     }
 
     handler.next(response);

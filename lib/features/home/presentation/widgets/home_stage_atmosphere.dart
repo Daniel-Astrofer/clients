@@ -27,8 +27,20 @@ Color restingWashAccentFor(HomeLedgerBalanceView view) {
   return switch (view) {
     HomeLedgerBalanceView.total => const Color(0xFF7DD3FC),
     HomeLedgerBalanceView.platform => const Color(0xFF7DD3FC),
-    HomeLedgerBalanceView.onChain => homeAmberColor,
+    // Bitcoin orange (not amber/pink) — matches [homeBalanceAccentFor].
+    HomeLedgerBalanceView.onChain => const Color(0xFFFF9500),
     HomeLedgerBalanceView.cold => const Color(0xFF7DD3FC),
+  };
+}
+
+/// Companion wash hue (secondary aurora channel) per ledger page.
+Color restingWashSecondaryFor(HomeLedgerBalanceView view) {
+  return switch (view) {
+    HomeLedgerBalanceView.onChain => const Color(0xFFFF6A00),
+    HomeLedgerBalanceView.cold => const Color(0xFF38BDF8),
+    HomeLedgerBalanceView.total ||
+    HomeLedgerBalanceView.platform =>
+      const Color(0xFF9B7BFF),
   };
 }
 

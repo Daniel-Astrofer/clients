@@ -44,12 +44,13 @@ SceneBackground _backgroundFor(HomeStage stage) {
     final main = atmo.glows.first;
     primary = resolveStageColorToken(main.colorToken);
     // Feed aurora intensity only — no separate static glow layer.
-    intensity = main.intensity.clamp(0.32, 0.58);
+    // Theater receive/announcement needs headroom so BE/local intensity is visible.
+    intensity = main.intensity.clamp(0.32, 0.78);
     if (atmo.glows.length > 1) {
       secondary = resolveStageColorToken(atmo.glows[1].colorToken);
     } else {
       secondary =
-          Color.lerp(primary, const Color(0xFF9B7BFF), 0.45) ?? secondary;
+          Color.lerp(primary, const Color(0xFF9B7BFF), 0.35) ?? secondary;
     }
   } else {
     // Theater without explicit glows still brightens the living field a bit.
@@ -114,7 +115,22 @@ SceneContent _contentFor(HomeStage stage) {
           .map((b) => b.text.trim())
           .join(' ')
       : '';
-  final body = c.hasRichBlocks ? c.plainBodyFallback() : (c.body ?? '');
+  // Body excludes H1/H2 — those map to title/subtitle only.
+  final body = c.hasRichBlocks
+      ? c.blocks
+          .where(
+            (b) =>
+                b.hasVisibleText &&
+                b.role != TheaterBlockRole.h1 &&
+                b.role != TheaterBlockRole.h2,
+          )
+          .map((b) {
+            final lead = (b.emoji ?? '').trim();
+            final text = b.text.trim();
+            return lead.isEmpty ? text : '$lead $text';
+          })
+          .join('\n')
+      : (c.body ?? '');
 
   var textMode = switch (c.textMode) {
     HomeStageTextMode.typewriter => SceneTextMode.typewriter,
@@ -124,6 +140,7 @@ SceneContent _contentFor(HomeStage stage) {
   // Long single-line titles without body still marquee (legacy behavior).
   if (textMode == SceneTextMode.staticText &&
       body.trim().isEmpty &&
+      subtitle.trim().isEmpty &&
       c.title.runes.length >= 28) {
     textMode = SceneTextMode.marquee;
   }

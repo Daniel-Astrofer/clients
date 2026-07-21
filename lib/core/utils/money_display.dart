@@ -6,6 +6,9 @@ import '../providers/price_provider.dart';
 class MoneyDisplay {
   const MoneyDisplay._();
 
+  /// Hard cap for amount entry / calculator: 10 trillion (10 × 10¹²).
+  static const double maxEditableAmount = 10000000000000;
+
   /// Bound from [MaterialApp] when the user changes language so every
   /// [format] / [formatCompact] call picks number separators from the app
   /// locale even when the caller omits [appLocale].
@@ -285,7 +288,9 @@ class MoneyDisplay {
     }
 
     final updated = '$current$key';
-    return updated.length <= maxLength ? updated : current;
+    if (updated.length > maxLength) return current;
+    if (parseEditableInput(updated) > maxEditableAmount) return current;
+    return updated;
   }
 
   /// Normalize free-form system-keyboard input into keypad-style raw amount.
@@ -328,7 +333,28 @@ class MoneyDisplay {
     if (text.length > maxLength) {
       text = text.substring(0, maxLength);
     }
+
+    final value = parseEditableInput(text);
+    if (value > maxEditableAmount) {
+      return rawFromMaxEditableAmount(currency);
+    }
     return text;
+  }
+
+  /// Raw editable string for [maxEditableAmount] (no trailing zeros).
+  static String rawFromMaxEditableAmount(Currency currency) {
+    final decimals = decimalsFor(currency);
+    if (decimals <= 0) {
+      return maxEditableAmount.toStringAsFixed(0);
+    }
+    return maxEditableAmount.toStringAsFixed(0);
+  }
+
+  /// Clamp a numeric result into the editable amount range.
+  static double clampEditableAmount(double value) {
+    if (value.isNaN || value.isInfinite || value < 0) return 0;
+    if (value > maxEditableAmount) return maxEditableAmount;
+    return value;
   }
 
   static String formatAmountFromBtc({

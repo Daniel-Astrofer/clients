@@ -44,16 +44,24 @@ class HomeStagePlaybackNotifier extends Notifier<HomeStagePlayback> {
   }
 
   void clear() {
-    if (state.isPlaying || state.bodyOffsetPx > 0) {
-      state = HomeStagePlayback(
-        isPlaying: false,
-        actionsPlacement: HomeStageActionsPlacement.trailing,
-        bodyOffsetPx: 0,
-        bodyShiftDurationMs: state.bodyShiftDurationMs,
-        bodyShiftCurve: state.bodyShiftCurve,
-        stageId: '',
-      );
-    }
+    close();
+  }
+
+  /// Ease home body back into place (curve-out), never snap offset to zero.
+  void close({
+    int? durationMs,
+    HomeStageCurveToken curve = HomeStageCurveToken.easeOutCubic,
+  }) {
+    if (!state.isPlaying && state.bodyOffsetPx <= 0) return;
+    state = HomeStagePlayback(
+      isPlaying: false,
+      actionsPlacement: HomeStageActionsPlacement.trailing,
+      bodyOffsetPx: 0,
+      bodyShiftDurationMs:
+          (durationMs ?? state.bodyShiftDurationMs).clamp(480, 1200),
+      bodyShiftCurve: curve,
+      stageId: '',
+    );
   }
 }
 

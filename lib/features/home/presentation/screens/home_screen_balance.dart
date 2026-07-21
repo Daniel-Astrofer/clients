@@ -5,10 +5,8 @@ import 'dart:math' as math;
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/providers/home_balance_ceremony_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
-import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_stage_playback_provider.dart';
-import 'package:kerosene/features/home/presentation/widgets/home_aurora_background.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_communication_stage.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
 
@@ -66,16 +64,11 @@ class HomeBalanceSection extends ConsumerStatefulWidget {
 
 class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
   final GlobalKey _notificationButtonKey = GlobalKey();
-  final GlobalKey _glowStackKey = GlobalKey();
   final GlobalKey _balanceHeroKey = GlobalKey();
   late final PageController _pageController;
   int _lastSyncedIndex = 0;
   bool _suppressRollForViewChange = false;
   bool _playSessionCeremony = false;
-
-  /// Y of balance mid-point inside the header stack (glow rests here).
-  double _glowMidY = 280;
-  bool _glowMeasureScheduled = false;
 
   // Snapshot quotes — never ref.watch live price streams here.
   double? _snapUsd;
@@ -148,31 +141,6 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
       _snapEur = eur;
       _snapBrl = brl;
       _snapChangePct = chg;
-    });
-  }
-
-  void _scheduleGlowMidMeasure() {
-    if (_glowMeasureScheduled) return;
-    _glowMeasureScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _glowMeasureScheduled = false;
-      if (!mounted) return;
-      final stackCtx = _glowStackKey.currentContext;
-      final heroCtx = _balanceHeroKey.currentContext;
-      if (stackCtx == null || heroCtx == null) return;
-      final stack = stackCtx.findRenderObject() as RenderBox?;
-      final hero = heroCtx.findRenderObject() as RenderBox?;
-      if (stack == null ||
-          hero == null ||
-          !stack.hasSize ||
-          !hero.hasSize) {
-        return;
-      }
-      final heroTop = hero.localToGlobal(Offset.zero, ancestor: stack).dy;
-      final mid = heroTop + hero.size.height * 0.5;
-      if ((mid - _glowMidY).abs() > 0.5) {
-        setState(() => _glowMidY = mid);
-      }
     });
   }
 
@@ -366,45 +334,40 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
 
     final hPad = widget.pageHorizontalPadding;
     final topPad = widget.pageTopPad;
-    _scheduleGlowMidMeasure();
 
-    // Fully transparent header+balance over the aurora — no gradient slabs.
-    return Stack(
-      key: _glowStackKey,
-      clipBehavior: Clip.none,
+    // Transparent header — ambient aurora is viewport-pinned in HomeAuroraLayer.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _HeaderGlowBand(midBalanceY: _glowMidY),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            HomeTheaterHeaderWash(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, homeSize(10)),
-                child: TickerMode(
-                  enabled: !ref.watch(homeScrollBusyProvider),
-                  child: HomeCommunicationStage(
-                    userName: widget.userName,
-                    notificationButtonKey: _notificationButtonKey,
-                  ),
-                ),
+        HomeTheaterHeaderWash(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, homeSize(10)),
+            child: TickerMode(
+              enabled: !ref.watch(homeScrollBusyProvider),
+              child: HomeCommunicationStage(
+                userName: widget.userName,
+                notificationButtonKey: _notificationButtonKey,
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(hPad, homeSize(8), hPad, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (bodyOffset > 0.5)
-                    AnimatedContainer(
-                      duration: bodyDuration,
-                      curve: bodyCurve,
-                      height: bodyOffset,
-                    ),
-                  // Lateral swipe between total / platform / onchain / cold.
-                  SizedBox(
-                    key: _balanceHeroKey,
-                    height: heroHeight,
-                    child: PageView.builder(
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(hPad, homeSize(8), hPad, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Always mounted so close (offset → 0) eases out instead of
+              // removing the spacer and snapping the balance hero up.
+              AnimatedContainer(
+                duration: bodyDuration,
+                curve: bodyCurve,
+                height: bodyOffset.clamp(0.0, 400.0),
+              ),
+              // Lateral swipe between total / platform / onchain / cold.
+              SizedBox(
+                key: _balanceHeroKey,
+                height: heroHeight,
+                child: PageView.builder(
                       controller: _pageController,
                       physics: const BouncingScrollPhysics(),
                       itemCount: tabs.length,
@@ -479,9 +442,7 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
               ),
             ),
           ],
-        ),
-      ],
-    );
+        );
   }
 
   static List<Wallet> _walletsForView(
@@ -535,39 +496,6 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
       if (wallet.isColdWallet || wallet.isObservedOnlyBalance) return sum;
       return sum + wallet.balance;
     });
-  }
-}
-
-/// Glow band: rests at mid-saldo; on pull expands into the overscroll gap and
-/// blooms through the upper screen. Watches only overscroll (cheap rebuilds).
-class _HeaderGlowBand extends ConsumerWidget {
-  final double midBalanceY;
-
-  const _HeaderGlowBand({required this.midBalanceY});
-
-  /// Pull bloom reach vs screen height (30% reduced so it stays above the
-  /// action-button floor).
-  static const _upperBloomFrac = 0.30 * 0.70; // was 0.30
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final overscroll = ref.watch(homeOverscrollProvider);
-    final pullT = ((overscroll - 6.0) / 130.0).clamp(0.0, 1.0);
-    final pullEase = pullT <= 0 ? 0.0 : Curves.easeOutCubic.transform(pullT);
-    final upperBloom =
-        pullEase * (MediaQuery.sizeOf(context).height * _upperBloomFrac);
-    // Cover the overscroll gap (top) + modest bloom; keep mid-saldo floor.
-    final height = (midBalanceY + overscroll + upperBloom).clamp(160.0, 820.0);
-
-    return Positioned(
-      // Extend into the pull gap above the header (needs scroll clipBehavior:
-      // Clip.none so the top bar / viewport doesn't shear the glow).
-      top: -overscroll,
-      left: 0,
-      right: 0,
-      height: height,
-      child: const RepaintBoundary(child: HomeAuroraBackground()),
-    );
   }
 }
 

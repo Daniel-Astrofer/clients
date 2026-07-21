@@ -50,8 +50,10 @@ class _BitcoinRefreshIndicatorState extends State<BitcoinRefreshIndicator>
   @override
   Widget build(BuildContext context) {
     return CupertinoSliverRefreshControl(
-      refreshTriggerPullDistance: 120.0,
-      refreshIndicatorExtent: 70.0,
+      // Longer throw + shorter indicator so the aurora can fill the gap
+      // without a black band under the status bar.
+      refreshTriggerPullDistance: 180.0,
+      refreshIndicatorExtent: 56.0,
       onRefresh: () async {
         _checkController.reset();
         await widget.onRefresh();
@@ -85,34 +87,37 @@ class _BitcoinRefreshIndicatorState extends State<BitcoinRefreshIndicator>
           if (_spinnerController.isAnimating) _spinnerController.stop();
         }
 
-        return SizedBox(
-          height: refreshIndicatorExtent,
-          child: Center(
-            child: Opacity(
-              opacity: opacity,
-              child: Transform.scale(
-                scale: scale,
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([
-                    _spinnerController,
-                    _checkController,
-                  ]),
-                  builder: (context, child) {
-                    final rotation =
-                        refreshState == RefreshIndicatorMode.refresh
-                            ? _spinnerController.value * 2 * pi
-                            : pullRotation;
+        return ColoredBox(
+          color: const Color(0x00000000),
+          child: SizedBox(
+            height: refreshIndicatorExtent,
+            child: Center(
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.scale(
+                  scale: scale,
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([
+                      _spinnerController,
+                      _checkController,
+                    ]),
+                    builder: (context, child) {
+                      final rotation =
+                          refreshState == RefreshIndicatorMode.refresh
+                              ? _spinnerController.value * 2 * pi
+                              : pullRotation;
 
-                    return CustomPaint(
-                      size: const Size(30, 30),
-                      painter: PullLoadingPainter(
-                        rotation: rotation,
-                        pullProgress: pullProgress,
-                        checkProgress: _checkAnim.value,
-                        isDone: refreshState == RefreshIndicatorMode.done,
-                      ),
-                    );
-                  },
+                      return CustomPaint(
+                        size: const Size(30, 30),
+                        painter: PullLoadingPainter(
+                          rotation: rotation,
+                          pullProgress: pullProgress,
+                          checkProgress: _checkAnim.value,
+                          isDone: refreshState == RefreshIndicatorMode.done,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),

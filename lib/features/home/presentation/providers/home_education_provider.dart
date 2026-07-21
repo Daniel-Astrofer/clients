@@ -300,17 +300,14 @@ HomeStage _incomingStage(HomeEducationEvent event, String lang) {
               : 'Interna');
 
   final title = switch (code) {
-    'en' => 'You received $amount',
-    'es' => 'Recibiste $amount',
-    _ => 'Você recebeu $amount',
+    'en' => 'Received',
+    'es' => 'Recibido',
+    _ => 'Recebido',
   };
-  final body = switch (code) {
-    'en' => 'Wallet "$wallet" · $network'
-        '${event.subtitle != null && event.subtitle!.isNotEmpty ? '\n${event.subtitle}' : ''}',
-    'es' => 'Cartera "$wallet" · $network'
-        '${event.subtitle != null && event.subtitle!.isNotEmpty ? '\n${event.subtitle}' : ''}',
-    _ => 'Carteira "$wallet" · $network'
-        '${event.subtitle != null && event.subtitle!.isNotEmpty ? '\n${event.subtitle}' : ''}',
+  final description = switch (code) {
+    'en' => 'Transfer received of $amount in wallet ($wallet)',
+    'es' => 'Transferencia recibida de $amount en la cartera ($wallet)',
+    _ => 'Transferência recebida de $amount na carteira ($wallet)',
   };
 
   final accent = switch (network.toLowerCase()) {
@@ -326,8 +323,14 @@ HomeStage _incomingStage(HomeEducationEvent event, String lang) {
     priority: 130, // higher than market so receive is visible
     content: HomeStageContent(
       title: title,
-      body: body,
-      textMode: HomeStageTextMode.typewriter,
+      // No body — description is H2 only (in-app theater, not shade copy).
+      textMode: HomeStageTextMode.staticText,
+      blocks: [
+        TheaterTextBlock(
+          role: TheaterBlockRole.h2,
+          text: description,
+        ),
+      ],
     ),
     layout: const HomeStageLayout(
       maxHeight: 180,

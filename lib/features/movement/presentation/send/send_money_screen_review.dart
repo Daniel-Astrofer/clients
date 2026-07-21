@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/presentation/send/send_amount_step.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_review_args.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -84,6 +86,11 @@ class InternalTransferReviewScreen<T> extends StatefulWidget {
   /// of `context.pop(result)`.
   final ValueChanged<T>? onCompleted;
 
+  /// Locked payment-request: speed / fee chips (amount is not editable).
+  final bool showFeeTierControls;
+  final NetworkFeeTier? feeTier;
+  final ValueChanged<NetworkFeeTier>? onFeeTierChanged;
+
   const InternalTransferReviewScreen({
     super.key,
     this.title = '',
@@ -104,6 +111,9 @@ class InternalTransferReviewScreen<T> extends StatefulWidget {
     this.receiptBuilder,
     this.onDismiss,
     this.onCompleted,
+    this.showFeeTierControls = false,
+    this.feeTier,
+    this.onFeeTierChanged,
   });
 
   @override
@@ -254,6 +264,39 @@ class InternalTransferReviewScreenState<T>
                                         card: widget.card,
                                         onBack: _isSubmitting ? null : _dismiss,
                                       ),
+                                      if (widget.showFeeTierControls &&
+                                          widget.feeTier != null &&
+                                          widget.onFeeTierChanged != null) ...[
+                                        const SizedBox(height: 20),
+                                        Text(
+                                          'Velocidade do envio',
+                                          textAlign: TextAlign.center,
+                                          style: AppTypography.inter(
+                                            color: _C.muted,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'O valor do pagamento está fixo. Você só pode ajustar a velocidade e as taxas.',
+                                          textAlign: TextAlign.center,
+                                          style: AppTypography.inter(
+                                            color: _C.muted.withValues(
+                                              alpha: 0.85,
+                                            ),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        SendFeeTierBar(
+                                          selected: widget.feeTier!,
+                                          onSelected: _isSubmitting
+                                              ? (_) {}
+                                              : widget.onFeeTierChanged!,
+                                        ),
+                                      ],
                                       if (widget.requiresFirstSendAck) ...[
                                         const SizedBox(height: 20),
                                         _FirstSendAckBlock(
