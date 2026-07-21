@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
+import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 class NotificationVisuals {
   final AppNotificationTone tone;

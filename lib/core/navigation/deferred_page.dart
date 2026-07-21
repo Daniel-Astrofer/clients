@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 typedef DeferredWidgetBuilder = Widget Function(BuildContext context);
 
@@ -29,11 +29,16 @@ class DeferredPage extends StatefulWidget {
   final DeferredWidgetBuilder builder;
   final Widget? loading;
 
+  /// When false, skip the library-ready fade/micro-slide (useful when the
+  /// route already has a full-bleed page transition).
+  final bool animateReveal;
+
   const DeferredPage({
     super.key,
     required this.loadLibrary,
     required this.builder,
     this.loading,
+    this.animateReveal = true,
   });
 
   @override
@@ -63,7 +68,8 @@ class _DeferredPageState extends State<DeferredPage> {
           child = widget.builder(context);
         }
 
-        if (KeroseneMotion.reduceMotion(context)) {
+        if (!widget.animateReveal ||
+            KeroseneMotion.reduceMotion(context)) {
           return child;
         }
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 
-import '../../../../core/theme/app_typography.dart';
-import '../../../../core/theme/monochrome_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 
 class PinEntryScaffold extends StatefulWidget {
   final String instruction;

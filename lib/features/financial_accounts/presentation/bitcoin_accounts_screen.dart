@@ -11,33 +11,33 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_public_material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/presentation/widgets/app_notice.dart';
-import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
-import 'package:kerosene/core/presentation/widgets/bitcoin_address_blocks.dart';
-import 'package:kerosene/core/presentation/widgets/tor_navigation_loading_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/features/presentation/widgets/bitcoin_address_blocks.dart';
+import 'package:kerosene/features/presentation/widgets/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/core/theme/monochrome_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/financial_surface_provider.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 import 'bitcoin_accounts_empty_layout.dart';
 import 'bitcoin_accounts_header.dart';
 import 'bitcoin_accounts_presentation_support.dart';
 import 'bitcoin_screens/wallet_setup_hub_screen.dart';
-import 'package:kerosene/features/movement/screens/send_money_screen.dart';
 
 import 'bitcoin_screens/cold_wallet_creation_screen.dart';
 import 'bitcoin_screens/internal_account_creation_screen.dart';
@@ -1250,15 +1250,8 @@ class ColdWalletBackendOptions extends ConsumerWidget {
             child: FilledButton.icon(
               onPressed: () {
                 HapticFeedback.selectionClick();
-                // Unified send wizard (PR6) — same flow as home send.
-                final walletId = coldWalletId.isNotEmpty
-                    ? coldWalletId
-                    : account.id.trim();
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => SendMoneyScreen(walletId: walletId),
-                  ),
-                );
+                // Unified send wizard — destination first; source wallet after.
+                context.go('/send-money');
               },
               icon: const Icon(KeroseneIcons.send, size: 18),
               label: Text(

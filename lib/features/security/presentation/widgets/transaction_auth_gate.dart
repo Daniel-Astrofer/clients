@@ -5,14 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:slip39/slip39.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/core/security/biometric_service.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/security/presentation/widgets/transaction_pin_authorization.dart';
 
 /// Distinguishes intentional user abort from hard failures at the auth gate.

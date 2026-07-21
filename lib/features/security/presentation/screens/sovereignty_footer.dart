@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 
 typedef SovereigntyFooterCopy = String Function(
     {required String pt, required String en, required String es});

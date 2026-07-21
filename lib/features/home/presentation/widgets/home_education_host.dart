@@ -13,7 +13,7 @@ import 'package:kerosene/features/home/presentation/providers/incoming_transfer_
 import 'package:kerosene/features/home/presentation/providers/theater_scheduler.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show HomeLedgerBalanceView, homeLedgerBalanceViewProvider;
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
 /// Injects education / receive copy into the **home theater** (Communication Stage).

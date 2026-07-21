@@ -1,16 +1,17 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/presentation/widgets/kerosene_logo.dart';
+import 'package:kerosene/features/presentation/widgets/kerosene_logo.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
+import 'package:kerosene/design_system/components/inputs/app_text_field.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/auth/domain/emergency_recovery_models.dart';
 import 'package:kerosene/features/auth/application/providers/emergency_recovery_service_provider.dart';
@@ -558,7 +559,7 @@ class _RecoveryTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return AppTextField(
       controller: controller,
       enabled: enabled,
       obscureText: obscureText,
@@ -567,12 +568,9 @@ class _RecoveryTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       textInputAction: textInputAction,
       onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 18),
-      ),
+      onFieldSubmitted: onSubmitted,
+      label: label,
+      prefixIcon: Icon(icon, size: 18),
     );
   }
 }
@@ -757,15 +755,12 @@ class _RecoveryActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 50,
-      child: FilledButton.icon(
-        onPressed: onPressed,
-        icon: loading
-            ? const CupertinoActivityIndicator(radius: 9)
-            : Icon(icon ?? KeroseneIcons.next, size: 18),
-        label: Text(label),
-      ),
+    return AppButton(
+      label: label,
+      onPressed: onPressed,
+      loading: loading,
+      expand: true,
+      icon: Icon(icon ?? KeroseneIcons.next, size: 18),
     );
   }
 }

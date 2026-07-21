@@ -1,4 +1,4 @@
-import 'package:kerosene/core/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 import 'package:flutter/material.dart';
 

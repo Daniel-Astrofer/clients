@@ -1,6 +1,6 @@
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_public_material.dart';
-import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
+import 'package:kerosene/features/movement/data/payment_security_guards.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/providers/home_stage_playback_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';

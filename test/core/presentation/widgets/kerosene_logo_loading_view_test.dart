@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/core/presentation/widgets/kerosene_logo_loading_view.dart';
+import 'package:kerosene/features/presentation/widgets/kerosene_logo_loading_view.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

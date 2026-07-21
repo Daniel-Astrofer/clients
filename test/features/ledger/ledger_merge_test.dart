@@ -3,7 +3,7 @@ import 'package:kerosene/features/ledger/domain/balance_display.dart';
 import 'package:kerosene/features/ledger/domain/ledger_merge.dart';
 import 'package:kerosene/features/ledger/domain/ledger_row.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 LedgerRow _row({
   required String id,

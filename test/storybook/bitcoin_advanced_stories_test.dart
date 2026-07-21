@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/cold_wallet_creation_screen.dart';
 import 'package:kerosene/storybook/stories/bitcoin_advanced_stories.dart';

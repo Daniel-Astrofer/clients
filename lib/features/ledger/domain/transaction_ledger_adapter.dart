@@ -1,4 +1,4 @@
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 import 'ledger_merge.dart';
 import 'ledger_row.dart';

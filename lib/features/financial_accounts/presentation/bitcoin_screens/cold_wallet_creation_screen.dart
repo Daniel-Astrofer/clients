@@ -6,7 +6,7 @@ import 'package:bip39/bip39.dart' as bip39;
 import 'package:kerosene/core/security/secure_screen_guard.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
-import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
+import 'package:kerosene/features/movement/data/payment_security_guards.dart';
 
 import '../bitcoin_accounts_dependencies.dart';
 import '../bitcoin_accounts_screen.dart';

@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:storybook_flutter/storybook_flutter.dart';
 import 'package:kerosene/features/auth/presentation/screens/login_screen.dart';
 import 'package:kerosene/features/auth/presentation/screens/emergency_recovery_screen.dart';
@@ -19,12 +19,12 @@ import 'package:kerosene/features/notifications/presentation/screens/notificatio
 import 'package:kerosene/features/security/presentation/screens/notification_settings_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/sovereignty_status_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart';
-import 'package:kerosene/features/movement/screens/movement_hub_screen.dart';
-import 'package:kerosene/features/movement/screens/movement_amount_screen.dart';
-import 'package:kerosene/features/movement/screens/receive_method.dart';
-import 'package:kerosene/features/movement/screens/receive_nfc_flow_screen.dart';
-import 'package:kerosene/features/movement/screens/receive_request_flow_screen.dart';
-import 'package:kerosene/features/movement/screens/send_money_screen.dart';
+import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_amount_screen.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_method.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_nfc_flow_screen.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_request_flow_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
 import 'package:kerosene/features/web/navigation/admin_content_router.dart';
 import 'package:kerosene/features/web/navigation/admin_routes.dart';
 import 'package:kerosene/features/web/screens/login/admin_login_screen.dart';
@@ -579,7 +579,6 @@ Map<String, WidgetBuilder> _routeBuilders() {
     '/account/notifications': (_) => const NotificationSettingsScreen(),
     '/security/sovereignty': (_) => const SovereigntyStatusScreen(),
     '/send-money': (_) => SendMoneyScreen(
-          walletId: primaryWallet.id,
           initialAddress: 'bc1qstorybookrecipient00000000000000000',
           initialAmountBtc: 0.0015,
         ),

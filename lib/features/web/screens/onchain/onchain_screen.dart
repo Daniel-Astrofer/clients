@@ -7,7 +7,7 @@ import '../../theme/admin_colors.dart';
 import '../../theme/admin_typography.dart';
 import '../../theme/admin_theme.dart';
 import '../../widgets/admin_widgets.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import '../../theme/admin_copy.dart';
 
 /// On-chain BTC operations module.

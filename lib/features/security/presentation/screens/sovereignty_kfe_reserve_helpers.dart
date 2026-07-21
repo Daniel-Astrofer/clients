@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/security/domain/entities/kfe_reserve_overview.dart';
 
 import 'sovereignty_kfe_reserve_overview_card.dart';

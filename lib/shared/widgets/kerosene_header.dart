@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
-import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 
 /// Glass-morphism top bar. Blur is policy-gated — solid surface is pixel-close
 /// on dark UI and avoids a permanent BackdropFilter saveLayer.

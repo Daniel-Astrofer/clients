@@ -10,7 +10,7 @@ import 'package:kerosene/core/services/tor_service.dart';
 import 'package:kerosene/features/auth/data/models/user_model.dart';
 import 'package:kerosene/features/auth/domain/entities/user.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:uuid/uuid.dart';
 
 import '../integration/totp_utils.dart';

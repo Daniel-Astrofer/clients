@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/widgets/movement_confirmation_surface.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_confirmation_surface.dart';
 
 void main() {
   testWidgets('renders configurable confirmation title amount and rows',

@@ -5,18 +5,18 @@ import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
-import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart'
     as transaction_providers;
 import 'package:kerosene/app/providers/kfe_receiving_capabilities_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     hide transactionRepositoryProvider;
-import 'package:kerosene/features/movement/screens/send_money_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 
 void main() {
   testWidgets('wallet selection step confirms send wallet by hold',
@@ -120,7 +120,7 @@ void main() {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SendMoneyScreen(walletId: _wallet().id),
+          home: const SendMoneyScreen(),
         ),
       ),
     );
@@ -165,7 +165,7 @@ void main() {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SendMoneyScreen(walletId: _wallet().id),
+          home: const SendMoneyScreen(),
         ),
       ),
     );
@@ -226,7 +226,7 @@ void main() {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SendMoneyScreen(walletId: _wallet().id),
+          home: const SendMoneyScreen(),
         ),
       ),
     );
@@ -290,7 +290,7 @@ void main() {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SendMoneyScreen(walletId: _wallet().id),
+          home: const SendMoneyScreen(),
         ),
       ),
     );
@@ -341,7 +341,7 @@ void main() {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SendMoneyScreen(walletId: _wallet().id),
+          home: const SendMoneyScreen(),
         ),
       ),
     );
@@ -381,7 +381,7 @@ void main() {
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SendMoneyScreen(walletId: _wallet().id),
+          home: const SendMoneyScreen(),
         ),
       ),
     );

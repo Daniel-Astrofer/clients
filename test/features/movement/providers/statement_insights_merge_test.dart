@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 
 void main() {

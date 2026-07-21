@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
-import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
 
 Transaction _tx({
   required String id,

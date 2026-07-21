@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/domain/entities/user.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/financial_accounts/data/bitcoin_accounts_service.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';

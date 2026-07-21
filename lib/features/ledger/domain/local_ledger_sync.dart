@@ -1,5 +1,5 @@
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 import 'transaction_ledger_adapter.dart';
 

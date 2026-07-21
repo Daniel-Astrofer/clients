@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/features/home/presentation/providers/incoming_transfer_theater.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 void main() {

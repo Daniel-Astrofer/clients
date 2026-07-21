@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 /// Balance amount with optional digit-roll (odometer) for **large value changes**.
 ///

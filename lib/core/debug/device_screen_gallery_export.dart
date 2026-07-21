@@ -19,7 +19,7 @@ import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/wallet_setup_hub_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
-import 'package:kerosene/features/movement/screens/movement_hub_screen.dart';
+import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart';
 import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 import 'package:kerosene/features/security/presentation/screens/notification_settings_screen.dart';

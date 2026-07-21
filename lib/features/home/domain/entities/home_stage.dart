@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/home/domain/entities/home_surface.dart'
     show
         HomeGreetingAnimation,

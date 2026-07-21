@@ -19,7 +19,7 @@ void main() {
         'Você recebeu \$displayAmount',
         '\${selectedCurrency.code} recebido',
       ],
-      'lib/features/movement/screens/send_payment_review_helpers.dart': [
+      'lib/features/movement/presentation/send/send_payment_review_helpers.dart': [
         'showSendSentTransactionNotification',
         'Transferência enviada',
         'Envio on-chain iniciado',

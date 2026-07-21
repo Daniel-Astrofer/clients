@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/performance/app_interaction_busy.dart';
 import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/shader_provider.dart';
 

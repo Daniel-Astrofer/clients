@@ -7,11 +7,11 @@ import 'package:kerosene/features/auth/domain/entities/user.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     show WalletNotifier, walletProvider;
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
-import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
-import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 void main() {
   const destinationWalletId = '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8';

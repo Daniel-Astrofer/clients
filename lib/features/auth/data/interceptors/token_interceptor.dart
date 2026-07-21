@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/session_invalidation_provider.dart';
+import '../../../../core/router/mobile_go_router.dart';
 import '../../../../core/utils/device_helper.dart';
 import '../../../../core/utils/snackbar_helper.dart';
 import '../../../../core/l10n/l10n_extension.dart';
@@ -328,18 +329,13 @@ class TokenInterceptor extends QueuedInterceptor {
           debugPrint(
             'TokenInterceptor: navigator unavailable; retrying next frame.',
           );
-          // Tentar novamente no próximo frame (pode acontecer durante splash)
           SchedulerBinding.instance.addPostFrameCallback((_) {
-            SnackbarHelper.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-              '/welcome',
-              (route) => false,
-            );
+            keroseneGo('/welcome');
           });
           return;
         }
 
-        // Remove toda a stack e vai para /welcome
-        navigator.pushNamedAndRemoveUntil('/welcome', (route) => false);
+        keroseneGo('/welcome');
 
         // Snackbar informativo após a navegação
         SchedulerBinding.instance.addPostFrameCallback((_) {

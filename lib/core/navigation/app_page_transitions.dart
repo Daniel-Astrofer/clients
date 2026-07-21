@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
 
 const Duration kKerosenePageTransitionDuration = KeroseneMotion.medium;
 const Duration kKerosenePageReverseTransitionDuration = KeroseneMotion.short;
+
+/// Shared with the in-flow send wizard (destination → wallet → amount → review).
+const Duration kKeroseneFlowNavDuration = Duration(milliseconds: 340);
+const Curve kKeroseneFlowNavCurve = Curves.easeInOutCubic;
 
 const PageTransitionsTheme kerosenePageTransitionsTheme = PageTransitionsTheme(
   builders: <TargetPlatform, PageTransitionsBuilder>{
@@ -134,5 +139,85 @@ Widget buildKeroseneRouteTransition({
     animation: animation,
     secondaryAnimation: secondaryAnimation,
     child: child,
+  );
+}
+
+/// Full-bleed horizontal push used by the send flow (and home → send).
+///
+/// No fade / scale — only a smooth right-to-left slide.
+Widget buildKeroseneFlowSlideTransition({
+  required Animation<double> animation,
+  required Widget child,
+}) {
+  return buildKeroseneFlowSlideTransitionFrom(
+    animation: animation,
+    begin: const Offset(1, 0),
+    child: child,
+  );
+}
+
+/// Same as [buildKeroseneFlowSlideTransition] but with a custom slide origin.
+Widget buildKeroseneFlowSlideTransitionFrom({
+  required Animation<double> animation,
+  required Offset begin,
+  required Widget child,
+}) {
+  final curved = CurvedAnimation(
+    parent: animation,
+    curve: kKeroseneFlowNavCurve,
+    reverseCurve: kKeroseneFlowNavCurve,
+  );
+  return SlideTransition(
+    position: Tween<Offset>(
+      begin: begin,
+      end: Offset.zero,
+    ).animate(curved),
+    child: child,
+  );
+}
+
+CustomTransitionPage<T> keroseneFlowSlidePage<T>({
+  required LocalKey key,
+  required Widget child,
+}) {
+  return keroseneFlowSlidePageFrom<T>(
+    key: key,
+    child: child,
+    begin: const Offset(1, 0),
+  );
+}
+
+/// Receive flow: screen enters from the left, sliding left-to-right.
+CustomTransitionPage<T> keroseneFlowSlideFromLeftPage<T>({
+  required LocalKey key,
+  required Widget child,
+}) {
+  return keroseneFlowSlidePageFrom<T>(
+    key: key,
+    child: child,
+    begin: const Offset(-1, 0),
+  );
+}
+
+CustomTransitionPage<T> keroseneFlowSlidePageFrom<T>({
+  required LocalKey key,
+  required Widget child,
+  required Offset begin,
+}) {
+  return CustomTransitionPage<T>(
+    key: key,
+    child: child,
+    transitionDuration: kKeroseneFlowNavDuration,
+    reverseTransitionDuration: kKeroseneFlowNavDuration,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      if (KeroseneMotion.reduceMotion(context)) {
+        return child;
+      }
+      return buildKeroseneFlowSlideTransitionFrom(
+        animation: animation,
+        begin: begin,
+        child: child,
+      );
+    },
   );
 }

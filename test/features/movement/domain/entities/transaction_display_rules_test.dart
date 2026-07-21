@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 void main() {
   group('Transaction display rules', () {
@@ -174,6 +174,72 @@ void main() {
       expect(tx.isOnChain, isTrue);
       expect(tx.amountSatoshis, 75000);
       expect(tx.amountBTC, 0.00075);
+    });
+
+    test('on-chain outbound recovers amount from totalDebitSats when gross is 0', () {
+      final tx = Transaction.fromJson({
+        'rail': 'ONCHAIN',
+        'direction': 'OUTBOUND',
+        'status': 'SETTLED',
+        'grossAmountSats': 0,
+        'receiverAmountSats': 0,
+        'networkFeeSats': 300,
+        'keroseneFeeSats': 100,
+        'totalDebitSats': 100400,
+        'confirmations': 2,
+        'blockchainTxid': 'deadbeef',
+        'createdAt': '2026-07-01T12:00:00Z',
+      });
+
+      expect(tx.isDebit, isTrue);
+      expect(tx.isOnChain, isTrue);
+      expect(tx.amountSatoshis, 100000);
+      expect(tx.confirmations, 2);
+      expect(tx.showsOnchainConfirmations, isTrue);
+    });
+
+    test('ignores zero fiat snapshots so display recomputes from sats', () {
+      final tx = Transaction.fromJson({
+        'rail': 'ONCHAIN',
+        'direction': 'INBOUND',
+        'status': 'SETTLED',
+        'grossAmountSats': 50000,
+        'displayAmountBrl': 0,
+        'displayAmountUsd': 0,
+        'confirmations': 3,
+        'blockchainTxid': 'abc',
+        'createdAt': '2026-07-01T12:00:00Z',
+      });
+
+      expect(tx.amountSatoshis, 50000);
+      expect(tx.displayAmountBrl, isNull);
+      expect(tx.displayAmountUsd, isNull);
+    });
+
+    test('lightning and internal never show on-chain confirmation UI', () {
+      final ln = Transaction.fromJson({
+        'rail': 'LIGHTNING',
+        'direction': 'INBOUND',
+        'status': 'SETTLED',
+        'grossAmountSats': 1000,
+        'confirmations': 6,
+        'createdAt': '2026-07-01T12:00:00Z',
+      });
+      final internal = Transaction.fromJson({
+        'rail': 'INTERNAL',
+        'direction': 'INTERNAL',
+        'status': 'SETTLED',
+        'grossAmountSats': 1000,
+        'confirmations': 6,
+        'walletId': 'a',
+        'destinationWalletId': 'a',
+        'createdAt': '2026-07-01T12:00:00Z',
+      });
+
+      expect(ln.showsOnchainConfirmations, isFalse);
+      expect(ln.confirmations, 0);
+      expect(internal.showsOnchainConfirmations, isFalse);
+      expect(internal.confirmations, 0);
     });
   });
 }

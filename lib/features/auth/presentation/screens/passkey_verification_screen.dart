@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/security/domain/entities/passkey_action_required.dart';
 

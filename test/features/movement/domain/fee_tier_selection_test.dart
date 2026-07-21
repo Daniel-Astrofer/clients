@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
-import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
-import 'package:kerosene/features/movement/screens/send_destination_models.dart';
+import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
+import 'package:kerosene/features/movement/data/fee_tier_selection.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 
 void main() {
   const fee = FeeEstimate(

@@ -1,11 +1,11 @@
-import '../../domain/entities/deposit.dart';
-import '../../domain/entities/external_transfer.dart';
-import '../../domain/entities/fee_estimate.dart';
-import '../../domain/entities/onchain_address_allocation.dart';
-import '../../domain/entities/payment_link.dart';
-import '../../domain/entities/transaction.dart';
-import '../../domain/entities/tx_status.dart';
-import '../../domain/entities/wallet_network_address.dart';
+import '../../data/entities/deposit.dart';
+import '../../data/entities/external_transfer.dart';
+import '../../data/entities/fee_estimate.dart';
+import '../../data/entities/onchain_address_allocation.dart';
+import '../../data/entities/payment_link.dart';
+import '../../data/entities/transaction.dart';
+import '../../data/entities/tx_status.dart';
+import '../../data/entities/wallet_network_address.dart';
 
 /// Interface do TransactionRemoteDataSource
 abstract class TransactionRemoteDataSource {

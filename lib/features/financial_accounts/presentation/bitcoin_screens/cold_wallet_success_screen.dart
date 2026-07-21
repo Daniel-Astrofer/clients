@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
 
 /// Post-create/import success with CTAs into unified send (or done).

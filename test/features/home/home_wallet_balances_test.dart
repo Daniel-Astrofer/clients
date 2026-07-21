@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';

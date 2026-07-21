@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Admin color aliases backed by the public Kerosene brand tokens.
 ///

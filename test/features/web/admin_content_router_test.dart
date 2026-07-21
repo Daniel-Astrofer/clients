@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/web/navigation/admin_content_router.dart';
 import 'package:kerosene/features/web/navigation/admin_routes.dart';

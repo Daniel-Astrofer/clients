@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
-import 'package:kerosene/features/movement/domain/transaction_taxonomy.dart';
-import 'package:kerosene/features/movement/widgets/activity_glyph.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
+import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
 
 void main() {
   group('ActivityGlyphSpec', () {

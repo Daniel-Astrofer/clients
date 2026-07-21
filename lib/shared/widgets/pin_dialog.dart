@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 import 'package:kerosene/shared/widgets/fingerprint_scanner.dart';
 import 'package:kerosene/core/security/app_pin_service.dart';

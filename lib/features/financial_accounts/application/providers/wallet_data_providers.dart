@@ -11,7 +11,7 @@ import 'package:kerosene/features/financial_accounts/domain/repositories/wallet_
 import 'package:kerosene/features/movement/providers/transaction_data_providers.dart'
     as movement_data;
 import 'package:kerosene/features/movement/data/datasources/transaction_remote_datasource.dart';
-import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 
 final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);

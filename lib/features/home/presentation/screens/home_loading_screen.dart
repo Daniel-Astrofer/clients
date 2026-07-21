@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kerosene/core/presentation/widgets/tor_navigation_loading_screen.dart';
+import 'package:kerosene/features/presentation/widgets/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
@@ -211,18 +212,7 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     if (!mounted) return;
 
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            home.HomeScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        // Short fade only — no second loading surface after dots.
-        transitionDuration: KeroseneMotion.short,
-      ),
-      (route) => false,
-    );
+    context.go('/home');
   }
 
   Future<void> _navigateToWalletSetup(String? userId) async {

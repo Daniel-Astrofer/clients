@@ -3,9 +3,9 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});

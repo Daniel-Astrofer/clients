@@ -4,8 +4,8 @@ import 'package:storybook_flutter/storybook_flutter.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 
 import 'package:kerosene/core/providers/price_provider.dart';

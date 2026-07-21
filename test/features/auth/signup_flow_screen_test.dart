@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/presentation/screens/signup/signup_flow_screen.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';

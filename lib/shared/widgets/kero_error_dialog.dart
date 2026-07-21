@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Kerosene Error Types — matches Figma error variants
 enum KeroErrorType {
@@ -244,58 +245,23 @@ class KeroErrorDialog extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Primary action: Back / Close
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color.withValues(alpha: 0.12),
-                  foregroundColor: color,
-                  elevation: 0,
-                  side: BorderSide(color: color.withValues(alpha: 0.4)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  context.tr.goBack,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
+            AppButton(
+              label: context.tr.goBack,
+              expand: true,
+              variant: AppButtonVariant.secondary,
+              onPressed: () => Navigator.of(context).pop(),
             ),
 
             // Secondary action (optional)
             if (onSecondaryAction != null) ...[
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    onSecondaryAction!();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: KeroseneBrandTokens.surfaceHigh,
-                    foregroundColor: KeroseneBrandTokens.textPrimary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    secondaryLabel ?? context.tr.deposit,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+              AppButton(
+                label: secondaryLabel ?? context.tr.deposit,
+                expand: true,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onSecondaryAction!();
+                },
               ),
             ],
           ],

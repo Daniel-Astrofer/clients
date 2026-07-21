@@ -4,16 +4,16 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
-import 'package:kerosene/core/navigation/app_route_observer.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
 import 'package:kerosene/core/navigation/route_transition_observer.dart';
-import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
+import 'package:kerosene/core/router/mobile_go_router.dart';
 import '../core/providers/shared_preferences_provider.dart';
 import '../core/providers/appearance_provider.dart';
 import '../core/providers/locale_provider.dart';
@@ -21,11 +21,7 @@ import '../core/providers/session_invalidation_provider.dart';
 import '../core/utils/money_display.dart';
 import '../core/responsive/kerosene_responsive.dart';
 import '../features/auth/presentation/screens/welcome_screen.dart';
-import '../features/auth/presentation/screens/emergency_recovery_screen.dart';
-import '../features/auth/presentation/screens/login_screen.dart';
-import '../features/auth/presentation/screens/signup/signup_flow_screen.dart';
 import '../features/home/presentation/screens/home_loading_screen.dart';
-import '../features/home/presentation/screens/onboarding_steps_screen.dart';
 import '../features/auth/presentation/screens/server_unavailable_screen.dart';
 import '../features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
     deferred as bitcoin_accounts;
@@ -38,12 +34,10 @@ import '../features/security/presentation/screens/settings_screen.dart'
 import '../features/notifications/presentation/widgets/global_notification_host.dart';
 import '../core/services/background_service.dart';
 import '../core/services/notification_service.dart' as local_notifications;
-import '../features/movement/screens/movement_hub_screen.dart'
+import '../features/movement/presentation/hub/movement_hub_screen.dart'
     deferred as deposits;
-import '../features/financial_accounts/domain/entities/wallet.dart';
-import '../features/movement/screens/send_money_screen.dart'
+import '../features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
-import '../features/financial_accounts/presentation/widgets/wallet_flow_selector.dart';
 import '../core/providers/tor_providers.dart';
 import '../core/providers/app_cold_start_provider.dart';
 import '../core/services/tor_network_bootstrap.dart';
@@ -52,9 +46,8 @@ import '../core/performance/app_interaction_busy.dart';
 import '../core/performance/graphics_runtime_degrade.dart';
 import '../core/performance/kerosene_graphics_policy.dart';
 import '../core/performance/kerosene_performance_boundary.dart';
-import '../core/presentation/widgets/kerosene_logo_loading_view.dart';
+import '../features/presentation/widgets/kerosene_logo_loading_view.dart';
 import '../core/providers/shader_provider.dart';
-import '../core/utils/qr_payment_parser.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';
 import '../features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
@@ -108,12 +101,14 @@ Future<void> initializeApp(ProviderContainer container) async {
 
   _routeTransitionBusyObserver = RouteTransitionBusyObserver(
     onBusyChanged: (busy) {
-      final notifier = container.read(routeTransitionBusyProvider.notifier);
-      if (busy) {
-        notifier.begin();
-      } else {
-        notifier.end();
-      }
+      Future.microtask(() {
+        final notifier = container.read(routeTransitionBusyProvider.notifier);
+        if (busy) {
+          notifier.begin();
+        } else {
+          notifier.end();
+        }
+      });
     },
   );
 
@@ -194,89 +189,26 @@ Future<void> _bootstrapPeripheralServices() async {
 
 Widget buildApp() => const MyApp();
 
-/// First shell: brand K beat, then auth shell.
-///
-/// Returning users: K → PIN (stable pad; Tor may still boot) → dots → Home.
-/// Tor readiness is gated inside PIN verify + HomeLoadingScreen requests.
-///
-/// Important: only one [AppEntryPinGate] on the home path. Route wrappers use
-/// [appEntryPinUnlockedProvider] and must not remount a second gate that
-/// re-asks for PIN after unlock.
-class _MobileAppRoot extends ConsumerWidget {
-  const _MobileAppRoot();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final coldStart = ref.watch(appColdStartProvider);
-
-    // Session probe may fail while Tor is still binding — retry once Tor is up.
-    ref.listen<AppColdStartState>(appColdStartProvider, (previous, next) {
-      if (!next.torSettled || previous?.torSettled == true) return;
-      final auth = ref.read(authControllerProvider);
-      if (auth is AuthServerUnavailable) {
-        unawaited(
-            ref.read(authControllerProvider.notifier).retrySessionCheck());
-      }
-    });
-
-    // 1) Kerosene K — brand beat while auth probes.
-    if (!coldStart.canShowAppShell) {
-      return const KeroseneLogoLoadingView(
-        status: 'INICIANDO',
-        detail: 'Preparando conexão segura',
-      );
-    }
-
-    final authState = ref.watch(authControllerProvider);
-
-    // Stay on K until session restore finishes — never flash PIN then Welcome.
-    if (authState is AuthInitial || authState is AuthLoading) {
-      return const KeroseneLogoLoadingView(
-        status: 'INICIANDO',
-        detail: 'Preparando conexão segura',
-      );
-    }
-
-    if (authState is AuthAuthenticated) {
-      // Token login: wait for Tor **before** the PIN pad.
-      // Showing PIN while Tor is still binding, then rebuilding when Tor
-      // settles, re-asked the PIN (double entry). Hold the K logo until the
-      // relay is up, then one unlock pad.
-      if (!coldStart.torSettled && !AppEntryPinSession.unlocked) {
-        return const KeroseneLogoLoadingView(
-          status: 'INICIANDO',
-          detail: 'Preparando conexão segura',
-        );
-      }
-      // Single PIN gate. Unlocked → HomeLoadingScreen → Home.
-      return const AppEntryPinGate(
-        child: HomeLoadingScreen(),
-      );
-    }
-
-    if (authState is AuthServerUnavailable) {
-      if (!coldStart.torSettled) {
-        return const KeroseneLogoLoadingView(
-          status: 'INICIANDO',
-          detail: 'Preparando conexão segura',
-        );
-      }
-      return const ServerUnavailableScreen();
-    }
-
-    return const WelcomeScreen();
-  }
-}
-
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  late final GoRouter _router = buildMobileGoRouter(
+    privateRouteBuilder: (child) => _PrivateMobileRoute(child: child),
+    root: const _MobileAppRoot(),
+    observers: mobileRouterObservers(
+      transitionBusy: _routeTransitionBusyObserver,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider).locale;
     final appearance = ref.watch(appearanceProvider);
-    // Keep number formatting (thousands/decimals) in sync with app language
-    // for every MoneyDisplay call site, including pure helpers.
     MoneyDisplay.bindAppLocale(locale);
     ref.listen<int>(sessionInvalidationProvider, (previous, next) {
       if (previous == next) {
@@ -285,16 +217,12 @@ class MyApp extends ConsumerWidget {
       ref.read(authControllerProvider.notifier).markSessionInvalidated();
     });
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Kerosene',
-      navigatorKey: SnackbarHelper.navigatorKey,
+      routerConfig: _router,
       scaffoldMessengerKey: SnackbarHelper.scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       scrollBehavior: const KeroseneScrollBehavior(),
-      navigatorObservers: [
-        appRouteObserver,
-        if (_routeTransitionBusyObserver != null) _routeTransitionBusyObserver!,
-      ],
       theme: AppTheme.themeFor(appearance.themeVariant),
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -320,136 +248,75 @@ class MyApp extends ConsumerWidget {
         );
         current = GlobalNotificationHost(child: current);
         current = _AppRealtimeBootstrap(child: current);
-        // In-app capture control (desktop debug ON by default).
-        // Force: --dart-define=SCREEN_CAPTURE_UI=true|false
         return ScreenCaptureHost(child: current);
-      },
-      home: const _MobileAppRoot(),
-      routes: {
-        '/welcome': (context) => const WelcomeScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/recovery/emergency': (context) => const EmergencyRecoveryScreen(),
-        '/signup': (context) => const SignupFlowScreen(),
-        '/server-unavailable': (context) => const ServerUnavailableScreen(),
-        '/home': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: home.loadLibrary,
-                builder: (_) => home.HomeScreen(),
-              ),
-            ),
-        '/home_loading': (context) => const _PrivateMobileRoute(
-              child: HomeLoadingScreen(),
-            ),
-        '/settings': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: settings.loadLibrary,
-                builder: (_) => settings.SettingsScreen(),
-              ),
-            ),
-        '/settings/notifications': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: settings.loadLibrary,
-                builder: (_) => settings.SettingsScreen(
-                  openNotificationsPane: true,
-                ),
-              ),
-            ),
-        '/settings/security': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: settings.loadLibrary,
-                builder: (_) => settings.SettingsScreen(
-                  openSecurityPane: true,
-                ),
-              ),
-            ),
-        '/activity': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: deposits.loadLibrary,
-                builder: (_) => deposits.TransactionStatementScreen(),
-              ),
-            ),
-        '/accounts': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: bitcoin_accounts.loadLibrary,
-                builder: (_) => bitcoin_accounts.BitcoinAccountsScreen(),
-              ),
-            ),
-        '/receive': (context) => _PrivateMobileRoute(
-              child: DeferredPage(
-                loadLibrary: deposits.loadLibrary,
-                builder: (_) => deposits.MovementHubScreen(),
-              ),
-            ),
-        '/onboarding/steps': (context) => const _PrivateMobileRoute(
-              child: OnboardingStepsScreen(),
-            ),
-        '/send-money': (context) => _PrivateMobileRoute(
-              child: _WalletFlowMobileRoute(
-                titleBuilder: (context) => context.tr.send,
-                subtitleBuilder: (context) =>
-                    context.tr.walletSelectorSendSubtitle,
-                destinationBuilder: (wallet) => DeferredPage(
-                  loadLibrary: send_money.loadLibrary,
-                  builder: (_) => send_money.SendMoneyScreen(
-                    walletId: wallet.id,
-                  ),
-                ),
-              ),
-            ),
-      },
-      onGenerateRoute: (settings) {
-        final linkId = QrPaymentParser.extractPaymentLinkId(
-          settings.name ?? '',
-        );
-        if (linkId != null) {
-          return keroseneHorizontalRoute(
-            settings: settings,
-            builder: (_) => _PrivateMobileRoute(
-              child: _WalletFlowMobileRoute(
-                titleBuilder: (context) => context.tr.send,
-                subtitleBuilder: (context) =>
-                    context.tr.walletSelectorSendSubtitle,
-                destinationBuilder: (wallet) => DeferredPage(
-                  loadLibrary: send_money.loadLibrary,
-                  builder: (_) => send_money.SendMoneyScreen(
-                    walletId: wallet.id,
-                    initialAddress: QrPaymentParser.encodePaymentLink(linkId),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-        return null;
       },
     );
   }
 }
 
-class _WalletFlowMobileRoute extends StatelessWidget {
-  final String Function(BuildContext context) titleBuilder;
-  final String Function(BuildContext context) subtitleBuilder;
-  final Widget Function(Wallet wallet) destinationBuilder;
-
-  const _WalletFlowMobileRoute({
-    required this.titleBuilder,
-    required this.subtitleBuilder,
-    required this.destinationBuilder,
-  });
+/// First shell: brand K beat, then auth shell.
+///
+/// Returning users: K → PIN (stable pad; Tor may still boot) → dots → Home.
+/// Tor readiness is gated inside PIN verify + HomeLoadingScreen requests.
+///
+/// Important: only one [AppEntryPinGate] on the home path. Route wrappers use
+/// [appEntryPinUnlockedProvider] and must not remount a second gate that
+/// re-asks for PIN after unlock.
+class _MobileAppRoot extends ConsumerWidget {
+  const _MobileAppRoot();
 
   @override
-  Widget build(BuildContext context) {
-    return WalletFlowSelector(
-      title: titleBuilder(context),
-      subtitle: subtitleBuilder(context),
-      onContinue: (wallet) {
-        Navigator.of(context).pushReplacement<void, void>(
-          keroseneHorizontalRoute<void>(
-            builder: (_) => destinationBuilder(wallet),
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final coldStart = ref.watch(appColdStartProvider);
+
+    ref.listen<AppColdStartState>(appColdStartProvider, (previous, next) {
+      if (!next.torSettled || previous?.torSettled == true) return;
+      final auth = ref.read(authControllerProvider);
+      if (auth is AuthServerUnavailable) {
+        unawaited(
+            ref.read(authControllerProvider.notifier).retrySessionCheck());
+      }
+    });
+
+    if (!coldStart.canShowAppShell) {
+      return const KeroseneLogoLoadingView(
+        status: 'INICIANDO',
+        detail: 'Preparando conexão segura',
+      );
+    }
+
+    final authState = ref.watch(authControllerProvider);
+
+    if (authState is AuthInitial || authState is AuthLoading) {
+      return const KeroseneLogoLoadingView(
+        status: 'INICIANDO',
+        detail: 'Preparando conexão segura',
+      );
+    }
+
+    if (authState is AuthAuthenticated) {
+      if (!coldStart.torSettled && !AppEntryPinSession.unlocked) {
+        return const KeroseneLogoLoadingView(
+          status: 'INICIANDO',
+          detail: 'Preparando conexão segura',
         );
-      },
-    );
+      }
+      return const AppEntryPinGate(
+        child: HomeLoadingScreen(),
+      );
+    }
+
+    if (authState is AuthServerUnavailable) {
+      if (!coldStart.torSettled) {
+        return const KeroseneLogoLoadingView(
+          status: 'INICIANDO',
+          detail: 'Preparando conexão segura',
+        );
+      }
+      return const ServerUnavailableScreen();
+    }
+
+    return const WelcomeScreen();
   }
 }
 
@@ -465,7 +332,6 @@ class _PrivateMobileRoute extends ConsumerWidget {
       return const Scaffold(backgroundColor: Colors.black);
     }
     if (authState is AuthAuthenticated) {
-      // Never mount a second [AppEntryPinGate] after cold-start unlock.
       final unlocked =
           ref.watch(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked;
       if (unlocked) {
@@ -478,7 +344,6 @@ class _PrivateMobileRoute extends ConsumerWidget {
         }
         return child;
       }
-      // Same Tor gate as cold start: do not show PIN until the relay is up.
       final torSettled = ref.watch(torSettledProvider);
       if (!torSettled) {
         return const KeroseneLogoLoadingView(

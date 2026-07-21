@@ -11,7 +11,7 @@ import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
     show sessionStorageScopeProvider;
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart'
+import 'package:kerosene/features/movement/data/entities/transaction.dart'
     show Transaction;
 
 /// Encrypted / integrity-sealed, session-scoped local ledger of transactions.

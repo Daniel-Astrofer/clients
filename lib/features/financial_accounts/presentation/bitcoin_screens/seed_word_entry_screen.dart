@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/security/secure_screen_guard.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/bip39_mnemonic_utils.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/electrum_seed_utils.dart';
 

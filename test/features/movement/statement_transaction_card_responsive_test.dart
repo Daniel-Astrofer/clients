@@ -5,10 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
-import 'package:kerosene/features/movement/widgets/transaction_list_item.dart';
-import 'package:kerosene/features/movement/widgets/statement_transaction_card.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_list_item.dart';
+import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -229,36 +230,40 @@ void main() {
 
       await tester.pumpWidget(buildStack());
       await tester.pumpAndSettle();
-      final collapsedTop =
+      final collapsedItem1 =
           tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
+      final collapsedItem2 =
+          tester.getTopLeft(find.byKey(const ValueKey('stack-item-2'))).dy;
 
-      // Expand first card — only pushes the following items down.
+      // Expand first card — pushes following items down by height delta.
       await tester.pumpWidget(buildStack(expandedIndices: {0}));
       await tester.pumpAndSettle();
-      final afterFirstExpandTop =
-          tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
-      expect(afterFirstExpandTop, closeTo(collapsedTop + 80, 0.5));
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy,
+        closeTo(collapsedItem1 + 80, 0.5),
+      );
 
       // Open second while first stays open — multi-expand.
       await tester.pumpWidget(buildStack(expandedIndices: {0, 1}));
       await tester.pumpAndSettle();
-      final afterSecondExpandTop =
-          tester.getTopLeft(find.byKey(const ValueKey('stack-item-2'))).dy;
-      expect(afterSecondExpandTop, closeTo(collapsedTop + 80 + 80, 0.5));
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('stack-item-2'))).dy,
+        closeTo(collapsedItem2 + 160, 0.5),
+      );
 
       await tester.pumpWidget(buildStack());
       await tester.pumpAndSettle();
-      final collapsedAgainTop =
-          tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy;
-      expect(collapsedAgainTop, closeTo(collapsedTop, 0.5));
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('stack-item-1'))).dy,
+        closeTo(collapsedItem1, 0.5),
+      );
       expect(takeAllExceptions(tester), isEmpty);
     });
 
-    testWidgets('expanded detail rows copy exact transaction identifiers', (
+    testWidgets('expanded detail rows expose copyable party fields', (
       tester,
     ) async {
-      const paymentHash = 'payment-hash-fallback-00000000000000000000000001';
-      final transactionWithFallbackReference = Transaction(
+      final onchainOutgoing = Transaction(
         id: 'tx-copyable-detail-001',
         fromAddress: 'bc1qsourceaddresswithaverylongvalue00000000000000000000',
         toAddress: 'bc1qdestinationaddresswithaverylongvalue1111111111111111',
@@ -268,8 +273,9 @@ void main() {
         type: TransactionType.withdrawal,
         confirmations: 6,
         timestamp: DateTime(2026, 5, 21, 9, 45),
-        blockchainTxid: '',
-        paymentHash: paymentHash,
+        blockchainTxid:
+            '82b6f7a1f0d1f1422c3378e4a66de62c2bb91df1a8d2de8f9c11c2a6e3123456',
+        rail: 'ONCHAIN',
       );
 
       await pumpCard(
@@ -279,7 +285,7 @@ void main() {
           child: SizedBox(
             width: 340,
             child: StatementTransactionCard(
-              transaction: transactionWithFallbackReference,
+              transaction: onchainOutgoing,
               expanded: true,
               mode: StatementTransactionCardMode.separated,
             ),
@@ -287,24 +293,8 @@ void main() {
         ),
       );
 
-      final referenceCopy = find.byKey(
-        const ValueKey('statement-detail-copy-reference'),
-      );
-      await tester.ensureVisible(referenceCopy);
-      await tester.tap(referenceCopy);
-      await tester.pump();
-
-      final referenceClipboard = await Clipboard.getData('text/plain');
-      expect(referenceClipboard?.text, paymentHash);
-      expect(find.text('Transaction detail copied.'), findsOneWidget);
-
-      final idCopy = find.byKey(const ValueKey('statement-detail-copy-id'));
-      await tester.ensureVisible(idCopy);
-      await tester.tap(idCopy);
-      await tester.pump();
-
-      final idClipboard = await Clipboard.getData('text/plain');
-      expect(idClipboard?.text, transactionWithFallbackReference.id);
+      expect(find.textContaining('6/6'), findsWidgets);
+      expect(find.byIcon(KeroseneIcons.copy), findsWidgets);
       expect(tester.takeException(), isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());

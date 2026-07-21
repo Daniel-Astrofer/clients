@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 
-import 'package:kerosene/features/movement/screens/send_money_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
 import 'package:kerosene/storybook/storybook_mocks.dart';
 
 import 'golden_harness.dart';
@@ -14,7 +14,7 @@ void main() {
   testGoldens('send money screen', (tester) async {
     await pumpFullScreenGolden(
       tester,
-      SendMoneyScreen(walletId: mockWallets.first.id),
+      const SendMoneyScreen(),
     );
     await screenMatchesGolden(tester, 'send_money_screen');
   });

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/presentation/widgets/app_notice.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
-import 'package:kerosene/features/movement/screens/send_money_screen.dart';
+import 'package:kerosene/features/movement/data/payment_security_guards.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'cold_wallet_creation_screen.dart';
@@ -188,11 +188,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
   ) async {
     if (outcome.openSend && outcome.seedStored) {
       // Replace hub with send so back from send returns to accounts, not setup.
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => SendMoneyScreen(walletId: outcome.walletId),
-        ),
-      );
+      context.go('/send-money');
       return;
     }
     if (context.mounted) {

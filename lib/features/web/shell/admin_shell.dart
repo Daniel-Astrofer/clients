@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/brand.dart';
+import 'package:kerosene/design_system/foundation/assets/brand/kerosene_brand.dart';
 import '../navigation/admin_routes.dart';
 import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 import '../theme/admin_copy.dart';
 import '../theme/admin_theme.dart';
 import '../providers/admin_providers.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// The main shell for the enterprise web admin panel.
 /// Contains sidebar navigation, top bar, and content area.

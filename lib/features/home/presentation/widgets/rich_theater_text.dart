@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/design/home_design_tokens.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';

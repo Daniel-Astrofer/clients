@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/components/auth/auth_form_field.dart';
+import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -314,51 +316,26 @@ class SignupTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: _signupBorder),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: SignupTypography.label(),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          autofocus: autofocus,
-          textInputAction: textInputAction,
-          keyboardType: keyboardType,
-          autofillHints: autofillHints,
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-          cursorColor: _signupText,
-          style: SignupTypography.field(),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: _signupField,
-            hintText: hintText,
-            hintStyle: SignupTypography.field().copyWith(
-              color: _signupDim,
-              fontWeight: FontWeight.w400,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            suffixIcon: suffixIcon,
-            enabledBorder: border,
-            focusedBorder: border.copyWith(
-              borderSide:
-                  BorderSide(color: Colors.white.withValues(alpha: 0.45)),
-            ),
-          ),
-        ),
-      ],
+    return AuthFormField(
+      controller: controller,
+      label: label,
+      hint: hintText,
+      obscureText: obscureText,
+      autofocus: autofocus,
+      textInputAction: textInputAction,
+      keyboardType: keyboardType,
+      autofillHints: autofillHints,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      suffixIcon: suffixIcon,
+      fillColor: _signupField,
+      borderColor: _signupBorder,
+      focusedBorderColor: Colors.white.withValues(alpha: 0.45),
+      textColor: _signupText,
+      hintColor: _signupDim,
+      cursorColor: _signupText,
+      labelStyle: SignupTypography.label(),
+      fieldStyle: SignupTypography.field(),
     );
   }
 }
@@ -471,35 +448,19 @@ class SignupPrimaryButton extends StatelessWidget {
 
     return AuthMotionPressScale(
       enabled: !disabled,
-      child: SizedBox(
+      child: AuthPrimaryCta(
+        label: text,
+        onPressed: onPressed,
+        isLoading: isLoading,
+        outlined: outlined,
         height: 54,
-        child: FilledButton(
-          onPressed: disabled
-              ? null
-              : () {
-                  HapticFeedback.selectionClick();
-                  onPressed?.call();
-                },
-          style: FilledButton.styleFrom(
-            backgroundColor: background,
-            disabledBackgroundColor: background,
-            foregroundColor: foreground,
-            disabledForegroundColor: foreground.withValues(alpha: 0.7),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              side: outlined
-                  ? BorderSide(color: Colors.white.withValues(alpha: 0.16))
-                  : BorderSide.none,
-            ),
-            textStyle: SignupTypography.button(color: foreground),
-          ),
-          child: isLoading
-              ? CupertinoActivityIndicator(
-                  radius: 9,
-                  color: foreground,
-                )
-              : Text(text),
-        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        backgroundColor: background,
+        foregroundColor: foreground,
+        borderColor: outlined
+            ? Colors.white.withValues(alpha: 0.16)
+            : Colors.transparent,
+        textStyle: SignupTypography.button(color: foreground),
       ),
     );
   }

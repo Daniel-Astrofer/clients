@@ -4,7 +4,7 @@ import 'package:kerosene/core/network/api_client_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 import 'package:kerosene/features/movement/data/datasources/transaction_remote_datasource.dart';
 import 'package:kerosene/features/movement/data/repositories/transaction_repository_impl.dart';
-import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 
 final transactionRemoteDataSourceProvider =
     Provider<TransactionRemoteDataSource>((ref) {

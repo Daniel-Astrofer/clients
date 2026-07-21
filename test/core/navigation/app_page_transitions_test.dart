@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
-import 'package:kerosene/design_system/motion/kerosene_motion.dart';
+import 'package:kerosene/design_system/foundation/assets/motion/kerosene_motion.dart';
 
 void main() {
   test('page motion is tuned for high-refresh displays', () {

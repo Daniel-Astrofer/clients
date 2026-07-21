@@ -3,8 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
@@ -318,7 +318,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             actionLabel: !hasWallet
                 ? context.l10n.homeCreateWalletAction
                 : !hasBalance
-                    ? context.tr.homeDepositFundsAction
+                    ? context.tr.homeReceiveBtcAction
                     : context.l10n.homeSendBtcAction,
             onAction: !hasWallet
                 ? widget.onCreateWallet
@@ -588,7 +588,7 @@ class HomeWideFeedBody extends ConsumerWidget {
             actionLabel: !hasWallet
                 ? context.l10n.homeCreateWalletAction
                 : !hasBalance
-                    ? context.tr.homeDepositFundsAction
+                    ? context.tr.homeReceiveBtcAction
                     : context.l10n.homeSendBtcAction,
             onAction: !hasWallet
                 ? onOpenCreateWallet

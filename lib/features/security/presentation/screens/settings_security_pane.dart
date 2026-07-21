@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/presentation/widgets/app_notice.dart';
+import 'package:kerosene/features/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/providers/privacy_preferences_provider.dart';
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/utils/error_translator.dart';

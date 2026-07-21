@@ -15,7 +15,7 @@ import 'package:kerosene/core/providers/biometric_provider.dart';
 import 'package:kerosene/core/providers/locale_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
-import 'package:kerosene/core/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/data/datasources/auth_remote_datasource.dart'
     show AccountSecurityStatusResult, BackupCodesStatusResult;

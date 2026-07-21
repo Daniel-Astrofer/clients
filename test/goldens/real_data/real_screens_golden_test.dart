@@ -4,8 +4,8 @@ import 'package:golden_toolkit/golden_toolkit.dart';
 
 import 'package:kerosene/features/financial_accounts/presentation/widgets/wallet_flow_selector.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
-import 'package:kerosene/features/movement/screens/send_money_screen.dart';
-import 'package:kerosene/features/movement/screens/statement_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
+import 'package:kerosene/features/movement/presentation/activity/statement_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart';
 import 'package:kerosene/storybook/storybook_mocks.dart';
 
@@ -78,13 +78,10 @@ void main() {
     });
 
     testGoldens('send money — real selected wallet', (tester) async {
-      final walletId = realGoldenSnapshot.wallets.isNotEmpty
-          ? realGoldenSnapshot.wallets.first.id
-          : (mockWallets.isNotEmpty ? mockWallets.first.id : '0');
       await shot(
         tester,
         'real_send_money_screen',
-        SendMoneyScreen(walletId: walletId),
+        const SendMoneyScreen(),
       );
     });
   }, skip: !shouldRunRealGoldens);

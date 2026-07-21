@@ -1,13 +1,13 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 
@@ -120,33 +120,20 @@ class ServerUnavailableScreen extends ConsumerWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.xxl),
-                  SizedBox(
-                    width: double.infinity,
+                  AuthPrimaryCta(
+                    label: context.tr.tryAgain,
+                    onPressed: isLoading ? null : () => _retry(context, ref),
+                    isLoading: isLoading,
                     height: 48,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.hexFFFFFFFF,
-                        foregroundColor: AppColors.hexFF000000,
-                        disabledBackgroundColor: AppColors.hexFFE4E4E7,
-                        disabledForegroundColor: AppColors.hexFF52525B,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        textStyle: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          height: 1,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      onPressed: isLoading ? null : () => _retry(context, ref),
-                      child: isLoading
-                          ? const CupertinoActivityIndicator(
-                              radius: 9,
-                              color: AppColors.hexFF000000,
-                            )
-                          : Text(context.tr.tryAgain),
+                    borderRadius: BorderRadius.circular(4),
+                    backgroundColor: AppColors.hexFFFFFFFF,
+                    foregroundColor: AppColors.hexFF000000,
+                    textStyle: const TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                      letterSpacing: 0,
                     ),
                   ),
                 ],

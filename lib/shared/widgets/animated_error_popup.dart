@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/core/presentation/widgets/glass_container.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/features/presentation/widgets/glass_container.dart';
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 class AnimatedErrorPopup extends StatefulWidget {
   final String title;
@@ -239,96 +240,33 @@ class _AnimatedErrorPopupState extends State<AnimatedErrorPopup>
               // Action Buttons
               if (widget.onRetry != null || widget.onGoBack != null) ...[
                 if (widget.onRetry != null)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        widget.onRetry!();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: baseColor,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onSurface,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
+                  AppButton(
+                    label:
                         AppLocalizations.of(context)?.tryAgain ?? 'Try Again',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    expand: true,
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onRetry!();
+                    },
                   ),
                 if (widget.onRetry != null && widget.onGoBack != null)
                   const SizedBox(height: 12),
                 if (widget.onGoBack != null)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        widget.onGoBack!();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onPrimary,
-                        side: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onPrimary
-                              .withValues(alpha: 0.2),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)?.goBack ?? 'Go Back',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                  AppButton(
+                    label: AppLocalizations.of(context)?.goBack ?? 'Go Back',
+                    expand: true,
+                    variant: AppButtonVariant.secondary,
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onGoBack!();
+                    },
                   ),
               ] else ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .onPrimary
-                          .withValues(alpha: 0.05),
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onPrimary
-                              .withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)?.done ?? 'Done',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                AppButton(
+                  label: AppLocalizations.of(context)?.done ?? 'Done',
+                  expand: true,
+                  variant: AppButtonVariant.secondary,
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ],

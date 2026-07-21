@@ -3624,7 +3624,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get homePrimaryReadyNoBalanceSubtitle =>
-      'Faça um depósito quando quiser. Acompanhamos a confirmação da rede em tempo real.';
+      'Receba quando quiser. Acompanhamos a confirmação da rede em tempo real.';
 
   @override
   String get homePrimaryReadyTitle => 'Pronto para movimentar';
@@ -3637,7 +3637,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeCreateWalletAction => 'Criar carteira';
 
   @override
-  String get homeDepositFundsAction => 'Depositar fundos';
+  String get homeDepositFundsAction => 'Receber fundos';
 
   @override
   String get homeSendBtcAction => 'Enviar BTC';
@@ -3776,7 +3776,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Novas movimentações vão aparecer automaticamente nesta área.';
 
   @override
-  String get homeDepositAction => 'Depositar';
+  String get homeDepositAction => 'Receber';
 
   @override
   String get homeRefreshAction => 'Atualizar';
@@ -5902,7 +5902,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Escolha como deseja receber. Cada opção mantém o foco no valor, no destino e na confirmação.';
 
   @override
-  String get receiveHubDeposit => 'Depositar';
+  String get receiveHubDeposit => 'Receber';
 
   @override
   String get receiveHubDepositSubtitle =>

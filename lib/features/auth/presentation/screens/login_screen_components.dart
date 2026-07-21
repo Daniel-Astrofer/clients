@@ -1,12 +1,12 @@
 // ignore_for_file: use_key_in_widget_constructors
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/components/auth/auth_form_field.dart';
+import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 import 'package:kerosene/features/auth/presentation/widgets/totp_input_container.dart';
 
@@ -225,57 +225,29 @@ class LoginTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AuthColors.of(context);
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide(color: colors.border),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: LoginTypography.label(colors)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          focusNode: focusNode,
-          enabled: enabled,
-          obscureText: obscureText,
-          autofocus: autofocus,
-          textInputAction: textInputAction,
-          keyboardType: keyboardType,
-          autofillHints: autofillHints,
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-          cursorColor: colors.text,
-          style: LoginTypography.field(colors).copyWith(
-            color: enabled ? colors.text : colors.text.withValues(alpha: 0.48),
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: colors.field,
-            hintText: hintText,
-            hintStyle: LoginTypography.field(colors).copyWith(
-              color: colors.dim,
-              fontWeight: FontWeight.w400,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
-            enabledBorder: border,
-            disabledBorder: border.copyWith(
-              borderSide:
-                  BorderSide(color: colors.border.withValues(alpha: 0.72)),
-            ),
-            focusedBorder: border.copyWith(
-              borderSide:
-                  BorderSide(color: colors.text.withValues(alpha: 0.45)),
-            ),
-          ),
-        ),
-      ],
+    return AuthFormField(
+      controller: controller,
+      focusNode: focusNode,
+      label: label,
+      hint: hintText,
+      enabled: enabled,
+      obscureText: obscureText,
+      autofocus: autofocus,
+      textInputAction: textInputAction,
+      keyboardType: keyboardType,
+      autofillHints: autofillHints,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      prefixIcon: prefixIcon,
+      suffixIcon: suffixIcon,
+      fillColor: colors.field,
+      borderColor: colors.border,
+      focusedBorderColor: colors.text.withValues(alpha: 0.45),
+      textColor: colors.text,
+      hintColor: colors.dim,
+      cursorColor: colors.text,
+      labelStyle: LoginTypography.label(colors),
+      fieldStyle: LoginTypography.field(colors),
     );
   }
 }
@@ -396,37 +368,15 @@ class LoginPrimaryButton extends StatelessWidget {
 
     return AuthMotionPressScale(
       enabled: !disabled,
-      child: SizedBox(
+      child: AuthPrimaryCta(
+        label: text,
+        onPressed: onPressed,
+        isLoading: isLoading,
         height: 54,
-        child: FilledButton(
-          onPressed: disabled
-              ? null
-              : () {
-                  HapticFeedback.selectionClick();
-                  onPressed?.call();
-                },
-          style: FilledButton.styleFrom(
-            backgroundColor: background,
-            disabledBackgroundColor: background,
-            foregroundColor: foreground,
-            disabledForegroundColor: foreground.withValues(alpha: 0.7),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              side: BorderSide.none,
-            ),
-            textStyle: LoginTypography.button(colors, color: foreground),
-          ),
-          child: isLoading
-              ? CupertinoActivityIndicator(
-                  radius: 9,
-                  color: foreground,
-                )
-              : Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        backgroundColor: background,
+        foregroundColor: foreground,
+        textStyle: LoginTypography.button(colors, color: foreground),
       ),
     );
   }

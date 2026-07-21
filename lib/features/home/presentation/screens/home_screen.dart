@@ -8,49 +8,48 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
-import 'package:kerosene/core/presentation/widgets/app_notice.dart';
-import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
-import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
-import 'package:kerosene/core/presentation/widgets/kerosene_logo.dart';
+import 'package:kerosene/design_system/components/feedback/app_notice.dart';
+import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
+import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/features/presentation/widgets/kerosene_logo.dart';
 import 'package:kerosene/core/providers/currency_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
-import 'package:kerosene/shared/widgets/state_feedback_view.dart';
+import 'package:kerosene/design_system/components/feedback/state_feedback_view.dart';
 import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 import 'package:kerosene/shared/widgets/bouncing_button_wrapper.dart';
 
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
-import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
-import 'package:kerosene/features/movement/screens/movement_hub_screen.dart'
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart'
     deferred as deposits;
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
-import 'package:kerosene/features/movement/widgets/statement_transaction_card.dart';
+import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     hide transactionRepositoryProvider;
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_settings_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
-import 'package:kerosene/features/movement/widgets/receive_flow_ui.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_ui.dart';
 import 'package:kerosene/features/financial_accounts/presentation/widgets/wallet_flow_selector.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
     deferred as bitcoin_accounts;
-import 'package:kerosene/features/movement/screens/send_money_screen.dart'
-    deferred as send_money;
 import '../widgets/animated_balance_display.dart';
 import '../widgets/home_bitcoin_market_chart_card.dart';
 import '../widgets/home_onboarding_progress_card.dart';
@@ -316,22 +315,22 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _openSendFlow({
-    required Wallet wallet,
     String? initialAddress,
     double? initialAmountBtc,
   }) async {
-    final result = await _pushDirectFlow<dynamic>(
-      builder: () => DeferredPage(
-        loadLibrary: send_money.loadLibrary,
-        builder: (_) => send_money.SendMoneyScreen(
-          walletId: wallet.id,
-          initialAddress: initialAddress,
-          initialAmountBtc: initialAmountBtc,
-        ),
-      ),
-    );
-
-    await _presentFinancialActionResult(result);
+    final params = <String, String>{};
+    if (initialAddress != null && initialAddress.trim().isNotEmpty) {
+      params['address'] = initialAddress.trim();
+    }
+    if (initialAmountBtc != null) {
+      params['amount'] = initialAmountBtc.toString();
+    }
+    final location = Uri(
+      path: '/send-money',
+      queryParameters: params.isEmpty ? null : params,
+    ).toString();
+    if (!mounted) return;
+    context.go(location);
   }
 
   Future<T?> _pushDirectFlow<T>({
@@ -340,58 +339,20 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     return _pushFromBottom<T>((context) => builder());
   }
 
-  void _openSend(Wallet? wallet) {
+  void _openSend() {
     HapticFeedback.lightImpact();
-
-    if (wallet == null) {
-      _showWalletRequiredNotice();
-      return;
-    }
-
-    unawaited(_openSendFlow(wallet: wallet));
+    unawaited(_openSendFlow());
   }
 
-  void _openReceiveFlow(Wallet? wallet) {
+  void _openReceiveFlow() {
     HapticFeedback.lightImpact();
-
-    if (wallet == null) {
-      _showWalletRequiredNotice();
-      return;
-    }
-
-    unawaited(
-      _pushDirectFlow<void>(
-        builder: () => DeferredPage(
-          loadLibrary: deposits.loadLibrary,
-          builder: (_) =>
-              deposits.MovementHubScreen(initialWallet: wallet),
-        ),
-      ),
-    );
+    // Amount-first receive — wallet is chosen in-flow, never from home.
+    unawaited(context.push('/receive'));
   }
 
-  void _openDeposit(Wallet? wallet) {
-    if (wallet == null) {
-      HapticFeedback.lightImpact();
-      _showWalletRequiredNotice();
-      return;
-    }
-
-    _openDepositForWallet(wallet);
-  }
-
-  void _openDepositForWallet(Wallet wallet) {
-    HapticFeedback.lightImpact();
-
-    unawaited(
-      _pushDirectFlow<void>(
-        builder: () => DeferredPage(
-          loadLibrary: deposits.loadLibrary,
-          builder: (_) =>
-              deposits.MovementHubScreen(initialWallet: wallet),
-        ),
-      ),
-    );
+  void _openDepositForWallet(Wallet _) {
+    // Platform has receive only — deposit entry points share the same flow.
+    _openReceiveFlow();
   }
 
   void _openCreateWallet() {
@@ -400,12 +361,7 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _openCreateWalletFlow() async {
-    await _pushFromBottom<void>(
-      (_) => DeferredPage(
-        loadLibrary: bitcoin_accounts.loadLibrary,
-        builder: (_) => bitcoin_accounts.BitcoinAccountsScreen(),
-      ),
-    );
+    await context.push<void>('/accounts');
     if (!mounted) {
       return;
     }
@@ -447,18 +403,8 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     // Each visual layer is an independent Consumer + RepaintBoundary
     // (see presentation/layers/home_layers.dart).
     void openStatement() {
-      unawaited(
-        _pushFromBottom<void>(
-          (_) => DeferredPage(
-            loadLibrary: deposits.loadLibrary,
-            builder: (_) => deposits.TransactionStatementScreen(),
-          ),
-        ),
-      );
+      unawaited(context.push<void>('/activity'));
     }
-
-    Wallet? activeWallet() =>
-        _resolveActiveWallet(ref.read(walletProvider));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -476,8 +422,8 @@ class HomeScreenState extends ConsumerState<HomeScreen>
             const HomeEducationHost(),
             HomeScrollLayer(
               onRefresh: _refreshHomeData,
-              onReceive: () => _openReceiveFlow(activeWallet()),
-              onSend: () => _openSend(activeWallet()),
+              onReceive: _openReceiveFlow,
+              onSend: _openSend,
               onOpenStatement: openStatement,
               onOpenWallets: () => AppPrimaryNavigationBar.navigateTo(
                 context,
@@ -485,8 +431,8 @@ class HomeScreenState extends ConsumerState<HomeScreen>
               ),
               onCreateWallet: _openCreateWallet,
               onDepositWallet: _openDepositForWallet,
-              onOpenDeposit: () => _openDeposit(activeWallet()),
-              onOpenSendFromFeed: () => _openSend(activeWallet()),
+              onOpenDeposit: _openReceiveFlow,
+              onOpenSendFromFeed: _openSend,
             ),
             const HomeBottomNavigationOverlay(
               currentDestination: AppPrimaryDestination.home,

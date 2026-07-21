@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
-import 'package:kerosene/features/movement/domain/payment_intent.dart';
-import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent_parser.dart';
 
 void main() {
   const parser = PaymentIntentParser();

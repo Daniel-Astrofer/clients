@@ -16,7 +16,7 @@ import 'package:kerosene/core/providers/session_invalidation_provider.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/web/theme/admin_theme.dart';
 import 'package:kerosene/features/auth/presentation/screens/server_unavailable_screen.dart'

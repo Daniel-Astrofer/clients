@@ -6,13 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
 
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import '../providers/balance_settings_provider.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Widget do card de balanço com gráfico circular
 class WalletBalanceCard extends ConsumerWidget {

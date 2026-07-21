@@ -24,15 +24,15 @@ import 'package:kerosene/features/auth/controller/auth_providers.dart'
 import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
-import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
-import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
-import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
-import 'package:kerosene/features/movement/domain/entities/deposit.dart';
-import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
-import 'package:kerosene/features/movement/domain/entities/wallet_network_address.dart';
+import 'package:kerosene/features/movement/data/activity_archive_store.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
+import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
+import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/data/entities/deposit.dart';
+import 'package:kerosene/features/movement/data/entities/external_transfer.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/wallet_network_address.dart';
 import 'package:kerosene/features/security/domain/entities/passkey_action_required.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     show ledgerRepositoryProvider, walletProvider;

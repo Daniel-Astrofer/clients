@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 class _MemoryKv implements LocalHistoryKvStore {
   final Map<String, String> data = {};

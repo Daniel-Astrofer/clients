@@ -3,14 +3,14 @@ import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/features/movement/application/unified_send_flags.dart';
-import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
-import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
-import 'package:kerosene/features/movement/domain/payment_intent.dart';
-import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
-import 'package:kerosene/features/movement/domain/payment_intent_resolver.dart';
-import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
-import 'package:kerosene/features/movement/flow/kfe_receiving_capabilities_service.dart';
-import 'package:kerosene/features/movement/screens/send_destination_models.dart';
+import 'package:kerosene/features/movement/data/fee_tier_selection.dart';
+import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent_parser.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
+import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/features/movement/data/kfe_receiving_capabilities_service.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 
 /// Automated slice of the PAYMENT_SWISS_ARMY PR8 smoke matrix (no device / no cluster).
 void main() {

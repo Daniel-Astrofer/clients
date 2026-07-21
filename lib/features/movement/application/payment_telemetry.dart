@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:kerosene/features/movement/domain/payment_intent.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
 
 /// Minimal payment telemetry — never log full addresses or seeds.
 void logPaymentEvent({

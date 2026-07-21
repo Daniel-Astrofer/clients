@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/flow/kfe_receiving_capabilities_service.dart';
+import 'package:kerosene/features/movement/data/kfe_receiving_capabilities_service.dart';
 
 void main() {
   group('KfeReceivingCapabilities.fromJson', () {
@@ -29,6 +29,41 @@ void main() {
         '4b5a98c6-fefa-4f57-b5fe-1fe6f8957df1',
       );
       expect(capabilities.availableRails, ['INTERNAL', 'ONCHAIN']);
+      expect(capabilities.eligibleSourceWallets, isEmpty);
+    });
+
+    test('parses eligibleSourceWallets for the send source step', () {
+      final capabilities = KfeReceivingCapabilities.fromJson(const {
+        'canReceiveInternal': true,
+        'canReceiveLightning': false,
+        'canReceiveOnchain': true,
+        'preferredRail': 'INTERNAL',
+        'missingRequirements': <String>[],
+        'receiverDisplayName': '@alice',
+        'internalWalletId': 'recv-1',
+        'availableRails': ['INTERNAL', 'ONCHAIN'],
+        'eligibleSourceWallets': [
+          {
+            'walletId': 'src-internal',
+            'kind': 'INTERNAL',
+            'label': 'Hot',
+            'compatibleRails': ['INTERNAL', 'ONCHAIN'],
+          },
+          {
+            'walletId': 'src-cold',
+            'kind': 'WATCH_ONLY',
+            'label': 'Cold',
+            'compatibleRails': ['ONCHAIN'],
+          },
+        ],
+      });
+
+      expect(capabilities.eligibleSourceWallets, hasLength(2));
+      expect(capabilities.eligibleSourceWalletIds, {'src-internal', 'src-cold'});
+      expect(
+        capabilities.eligibleSourceWallets.first.compatibleRails,
+        ['INTERNAL', 'ONCHAIN'],
+      );
     });
 
     test('unwraps the backend ApiResponse envelope when it reaches the service',

@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
-import 'package:kerosene/features/movement/domain/payment_intent.dart';
-import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
-import 'package:kerosene/features/movement/screens/send_destination_analyzer.dart';
-import 'package:kerosene/features/movement/screens/send_destination_models.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent_parser.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_analyzer.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 
 void main() {
   const parser = PaymentIntentParser();

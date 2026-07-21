@@ -6,11 +6,11 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/icons.dart';
-import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
-import 'package:kerosene/core/presentation/widgets/app_screen_feedback_host.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
+import 'package:kerosene/design_system/components/feedback/app_screen_feedback_host.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
 import 'package:kerosene/features/notifications/presentation/notification_translator.dart';

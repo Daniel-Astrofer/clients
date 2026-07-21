@@ -6,9 +6,9 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
-import 'package:kerosene/features/movement/domain/entities/statement_report.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/services/statement_report_calculator.dart';
+import 'package:kerosene/features/movement/data/entities/statement_report.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/statement_report_calculator.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
 /// Legacy test helper — redirects to [TransactionLedgerAdapter] (id-keyed).

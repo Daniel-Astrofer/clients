@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/domain/entities/withdraw_fee_quote_calculation.dart';
+import 'package:kerosene/features/movement/data/entities/withdraw_fee_quote_calculation.dart';
 
 void main() {
   group('WithdrawFeeQuoteCalculation', () {

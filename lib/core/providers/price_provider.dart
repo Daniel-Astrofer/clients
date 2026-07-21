@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../network/api_client_provider.dart';
@@ -9,8 +10,24 @@ final priceWebSocketServiceProvider =
   final service = PriceWebSocketService();
   service.connect();
 
+  // Keep the provider alive for a brief period after the last listener is removed
+  // to prevent thrashing (connecting/disposing rapidly) during transient rebuilds or navigation.
+  final keepAlive = ref.keepAlive();
+  Timer? timer;
+
+  ref.onCancel(() {
+    timer = Timer(const Duration(seconds: 5), () {
+      keepAlive.close();
+    });
+  });
+
+  ref.onResume(() {
+    timer?.cancel();
+  });
+
   // Dispose when provider is disposed
   ref.onDispose(() {
+    timer?.cancel();
     service.dispose();
   });
 

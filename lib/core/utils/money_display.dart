@@ -288,6 +288,49 @@ class MoneyDisplay {
     return updated.length <= maxLength ? updated : current;
   }
 
+  /// Normalize free-form system-keyboard input into keypad-style raw amount.
+  static String sanitizeEditableInput({
+    required String rawValue,
+    required Currency currency,
+    int maxLength = 16,
+  }) {
+    final decimals = decimalsFor(currency);
+    var text = rawValue.trim().replaceAll(',', '.');
+    text = text.replaceAll(RegExp(r'[^0-9.]'), '');
+
+    if (text.isEmpty) return '0';
+
+    final firstDot = text.indexOf('.');
+    if (firstDot >= 0) {
+      final before = text.substring(0, firstDot).replaceAll('.', '');
+      var after = text.substring(firstDot + 1).replaceAll('.', '');
+      if (decimals == 0) {
+        text = before.isEmpty ? '0' : before;
+      } else {
+        if (after.length > decimals) {
+          after = after.substring(0, decimals);
+        }
+        text = '${before.isEmpty ? '0' : before}.$after';
+      }
+    }
+
+    // Strip leading zeros while preserving "0." / "0.xx".
+    if (text.contains('.')) {
+      final parts = text.split('.');
+      var integer = parts[0].replaceFirst(RegExp(r'^0+(?=\d)'), '');
+      if (integer.isEmpty) integer = '0';
+      text = '$integer.${parts.length > 1 ? parts[1] : ''}';
+    } else {
+      text = text.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+      if (text.isEmpty) text = '0';
+    }
+
+    if (text.length > maxLength) {
+      text = text.substring(0, maxLength);
+    }
+    return text;
+  }
+
   static String formatAmountFromBtc({
     required double btcAmount,
     required Currency currency,
@@ -384,38 +427,41 @@ class MoneyDisplay {
       case Currency.btc:
         return btcAmount;
       case Currency.usd:
-        return displayAmountUsd?.abs() ??
-            (displayBtcUsd != null && displayBtcUsd > 0
-                ? btcAmount * displayBtcUsd
-                : convertFromBtcAmount(
-                    btcAmount: btcAmount,
-                    currency: currency,
-                    btcUsd: btcUsd,
-                    btcEur: btcEur,
-                    btcBrl: btcBrl,
-                  ));
+        final frozen = displayAmountUsd;
+        if (frozen != null && frozen != 0) return frozen.abs();
+        return (displayBtcUsd != null && displayBtcUsd > 0
+            ? btcAmount * displayBtcUsd
+            : convertFromBtcAmount(
+                btcAmount: btcAmount,
+                currency: currency,
+                btcUsd: btcUsd,
+                btcEur: btcEur,
+                btcBrl: btcBrl,
+              ));
       case Currency.eur:
-        return displayAmountEur?.abs() ??
-            (displayBtcEur != null && displayBtcEur > 0
-                ? btcAmount * displayBtcEur
-                : convertFromBtcAmount(
-                    btcAmount: btcAmount,
-                    currency: currency,
-                    btcUsd: btcUsd,
-                    btcEur: btcEur,
-                    btcBrl: btcBrl,
-                  ));
+        final frozen = displayAmountEur;
+        if (frozen != null && frozen != 0) return frozen.abs();
+        return (displayBtcEur != null && displayBtcEur > 0
+            ? btcAmount * displayBtcEur
+            : convertFromBtcAmount(
+                btcAmount: btcAmount,
+                currency: currency,
+                btcUsd: btcUsd,
+                btcEur: btcEur,
+                btcBrl: btcBrl,
+              ));
       case Currency.brl:
-        return displayAmountBrl?.abs() ??
-            (displayBtcBrl != null && displayBtcBrl > 0
-                ? btcAmount * displayBtcBrl
-                : convertFromBtcAmount(
-                    btcAmount: btcAmount,
-                    currency: currency,
-                    btcUsd: btcUsd,
-                    btcEur: btcEur,
-                    btcBrl: btcBrl,
-                  ));
+        final frozen = displayAmountBrl;
+        if (frozen != null && frozen != 0) return frozen.abs();
+        return (displayBtcBrl != null && displayBtcBrl > 0
+            ? btcAmount * displayBtcBrl
+            : convertFromBtcAmount(
+                btcAmount: btcAmount,
+                currency: currency,
+                btcUsd: btcUsd,
+                btcEur: btcEur,
+                btcBrl: btcBrl,
+              ));
     }
   }
 

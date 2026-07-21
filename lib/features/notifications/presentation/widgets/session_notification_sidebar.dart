@@ -3,16 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/presentation/widgets/app_notification_surface.dart';
-import 'package:kerosene/core/presentation/widgets/push_notification_card.dart';
+import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
+import 'package:kerosene/features/presentation/widgets/push_notification_card.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 class SessionNotificationSidebar extends ConsumerWidget {
   final VoidCallback? onClose;

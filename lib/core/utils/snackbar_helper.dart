@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/feedback/app_notice.dart';
 
 class SnackbarHelper {
   static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =

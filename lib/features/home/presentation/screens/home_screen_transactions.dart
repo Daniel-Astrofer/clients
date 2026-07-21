@@ -5,8 +5,8 @@ import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/movement/domain/activity_archive_store.dart';
-import 'package:kerosene/features/movement/domain/transaction_filter_engine.dart';
+import 'package:kerosene/features/movement/data/activity_archive_store.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
@@ -297,7 +297,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
                   ? context.tr.homeCreateWalletAction
                   : hasBalance
                       ? context.tr.homeRefreshAction
-                      : context.tr.homeDepositAction,
+                      : context.tr.homeReceiveActionShort,
           actionIcon: showClearOnCancelled
               ? KeroseneIcons.close
               : !hasWallet

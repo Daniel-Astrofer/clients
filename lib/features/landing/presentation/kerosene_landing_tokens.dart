@@ -1,16 +1,21 @@
-import 'package:kerosene/core/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/landing_surface_tokens.dart';
 
-const landingInk = AppColors.hexFF000000;
-const landingSurface = AppColors.hexFF131313;
-const landingPanel = AppColors.hex99101010;
-const landingPanelSoft = AppColors.hexFF201F1F;
-const landingLine = AppColors.hexFF353534;
-const landingMuted = AppColors.hexFFD5C4AB;
-const landingFaint = AppColors.hexFF9E8F78;
-const landingGold = AppColors.hexFFFFB800;
-const landingGoldSoft = AppColors.hexFFFFDCA1;
-const landingGreen = AppColors.hexFF00E274;
-const landingContentMaxWidth = 1280.0;
+export 'package:kerosene/design_system/foundation/theme/landing_surface_tokens.dart';
+
+// --- Compatibility color aliases ---
+const landingInk = LandingSurfaceTokens.ink;
+const landingSurface = LandingSurfaceTokens.surface;
+const landingPanel = LandingSurfaceTokens.panel;
+const landingPanelSoft = LandingSurfaceTokens.panelSoft;
+const landingLine = LandingSurfaceTokens.line;
+const landingMuted = LandingSurfaceTokens.muted;
+const landingFaint = LandingSurfaceTokens.faint;
+const landingGold = LandingSurfaceTokens.gold;
+const landingGoldSoft = LandingSurfaceTokens.goldSoft;
+const landingGreen = LandingSurfaceTokens.green;
+const landingContentMaxWidth = LandingSurfaceTokens.contentMaxWidth;
+
+// --- Editorial copy (feature-owned; prefer ARB when localizing) ---
 const landingHeroBodyText =
     'A Kerosene torna o Bitcoin mais seguro e útil para indivíduos e empresas, com privacidade absoluta, transparência operacional e controle real dos seus ativos sob a rede Tor.';
 const landingStatusCtaBodyText =

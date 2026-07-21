@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:kerosene/features/movement/screens/receive_method.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_method.dart';
 
 /// Receive-flow copy (en/es/pt), aligned with [SendMoneyCopy] style.
 class ReceiveMoneyCopy {
@@ -63,6 +64,77 @@ class ReceiveMoneyCopy {
       _ => 'Em $clean',
     };
   }
+
+  static String pickWalletTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Where should it land?',
+        'es' => '¿Dónde quieres recibirlo?',
+        _ => 'Onde deseja receber?',
+      };
+
+  static String pickWalletSubtitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Choose the wallet that will hold this receive.',
+        'es' => 'Elige la billetera que recibirá este valor.',
+        _ => 'Escolha a carteira que vai receber este valor.',
+      };
+
+  static String walletCustodyLabel(BuildContext context, Wallet wallet) {
+    if (wallet.isColdWallet) {
+      return switch (_language(context)) {
+        'en' => 'Cold Wallet',
+        'es' => 'Cold Wallet',
+        _ => 'Cold Wallet',
+      };
+    }
+    if (wallet.isCustodialOnchain) {
+      return switch (_language(context)) {
+        'en' => 'Custodial Onchain',
+        'es' => 'Custodial Onchain',
+        _ => 'Custodial Onchain',
+      };
+    }
+    return switch (_language(context)) {
+      'en' => 'Internal Wallet',
+      'es' => 'Carteira Interna',
+      _ => 'Carteira Interna',
+    };
+  }
+
+  static String pointCameraHint(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Point your phone camera',
+        'es' => 'Apunta la cámara del celular',
+        _ => 'Aponte a câmera do celular',
+      };
+
+  static String receiveAmountTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'How much do you want to receive?',
+        'es' => '¿Cuánto quieres recibir?',
+        _ => 'Quanto deseja receber?',
+      };
+
+  static String networkPickTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Choose the network',
+        'es' => 'Elige la red',
+        _ => 'Escolha a rede',
+      };
+
+  static String networkPickSubtitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Pick the rail with the best cost and settlement time.',
+        'es' => 'Elige la red con mejor costo y tiempo de liquidación.',
+        _ => 'Escolha a rede com melhor custo e tempo de liquidação.',
+      };
+
+  static String networkBestValue(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Best value',
+        'es' => 'Mejor costo',
+        _ => 'Melhor custo',
+      };
 
   static String p2pTitle(BuildContext context) =>
       switch (_language(context)) {

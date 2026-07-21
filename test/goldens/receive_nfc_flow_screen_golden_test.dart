@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 
-import 'package:kerosene/features/movement/screens/receive_nfc_flow_screen.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_nfc_flow_screen.dart';
 import 'package:kerosene/storybook/storybook_mocks.dart';
 
 import 'golden_harness.dart';

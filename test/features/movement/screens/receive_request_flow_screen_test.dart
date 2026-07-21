@@ -4,15 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
-import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
-import 'package:kerosene/features/movement/domain/entities/onchain_address_allocation.dart';
-import 'package:kerosene/features/movement/domain/repositories/transaction_repository.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/screens/receive_method.dart';
-import 'package:kerosene/features/movement/screens/receive_request_flow_screen.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_method.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_request_flow_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -47,8 +45,8 @@ void main() {
       _setMobileViewport(tester);
       final repository = _PollingReceiveRepository(
         updates: [
-          _externalTransfer(status: 'DETECTED', confirmations: 1),
-          _externalTransfer(status: 'CONFIRMED', confirmations: 2),
+          _paymentLink(confirmations: 1, status: 'paid', txid: 'txid-1'),
+          _paymentLink(confirmations: 2, status: 'paid', txid: 'txid-1'),
         ],
       );
 
@@ -58,6 +56,7 @@ void main() {
             transactionRepositoryProvider.overrideWithValue(repository),
             transactionHistoryProvider.overrideWith((ref) async => const []),
             externalTransfersProvider.overrideWith((ref) async => const []),
+            paymentLinksProvider.overrideWith((ref) async => const []),
           ],
           child: MaterialApp(
             scaffoldMessengerKey: SnackbarHelper.scaffoldMessengerKey,
@@ -75,18 +74,16 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Receber Bitcoin'), findsOneWidget);
-
-      await tester.pump(const Duration(seconds: 6));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Aguardando confirmações (1/3)'), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 6));
+      await tester.pump(const Duration(seconds: 2));
       await tester.pump();
       expect(find.text('Aguardando confirmações (2/3)'), findsOneWidget);
-      expect(repository.getExternalTransferCalls, 2);
+      expect(repository.getPaymentLinkCalls, greaterThanOrEqualTo(2));
 
       await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 3));
     },
   );
 
@@ -120,6 +117,7 @@ void main() {
     );
 
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     final copyPill = find.byKey(const ValueKey('receive-address-pill-copy'));
     await tester.ensureVisible(copyPill);
     await tester.tap(copyPill);
@@ -128,9 +126,10 @@ void main() {
     final clipboardData = await Clipboard.getData('text/plain');
     expect(clipboardData?.text, wallet.address);
 
+    // App notice success toast uses a 3s timer — drain before dispose.
     await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('shows payment details before sharing the receive request', (
@@ -163,16 +162,19 @@ void main() {
     );
 
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
+    expect(find.text('Aponte a câmera do celular'), findsOneWidget);
     expect(find.text('Carteira'), findsOneWidget);
     expect(find.text(wallet.name), findsOneWidget);
     expect(find.text('Rede'), findsOneWidget);
-    expect(find.text('Bitcoin (BTC)'), findsOneWidget);
     expect(find.text('Solicitado'), findsOneWidget);
     expect(find.text('0.001500 BTC'), findsOneWidget);
     expect(find.text('Endereço'), findsOneWidget);
+    expect(find.text('PARTILHAR'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 }
 
@@ -199,68 +201,50 @@ Wallet _wallet() {
   );
 }
 
-ExternalTransfer _externalTransfer({
-  required String status,
+PaymentLink _paymentLink({
   required int confirmations,
+  required String status,
+  String? txid,
 }) {
-  return ExternalTransfer(
-    id: 'transfer-1',
-    network: 'ONCHAIN',
-    transferType: 'ADDRESS_ISSUE',
+  return PaymentLink(
+    id: 'receive-link-1',
+    userId: 1,
+    amountBtc: 0.0015,
+    description: 'Recebimento via QR',
+    depositAddress: 'bc1qreceiveflow000000000000000000000000000000',
     status: status,
-    provider: 'KFE',
-    walletName: 'Reserva principal',
-    destination: 'bc1qreceiveflow000000000000000000000000000000',
-    amountBtc: 0,
-    networkFeeBtc: 0,
-    platformFeeBtc: 0,
-    totalDebitedBtc: 0,
-    externalReference: 'bc1qreceiveflow000000000000000000000000000000',
-    invoiceId: '',
-    blockchainTxid: 'txid-receive-flow',
-    paymentHash: '',
-    invoiceData: '',
-    expectedAmountBtc: 0.0015,
+    txid: txid,
+    paymentRail: 'ONCHAIN',
     confirmations: confirmations,
-    detectedAt: DateTime(2026, 6, 1, 12),
-    settledAt: null,
-    createdAt: DateTime(2026, 6, 1, 11, 58),
-    updatedAt: DateTime(2026, 6, 1, 12, confirmations),
-    context: 'Recebimento via QR',
+    expiresAt: DateTime.now().add(const Duration(minutes: 15)),
+    createdAt: DateTime.now(),
   );
 }
 
 class _PollingReceiveRepository implements TransactionRepository {
-  final List<ExternalTransfer> updates;
-  int getExternalTransferCalls = 0;
+  final List<PaymentLink> updates;
+  int getPaymentLinkCalls = 0;
 
   _PollingReceiveRepository({required this.updates});
 
   @override
-  Future<OnchainAddressAllocation> issueOnchainAddress({
-    required String walletName,
-    required double expectedAmountBtc,
+  Future<PaymentLink> createPaymentLink({
+    required double amount,
+    String? description,
+    int? expiresInMinutes,
+    String? visibility,
+    String? confirmationMode,
+    bool amountLocked = true,
+    String? referenceLabel,
+    Map<String, String>? metadata,
   }) async {
-    return OnchainAddressAllocation(
-      walletName: walletName,
-      onchainAddress: 'bc1qreceiveflow000000000000000000000000000000',
-      expectedAmountBtc: expectedAmountBtc,
-      network: 'ONCHAIN',
-      provider: 'KFE',
-      externalWalletReference: walletName,
-      walletMode: 'SELF_CUSTODY',
-      transferId: 'transfer-1',
-      transferStatus: 'PENDING',
-      confirmations: 0,
-      requiredConfirmations: 3,
-      blockchainTxid: '',
-    );
+    return _paymentLink(confirmations: 0, status: 'pending');
   }
 
   @override
-  Future<ExternalTransfer> getExternalTransfer(String transferId) async {
-    final index = getExternalTransferCalls;
-    getExternalTransferCalls++;
+  Future<PaymentLink> getPaymentLink(String requestId) async {
+    final index = getPaymentLinkCalls;
+    getPaymentLinkCalls++;
     if (index >= updates.length) {
       return updates.last;
     }
@@ -279,5 +263,4 @@ class _PollingReceiveRepository implements TransactionRepository {
   Future<PaymentLink> cancelPaymentRequest(String requestId) async {
     throw UnimplementedError();
   }
-
 }

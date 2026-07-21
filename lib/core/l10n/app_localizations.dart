@@ -6686,7 +6686,7 @@ abstract class AppLocalizations {
   /// No description provided for @homePrimaryReadyNoBalanceSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Deposit whenever you want. We track network confirmation in real time.'**
+  /// **'Receive whenever you want. We track network confirmation in real time.'**
   String get homePrimaryReadyNoBalanceSubtitle;
 
   /// No description provided for @homePrimaryReadyTitle.
@@ -6710,7 +6710,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeDepositFundsAction.
   ///
   /// In en, this message translates to:
-  /// **'Deposit funds'**
+  /// **'Receive funds'**
   String get homeDepositFundsAction;
 
   /// No description provided for @homeSendBtcAction.
@@ -6974,7 +6974,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeDepositAction.
   ///
   /// In en, this message translates to:
-  /// **'Deposit'**
+  /// **'Receive'**
   String get homeDepositAction;
 
   /// No description provided for @homeRefreshAction.
@@ -10706,7 +10706,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveHubDeposit.
   ///
   /// In en, this message translates to:
-  /// **'Deposit'**
+  /// **'Receive'**
   String get receiveHubDeposit;
 
   /// No description provided for @receiveHubDepositSubtitle.

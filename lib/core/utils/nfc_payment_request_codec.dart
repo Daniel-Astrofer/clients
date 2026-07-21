@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:nfc_manager/ndef_record.dart';
 
-import 'package:kerosene/features/movement/domain/payment_intent_parser.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent_parser.dart';
 
 import 'qr_payment_parser.dart';
 

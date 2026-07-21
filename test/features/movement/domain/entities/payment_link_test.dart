@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 
 void main() {
   group('PaymentLink settlement fields', () {

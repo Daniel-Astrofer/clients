@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
-import 'package:kerosene/features/movement/widgets/transaction_visuals.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/external_transfer.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_visuals.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 
 void main() {
   group('TransactionVisualSpec', () {

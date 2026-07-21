@@ -6,7 +6,7 @@ import '../../theme/admin_copy.dart';
 import '../../theme/admin_typography.dart';
 import '../../theme/admin_theme.dart';
 import '../../widgets/admin_widgets.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Analytics module with aggregate metrics only.
 class AnalyticsScreen extends ConsumerWidget {

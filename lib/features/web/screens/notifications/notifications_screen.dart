@@ -6,7 +6,7 @@ import 'package:kerosene/core/services/notification_orchestrator.dart';
 import 'package:kerosene/features/web/theme/admin_colors.dart';
 import 'package:kerosene/features/web/theme/admin_typography.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import '../../theme/admin_copy.dart';

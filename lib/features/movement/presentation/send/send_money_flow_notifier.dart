@@ -1,0 +1,133 @@
+import 'dart:async';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
+import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
+
+class SendMoneyFlowState {
+  final int currentStep;
+  final String lockedRecipientAddress;
+  final String? lockedRecipientLabel;
+  final double lockedAmountBtc;
+  final Wallet? selectedWallet;
+  final ResolvedPaymentIntent? liveResolvedIntent;
+  final PaymentRail? userSelectedRail;
+  final SendDestinationAnalysis? destinationAnalysis;
+  final NetworkFeeTier selectedFeeTier;
+  final bool isBusy;
+  final String? errorMessage;
+
+  const SendMoneyFlowState({
+    this.currentStep = 0,
+    this.lockedRecipientAddress = '',
+    this.lockedRecipientLabel,
+    this.lockedAmountBtc = 0.0,
+    this.selectedWallet,
+    this.liveResolvedIntent,
+    this.userSelectedRail,
+    this.destinationAnalysis,
+    this.selectedFeeTier = NetworkFeeTier.standard,
+    this.isBusy = false,
+    this.errorMessage,
+  });
+
+  SendMoneyFlowState copyWith({
+    int? currentStep,
+    String? lockedRecipientAddress,
+    String? lockedRecipientLabel,
+    double? lockedAmountBtc,
+    Wallet? selectedWallet,
+    ResolvedPaymentIntent? liveResolvedIntent,
+    PaymentRail? userSelectedRail,
+    SendDestinationAnalysis? destinationAnalysis,
+    NetworkFeeTier? selectedFeeTier,
+    bool? isBusy,
+    String? errorMessage,
+  }) {
+    return SendMoneyFlowState(
+      currentStep: currentStep ?? this.currentStep,
+      lockedRecipientAddress: lockedRecipientAddress ?? this.lockedRecipientAddress,
+      lockedRecipientLabel: lockedRecipientLabel ?? this.lockedRecipientLabel,
+      lockedAmountBtc: lockedAmountBtc ?? this.lockedAmountBtc,
+      selectedWallet: selectedWallet ?? this.selectedWallet,
+      liveResolvedIntent: liveResolvedIntent ?? this.liveResolvedIntent,
+      userSelectedRail: userSelectedRail ?? this.userSelectedRail,
+      destinationAnalysis: destinationAnalysis ?? this.destinationAnalysis,
+      selectedFeeTier: selectedFeeTier ?? this.selectedFeeTier,
+      isBusy: isBusy ?? this.isBusy,
+      errorMessage: errorMessage, // explicitly allow nulling
+    );
+  }
+}
+
+class SendMoneyFlowNotifier extends AsyncNotifier<SendMoneyFlowState> {
+  @override
+  FutureOr<SendMoneyFlowState> build() async {
+    return const SendMoneyFlowState();
+  }
+
+  void setStep(int step) {
+    state = AsyncValue.data(state.value!.copyWith(currentStep: step));
+  }
+
+  void updateDestination(SendDestinationAnalysis? destination, {
+    String? lockedAddress,
+    String? lockedLabel,
+    double? lockedAmount,
+    ResolvedPaymentIntent? liveIntent,
+    PaymentRail? userRail,
+  }) {
+    state = AsyncValue.data(state.value!.copyWith(
+      destinationAnalysis: destination ?? state.value!.destinationAnalysis,
+      lockedRecipientAddress: lockedAddress ?? state.value!.lockedRecipientAddress,
+      lockedRecipientLabel: lockedLabel ?? state.value!.lockedRecipientLabel,
+      lockedAmountBtc: lockedAmount ?? state.value!.lockedAmountBtc,
+      liveResolvedIntent: liveIntent ?? state.value!.liveResolvedIntent,
+      userSelectedRail: userRail ?? state.value!.userSelectedRail,
+    ));
+  }
+
+  void selectWallet(Wallet wallet) {
+    state = AsyncValue.data(state.value!.copyWith(selectedWallet: wallet));
+  }
+
+  void clearSelectedWallet() {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      SendMoneyFlowState(
+        currentStep: current.currentStep,
+        lockedRecipientAddress: current.lockedRecipientAddress,
+        lockedRecipientLabel: current.lockedRecipientLabel,
+        lockedAmountBtc: current.lockedAmountBtc,
+        selectedWallet: null,
+        liveResolvedIntent: current.liveResolvedIntent,
+        userSelectedRail: current.userSelectedRail,
+        destinationAnalysis: current.destinationAnalysis,
+        selectedFeeTier: current.selectedFeeTier,
+        isBusy: current.isBusy,
+        errorMessage: current.errorMessage,
+      ),
+    );
+  }
+
+  void setFeeTier(NetworkFeeTier tier) {
+    state = AsyncValue.data(state.value!.copyWith(selectedFeeTier: tier));
+  }
+
+  void setBusy(bool busy) {
+    state = AsyncValue.data(state.value!.copyWith(isBusy: busy));
+  }
+
+  void setError(String? error) {
+    state = AsyncValue.data(state.value!.copyWith(errorMessage: error));
+  }
+}
+
+final sendMoneyFlowProvider = AsyncNotifierProvider<SendMoneyFlowNotifier, SendMoneyFlowState>(() {
+  return SendMoneyFlowNotifier();
+});

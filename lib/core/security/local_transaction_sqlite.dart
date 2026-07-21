@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart'
+import 'package:kerosene/features/movement/data/entities/transaction.dart'
     as domain;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';

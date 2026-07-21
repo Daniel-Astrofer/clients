@@ -64,6 +64,50 @@ class SendMoneyCopy {
         _ => 'Não encontramos carteiras disponíveis para envio.',
       };
 
+  static String confirmWalletAction(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Continue with this wallet',
+        'es' => 'Continuar con esta billetera',
+        _ => 'Continuar com esta carteira',
+      };
+
+  static String walletUnavailableGeneric(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'This wallet cannot send right now.',
+        'es' => 'Esta billetera no puede enviar ahora.',
+        _ => 'Esta carteira não pode enviar agora.',
+      };
+
+  static String walletUnavailableInstant(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'This wallet does not support instant sends. Use your insured balance.',
+        'es' =>
+          'Esta billetera no admite envíos instantáneos. Usa tu saldo asegurado.',
+        _ =>
+          'Esta carteira não faz envio instantâneo. Use o saldo assegurado.',
+      };
+
+  static String walletUnavailableOnchain(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'This wallet cannot pay on-chain addresses. Pick an on-chain or cold wallet.',
+        'es' =>
+          'Esta billetera no puede pagar direcciones on-chain. Elige on-chain o cold.',
+        _ =>
+          'Esta carteira não paga endereços on-chain. Escolha on-chain ou cold.',
+      };
+
+  static String walletBlockedHint(
+    BuildContext context, {
+    required String reason,
+  }) =>
+      switch (_language(context)) {
+        'en' => 'Some wallets stay hidden here: $reason',
+        'es' => 'Algunas billeteras quedan fuera: $reason',
+        _ => 'Algumas carteiras ficam de fora: $reason',
+      };
+
   static String chooseWalletToContinue(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Choose a wallet to continue.',
@@ -332,23 +376,108 @@ class SendMoneyCopy {
 
   static String reviewTitle(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Does this look right?',
-        'es' => '¿Está todo correcto?',
-        _ => 'Confere essa transferência?',
+        'en' => 'Is this transaction correct?',
+        'es' => '¿Esta transacción es correcta?',
+        _ => 'Essa transação está correta?',
+      };
+
+  static String reviewTransferAmountLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Transfer amount',
+        'es' => 'Valor de la transferencia',
+        _ => 'Valor da transferência',
+      };
+
+  static String reviewTransactionFeeLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Transaction fee',
+        'es' => 'Tarifa de transacción',
+        _ => 'Taxa de transação',
+      };
+
+  static String reviewMiningFeeLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Mining fee',
+        'es' => 'Tarifa de minería',
+        _ => 'Taxa de mineração',
+      };
+
+  static String reviewTotalLabel(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Total',
+        'es' => 'Total',
+        _ => 'Total',
+      };
+
+  static String reviewFraudTipLead(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'To continue, review the details. ',
+        'es' => 'Para continuar, revisa los datos. ',
+        _ => 'Para continuar, analise os dados. ',
+      };
+
+  static String reviewFraudTipLink(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Read here',
+        'es' => 'Lee aquí',
+        _ => 'Leia aqui',
+      };
+
+  static String reviewFraudTipTrail(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => ' how to avoid fraud.',
+        'es' => ' cómo evitar fraudes.',
+        _ => ' como evitar fraudes.',
+      };
+
+  static String reviewFraudDialogTitle(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'How to avoid fraud',
+        'es' => 'Cómo evitar fraudes',
+        _ => 'Como evitar fraudes',
+      };
+
+  static String reviewFraudDialogBody(BuildContext context) =>
+      switch (_language(context)) {
+        'en' =>
+          'Confirm the recipient and amounts before authorizing. Kerosene never asks you to send funds to “validate” an account.',
+        'es' =>
+          'Confirma el destinatario y los montos antes de autorizar. Kerosene nunca te pide enviar fondos para “validar” una cuenta.',
+        _ =>
+          'Confirme o destinatário e os valores antes de autorizar. A Kerosene nunca pede que você envie fundos para “validar” uma conta.',
+      };
+
+  static List<String> reviewFraudDialogBullets(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => const [
+            'Check the name and destination address carefully.',
+            'Compare the transfer total with what you intended to send.',
+            'If someone rushed you or asked for a test payment, stop and verify.',
+          ],
+        'es' => const [
+            'Revisa con cuidado el nombre y la dirección de destino.',
+            'Compara el total con lo que querías enviar.',
+            'Si alguien te apuró o pidió un pago de prueba, detente y verifica.',
+          ],
+        _ => const [
+            'Confira com atenção o nome e o endereço de destino.',
+            'Compare o total com o valor que você pretendia enviar.',
+            'Se alguém te apressou ou pediu um pagamento de teste, pare e verifique.',
+          ],
       };
 
   static String authorizeAction(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Authorize',
-        'es' => 'Autorizar',
-        _ => 'Autorizar',
+        'en' => 'Confirm with PIN',
+        'es' => 'Confirmar con PIN',
+        _ => 'Confirmar com PIN',
       };
 
   static String authorizingAction(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Authorizing…',
-        'es' => 'Autorizando…',
-        _ => 'Autorizando…',
+        'en' => 'Confirming…',
+        'es' => 'Confirmando…',
+        _ => 'Confirmando…',
       };
 
   /// Progressive labels while the authorize button waits on the network.
@@ -402,16 +531,16 @@ class SendMoneyCopy {
 
   static String authNextDevicePin(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Next: app PIN',
-        'es' => 'Siguiente: PIN de la app',
-        _ => 'Em seguida: PIN do app',
+        'en' => 'Next: app PIN. Device biometrics come after.',
+        'es' => 'Siguiente: PIN de la app. La biometría del dispositivo viene después.',
+        _ => 'Em seguida: PIN do app. Biometria do dispositivo vem depois.',
       };
 
   static String authNextPinAndTotp(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Next: app PIN · authenticator',
-        'es' => 'Siguiente: PIN de la app · autenticador',
-        _ => 'Em seguida: PIN do app · autenticador',
+        'en' => 'Next: app PIN, then biometrics and your authenticator code',
+        'es' => 'Siguiente: PIN de la app, luego biometría y el código del autenticador',
+        _ => 'Em seguida: PIN do app, depois biometria e o código do autenticador',
       };
 
   static String receiptSubtitleConfirmed(BuildContext context) =>

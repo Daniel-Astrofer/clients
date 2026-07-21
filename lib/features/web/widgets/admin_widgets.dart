@@ -6,7 +6,7 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import '../theme/admin_colors.dart';
 import '../theme/admin_theme.dart';
 import '../theme/admin_typography.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 class AdminResponsiveGrid extends StatelessWidget {
   final List<Widget> children;

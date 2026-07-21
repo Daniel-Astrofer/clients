@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 import 'sovereignty_kfe_reserve_overview_card.dart';
 import 'sovereignty_status_components.dart';

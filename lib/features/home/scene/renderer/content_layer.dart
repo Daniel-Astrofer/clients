@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show homeFontSize, homeSize;
 import 'package:kerosene/features/home/scene/models/home_scene.dart';

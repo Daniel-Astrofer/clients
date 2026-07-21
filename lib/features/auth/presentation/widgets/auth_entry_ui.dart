@@ -1,11 +1,11 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
+import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
 const Color authEntryInk = AppColors.hexFF000000;
@@ -247,63 +247,27 @@ class AuthEntryButton extends StatelessWidget {
             ? Colors.white.withValues(alpha: 0.06)
             : Colors.white.withValues(alpha: 0.22))
         : Colors.transparent;
+    final height = responsive.isCompact ? (isShort ? 46.0 : 50.0) : 54.0;
 
     return AuthMotionPressScale(
       enabled: !disabled,
-      child: SizedBox(
-        height: responsive.isCompact ? (isShort ? 46 : 50) : 54,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: disabled
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    onPressed?.call();
-                  },
-            child: Ink(
-              decoration: BoxDecoration(
-                color: background,
-                border: Border.all(color: borderColor),
-              ),
-              child: Center(
-                child: isLoading
-                    ? CupertinoActivityIndicator(
-                        radius: 9,
-                        color: foreground,
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          if (icon != null) ...[
-                            Icon(icon, size: 16, color: foreground),
-                            const SizedBox(width: AppSpacing.sm),
-                          ],
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                text,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                softWrap: false,
-                                textAlign: TextAlign.center,
-                                style: AppTypography.buttonText.copyWith(
-                                  color: foreground,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0,
-                                  height: 1.05,
-                                  fontSize: responsive.isCompact ? 14 : null,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-          ),
+      child: AuthPrimaryCta(
+        label: text,
+        onPressed: onPressed,
+        isLoading: isLoading,
+        outlined: outlined,
+        height: height,
+        borderRadius: BorderRadius.zero,
+        backgroundColor: background,
+        foregroundColor: foreground,
+        borderColor: borderColor,
+        icon: icon == null ? null : Icon(icon, size: 16, color: foreground),
+        textStyle: AppTypography.buttonText.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+          height: 1.05,
+          fontSize: responsive.isCompact ? 14 : null,
         ),
       ),
     );

@@ -6,7 +6,7 @@ import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_public_material.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/electrum_seed_utils.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
-import 'package:kerosene/features/movement/domain/payment_security_guards.dart';
+import 'package:kerosene/features/movement/data/payment_security_guards.dart';
 
 void main() {
   group('cold wallet network path', () {

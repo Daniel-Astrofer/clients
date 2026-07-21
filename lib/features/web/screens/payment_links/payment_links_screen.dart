@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
 import '../../providers/admin_providers.dart';
@@ -9,7 +9,7 @@ import '../../theme/admin_colors.dart';
 import '../../theme/admin_typography.dart';
 import '../../theme/admin_theme.dart';
 import '../../widgets/admin_widgets.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 class PaymentLinksScreen extends ConsumerWidget {
   const PaymentLinksScreen({super.key});

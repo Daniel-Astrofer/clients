@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/presentation/widgets/app_notice.dart';
-import 'package:kerosene/core/presentation/widgets/kerosene_screen_background.dart';
-import 'package:kerosene/core/presentation/widgets/tor_loading_dots.dart';
-import 'package:kerosene/core/theme/app_spacing.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/monochrome_theme.dart';
+import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/features/presentation/widgets/kerosene_screen_background.dart';
+import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/controller/auth_providers.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 

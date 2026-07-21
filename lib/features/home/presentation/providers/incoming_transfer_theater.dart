@@ -1,5 +1,5 @@
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 /// Pure helpers that turn financial events into home-theater receive pieces.

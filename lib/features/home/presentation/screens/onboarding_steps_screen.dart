@@ -3,12 +3,13 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/presentation/widgets/app_primary_navigation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/core/theme/app_colors.dart';
-import 'package:kerosene/core/theme/app_typography.dart';
-import 'package:kerosene/core/theme/monochrome_theme.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import '../providers/onboarding_progress_provider.dart';
 
 class OnboardingStepsScreen extends ConsumerWidget {
@@ -126,7 +127,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                           enabled: progress.hasCustodialWallet,
                           onTapAction: () {
                             Navigator.pop(context);
-                            Navigator.pushNamed(context, '/receive');
+                            context.go('/receive');
                           },
                         ),
                         _buildStepItem(
@@ -138,7 +139,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                           enabled: progress.hasDeposit,
                           onTapAction: () {
                             Navigator.pop(context);
-                            Navigator.pushNamed(context, '/send-money');
+                            context.go('/send-money');
                           },
                         ),
                       ].animate(interval: 80.ms).fade(duration: 250.ms).slideY(begin: 0.04, end: 0),

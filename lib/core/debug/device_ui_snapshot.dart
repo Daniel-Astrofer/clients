@@ -13,7 +13,7 @@ import 'package:kerosene/features/auth/domain/entities/user.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
 /// Fixed file name so adb/scripts always know where to look.

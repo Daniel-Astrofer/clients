@@ -3,9 +3,9 @@ import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:kerosene/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:kerosene/features/movement/data/datasources/transaction_remote_datasource.dart';
 import 'package:kerosene/features/movement/data/repositories/transaction_repository_impl.dart';
-import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 
 class _SpyTransactionRemoteDataSource implements TransactionRemoteDataSource {
   TxStatus response = const TxStatus(

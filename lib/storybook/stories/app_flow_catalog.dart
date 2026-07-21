@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/icons.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 enum FlowSurface {
   mobile(Size(390, 844)),

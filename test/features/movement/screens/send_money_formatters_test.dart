@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/movement/screens/send_destination_models.dart';
-import 'package:kerosene/features/movement/screens/send_money_formatters.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 
 void main() {
   const onchain = SendDestinationAnalysis(
