@@ -74,9 +74,8 @@ abstract final class BackgroundNetworkBridge {
       final existing = prefs.getStringList(seenNotificationIdsKey) ?? const [];
       final merged = <String>{...existing, ...ids}.toList();
       // Cap durable set.
-      final kept = merged.length > 400
-          ? merged.sublist(merged.length - 400)
-          : merged;
+      final kept =
+          merged.length > 400 ? merged.sublist(merged.length - 400) : merged;
       await prefs.setStringList(seenNotificationIdsKey, kept);
       final numeric = kept
           .map(int.tryParse)

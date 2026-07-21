@@ -40,12 +40,13 @@ class ReceiveFlowTitleBar extends StatelessWidget {
       height: titleStyle?.height ?? baseH1.height,
     );
     final resolvedSubtitle = (subtitleStyle ?? baseDescription).copyWith(
-      fontSize:
-          (subtitleStyle?.fontSize ?? baseDescription.fontSize ?? 14) * bodyScale,
+      fontSize: (subtitleStyle?.fontSize ?? baseDescription.fontSize ?? 14) *
+          bodyScale,
     );
 
     final horizontalPad = alignLeft || compact ? 20.0 : 8.0;
-    final backWidth = onBack != null ? 48.0 : (alignLeft || compact ? 0.0 : 48.0);
+    final backWidth =
+        onBack != null ? 48.0 : (alignLeft || compact ? 0.0 : 48.0);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(horizontalPad, 0, 24, 0),

@@ -80,7 +80,6 @@ class _KeroseneLogoLoadingViewState extends State<KeroseneLogoLoadingView>
       ),
     );
   }
-
 }
 
 class KeroseneLogoLoadingMark extends StatelessWidget {

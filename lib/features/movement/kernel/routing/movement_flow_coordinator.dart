@@ -11,8 +11,6 @@ enum MovementRail { internal, onchain, lightning, paymentLink, nfc, onramp }
 
 enum MovementReceiveWalletKind { internal, custodialOnchain, coldWallet }
 
-
-
 class MovementFlowState {
   final MovementFlowSurface surface;
   final Wallet? selectedWallet;
@@ -91,6 +89,14 @@ class MovementFlowCoordinator extends Notifier<MovementFlowState> {
     state = state.copyWith(amountInput: value.trim().isEmpty ? '0' : value);
   }
 
+  void setSelectedWallet(Wallet wallet) {
+    state = state.copyWith(
+      surface: MovementFlowSurface.receive,
+      selectedWallet: wallet,
+      receiveWalletKind: classifyReceiveWallet(wallet),
+    );
+  }
+
   void selectPaymentLinkExpiration(int minutes) {
     state = state.copyWith(paymentLinkExpiresInMinutes: minutes);
   }
@@ -124,8 +130,6 @@ MovementReceiveWalletKind classifyReceiveWallet(Wallet wallet) {
 bool isReceiveOnChainWallet(Wallet wallet) {
   return classifyReceiveWallet(wallet) != MovementReceiveWalletKind.internal;
 }
-
-
 
 MovementRail railForReceiveMethod({
   required ReceiveAmountMethod method,

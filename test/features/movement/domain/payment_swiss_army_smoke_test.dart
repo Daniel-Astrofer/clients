@@ -91,8 +91,7 @@ void main() {
     });
 
     test('9 cold source selects coldOnchain rail', () {
-      final intent =
-          parser.parse('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx');
+      final intent = parser.parse('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx');
       final resolved = resolver.resolveLocal(
         intent: intent,
         source: SourceCustody.watchOnly,

@@ -220,8 +220,7 @@ final class Wallet extends Equatable {
     final walletMode =
         data['walletMode']?.toString() ?? _walletModeFromKfeKind(kind);
     final primarySats = BalanceDisplayRules.primarySats(
-      kind: kind ??
-          (spendable ? 'INTERNAL' : 'WATCH_ONLY'),
+      kind: kind ?? (spendable ? 'INTERNAL' : 'WATCH_ONLY'),
       availableSats: availableSats,
       observedSats: observedSats,
     );

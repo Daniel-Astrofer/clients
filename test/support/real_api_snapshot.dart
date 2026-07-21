@@ -236,8 +236,7 @@ Future<({String jwt, UserModel user, String? totp})> _loginOrSignup(
     throw StateError('signup failed: ${signup.statusCode} ${signup.data}');
   }
   final body = signup.data;
-  final otpUri =
-      body['otpUri'] ?? body['qrCodeUri'] ?? body['data']?['otpUri'];
+  final otpUri = body['otpUri'] ?? body['qrCodeUri'] ?? body['data']?['otpUri'];
   String? totp;
   if (otpUri != null) {
     totp = Uri.tryParse(otpUri.toString())?.queryParameters['secret'];
@@ -344,14 +343,17 @@ Future<RealUiSnapshot> fetchRealUiSnapshot() async {
       queryParameters: {'page': 0, 'size': 50},
     );
     final items = _asMapList(hist.data);
-    txs = items.map((m) {
-      try {
-        return Transaction.fromJson(m);
-      } catch (e) {
-        debugPrint('[real-golden] skip tx parse: $e');
-        return null;
-      }
-    }).whereType<Transaction>().toList();
+    txs = items
+        .map((m) {
+          try {
+            return Transaction.fromJson(m);
+          } catch (e) {
+            debugPrint('[real-golden] skip tx parse: $e');
+            return null;
+          }
+        })
+        .whereType<Transaction>()
+        .toList();
   } catch (e) {
     debugPrint('[real-golden] transactions: $e');
   }

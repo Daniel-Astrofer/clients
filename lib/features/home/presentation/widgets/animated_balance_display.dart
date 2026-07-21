@@ -121,8 +121,8 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
           largeDelta &&
           !widget.isHidden) {
         _flashColor = widget.balance > oldWidget.balance
-            ? AppColors.hexFF00FF94
-            : AppColors.hexFFFF0055;
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.error;
         _flashController.forward(from: 0.0);
       }
     }

@@ -84,7 +84,8 @@ class HomeFeedCta {
     );
   }
 
-  bool get isNavigate => action.toUpperCase() == 'NAVIGATE' && target.isNotEmpty;
+  bool get isNavigate =>
+      action.toUpperCase() == 'NAVIGATE' && target.isNotEmpty;
 }
 
 class HomeFeedItem {

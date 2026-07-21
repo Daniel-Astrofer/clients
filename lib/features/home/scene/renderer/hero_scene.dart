@@ -16,6 +16,7 @@ import 'package:kerosene/features/home/scene/renderer/scene_transition.dart';
 class HeroScene extends ConsumerWidget {
   final String userName;
   final SceneActionHandler? onAction;
+
   /// Optional trailing chrome (e.g. notification bell) kept outside scene JSON.
   final Widget? trailing;
 

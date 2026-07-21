@@ -22,4 +22,3 @@ Future<void> main() async {
     ),
   );
 }
-

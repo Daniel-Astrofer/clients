@@ -10,11 +10,12 @@ class LightningMovementProvider implements MovementEntryProvider {
   const LightningMovementProvider();
 
   @override
-  List<MovementEntry> entriesFor(BuildContext context, Wallet? wallet, MovementCapability caps) {
+  List<MovementEntry> entriesFor(
+      BuildContext context, Wallet? wallet, MovementCapability caps) {
     if (wallet != null && (wallet.isColdWallet || wallet.isCustodialOnchain)) {
       return []; // Only internal wallet can do Lightning
     }
-    
+
     return [
       MovementEntry(
         id: 'lightning',

@@ -58,7 +58,8 @@ class DeviceHelper {
 
   static Future<String?> getDeviceBoundUsername() async {
     final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(_deviceBoundUsernameKey)?.trim().toLowerCase();
+    final value =
+        prefs.getString(_deviceBoundUsernameKey)?.trim().toLowerCase();
     if (value == null || value.isEmpty) {
       return null;
     }

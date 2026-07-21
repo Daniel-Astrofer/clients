@@ -190,8 +190,10 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                               child: CircularProgressIndicator(
                                 value: _holdController.value,
                                 strokeWidth: 3.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(foreground),
-                                backgroundColor: foreground.withValues(alpha: 0.12),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(foreground),
+                                backgroundColor:
+                                    foreground.withValues(alpha: 0.12),
                               ),
                             ),
                           child!,
@@ -264,7 +266,8 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                         selected: selected,
                         compact: compact,
                       ),
-                      if (widget.wallet.spendable && widget.wallet.balance > 0) ...[
+                      if (widget.wallet.spendable &&
+                          widget.wallet.balance > 0) ...[
                         const SizedBox(width: 8),
                         _SafeToSpendChip(
                           selected: selected,
@@ -273,7 +276,8 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                       ],
                     ],
                   ),
-                ] else if (widget.wallet.spendable && widget.wallet.balance > 0) ...[
+                ] else if (widget.wallet.spendable &&
+                    widget.wallet.balance > 0) ...[
                   SizedBox(height: compact ? 10 : 12),
                   _SafeToSpendChip(
                     selected: selected,

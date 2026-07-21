@@ -439,7 +439,8 @@ class StatementReportCalculator {
     required bool fallbackToWallet,
   }) {
     final amount = tx.amountSatoshis.abs();
-    final debitAmount = amount + tx.feeSatoshis.abs() + tx.serviceFeeSatoshis.abs();
+    final debitAmount =
+        amount + tx.feeSatoshis.abs() + tx.serviceFeeSatoshis.abs();
     final walletMatches = _matchesWallet(wallet, [tx.walletId]);
     final sourceMatches = _matchesWallet(wallet, [
       tx.sourceWalletId,

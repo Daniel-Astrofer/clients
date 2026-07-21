@@ -516,13 +516,11 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
         final showShell = open > 0.001 && current != null;
 
         final currentBody = current != null
-            ? _bodyCache[
-                    '${_sceneCacheKey(current)}|live=true|i=true'] ??
+            ? _bodyCache['${_sceneCacheKey(current)}|live=true|i=true'] ??
                 _cachedBody(current, interactive: true, liveContent: true)
             : null;
         final previousBody = previous != null
-            ? _bodyCache[
-                    '${_sceneCacheKey(previous)}|live=false|i=false'] ??
+            ? _bodyCache['${_sceneCacheKey(previous)}|live=false|i=false'] ??
                 _cachedBody(previous, interactive: false, liveContent: false)
             : null;
 

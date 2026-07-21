@@ -159,8 +159,7 @@ List<double> _generateTransactionSound() {
   for (int i = 0; i < duration * sampleRate; i++) {
     double t = i / sampleRate;
     // Cyber-coin: two pure high sines overlapping with a bright fast delay
-    double wave =
-        _sine(t, 2000) * _adsr(t, 0.01, 0.1, 0, 0, duration) +
+    double wave = _sine(t, 2000) * _adsr(t, 0.01, 0.1, 0, 0, duration) +
         _sine(t, 3000) * _adsr(t - 0.1, 0.01, 0.2, 0, 0, duration) +
         _sine(t, 4000) * _adsr(t - 0.2, 0.01, 0.4, 0, 0, duration);
     samples.add(wave * 0.3);

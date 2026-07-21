@@ -56,7 +56,8 @@ class _TransactionStatementInsightsState
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(
           children: [
-            const Icon(KeroseneIcons.warning, color: _onSurfaceVariant, size: 28),
+            const Icon(KeroseneIcons.warning,
+                color: _onSurfaceVariant, size: 28),
             const SizedBox(height: 12),
             Text(
               context.tr.financialStatementLoadErrorTitle,
@@ -175,7 +176,8 @@ class _KpiSummaryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(KeroseneIcons.chart, color: _onSurfaceVariant, size: 18),
+              const Icon(KeroseneIcons.chart,
+                  color: _onSurfaceVariant, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1282,9 +1284,8 @@ class _InsightViewModel {
   factory _InsightViewModel.from(StatementReport report) {
     final colorsByWalletId = <String, Color>{};
     for (var index = 0; index < report.wallets.length; index++) {
-      colorsByWalletId[report.wallets[index].id] = report.wallets.length == 1
-          ? _singleWalletColor
-          : _walletColor(index);
+      colorsByWalletId[report.wallets[index].id] =
+          report.wallets.length == 1 ? _singleWalletColor : _walletColor(index);
     }
 
     final buckets = [
@@ -1312,8 +1313,8 @@ class _InsightViewModel {
           visualSats: segment.visualSats,
           percent: segment.percent,
           color: colorsByWalletId[segment.walletId] ?? _singleWalletColor,
-          isDominant: report.totalBalanceSats > 0 &&
-              segment.walletId == dominantId,
+          isDominant:
+              report.totalBalanceSats > 0 && segment.walletId == dominantId,
         ),
     ];
 
@@ -1392,8 +1393,7 @@ String _rangeLabel(BuildContext context, StatementReportPeriod period) {
 
 String _periodTabLabel(BuildContext context, StatementReportPeriod period) {
   return switch (period) {
-    StatementReportPeriod.monthly =>
-      context.tr.financialStatementPeriodMonthly,
+    StatementReportPeriod.monthly => context.tr.financialStatementPeriodMonthly,
     StatementReportPeriod.weekly => context.tr.financialStatementPeriodWeekly,
     StatementReportPeriod.annual => context.tr.financialStatementPeriodAnnual,
   };

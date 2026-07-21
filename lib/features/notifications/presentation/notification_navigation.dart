@@ -31,7 +31,8 @@ class NotificationNavigation {
 
     // Transaction notifications → exclusive detail screen (not legacy dialog).
     if (_isTransaction(notification)) {
-      final tx = await _resolveTransactionFromNotification(context, notification);
+      final tx =
+          await _resolveTransactionFromNotification(context, notification);
       if (!navigator.mounted) return;
       if (tx != null) {
         await TransactionDetailScreen.open(navigator.context, tx);
@@ -100,8 +101,7 @@ class NotificationNavigation {
 
       // 1) Local/remote projection already loaded.
       try {
-        final history =
-            await container.read(transactionHistoryProvider.future);
+        final history = await container.read(transactionHistoryProvider.future);
         final hit = _matchInList(history, keys);
         if (hit != null) return hit;
       } catch (_) {}
@@ -122,9 +122,7 @@ class NotificationNavigation {
               sessionScope: scope,
               remote: [remote],
             );
-            container
-                .read(lastTransactionHistoryProvider.notifier)
-                .set(merged);
+            container.read(lastTransactionHistoryProvider.notifier).set(merged);
             container.invalidate(transactionHistoryProvider);
           }
           return remote;
@@ -327,7 +325,8 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              NotificationTranslator.resolveTitle(context, notification),
+                              NotificationTranslator.resolveTitle(
+                                  context, notification),
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -347,7 +346,8 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        NotificationTranslator.resolveBody(context, notification),
+                        NotificationTranslator.resolveBody(
+                            context, notification),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white.withValues(alpha: 0.76),
                           height: 1.42,
@@ -395,7 +395,8 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                         child: TextButton(
                           onPressed: () => Navigator.of(context).pop(false),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.white.withValues(alpha: 0.72),
+                            foregroundColor:
+                                Colors.white.withValues(alpha: 0.72),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),

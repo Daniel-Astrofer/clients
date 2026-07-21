@@ -245,7 +245,8 @@ class ColdWalletCreationScreenState
       final passphraseToStore =
           level.usesExtraWord ? extraWordController.text.trim() : '';
       final useCase = RegisterColdWalletUseCase(
-        importColdWallet: ref.read(bitcoinAccountsProvider.notifier).importColdWallet,
+        importColdWallet:
+            ref.read(bitcoinAccountsProvider.notifier).importColdWallet,
       );
       final result = await useCase.registerFromMnemonic(
         label: walletLabel,

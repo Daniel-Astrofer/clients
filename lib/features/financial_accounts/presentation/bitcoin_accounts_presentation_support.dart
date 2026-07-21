@@ -146,10 +146,9 @@ String bitcoinAccountTransactionStatusLabel(
     TransactionStatus.pending => context.tr.bitcoinReceiveStatusWaiting,
     TransactionStatus.confirming => context.tr.bitcoinReceiveStatusConfirming,
     TransactionStatus.confirmed => context.tr.bitcoinReceiveStatusPaid,
-    TransactionStatus.cancelled =>
-      context.tr.financialStatementFilterCancelled,
+    TransactionStatus.cancelled => context.tr.financialStatementFilterCancelled,
     TransactionStatus.reconciling => 'Em análise',
-      TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
+    TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
   };
 }
 

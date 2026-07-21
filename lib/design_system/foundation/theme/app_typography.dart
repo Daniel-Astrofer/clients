@@ -18,7 +18,7 @@ class AppTypography {
 
   static const String fontFamily = 'Plus Jakarta Sans';
   static const String bodyFontFamily = fontFamily;
-  static const String displayFontFamily = 'Newsreader';
+  static const String displayFontFamily = 'Playfair Display';
   static const String titleFontFamily = displayFontFamily;
   static const String monoFontFamily = 'JetBrains Mono';
   static const String numericFontFamily = fontFamily;
@@ -39,36 +39,32 @@ class AppTypography {
   // Newsreader, 500/600, mobile 36–44, web 56–72.
   // ─────────────────────────────────────────────────────────────
 
-  static final TextStyle display = newsreader(
+  static final TextStyle display = playfairDisplay(
     fontSize: 40,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w400,
     height: 1.06,
     letterSpacing: -1.0,
-    color: AppColors.textPrimary,
   );
 
-  static final TextStyle displayLarge = newsreader(
+  static final TextStyle displayLarge = playfairDisplay(
     fontSize: 44,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w400,
     height: 1.04,
     letterSpacing: -1.2,
-    color: AppColors.textPrimary,
   );
 
-  static final TextStyle displayWeb = newsreader(
+  static final TextStyle displayWeb = playfairDisplay(
     fontSize: 64,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w400,
     height: 1.04,
     letterSpacing: -1.2,
-    color: AppColors.textPrimary,
   );
 
-  static final TextStyle displayWebLarge = newsreader(
+  static final TextStyle displayWebLarge = playfairDisplay(
     fontSize: 72,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w400,
     height: 1.02,
     letterSpacing: -1.4,
-    color: AppColors.textPrimary,
   );
 
   // Compatibility aliases.
@@ -86,7 +82,6 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     height: 1.12,
     letterSpacing: -0.5,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle h2Small = inter(
@@ -94,7 +89,6 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     height: 1.12,
     letterSpacing: -0.5,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle h2Web = inter(
@@ -102,7 +96,6 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     height: 1.12,
     letterSpacing: -0.5,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle h2WebLarge = inter(
@@ -110,7 +103,6 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     height: 1.12,
     letterSpacing: -0.5,
-    color: AppColors.textPrimary,
   );
 
   // ─────────────────────────────────────────────────────────────
@@ -124,7 +116,6 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.18,
     letterSpacing: -0.2,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle h3Small = inter(
@@ -132,7 +123,6 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.18,
     letterSpacing: -0.2,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle h3Large = inter(
@@ -140,7 +130,6 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.18,
     letterSpacing: -0.2,
-    color: AppColors.textPrimary,
   );
 
   // ─────────────────────────────────────────────────────────────
@@ -154,7 +143,6 @@ class AppTypography {
     fontWeight: FontWeight.w400,
     height: 1.55,
     letterSpacing: 0,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle bodyMedium = inter(
@@ -162,7 +150,6 @@ class AppTypography {
     fontWeight: FontWeight.w400,
     height: 1.5,
     letterSpacing: 0,
-    color: AppColors.textPrimary,
   );
 
   static final TextStyle bodySmall = inter(
@@ -170,7 +157,6 @@ class AppTypography {
     fontWeight: FontWeight.w400,
     height: 1.45,
     letterSpacing: 0,
-    color: AppColors.textSecondary,
   );
 
   static final TextStyle description = inter(
@@ -178,7 +164,6 @@ class AppTypography {
     fontWeight: FontWeight.w400,
     height: 1.55,
     letterSpacing: 0,
-    color: AppColors.textSecondary,
   );
 
   static final TextStyle descriptionStrong = inter(
@@ -186,7 +171,6 @@ class AppTypography {
     fontWeight: FontWeight.w500,
     height: 1.5,
     letterSpacing: 0,
-    color: AppColors.textPrimary,
   );
 
   // ─────────────────────────────────────────────────────────────
@@ -200,7 +184,6 @@ class AppTypography {
     fontWeight: FontWeight.w500,
     height: 1.35,
     letterSpacing: 0.1,
-    color: AppColors.textMuted,
   );
 
   static final TextStyle captionLarge = inter(
@@ -208,7 +191,6 @@ class AppTypography {
     fontWeight: FontWeight.w500,
     height: 1.35,
     letterSpacing: 0.1,
-    color: AppColors.textMuted,
   );
 
   static final TextStyle label = inter(
@@ -216,7 +198,6 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.35,
     letterSpacing: 0.1,
-    color: AppColors.textSecondary,
   );
 
   static final TextStyle buttonText = inter(
@@ -224,7 +205,6 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.15,
     letterSpacing: 0,
-    color: AppColors.textPrimary,
   );
 
   // ─────────────────────────────────────────────────────────────
@@ -236,7 +216,6 @@ class AppTypography {
   static final TextStyle number = inter(
     fontSize: 18,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
     letterSpacing: 3,
     fontFeatures: const [FontFeature.tabularFigures()],
   );
@@ -245,7 +224,6 @@ class AppTypography {
     fontSize: 32,
     fontWeight: FontWeight.w600,
     height: 1.08,
-    color: AppColors.textPrimary,
     letterSpacing: 3,
     fontFeatures: const [FontFeature.tabularFigures()],
   );
@@ -254,7 +232,6 @@ class AppTypography {
     fontSize: 40,
     fontWeight: FontWeight.w600,
     height: 1.05,
-    color: AppColors.textPrimary,
     letterSpacing: 3,
     fontFeatures: const [FontFeature.tabularFigures()],
   );
@@ -263,7 +240,6 @@ class AppTypography {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.12,
-    color: AppColors.textPrimary,
     letterSpacing: 3,
     fontFeatures: const [FontFeature.tabularFigures()],
   );
@@ -272,7 +248,6 @@ class AppTypography {
     fontSize: 13,
     fontWeight: FontWeight.w500,
     height: 1.35,
-    color: AppColors.textSecondary,
   );
 
   static TextStyle amountInput({
@@ -383,6 +358,50 @@ class AppTypography {
     );
   }
 
+  static TextStyle playfairDisplay({
+    TextStyle? textStyle,
+    Color? color,
+    Color? backgroundColor,
+    double? fontSize,
+    FontWeight? fontWeight,
+    FontStyle? fontStyle,
+    double? letterSpacing,
+    double? wordSpacing,
+    TextBaseline? textBaseline,
+    double? height,
+    Locale? locale,
+    Paint? foreground,
+    Paint? background,
+    List<Shadow>? shadows,
+    List<FontFeature>? fontFeatures,
+    TextDecoration? decoration,
+    Color? decorationColor,
+    TextDecorationStyle? decorationStyle,
+    double? decorationThickness,
+  }) {
+    return GoogleFonts.playfairDisplay(
+      textStyle: textStyle,
+      color: color,
+      backgroundColor: backgroundColor,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      fontStyle: fontStyle,
+      letterSpacing: letterSpacing,
+      wordSpacing: wordSpacing,
+      textBaseline: textBaseline,
+      height: height,
+      locale: locale,
+      foreground: foreground,
+      background: background,
+      shadows: shadows,
+      fontFeatures: fontFeatures,
+      decoration: decoration,
+      decorationColor: decorationColor,
+      decorationStyle: decorationStyle,
+      decorationThickness: decorationThickness,
+    );
+  }
+
   static TextStyle newsreader({
     TextStyle? textStyle,
     Color? color,
@@ -404,7 +423,7 @@ class AppTypography {
     TextDecorationStyle? decorationStyle,
     double? decorationThickness,
   }) {
-    return GoogleFonts.newsreader(
+    return playfairDisplay(
       textStyle: textStyle,
       color: color,
       backgroundColor: backgroundColor,

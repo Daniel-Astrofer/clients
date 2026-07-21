@@ -73,7 +73,8 @@ void main() {
     expect(kv.data.containsKey(key), isFalse);
   });
 
-  test('legacy plain JSON list still loads and upgrades on next save', () async {
+  test('legacy plain JSON list still loads and upgrades on next save',
+      () async {
     final kv = _MemoryKv();
     final store = LocalTransactionHistoryStore.withKv(kv);
     const scope = 'user_7';

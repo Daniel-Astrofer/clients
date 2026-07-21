@@ -392,10 +392,9 @@ class PaymentIntentResolver {
     final intent = resolved.intent;
     switch (resolved.selectedRail) {
       case PaymentRail.internal:
-        final walletId =
-            resolved.destWalletId?.trim().isNotEmpty == true
-                ? resolved.destWalletId!.trim()
-                : intent.normalizedValue;
+        final walletId = resolved.destWalletId?.trim().isNotEmpty == true
+            ? resolved.destWalletId!.trim()
+            : intent.normalizedValue;
         return SendDestinationAnalysis(
           type: SendDestinationType.internal,
           normalizedValue: walletId,
@@ -516,8 +515,7 @@ class PaymentIntentResolver {
     if (dest.isEmpty) return const [];
     final id = sourceWalletId?.trim().toLowerCase() ?? '';
     final addr = sourceWalletAddress?.trim().toLowerCase() ?? '';
-    if ((id.isNotEmpty && dest == id) ||
-        (addr.isNotEmpty && dest == addr)) {
+    if ((id.isNotEmpty && dest == id) || (addr.isNotEmpty && dest == addr)) {
       return const [
         PaymentBlocker(
           code: PaymentBlockerCode.selfPay,
@@ -572,17 +570,17 @@ bool walletMatchesSendRail(Wallet wallet, PaymentRail? rail) {
           custody,
         );
     if (!canExecute) return false;
-    
+
     if (wallet.isInternalCustody || wallet.isCustodialOnchain) {
       return wallet.spendable;
     }
     return wallet.isColdWallet || wallet.isSelfCustody;
   }
-  
+
   if (!PaymentIntentResolver.sourceCanExecute(rail, custody)) {
     return false;
   }
-  
+
   return wallet.isInternalCustody && wallet.spendable;
 }
 

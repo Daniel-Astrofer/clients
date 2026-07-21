@@ -316,9 +316,7 @@ final class Transaction extends Equatable {
 
   /// True when backend marked settled but chain confs are still 0 (mempool).
   bool get isMempoolSettled =>
-      isOnChain &&
-      status == TransactionStatus.confirmed &&
-      confirmations <= 0;
+      isOnChain && status == TransactionStatus.confirmed && confirmations <= 0;
 
   /// Backend still exposes the row, but it never got a confirmation within 24h.
   /// UI should leave the "pending" path and surface "não confirmada".
@@ -367,8 +365,7 @@ final class Transaction extends Equatable {
   /// Verifica se a transação está confirmada (status final ou confs suficientes).
   bool get isConfirmed =>
       status == TransactionStatus.confirmed ||
-      (showsOnchainConfirmations &&
-          confirmations >= onchainConfirmationTarget);
+      (showsOnchainConfirmations && confirmations >= onchainConfirmationTarget);
 
   /// Verifica se a transação está pendente
   bool get isPending => status == TransactionStatus.pending;
@@ -654,9 +651,8 @@ final class Transaction extends Equatable {
       confirmations: isInternalLegacy || isLightningLegacy ? 0 : confirmations,
     );
     final createdAt = _parseDateTime(json['createdAt'] ?? json['timestamp']);
-    final networkFeeSats = isInternalLegacy
-        ? 0
-        : (networkFee.abs() * 100000000).round();
+    final networkFeeSats =
+        isInternalLegacy ? 0 : (networkFee.abs() * 100000000).round();
 
     return Transaction(
       id: (json['id'] ?? json['blockchainTxid'] ?? '').toString(),
@@ -678,8 +674,7 @@ final class Transaction extends Equatable {
       serviceFeeSatoshis: _parseServiceFeeSats(json, networkFeeBtc: networkFee),
       status: txStatus,
       type: txType,
-      confirmations:
-          isInternalLegacy || isLightningLegacy ? 0 : confirmations,
+      confirmations: isInternalLegacy || isLightningLegacy ? 0 : confirmations,
       timestamp: createdAt ?? DateTime.now(),
       updatedAt: _parseDateTime(json['updatedAt']) ?? createdAt,
       description:
@@ -769,7 +764,8 @@ final class Transaction extends Equatable {
           }
           return null;
         }() ??
-        _parseBtcToSats(json['amountBtc'] ?? json['amount_btc'] ?? json['amount']);
+        _parseBtcToSats(
+            json['amountBtc'] ?? json['amount_btc'] ?? json['amount']);
     final rawReceiverSats = _parseInt(json['receiverAmountSats']);
     final receiverAmountSats = (rawReceiverSats != null && rawReceiverSats > 0)
         ? rawReceiverSats
@@ -808,8 +804,7 @@ final class Transaction extends Equatable {
     )!;
 
     // Internal ledger never has miner fees; ignore accidental non-zero noise.
-    final effectiveNetworkFee =
-        isInternal ? 0 : networkFeeSats.abs();
+    final effectiveNetworkFee = isInternal ? 0 : networkFeeSats.abs();
     final effectiveConfs = isInternal || isLightning ? 0 : confirmations;
 
     final memo = json['memo']?.toString();

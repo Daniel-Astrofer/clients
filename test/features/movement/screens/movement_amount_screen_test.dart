@@ -298,7 +298,8 @@ class _ReceiveAmountRepository implements TransactionRepository {
   }
 
   @override
-  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async =>
+  Future<PaymentLink?> lookupPlatformLightningInvoice(
+          String invoiceOrHash) async =>
       null;
 
   @override

@@ -205,7 +205,8 @@ class HomeHeaderIconButton extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: homeAmberColor,
-                border: Border.all(color: AppColors.hexFF06090B, width: 1.5),
+                border: Border.all(
+                    color: Theme.of(context).dividerColor, width: 1.5),
               ),
             ),
           ),

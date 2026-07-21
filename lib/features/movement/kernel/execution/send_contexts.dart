@@ -231,8 +231,7 @@ class SendFeeQuoting {
       );
     }
 
-    final tierPick =
-        FeeTierSelection.fromEstimate(fee, tier: request.feeTier);
+    final tierPick = FeeTierSelection.fromEstimate(fee, tier: request.feeTier);
     return external(
       amountBtc: request.amountBtc,
       platformFeeRate: platformFeeRate,

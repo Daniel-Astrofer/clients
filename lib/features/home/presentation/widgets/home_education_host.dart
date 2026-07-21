@@ -132,7 +132,8 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
         : DateTime.now().difference(_stageIdleSince!);
 
     final prefs = ref.read(sharedPreferencesProvider);
-    final lang = Localizations.localeOf(context).languageCode
+    final lang = Localizations.localeOf(context)
+        .languageCode
         .toLowerCase()
         .split(RegExp(r'[_-]'))
         .first;
@@ -238,7 +239,8 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     }
 
     final event = queue.first;
-    final lang = Localizations.localeOf(context).languageCode
+    final lang = Localizations.localeOf(context)
+        .languageCode
         .toLowerCase()
         .split(RegExp(r'[_-]'))
         .first;
@@ -316,11 +318,8 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
 
     // Bound memory for long sessions.
     if (_seenCreditIds.length > 400) {
-      final keep = txs
-          .where((t) => t.isCredit)
-          .map((t) => t.id)
-          .take(200)
-          .toSet();
+      final keep =
+          txs.where((t) => t.isCredit).map((t) => t.id).take(200).toSet();
       _seenCreditIds
         ..clear()
         ..addAll(keep);

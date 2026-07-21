@@ -62,6 +62,7 @@ int _resolveTargetPort(Uri uri) {
 Future<bool> bootstrapTorNetwork({
   required TorService torService,
   required TorApiUrlUpdater updateApiUrl,
+
   /// When true (e.g. PIN held while Tor boots), do not short-circuit on the
   /// recent-failure cooldown — keep trying so the deferred PIN verify can send.
   bool ignoreFailureCooldown = false,
@@ -164,7 +165,8 @@ Future<bool> _bootstrapTorNetworkInternal({
       torService.warmOnionCircuit(target.targetHost, target.targetPort),
     );
 
-    debugPrint('✅ Tor Network Ready (relay bound; circuit warm in background).');
+    debugPrint(
+        '✅ Tor Network Ready (relay bound; circuit warm in background).');
     debugPrint(
       '🌐 Unified Tor Relay Active: ${AppConfig.apiUrl} -> ${target.apiUrl}',
     );

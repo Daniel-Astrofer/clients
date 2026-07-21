@@ -36,8 +36,7 @@ Future<void> archiveActivity(
   if (id.isNotEmpty) {
     await archive.markArchived(id);
   }
-  final prId =
-      (tx.paymentRequestPublicId ?? tx.paymentRequestId ?? '').trim();
+  final prId = (tx.paymentRequestPublicId ?? tx.paymentRequestId ?? '').trim();
   if (prId.isNotEmpty) {
     await archive.markArchived(paymentLinkArchiveId(prId));
     return;

@@ -602,7 +602,8 @@ class _PrettyLogInterceptor extends Interceptor {
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     final buffer = StringBuffer();
     buffer.writeln('╭── RESPONSE ───────────────────────────');
-    buffer.writeln('│ ${response.statusCode} ${response.requestOptions.baseUrl}${response.requestOptions.path}');
+    buffer.writeln(
+        '│ ${response.statusCode} ${response.requestOptions.baseUrl}${response.requestOptions.path}');
     if (response.data != null) {
       buffer.writeln('│ Body:');
       buffer.writeln('│   ${_formatData(response.data)}');
@@ -616,7 +617,8 @@ class _PrettyLogInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final buffer = StringBuffer();
     buffer.writeln('╭── ERROR ──────────────────────────────');
-    buffer.writeln('│ ${err.response?.statusCode ?? '?'} ${err.requestOptions.baseUrl}${err.requestOptions.path}');
+    buffer.writeln(
+        '│ ${err.response?.statusCode ?? '?'} ${err.requestOptions.baseUrl}${err.requestOptions.path}');
     buffer.writeln('│ Message: ${err.message}');
     if (err.response?.data != null) {
       buffer.writeln('│ Data:');
@@ -630,7 +632,9 @@ class _PrettyLogInterceptor extends Interceptor {
   String _formatData(dynamic data) {
     if (data is Map || data is List) {
       try {
-        return const JsonEncoder.withIndent('  ').convert(data).replaceAll('\n', '\n│   ');
+        return const JsonEncoder.withIndent('  ')
+            .convert(data)
+            .replaceAll('\n', '\n│   ');
       } catch (_) {
         return data.toString().replaceAll('\n', '\n│   ');
       }

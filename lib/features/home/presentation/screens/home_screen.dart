@@ -37,6 +37,8 @@ import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 import 'package:kerosene/features/movement/data/entities/tx_status.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart'
     deferred as deposits;
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
+    deferred as send_money;
 import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
@@ -96,17 +98,22 @@ enum HomeActivityFilter {
   all,
   incoming,
   outgoing,
+
   /// Internal ledger (instant).
   internal,
   onchain,
+
   /// Lightning rail (was missing from home chips).
   lightning,
   cold,
+
   /// pending + confirming + reconciling.
   pending,
+
   /// failed + unconfirmed expired.
   failed,
   cancelled,
+
   /// Local archive after user opens a cancelled item.
   archived,
 }
@@ -124,8 +131,6 @@ final homeActivityFilterProvider = StateProvider<HomeActivityFilter>((ref) {
 });
 
 final homeRouteActiveProvider = StateProvider<bool>((ref) => true);
-
-
 
 bool isLightningPaymentPayload(String value) {
   final trimmed = value.trim();
@@ -318,6 +323,18 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     String? initialAddress,
     double? initialAmountBtc,
   }) async {
+    // Ensure the deferred send unit is loaded before the slide starts — otherwise
+    // the first Enviar animates a placeholder and swaps mid-transition (jank).
+    try {
+      await loadDeferredLibrary(
+        send_money.loadLibrary,
+        key: DeferredLibraryKeys.sendMoney,
+      );
+    } catch (_) {
+      // DeferredPage on the route will surface the error if load still fails.
+    }
+    if (!mounted) return;
+
     final params = <String, String>{};
     if (initialAddress != null && initialAddress.trim().isNotEmpty) {
       params['address'] = initialAddress.trim();
@@ -425,10 +442,7 @@ class HomeScreenState extends ConsumerState<HomeScreen>
               onReceive: _openReceiveFlow,
               onSend: _openSend,
               onOpenStatement: openStatement,
-              onOpenWallets: () => AppPrimaryNavigationBar.navigateTo(
-                context,
-                AppPrimaryDestination.card,
-              ),
+              onOpenWallets: () => context.push('/accounts'),
               onCreateWallet: _openCreateWallet,
               onDepositWallet: _openDepositForWallet,
               onOpenDeposit: _openReceiveFlow,

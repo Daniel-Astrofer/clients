@@ -58,10 +58,12 @@ class KfeReceivingCapabilities {
   final List<String> missingRequirements;
   final String receiverDisplayName;
   final String? internalWalletId;
+
   /// Active on-chain receive address for dual-rail send (Fase A).
   final String? onchainReceiveAddress;
   final String? onchainWalletId;
   final List<String> availableRails;
+
   /// Sender wallets eligible to fund at least one [availableRails].
   final List<EligibleSourceWallet> eligibleSourceWallets;
 

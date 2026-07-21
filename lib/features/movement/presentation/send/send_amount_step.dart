@@ -96,9 +96,7 @@ class SendAmountStep extends StatelessWidget {
 
         final warningLabel = insufficientBalance
             ? SendMoneyCopy.insufficientBalance(context)
-            : (quoteExpired
-                ? context.tr.sendFeeQuoteExpired
-                : null);
+            : (quoteExpired ? context.tr.sendFeeQuoteExpired : null);
 
         return TransactionValueEntrySurface(
           onBack: onBack,
@@ -219,9 +217,8 @@ class _FeeTierBar extends StatelessWidget {
               SizedBox(width: tokens.spaceSm),
             Expanded(
               child: Material(
-                color: selected == tier
-                    ? tokens.textPrimary
-                    : tokens.surfaceHigh,
+                color:
+                    selected == tier ? tokens.textPrimary : tokens.surfaceHigh,
                 borderRadius: tokens.inputBorderRadius,
                 child: InkWell(
                   onTap: () {
@@ -272,8 +269,8 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!feeQuote.hasAmount) return const SizedBox.shrink();
     final tokens = SendFlowTheme.of(context);
-    final showPlatformFee =
-        destination.isExternal && (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
+    final showPlatformFee = destination.isExternal &&
+        (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
     final showNetworkFee = destination.isExternal;
     final showFeeCard = showPlatformFee || showNetworkFee;
 

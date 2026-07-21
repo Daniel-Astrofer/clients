@@ -118,8 +118,7 @@ Future<dynamic> executeColdOnchainSend({
   }
 
   final feeRate = feeQuote.feeRateSatPerByte;
-  final feeRateInt =
-      feeRate != null && feeRate > 0 ? feeRate.round() : null;
+  final feeRateInt = feeRate != null && feeRate > 0 ? feeRate.round() : null;
 
   final networkKind = inferBitcoinNetworkFromAddress(toAddress);
   final signingNetwork = switch (networkKind) {
@@ -205,8 +204,7 @@ Future<dynamic> executeExternalSend({
   required bool Function() isMounted,
 }) async {
   final feeRate = feeQuote.feeRateSatPerByte;
-  final feeRateInt =
-      feeRate != null && feeRate > 0 ? feeRate.round() : null;
+  final feeRateInt = feeRate != null && feeRate > 0 ? feeRate.round() : null;
   final result = await ref.read(withdrawProvider.notifier).withdraw(
         fromWalletName: wallet.id,
         toAddress: destination.isOnChain ? toAddress : null,

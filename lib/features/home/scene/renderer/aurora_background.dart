@@ -2,18 +2,18 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/scene/models/home_scene.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
-/// Soft multi-blob aurora for the home shell (theater background glow).
+/// Edge-wave aurora — **the** home background glow.
 ///
-/// **Look:** full rich multi-blob haze (designed theater light).
-/// **Freeze-safe:**
-/// - No AnimationController.repeat
-/// - No per-frame re-bake of radials (that froze the UI)
-/// - Picture built at most once per palette+size change, never inside a tick
-/// - Palette apply is post-frame only (never setState/notify during build)
+/// Fixed in the upper band (status → mid-balance). Pull only intensifies the
+/// same field — never translates or stretches the band. Soft Gemini-like
+/// ribbons leave the side edges and travel inward; no linear fade slab.
 class SceneAuroraBackground extends ConsumerStatefulWidget {
   const SceneAuroraBackground({super.key});
 
@@ -22,27 +22,49 @@ class SceneAuroraBackground extends ConsumerStatefulWidget {
       _SceneAuroraBackgroundState();
 }
 
-class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground> {
+class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground>
+    with SingleTickerProviderStateMixin {
   Color _primary = const Color(0xFF4D7EFF);
   Color _secondary = const Color(0xFF9B7BFF);
-  double _intensity = 0.36;
+  double _baseIntensity = 0.36;
   double _topInset = 0;
 
-  Size? _size;
-  ui.Picture? _picture;
-  int _key = 0;
-  int _builtKey = -1;
-  bool _applyScheduled = false;
-
-  // Desired palette from last build (applied post-frame).
   Color? _wantPrimary;
   Color? _wantSecondary;
   double? _wantIntensity;
   double? _wantTopInset;
+  bool _applyScheduled = false;
+
+  late final Ticker _ticker;
+  double _seconds = 0;
+  Duration? _lastTick;
+  bool _ticking = false;
+
+  /// Smoothed pull 0→1 (intensity / energy only).
+  double _pullVisual = 0;
+  double _pullTarget = 0;
+
+  static const _deadZonePx = 6.0;
+  static const _fullBloomPx = 130.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_onTick);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _ensureTicking();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ensureTicking();
+  }
 
   @override
   void dispose() {
-    _picture?.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
@@ -52,7 +74,7 @@ class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground> {
       (a.b - b.b).abs() < 0.02 &&
       (a.a - b.a).abs() < 0.02;
 
-  void _scheduleApply({
+  void _schedulePalette({
     required Color primary,
     required Color secondary,
     required double intensity,
@@ -74,46 +96,65 @@ class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground> {
       if (p == null || s == null || i == null || t == null) return;
       if (_nearColor(_primary, p) &&
           _nearColor(_secondary, s) &&
-          (_intensity - i).abs() < 0.015 &&
+          (_baseIntensity - i).abs() < 0.015 &&
           (_topInset - t).abs() < 0.5) {
         return;
       }
-      _primary = p;
-      _secondary = s;
-      _intensity = i;
-      _topInset = t;
-      _key++;
-      // Drop cached picture so next paint rebuilds once.
-      _picture?.dispose();
-      _picture = null;
-      _builtKey = -1;
-      setState(() {});
+      setState(() {
+        _primary = p;
+        _secondary = s;
+        _baseIntensity = i;
+        _topInset = t;
+      });
     });
   }
 
-  ui.Picture _ensurePicture(Size size) {
-    if (_size == size && _builtKey == _key && _picture != null) {
-      return _picture!;
+  void _ensureTicking() {
+    if (!mounted) return;
+    final reduce = KeroseneMotion.reduceMotion(context);
+    final enabled = TickerMode.valuesOf(context).enabled;
+    final want = !reduce && enabled;
+    if (want && !_ticking) {
+      _lastTick = null;
+      _ticker.start();
+      _ticking = true;
+    } else if (!want && _ticking) {
+      _ticker.stop();
+      _ticking = false;
+      _lastTick = null;
     }
-    _picture?.dispose();
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    _paintField(
-      canvas,
-      size,
-      primary: _primary,
-      secondary: _secondary,
-      intensity: _intensity,
-      topInset: _topInset,
-    );
-    _picture = recorder.endRecording();
-    _size = size;
-    _builtKey = _key;
-    return _picture!;
+  }
+
+  void _onTick(Duration elapsed) {
+    final last = _lastTick;
+    _lastTick = elapsed;
+    if (last == null) return;
+    final dt = ((elapsed - last).inMicroseconds / 1e6).clamp(0.0, 1 / 30);
+    if (dt <= 0) return;
+
+    _seconds += dt;
+
+    final rising = _pullTarget > _pullVisual;
+    final alpha = rising ? 0.34 : 0.12;
+    _pullVisual += (_pullTarget - _pullVisual) * alpha;
+    if ((_pullTarget - _pullVisual).abs() < 0.002) {
+      _pullVisual = _pullTarget;
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  void _syncPull(double overscrollPx) {
+    final raw = ((overscrollPx - _deadZonePx) / _fullBloomPx).clamp(0.0, 1.0);
+    _pullTarget = raw <= 0 ? 0.0 : Curves.easeOutCubic.transform(raw);
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<double>(homeOverscrollProvider, (_, next) {
+      _syncPull(next);
+    });
+
     final bg = ref.watch(homeSceneBackgroundProvider);
     final topInset = MediaQuery.paddingOf(context).top;
 
@@ -121,112 +162,316 @@ class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground> {
       return const SizedBox.shrink();
     }
 
-    _scheduleApply(
+    final sceneIntensity =
+        (bg.intensity.clamp(0.28, 0.75) * 0.72).clamp(0.22, 0.55);
+    _schedulePalette(
       primary: bg.primary ?? const Color(0xFF4D7EFF),
       secondary: bg.secondary ?? const Color(0xFF9B7BFF),
-      intensity: bg.intensity.clamp(0.28, 0.75),
+      intensity: sceneIntensity,
       topInset: topInset,
     );
 
+    final pull = _pullVisual.clamp(0.0, 1.0);
+
     return IgnorePointer(
       child: RepaintBoundary(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final size = Size(constraints.maxWidth, constraints.maxHeight);
-            if (size.isEmpty) return const SizedBox.expand();
-            final picture = _ensurePicture(size);
-            return CustomPaint(
-              painter: _PicturePainter(picture: picture),
-              isComplex: true,
-              willChange: false,
-              child: const SizedBox.expand(),
-            );
-          },
+        child: CustomPaint(
+          isComplex: true,
+          willChange: true,
+          painter: _EdgeWaveAuroraPainter(
+            timeSec: _seconds,
+            pull: pull,
+            primary: _primary,
+            secondary: _secondary,
+            baseIntensity: _baseIntensity,
+            topInset: _topInset,
+          ),
+          child: const SizedBox.expand(),
         ),
       ),
     );
   }
 }
 
-class _PicturePainter extends CustomPainter {
-  _PicturePainter({required this.picture});
-  final ui.Picture picture;
+class _EdgeWaveAuroraPainter extends CustomPainter {
+  final double timeSec;
+  final double pull;
+  final Color primary;
+  final Color secondary;
+  final double baseIntensity;
+  final double topInset;
+
+  const _EdgeWaveAuroraPainter({
+    required this.timeSec,
+    required this.pull,
+    required this.primary,
+    required this.secondary,
+    required this.baseIntensity,
+    required this.topInset,
+  });
+
+  static const _hazeStops = [0.0, 0.22, 0.48, 0.72, 0.9, 1.0];
+
+  /// Logical band: status bar → mid-balance. Fixed px, not % of screen height.
+  /// Pull must never change this.
+  double _bandBottom(double topInset) => topInset + 208;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    canvas.drawPicture(picture);
+    final w = size.width;
+    final bandBottom = _bandBottom(topInset);
+    if (bandBottom <= 8) return;
+    // Glow lives in a fixed logical height (mid-balance), not % of screen.
+    final bandH = math.max(120.0, bandBottom - topInset * 0.15);
+
+    // Soft clip to upper band only — hard rect, no linear fade paint.
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, w, bandBottom + 24));
+
+    final energy =
+        ((baseIntensity / 0.4) * (1.0 + 0.55 * pull)).clamp(0.55, 1.7);
+    final speedBoost = 1.0 + 0.85 * pull;
+    final ampBoost = 1.0 + 0.35 * pull;
+
+    final cyan = Color.lerp(primary, const Color(0xFF5EC8E8), 0.58)!;
+    final violet = Color.lerp(secondary, const Color(0xFFC4B5FD), 0.45)!;
+    final mint = Color.lerp(secondary, const Color(0xFF5EEAD4), 0.42)!;
+    final rose = Color.lerp(primary, const Color(0xFFF0ABFC), 0.35)!;
+    final sky = Color.lerp(cyan, const Color(0xFF7DD3FC), 0.4)!;
+
+    final hazeColors = List<Color>.filled(6, const Color(0x00000000));
+
+    void haze(Offset c, double r, Color color, double peak) {
+      if (r <= 1 || peak <= 0.008) return;
+      // Soften blobs that sit near the band floor (local, not a screen wash).
+      final yNorm = ((c.dy - topInset * 0.1) / bandH).clamp(0.0, 1.15);
+      final depth = (1.0 - ((yNorm - 0.62) / 0.48).clamp(0.0, 1.0));
+      final soft = depth * depth * (3 - 2 * depth);
+      final a = peak * (0.55 + 0.45 * soft);
+      if (a <= 0.008) return;
+      hazeColors[0] = color.withValues(alpha: a * 0.55);
+      hazeColors[1] = color.withValues(alpha: a * 0.42);
+      hazeColors[2] = color.withValues(alpha: a * 0.26);
+      hazeColors[3] = color.withValues(alpha: a * 0.12);
+      hazeColors[4] = color.withValues(alpha: a * 0.04);
+      hazeColors[5] = color.withValues(alpha: 0);
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..isAntiAlias = true
+          ..shader = ui.Gradient.radial(c, r, hazeColors, _hazeStops),
+      );
+    }
+
+    // Tall crest near edges → travels toward center (Gemini-like).
+    double edgeTallness(double xNorm) {
+      final d = (xNorm - 0.5).abs() * 2; // 0 center → 1 edge
+      return 0.28 + 0.72 * (d * d);
+    }
+
+    // Inward travel envelope: crests born at edges, pass through middle.
+    double travelPulse(double xNorm, double t, double phase,
+        {required bool fromLeft}) {
+      final origin = fromLeft ? 0.0 : 1.0;
+      final signed = fromLeft ? xNorm : (1.0 - xNorm);
+      // Moving front: peaks leave the edge and sweep inward.
+      final front = (signed - (t * 0.085 + phase) % 1.35 + 0.15);
+      final lobe = math.exp(-((front - 0.35) * (front - 0.35)) / 0.08);
+      final edgeBias = math.exp(-((xNorm - origin).abs() * 2.2));
+      return 0.35 + 0.65 * lobe + 0.25 * edgeBias;
+    }
+
+    void paintRibbon({
+      required bool fromLeft,
+      required Color color,
+      required double baseYNorm,
+      required double ampPx,
+      required double freq,
+      required double phase,
+      required double speed,
+      required double peak,
+      required double radiusScale,
+      int samples = 28,
+    }) {
+      final t = timeSec * speed * speedBoost + phase;
+      for (var i = 0; i <= samples; i++) {
+        final u = i / samples;
+        // Bias samples toward the originating edge so tall crests read clearly.
+        final xNorm = fromLeft
+            ? (u * u * 0.55 + u * 0.45)
+            : (1.0 - (u * u * 0.55 + u * 0.45));
+        final x = xNorm * w;
+
+        final tall = edgeTallness(xNorm);
+        final travel = travelPulse(xNorm, timeSec * speedBoost, phase * 0.17,
+            fromLeft: fromLeft);
+
+        final wave = math.sin(xNorm * freq * math.pi * 2 + t) * 0.55 +
+            math.sin(xNorm * freq * 1.7 * math.pi * 2 + t * 1.31 + 1.1) * 0.30 +
+            math.sin(xNorm * freq * 0.55 * math.pi * 2 - t * 0.72 + phase) *
+                0.22 +
+            math.sin(t * 1.9 + xNorm * 4.0 + phase) * 0.12;
+
+        final y = topInset * 0.12 +
+            bandH *
+                (baseYNorm + wave * (ampPx / bandH) * ampBoost * tall * travel)
+                    .clamp(0.06, 0.88);
+
+        // Stronger near edges; still visible as crest crosses mid.
+        final side = fromLeft ? (1.0 - xNorm) : xNorm;
+        final sideGain = 0.45 + 0.55 * math.pow(side.clamp(0.0, 1.0), 0.65);
+        final localPeak = peak * energy * sideGain * (0.7 + 0.3 * travel);
+        final r = (w * 0.22 + bandH * 0.42) *
+            radiusScale *
+            (0.85 + 0.25 * tall) *
+            (1.0 + 0.08 * pull);
+
+        haze(Offset(x, y), r, color, localPeak.clamp(0.0, 0.34));
+      }
+    }
+
+    // Ambient wash under the ribbons (still inside fixed band).
+    haze(
+      Offset(w * 0.5, topInset + bandH * 0.28),
+      math.max(w * 0.55, bandH * 0.9),
+      primary,
+      0.10 * energy,
+    );
+    haze(
+      Offset(w * 0.22, topInset + bandH * 0.22),
+      w * 0.42,
+      cyan,
+      0.08 * energy,
+    );
+    haze(
+      Offset(w * 0.78, topInset + bandH * 0.20),
+      w * 0.40,
+      violet,
+      0.08 * energy,
+    );
+
+    // Left-edge ribbons → center
+    paintRibbon(
+      fromLeft: true,
+      color: cyan,
+      baseYNorm: 0.32,
+      ampPx: 38,
+      freq: 1.15,
+      phase: 0.2,
+      speed: 0.55,
+      peak: 0.22,
+      radiusScale: 0.95,
+    );
+    paintRibbon(
+      fromLeft: true,
+      color: primary,
+      baseYNorm: 0.44,
+      ampPx: 48,
+      freq: 0.85,
+      phase: 1.4,
+      speed: 0.42,
+      peak: 0.20,
+      radiusScale: 1.05,
+    );
+    paintRibbon(
+      fromLeft: true,
+      color: mint,
+      baseYNorm: 0.22,
+      ampPx: 30,
+      freq: 1.55,
+      phase: 2.7,
+      speed: 0.72,
+      peak: 0.16,
+      radiusScale: 0.78,
+      samples: 24,
+    );
+
+    // Right-edge ribbons → center
+    paintRibbon(
+      fromLeft: false,
+      color: violet,
+      baseYNorm: 0.30,
+      ampPx: 40,
+      freq: 1.05,
+      phase: 0.8,
+      speed: 0.50,
+      peak: 0.22,
+      radiusScale: 0.98,
+    );
+    paintRibbon(
+      fromLeft: false,
+      color: secondary,
+      baseYNorm: 0.46,
+      ampPx: 52,
+      freq: 0.78,
+      phase: 2.1,
+      speed: 0.38,
+      peak: 0.19,
+      radiusScale: 1.08,
+    );
+    paintRibbon(
+      fromLeft: false,
+      color: rose,
+      baseYNorm: 0.20,
+      ampPx: 28,
+      freq: 1.65,
+      phase: 3.3,
+      speed: 0.80,
+      peak: 0.15,
+      radiusScale: 0.74,
+      samples: 24,
+    );
+    paintRibbon(
+      fromLeft: false,
+      color: sky,
+      baseYNorm: 0.38,
+      ampPx: 34,
+      freq: 1.25,
+      phase: 4.0,
+      speed: 0.62,
+      peak: 0.14,
+      radiusScale: 0.82,
+      samples: 22,
+    );
+
+    // Crossing mid crests — taller fronts that have left the edges.
+    paintRibbon(
+      fromLeft: true,
+      color: Color.lerp(cyan, violet, 0.4)!,
+      baseYNorm: 0.36,
+      ampPx: 44,
+      freq: 0.95,
+      phase: 5.2,
+      speed: 0.48,
+      peak: 0.14,
+      radiusScale: 0.88,
+      samples: 26,
+    );
+    paintRibbon(
+      fromLeft: false,
+      color: Color.lerp(mint, rose, 0.35)!,
+      baseYNorm: 0.34,
+      ampPx: 42,
+      freq: 1.05,
+      phase: 5.9,
+      speed: 0.52,
+      peak: 0.13,
+      radiusScale: 0.86,
+      samples: 26,
+    );
+
+    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _PicturePainter oldDelegate) =>
-      oldDelegate.picture != picture;
-}
-
-// ── Rich static field (designed theater glow) ───────────────────────────────
-
-void _paintField(
-  Canvas canvas,
-  Size size, {
-  required Color primary,
-  required Color secondary,
-  required double intensity,
-  required double topInset,
-}) {
-  final w = size.width;
-  final h = size.height;
-  final s = (intensity / 0.4).clamp(0.65, 1.55);
-  final stops = const [0.0, 0.18, 0.38, 0.58, 0.78, 1.0];
-  final colors = List<Color>.filled(6, const Color(0x00000000));
-
-  void haze(Offset c, double r, Color color, double peak) {
-    if (r <= 1 || peak <= 0.01) return;
-    colors[0] = color.withValues(alpha: peak * 0.55);
-    colors[1] = color.withValues(alpha: peak * 0.50);
-    colors[2] = color.withValues(alpha: peak * 0.38);
-    colors[3] = color.withValues(alpha: peak * 0.18);
-    colors[4] = color.withValues(alpha: peak * 0.06);
-    colors[5] = color.withValues(alpha: 0);
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..isAntiAlias = true
-        ..shader = ui.Gradient.radial(c, r, colors, stops),
-    );
-  }
-
-  final cyan = Color.lerp(primary, const Color(0xFF5EC8E8), 0.55)!;
-  final sky = Color.lerp(secondary, const Color(0xFF7DD3FC), 0.55)!;
-  final mint = Color.lerp(secondary, const Color(0xFF5EEAD4), 0.45)!;
-
-  haze(
-    Offset(w * 0.50, h * 0.10 + topInset * 0.04),
-    math.max(w, h) * 1.05,
-    primary,
-    0.22 * s,
-  );
-  haze(
-    Offset(w * 0.55, h * 0.08 + topInset * 0.03),
-    math.max(w, h) * 0.95,
-    secondary,
-    0.16 * s,
-  );
-
-  final blobs = <(double, double, double, Color, double)>[
-    (0.28, 0.14, 0.95, primary, 0.20),
-    (0.74, 0.12, 0.90, secondary, 0.18),
-    (0.48, 0.22, 0.88, cyan, 0.14),
-    (0.12, 0.24, 0.78, sky, 0.12),
-    (0.88, 0.26, 0.72, mint, 0.10),
-    (0.52, 0.06, 0.70, primary, 0.13),
-  ];
-
-  for (final b in blobs) {
-    final cx = b.$1 * w;
-    final cy = b.$2 * h * 0.55 + topInset * 0.04;
-    final r = w * b.$3;
-    final peak = (b.$5 * s).clamp(0.0, 0.32);
-    haze(Offset(cx, cy), r, b.$4, peak);
+  bool shouldRepaint(covariant _EdgeWaveAuroraPainter oldDelegate) {
+    return oldDelegate.timeSec != timeSec ||
+        oldDelegate.pull != pull ||
+        oldDelegate.primary != primary ||
+        oldDelegate.secondary != secondary ||
+        oldDelegate.baseIntensity != baseIntensity ||
+        oldDelegate.topInset != topInset;
   }
 }

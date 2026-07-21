@@ -90,7 +90,8 @@ void main() {
       expect(caps.deviceKeyLoginPreferred, isFalse);
     });
 
-    test('deviceKeyLoginEnabled flag can disable preferred login on mobile', () {
+    test('deviceKeyLoginEnabled flag can disable preferred login on mobile',
+        () {
       final caps = DeviceCredentialCapabilitiesResolver.fromProbes(
         platformId: 'ios',
         canCheckBiometrics: true,

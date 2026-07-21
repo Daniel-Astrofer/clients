@@ -93,7 +93,8 @@ class BalanceSettingsNotifier extends Notifier<BalanceSettings> {
         prefs.containsKey(_legacyDecimalsKey)) {
       final legacyDecimals = prefs.getInt(_legacyDecimalsKey);
       if (legacyDecimals != null) {
-        await prefs.setInt(decimalsKey, _normalizeDecimalPlaces(legacyDecimals));
+        await prefs.setInt(
+            decimalsKey, _normalizeDecimalPlaces(legacyDecimals));
       }
     }
 

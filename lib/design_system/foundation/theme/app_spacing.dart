@@ -10,12 +10,15 @@ class AppSpacing {
   static const double lg = 20.0;
   static const double xl2 = 24.0;
   static const double xl = 28.0;
+
   /// Module grouping (send-flow / financial surfaces).
   static const double module = 32.0;
   static const double xxl = 40.0;
+
   /// Section rhythm.
   static const double section = 48.0;
   static const double xxxl = 56.0;
+
   /// Minimum touch target (Material / thumb ergonomics).
   static const double minTouch = 48.0;
 }

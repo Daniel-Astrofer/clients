@@ -11,11 +11,11 @@ import 'dart:ffi' as ffi;
 class NativeLibrary {
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
-  _lookup;
+      _lookup;
 
   /// The symbols are looked up in [dynamicLibrary].
   NativeLibrary(ffi.DynamicLibrary dynamicLibrary)
-    : _lookup = dynamicLibrary.lookup;
+      : _lookup = dynamicLibrary.lookup;
 
   /// The symbols are looked up with [lookup].
   NativeLibrary.fromLookup(
@@ -30,16 +30,12 @@ class NativeLibrary {
     return _tor_start(socks_port, state_dir, cache_dir);
   }
 
-  late final _tor_startPtr =
-      _lookup<
-        ffi.NativeFunction<
-          Tor Function(ffi.Uint16, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
-        >
-      >('tor_start');
-  late final _tor_start = _tor_startPtr
-      .asFunction<
-        Tor Function(int, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
-      >();
+  late final _tor_startPtr = _lookup<
+      ffi.NativeFunction<
+          Tor Function(ffi.Uint16, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>)>>('tor_start');
+  late final _tor_start = _tor_startPtr.asFunction<
+      Tor Function(int, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
   bool tor_client_bootstrap(ffi.Pointer<ffi.Void> client) {
     return _tor_client_bootstrap(client);
@@ -47,8 +43,8 @@ class NativeLibrary {
 
   late final _tor_client_bootstrapPtr =
       _lookup<ffi.NativeFunction<ffi.Bool Function(ffi.Pointer<ffi.Void>)>>(
-        'tor_client_bootstrap',
-      );
+    'tor_client_bootstrap',
+  );
   late final _tor_client_bootstrap = _tor_client_bootstrapPtr
       .asFunction<bool Function(ffi.Pointer<ffi.Void>)>();
 
@@ -60,29 +56,25 @@ class NativeLibrary {
     return _tor_client_check_connect(client, target_host, target_port);
   }
 
-  late final _tor_client_check_connectPtr =
-      _lookup<
-        ffi.NativeFunction<
+  late final _tor_client_check_connectPtr = _lookup<
+      ffi.NativeFunction<
           ffi.Bool Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
             ffi.Uint16,
-          )
-        >
-      >('tor_client_check_connect');
-  late final _tor_client_check_connect = _tor_client_check_connectPtr
-      .asFunction<
-        bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, int)
-      >();
+          )>>('tor_client_check_connect');
+  late final _tor_client_check_connect =
+      _tor_client_check_connectPtr.asFunction<
+          bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, int)>();
 
   void tor_client_set_dormant(ffi.Pointer<ffi.Void> client, bool soft_mode) {
     return _tor_client_set_dormant(client, soft_mode);
   }
 
-  late final _tor_client_set_dormantPtr =
-      _lookup<
-        ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Bool)>
-      >('tor_client_set_dormant');
+  late final _tor_client_set_dormantPtr = _lookup<
+          ffi
+          .NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Bool)>>(
+      'tor_client_set_dormant');
   late final _tor_client_set_dormant = _tor_client_set_dormantPtr
       .asFunction<void Function(ffi.Pointer<ffi.Void>, bool)>();
 
@@ -92,10 +84,10 @@ class NativeLibrary {
 
   late final _tor_proxy_stopPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'tor_proxy_stop',
-      );
-  late final _tor_proxy_stop = _tor_proxy_stopPtr
-      .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+    'tor_proxy_stop',
+  );
+  late final _tor_proxy_stop =
+      _tor_proxy_stopPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void tor_hello() {
     return _tor_hello();
@@ -112,10 +104,10 @@ class NativeLibrary {
 
   late final _tor_last_error_messagePtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>(
-        'tor_last_error_message',
-      );
-  late final _tor_last_error_message = _tor_last_error_messagePtr
-      .asFunction<ffi.Pointer<ffi.Char> Function()>();
+    'tor_last_error_message',
+  );
+  late final _tor_last_error_message =
+      _tor_last_error_messagePtr.asFunction<ffi.Pointer<ffi.Char> Function()>();
 
   int tor_get_nofile_limit() {
     return _tor_get_nofile_limit();
@@ -123,10 +115,10 @@ class NativeLibrary {
 
   late final _tor_get_nofile_limitPtr =
       _lookup<ffi.NativeFunction<ffi.Uint64 Function()>>(
-        'tor_get_nofile_limit',
-      );
-  late final _tor_get_nofile_limit = _tor_get_nofile_limitPtr
-      .asFunction<int Function()>();
+    'tor_get_nofile_limit',
+  );
+  late final _tor_get_nofile_limit =
+      _tor_get_nofile_limitPtr.asFunction<int Function()>();
 
   int tor_set_nofile_limit(int limit) {
     return _tor_set_nofile_limit(limit);
@@ -134,10 +126,10 @@ class NativeLibrary {
 
   late final _tor_set_nofile_limitPtr =
       _lookup<ffi.NativeFunction<ffi.Uint64 Function(ffi.Uint64)>>(
-        'tor_set_nofile_limit',
-      );
-  late final _tor_set_nofile_limit = _tor_set_nofile_limitPtr
-      .asFunction<int Function(int)>();
+    'tor_set_nofile_limit',
+  );
+  late final _tor_set_nofile_limit =
+      _tor_set_nofile_limitPtr.asFunction<int Function(int)>();
 }
 
 final class Tor extends ffi.Struct {

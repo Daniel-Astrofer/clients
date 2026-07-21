@@ -43,7 +43,8 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
         state = HomeSurface.localDefaults();
       }
     });
-    ref.listen<HomeLedgerBalanceView>(homeLedgerBalanceViewProvider, (prev, next) {
+    ref.listen<HomeLedgerBalanceView>(homeLedgerBalanceViewProvider,
+        (prev, next) {
       if (prev != next) {
         unawaitedRefresh();
       }
@@ -111,7 +112,8 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
 
       final payload = _extractSurfacePayload(response.data);
       if (payload == null) {
-        debugPrint('[homeSurface] unexpected payload type: ${response.data.runtimeType}');
+        debugPrint(
+            '[homeSurface] unexpected payload type: ${response.data.runtimeType}');
         return;
       }
       var surface = HomeSurface.fromJson(payload);
@@ -220,9 +222,7 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
       switch (event.type) {
         case HomeUiEventType.scene:
           if (event.payload.isNotEmpty) {
-            ref
-                .read(homeSceneProvider.notifier)
-                .presentFromJson(event.payload);
+            ref.read(homeSceneProvider.notifier).presentFromJson(event.payload);
           }
         case HomeUiEventType.sceneClear:
           ref.read(homeSceneProvider.notifier).clearOverride();
@@ -310,7 +310,8 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
         '[homeSurface] ack stage=${stage.id} fp=$fingerprint',
       );
     } catch (e, st) {
-      debugPrint('[homeSurface] ack failed (will retry via local cache): $e\n$st');
+      debugPrint(
+          '[homeSurface] ack failed (will retry via local cache): $e\n$st');
     }
   }
 
@@ -325,8 +326,7 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
     return surface.clearStage();
   }
 
-  String _seenPrefsKey(User user) =>
-      'home.stage.seen.${user.id}';
+  String _seenPrefsKey(User user) => 'home.stage.seen.${user.id}';
 
   bool _isLocallySeen(User user, String fingerprint) {
     try {

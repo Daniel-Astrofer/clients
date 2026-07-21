@@ -33,7 +33,8 @@ class RaspGuard {
     // - Frida / Magisk hooks
     // - Root / Jailbreak paths
     // - Suspicious background services
-    log('RASP Guard: Performing background heuristics check...', name: 'Security');
+    log('RASP Guard: Performing background heuristics check...',
+        name: 'Security');
   }
 }
 

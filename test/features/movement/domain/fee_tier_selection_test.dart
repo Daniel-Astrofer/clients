@@ -57,7 +57,8 @@ void main() {
         platformFeeBtc: 0,
         networkFeeBtc: 0.00001,
         totalDebitedBtc: 0.00101,
-        quoteExpiresAt: DateTime.now().toUtc().subtract(const Duration(seconds: 5)),
+        quoteExpiresAt:
+            DateTime.now().toUtc().subtract(const Duration(seconds: 5)),
       );
       expect(expired.isQuoteExpired, isTrue);
       expect(expired.isReady, isFalse);

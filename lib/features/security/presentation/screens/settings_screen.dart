@@ -47,9 +47,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final responsive = context.responsive;
-    final horizontalPadding = responsive.isTinyPhone
-        ? AppSpacing.lg
-        : responsive.horizontalPadding;
+    final horizontalPadding =
+        responsive.isTinyPhone ? AppSpacing.lg : responsive.horizontalPadding;
     final bottomPadding = widget.showPrimaryNavigation
         ? AppPrimaryNavigationBar.scaffoldBottomClearance(context)
         : viewPadding.bottom + AppSpacing.xxl;
@@ -154,9 +153,8 @@ class _SettingsPaneDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final responsive = context.responsive;
-    final horizontalPadding = responsive.isTinyPhone
-        ? AppSpacing.lg
-        : responsive.horizontalPadding;
+    final horizontalPadding =
+        responsive.isTinyPhone ? AppSpacing.lg : responsive.horizontalPadding;
     final bottomPadding = showPrimaryNavigation
         ? AppPrimaryNavigationBar.scaffoldBottomClearance(context)
         : viewPadding.bottom + AppSpacing.xxl;

@@ -145,7 +145,8 @@ class RichTheaterText extends StatelessWidget {
         // Title already painted as H1.
         continue;
       }
-      if (!block.hasVisibleText && (block.emoji == null || block.emoji!.isEmpty)) {
+      if (!block.hasVisibleText &&
+          (block.emoji == null || block.emoji!.isEmpty)) {
         continue;
       }
 
@@ -174,9 +175,7 @@ class RichTheaterText extends StatelessWidget {
         _BlockRow(
           block: block,
           baseStyle: style,
-          emojiSize: block.role == TheaterBlockRole.h2
-              ? h2Size
-              : bodySize + 1,
+          emojiSize: block.role == TheaterBlockRole.h2 ? h2Size : bodySize + 1,
         ),
       );
     }
@@ -273,7 +272,8 @@ class _BlockRow extends StatelessWidget {
       final end = mark.end.clamp(0, text.length);
       if (end <= start || start < cursor) continue;
       if (start > cursor) {
-        children.add(TextSpan(text: text.substring(cursor, start), style: base));
+        children
+            .add(TextSpan(text: text.substring(cursor, start), style: base));
       }
       children.add(
         TextSpan(
@@ -282,7 +282,8 @@ class _BlockRow extends StatelessWidget {
             fontWeight: switch (mark.weight) {
               TheaterTextWeight.regular => FontWeight.w400,
               TheaterTextWeight.medium => FontWeight.w600,
-              TheaterTextWeight.bold || TheaterTextWeight.unknown =>
+              TheaterTextWeight.bold ||
+              TheaterTextWeight.unknown =>
                 FontWeight.w700,
             },
             color: _toneColor(mark.tone) ?? base.color,

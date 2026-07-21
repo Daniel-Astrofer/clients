@@ -11,8 +11,7 @@ Route<T> keroseneCircularRevealRoute<T>({
 }) {
   return PageRouteBuilder<T>(
     opaque: true,
-    transitionDuration:
-        transitionDuration ?? const Duration(milliseconds: 420),
+    transitionDuration: transitionDuration ?? const Duration(milliseconds: 420),
     reverseTransitionDuration:
         reverseTransitionDuration ?? const Duration(milliseconds: 260),
     pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -32,16 +31,14 @@ Route<T> keroseneCircularRevealRoute<T>({
         builder: (context, _) {
           final size = MediaQuery.sizeOf(context);
           final center = originRect.center;
-          final startRadius =
-              math.max(originRect.width, originRect.height) / 2;
+          final startRadius = math.max(originRect.width, originRect.height) / 2;
           final endRadius = [
             Offset.zero,
             Offset(size.width, 0),
             Offset(0, size.height),
             Offset(size.width, size.height),
           ].map((c) => (c - center).distance).reduce(math.max);
-          final radius =
-              startRadius + (endRadius - startRadius) * curved.value;
+          final radius = startRadius + (endRadius - startRadius) * curved.value;
           final opacity = const Interval(
             0.10,
             0.78,

@@ -108,6 +108,7 @@ GoRouter buildMobileGoRouter({
                 key: state.pageKey,
                 child: DeferredPage(
                   loadLibrary: send_money.loadLibrary,
+                  libraryKey: DeferredLibraryKeys.sendMoney,
                   animateReveal: false,
                   builder: (_) => send_money.SendMoneyScreen(
                     initialAddress: initialAddress,
@@ -125,6 +126,7 @@ GoRouter buildMobileGoRouter({
                   return privateRouteBuilder(
                     DeferredPage(
                       loadLibrary: send_money_review.loadLibrary,
+                      libraryKey: DeferredLibraryKeys.sendMoneyReview,
                       builder: (_) => send_money_review
                           .InternalTransferReviewScreen<dynamic>(
                         title: args.title,
@@ -156,8 +158,9 @@ GoRouter buildMobileGoRouter({
                     key: state.pageKey,
                     child: DeferredPage(
                       loadLibrary: send_money_review.loadLibrary,
-                      builder: (_) => send_money_review
-                          .SendPaymentReceiptScreen<dynamic>(
+                      libraryKey: DeferredLibraryKeys.sendMoneyReview,
+                      builder: (_) =>
+                          send_money_review.SendPaymentReceiptScreen<dynamic>(
                         data: args.data,
                         result: args.result,
                       ),
@@ -193,6 +196,7 @@ GoRouter buildMobileGoRouter({
         builder: (context, state) => privateRouteBuilder(
           DeferredPage(
             loadLibrary: settings.loadLibrary,
+            libraryKey: DeferredLibraryKeys.settings,
             builder: (_) => settings.SettingsScreen(),
           ),
         ),
@@ -202,6 +206,7 @@ GoRouter buildMobileGoRouter({
         builder: (context, state) => privateRouteBuilder(
           DeferredPage(
             loadLibrary: settings.loadLibrary,
+            libraryKey: DeferredLibraryKeys.settings,
             builder: (_) => settings.SettingsScreen(
               openNotificationsPane: true,
             ),
@@ -213,6 +218,7 @@ GoRouter buildMobileGoRouter({
         builder: (context, state) => privateRouteBuilder(
           DeferredPage(
             loadLibrary: settings.loadLibrary,
+            libraryKey: DeferredLibraryKeys.settings,
             builder: (_) => settings.SettingsScreen(
               openSecurityPane: true,
             ),
@@ -224,6 +230,7 @@ GoRouter buildMobileGoRouter({
         builder: (context, state) => privateRouteBuilder(
           DeferredPage(
             loadLibrary: deposits.loadLibrary,
+            libraryKey: DeferredLibraryKeys.deposits,
             builder: (_) => deposits.TransactionStatementScreen(),
           ),
         ),
@@ -233,6 +240,7 @@ GoRouter buildMobileGoRouter({
         builder: (context, state) => privateRouteBuilder(
           DeferredPage(
             loadLibrary: bitcoin_accounts.loadLibrary,
+            libraryKey: DeferredLibraryKeys.bitcoinAccounts,
             builder: (_) => bitcoin_accounts.BitcoinAccountsScreen(),
           ),
         ),
@@ -247,6 +255,7 @@ GoRouter buildMobileGoRouter({
             child: privateRouteBuilder(
               DeferredPage(
                 loadLibrary: receive.loadLibrary,
+                libraryKey: DeferredLibraryKeys.receive,
                 animateReveal: false,
                 builder: (_) => receive.ReceiveAmountEntryScreen(),
               ),
@@ -294,6 +303,7 @@ class _HomeFlowShell extends StatelessWidget {
               ignoring: overlayActive,
               child: DeferredPage(
                 loadLibrary: home.loadLibrary,
+                libraryKey: DeferredLibraryKeys.home,
                 builder: (_) => home.HomeScreen(),
               ),
             ),

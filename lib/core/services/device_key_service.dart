@@ -264,7 +264,8 @@ class DeviceKeyService {
     bool appPinConfigured = false,
   }) async {
     try {
-      return await DeviceCredentialCapabilitiesResolver.instance.assertCanEnroll(
+      return await DeviceCredentialCapabilitiesResolver.instance
+          .assertCanEnroll(
         appPinConfigured: appPinConfigured,
       );
     } on DeviceCredentialCapabilityException catch (error) {
@@ -309,7 +310,8 @@ class DeviceKeyService {
         );
       }
     } on MissingPluginException {
-      debugPrint('DeviceKey: local_auth plugin missing — skipping presence gate.');
+      debugPrint(
+          'DeviceKey: local_auth plugin missing — skipping presence gate.');
     } on PlatformException catch (error) {
       debugPrint('DeviceKey: local_auth PlatformException: $error — skipping.');
     }

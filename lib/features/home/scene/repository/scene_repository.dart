@@ -16,7 +16,8 @@ class SceneRepository {
     if (raw is Map) {
       final map = Map<String, dynamic>.from(raw);
       if (map['scene'] is Map) {
-        return HomeScene.fromJson(Map<String, dynamic>.from(map['scene'] as Map));
+        return HomeScene.fromJson(
+            Map<String, dynamic>.from(map['scene'] as Map));
       }
       // Accept either pure scene JSON or legacy stage JSON (has kind/playPolicy).
       if (map.containsKey('layout') || map.containsKey('background')) {

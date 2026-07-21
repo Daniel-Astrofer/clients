@@ -121,9 +121,7 @@ class PresentationField {
   });
 
   bool get hasConfirmationProgress =>
-      progressCurrent != null &&
-      progressTarget != null &&
-      progressTarget! > 0;
+      progressCurrent != null && progressTarget != null && progressTarget! > 0;
 }
 
 /// Single presentation model for Home / Extrato list rows and detail primary.
@@ -170,6 +168,7 @@ final class TransactionPresentation {
     required double? btcEur,
     required double? btcBrl,
     Locale? appLocale,
+
     /// When false, skips dossier / expand field lists (home row scan path).
     bool includeExpandPayload = true,
   }) {
@@ -547,7 +546,8 @@ final class TransactionPresentation {
       );
     }
     if (tx.showsServiceFee) {
-      add('service-fee', copy.serviceFee, formatSatsAsBtc(tx.serviceFeeSatoshis));
+      add('service-fee', copy.serviceFee,
+          formatSatsAsBtc(tx.serviceFeeSatoshis));
     }
     if (includeFeesInDebit) {
       add('total', copy.totalDebited, totalLabel);
@@ -617,7 +617,8 @@ final class TransactionPresentation {
     if (axes.product == TxProduct.paymentLink) {
       return '$action · ${copy.link}';
     }
-    if (axes.product == TxProduct.deposit || axes.product == TxProduct.withdraw) {
+    if (axes.product == TxProduct.deposit ||
+        axes.product == TxProduct.withdraw) {
       return '$action · ${copy.railShort(axes.rail)}';
     }
 

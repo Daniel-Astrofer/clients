@@ -856,7 +856,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
   }
 
   @override
-  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async {
+  Future<PaymentLink?> lookupPlatformLightningInvoice(
+      String invoiceOrHash) async {
     final raw = invoiceOrHash.trim();
     if (raw.isEmpty) return null;
     try {
@@ -1141,9 +1142,8 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     );
     final normalizedDescription = _optionalText(description);
     // Prefer paymentRequest when present, else toAddress.
-    final rawDestination = _optionalText(paymentRequest) ??
-        _optionalText(toAddress) ??
-        '';
+    final rawDestination =
+        _optionalText(paymentRequest) ?? _optionalText(toAddress) ?? '';
     if (rawDestination.isEmpty) {
       throw ValidationException(
         message: isLightning
@@ -1156,11 +1156,13 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     // (UI sometimes picks "Lightning" rail for a Kerosene user and locks wallet id.)
     final isWalletUuid = _looksLikeUuid(rawDestination);
     // Explicit platform payment-request public id → always INTERNAL ledger.
-    final explicitPaymentRequestPublicId = _optionalText(paymentRequest) != null &&
-            !_looksLikeUuid(_optionalText(paymentRequest)!) &&
-            !_looksLikeExecutableLightningDestination(_optionalText(paymentRequest)!)
-        ? _optionalText(paymentRequest)
-        : null;
+    final explicitPaymentRequestPublicId =
+        _optionalText(paymentRequest) != null &&
+                !_looksLikeUuid(_optionalText(paymentRequest)!) &&
+                !_looksLikeExecutableLightningDestination(
+                    _optionalText(paymentRequest)!)
+            ? _optionalText(paymentRequest)
+            : null;
     final effectiveLightning = isLightning &&
         explicitPaymentRequestPublicId == null &&
         !isWalletUuid &&

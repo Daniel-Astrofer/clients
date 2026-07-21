@@ -10,7 +10,8 @@ import '../../domain/usecases/get_transactions_usecase.dart';
 import '../../domain/usecases/send_bitcoin_usecase.dart';
 import '../../domain/usecases/get_deposit_address_usecase.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/providers/transaction_provider.dart' show transactionHistoryProvider;
+import 'package:kerosene/features/movement/providers/transaction_provider.dart'
+    show transactionHistoryProvider;
 
 import 'package:kerosene/features/financial_accounts/application/providers/wallet_data_providers.dart';
 
@@ -156,8 +157,7 @@ class WalletNotifier extends Notifier<WalletState> {
     var matched = false;
     final ctx = context.toLowerCase();
     final bucketUpper = (bucket ?? '').toUpperCase();
-    final isObservedEvent =
-        bucketUpper == 'OBSERVED' || ctx.contains('observ');
+    final isObservedEvent = bucketUpper == 'OBSERVED' || ctx.contains('observ');
 
     final updatedWallets = currentState.wallets.map((wallet) {
       // Prefer stable KFE wallet UUID only — never match by name/label (collision risk).
@@ -209,7 +209,7 @@ class WalletNotifier extends Notifier<WalletState> {
     }
 
     state = currentState.copyWith(wallets: updatedWallets);
-    
+
     // As soon as the websocket pushes a balance update, invalidate the transaction
     // history so it automatically fetches the new rows that generated this balance.
     ref.invalidate(transactionHistoryProvider);

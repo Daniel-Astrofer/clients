@@ -10,6 +10,7 @@ export 'providers/scene_provider.dart';
 export 'repository/scene_repository.dart';
 export 'renderer/action_layer.dart';
 export 'renderer/aurora_background.dart';
+export 'renderer/gemini_glow_background.dart';
 export 'renderer/content_layer.dart';
 export 'renderer/hero_scene.dart';
 export 'renderer/home_scene_host.dart';

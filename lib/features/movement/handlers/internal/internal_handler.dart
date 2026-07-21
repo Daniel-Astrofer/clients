@@ -11,11 +11,12 @@ class InternalMovementProvider implements MovementEntryProvider {
   const InternalMovementProvider();
 
   @override
-  List<MovementEntry> entriesFor(BuildContext context, Wallet? wallet, MovementCapability caps) {
+  List<MovementEntry> entriesFor(
+      BuildContext context, Wallet? wallet, MovementCapability caps) {
     if (wallet != null && (wallet.isColdWallet || wallet.isCustodialOnchain)) {
       return []; // Only internal wallet can do P2P
     }
-    
+
     return [
       MovementEntry(
         id: 'internal',

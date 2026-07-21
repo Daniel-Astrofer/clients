@@ -27,7 +27,11 @@ void main() {
       final seed = ElectrumSeedUtils.mnemonicToSeed(electrumSegwit);
       expect(seed.length, 64);
       // Fixed vector from independent python pbkdf2 (electrum salt).
-      expect(seed.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+      expect(
+          seed
+              .sublist(0, 8)
+              .map((b) => b.toRadixString(16).padLeft(2, '0'))
+              .join(),
           '2820c2428a4c9e89');
     });
   });

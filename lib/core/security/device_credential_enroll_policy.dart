@@ -3,7 +3,7 @@ import 'device_credential_capabilities.dart';
 
 /// Enroll + auth policy for Device Key vs WebAuthn-shaped legacy.
 ///
-/// N+1: block new shaped enroll on tier A.  
+/// N+1: block new shaped enroll on tier A.
 /// N+2: block shaped auth on tier A (step-up / biometric login).
 class DeviceCredentialEnrollPolicy {
   const DeviceCredentialEnrollPolicy._();

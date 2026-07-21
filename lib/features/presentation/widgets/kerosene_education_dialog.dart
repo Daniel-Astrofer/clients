@@ -182,7 +182,8 @@ class KeroseneEducationDialog extends StatelessWidget {
                         const SizedBox(height: 8),
                       ],
                     ],
-                    if (footerNote != null && footerNote!.trim().isNotEmpty) ...[
+                    if (footerNote != null &&
+                        footerNote!.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
                         footerNote!,
@@ -372,8 +373,7 @@ Future<bool?> showIncomingTransferDialog(
       'en' => 'On-chain funds may still need confirmations before they settle.',
       'es' =>
         'Los fondos on-chain pueden necesitar confirmaciones antes de liquidarse.',
-      _ =>
-        'Fundos on-chain podem precisar de confirmações antes de liquidar.',
+      _ => 'Fundos on-chain podem precisar de confirmações antes de liquidar.',
     },
   );
 }

@@ -95,7 +95,8 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                   children: [
                                     SettingsSectionRow(
                                       icon: KeroseneIcons.security,
-                                      title: context.tr.settingsRecoverySecurityMode,
+                                      title: context
+                                          .tr.settingsRecoverySecurityMode,
                                       subtitle: modeLabel,
                                       onTap: null,
                                     ),
@@ -110,8 +111,10 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                     if (remaining != null)
                                       SettingsSectionRow(
                                         icon: KeroseneIcons.download,
-                                        title: context.tr.settingsRecoveryCodesRemaining,
-                                        subtitle: '$remaining código(s) de backup',
+                                        title: context
+                                            .tr.settingsRecoveryCodesRemaining,
+                                        subtitle:
+                                            '$remaining código(s) de backup',
                                         onTap: null,
                                       ),
                                   ],
@@ -136,9 +139,10 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                     ),
                                     SettingsSectionRow(
                                       icon: KeroseneIcons.inbox,
-                                      title: context.tr.settingsRecoveryEmergency,
-                                      subtitle:
-                                          context.tr.settingsRecoveryEmergencyBody,
+                                      title:
+                                          context.tr.settingsRecoveryEmergency,
+                                      subtitle: context
+                                          .tr.settingsRecoveryEmergencyBody,
                                       onTap: () {
                                         HapticFeedback.selectionClick();
                                         Navigator.of(context).push(

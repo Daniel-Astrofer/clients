@@ -162,7 +162,8 @@ class _HomeBitcoinPriceTickerState extends State<HomeBitcoinPriceTicker> {
   @override
   Widget build(BuildContext context) {
     if (KeroseneMotion.reduceMotion(context) || (_to - _from).abs() < 0.0001) {
-      return Text(widget.formatter(widget.price), maxLines: 1, style: widget.style);
+      return Text(widget.formatter(widget.price),
+          maxLines: 1, style: widget.style);
     }
     return TweenAnimationBuilder<double>(
       key: ValueKey(_to),

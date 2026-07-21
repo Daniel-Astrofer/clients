@@ -217,7 +217,8 @@ final balanceWebSocketServiceProvider =
     token = _normalizeSessionToken(token);
     if (token != null && token.length < 10) {
       if (kDebugMode) {
-        debugPrint('BalanceWebSocket: session credential was rejected locally.');
+        debugPrint(
+            'BalanceWebSocket: session credential was rejected locally.');
       }
     }
   } catch (_) {
@@ -238,7 +239,8 @@ final balanceWebSocketServiceProvider =
     deviceHash: deviceHash,
     onSessionInvalidated: () {
       if (kDebugMode) {
-        debugPrint('BalanceWebSocket: session invalidated by realtime channel.');
+        debugPrint(
+            'BalanceWebSocket: session invalidated by realtime channel.');
       }
       ref.read(sessionInvalidationProvider.notifier).emit();
     },

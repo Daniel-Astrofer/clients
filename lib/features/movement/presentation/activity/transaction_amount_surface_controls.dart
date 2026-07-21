@@ -420,11 +420,11 @@ class TransactionPrimaryButton extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: _surfaceDuration(disableAnimations, KeroseneMotion.short),
             child: isLoading
-                  ? CupertinoActivityIndicator(
-                      key: const ValueKey('loading'),
-                      radius: 9,
-                      color: foregroundColor,
-                    )
+                ? CupertinoActivityIndicator(
+                    key: const ValueKey('loading'),
+                    radius: 9,
+                    color: foregroundColor,
+                  )
                 : Text(
                     label.toUpperCase(),
                     key: ValueKey(label),

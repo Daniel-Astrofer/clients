@@ -59,6 +59,7 @@ class BalanceWebSocketService {
   bool _manualDisconnect = false;
   bool _sessionInvalidated = false;
   bool _reconnectExhausted = false;
+
   /// Prefer raw STOMP (`/ws/raw-balance`) on IO; SockJS as fallback.
   bool _preferRawWebSocket = !kIsWeb;
   bool _triedSockJsFallback = false;
@@ -93,7 +94,8 @@ class BalanceWebSocketService {
   }
 
   void _notifyConnectionListeners() {
-    for (final listener in List<void Function(bool)>.from(_connectionListeners)) {
+    for (final listener
+        in List<void Function(bool)>.from(_connectionListeners)) {
       try {
         listener(_isConnected);
       } catch (_) {}

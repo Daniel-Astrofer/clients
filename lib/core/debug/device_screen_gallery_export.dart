@@ -99,7 +99,8 @@ class DeviceScreenGalleryExport {
       _GalleryScreen('10_devices', const SettingsDevicesScreen()),
       _GalleryScreen('11_backup_codes', const SettingsBackupCodesScreen()),
       _GalleryScreen('12_sovereignty', const SovereigntyStatusScreen()),
-      _GalleryScreen('13_notification_settings', const NotificationSettingsScreen()),
+      _GalleryScreen(
+          '13_notification_settings', const NotificationSettingsScreen()),
     ];
 
     final controller = _GalleryCaptureController(

@@ -168,7 +168,8 @@ List<HomeFeedItem> resolveHomeFeedCards({
   }
   if (remote != null && remote.isNotEmpty) {
     // Drop legacy mock card product shots on non-platform views.
-    final cleaned = remote.where((item) => !_isLegacyMockCardPromo(item)).toList();
+    final cleaned =
+        remote.where((item) => !_isLegacyMockCardPromo(item)).toList();
     if (cleaned.isNotEmpty) return cleaned;
   }
   return localEducationFallback(context, view);

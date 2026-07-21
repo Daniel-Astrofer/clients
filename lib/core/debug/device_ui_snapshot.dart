@@ -129,9 +129,8 @@ class DeviceUiSnapshot {
     }
 
     final walletState = ref.read(walletProvider);
-    final wallets = walletState is WalletLoaded
-        ? walletState.wallets
-        : const <Wallet>[];
+    final wallets =
+        walletState is WalletLoaded ? walletState.wallets : const <Wallet>[];
 
     var txs = <Transaction>[];
     final txAsync = ref.read(transactionHistoryProvider);
@@ -203,7 +202,8 @@ class DeviceUiSnapshot {
         final file = File(p.join(targetDir.path, kDeviceUiSnapshotFileName));
         await file.writeAsBytes(bytes, flush: true);
         written.add(file);
-        debugPrint('[device-snapshot] wrote ${file.path} (${bytes.length} bytes)');
+        debugPrint(
+            '[device-snapshot] wrote ${file.path} (${bytes.length} bytes)');
       } catch (e) {
         debugPrint('[device-snapshot] write failed in ${dir.path}: $e');
       }

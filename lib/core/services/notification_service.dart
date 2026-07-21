@@ -98,8 +98,8 @@ class NotificationService {
   }
 
   Future<void> _ensureAndroidChannels() async {
-    final android = flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
+    final android =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (android == null) return;
 
@@ -169,7 +169,8 @@ class NotificationService {
   }
 
   /// Preferred entry: full structured presentation from backend fields.
-  Future<void> showPresented(NativeNotificationPresentation presentation) async {
+  Future<void> showPresented(
+      NativeNotificationPresentation presentation) async {
     if (!_initialized) {
       await init();
     }
@@ -187,8 +188,11 @@ class NotificationService {
       presentation.channelId,
       _channelName(presentation.channelId),
       channelDescription: _channelDescription(presentation.channelId),
-      importance: presentation.highPriority ? Importance.max : Importance.defaultImportance,
-      priority: presentation.highPriority ? Priority.high : Priority.defaultPriority,
+      importance: presentation.highPriority
+          ? Importance.max
+          : Importance.defaultImportance,
+      priority:
+          presentation.highPriority ? Priority.high : Priority.defaultPriority,
       showWhen: true,
       when: DateTime.now().millisecondsSinceEpoch,
       color: color,
@@ -210,9 +214,10 @@ class NotificationService {
       playSound: true,
       enableVibration: true,
       // Group financial alerts under one app section when possible.
-      groupKey: presentation.channelId == NativeNotificationChannels.transactions
-          ? 'kerosene_tx_group'
-          : null,
+      groupKey:
+          presentation.channelId == NativeNotificationChannels.transactions
+              ? 'kerosene_tx_group'
+              : null,
       autoCancel: true,
       onlyAlertOnce: false,
     );
@@ -225,8 +230,9 @@ class NotificationService {
     );
 
     final id = _stableId(presentation.dedupeKey);
-    appLog('NotificationService: attempting to show id=$id channel=${presentation.channelId}');
-    
+    appLog(
+        'NotificationService: attempting to show id=$id channel=${presentation.channelId}');
+
     try {
       await flutterLocalNotificationsPlugin.show(
         id: id,
@@ -242,7 +248,8 @@ class NotificationService {
         ),
         payload: presentation.payload,
       );
-      appLog('NotificationService: successfully shown id=$id title="${presentation.title}"');
+      appLog(
+          'NotificationService: successfully shown id=$id title="${presentation.title}"');
     } catch (e, stack) {
       appLog('NotificationService: FAILED to show notification. Error: $e');
       appLog(stack.toString());
@@ -298,12 +305,10 @@ class NotificationService {
           ? NativeNotificationFamily.transactionIncoming
           : NativeNotificationFamily.transactionOutgoing,
       highPriority: true,
-      accentColor: incoming
-          ? KeroseneBrandTokens.success
-          : KeroseneBrandTokens.warning,
+      accentColor:
+          incoming ? KeroseneBrandTokens.success : KeroseneBrandTokens.warning,
       payload: payload,
-      dedupeKey: dedupeKey ??
-          _nativeDedupeKey(title: title, body: body),
+      dedupeKey: dedupeKey ?? _nativeDedupeKey(title: title, body: body),
     );
     return showPresented(presentation);
   }
@@ -325,7 +330,8 @@ class NotificationService {
     return switch (id) {
       NativeNotificationChannels.security =>
         NativeNotificationChannels.securityName,
-      NativeNotificationChannels.system => NativeNotificationChannels.systemName,
+      NativeNotificationChannels.system =>
+        NativeNotificationChannels.systemName,
       NativeNotificationChannels.foreground =>
         NativeNotificationChannels.foregroundName,
       _ => NativeNotificationChannels.transactionsName,
@@ -336,7 +342,8 @@ class NotificationService {
     return switch (id) {
       NativeNotificationChannels.security =>
         NativeNotificationChannels.securityDesc,
-      NativeNotificationChannels.system => NativeNotificationChannels.systemDesc,
+      NativeNotificationChannels.system =>
+        NativeNotificationChannels.systemDesc,
       NativeNotificationChannels.foreground =>
         NativeNotificationChannels.foregroundDesc,
       _ => NativeNotificationChannels.transactionsDesc,

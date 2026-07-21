@@ -73,16 +73,12 @@ class AuthFormField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final radius = borderRadius ?? AppRadius.input;
-    final resolvedText =
-        textColor ?? theme.colorScheme.onSurface;
-    final resolvedHint =
-        hintColor ?? resolvedText.withValues(alpha: 0.36);
-    final resolvedBorder =
-        borderColor ?? theme.dividerColor;
+    final resolvedText = textColor ?? theme.colorScheme.onSurface;
+    final resolvedHint = hintColor ?? resolvedText.withValues(alpha: 0.36);
+    final resolvedBorder = borderColor ?? theme.dividerColor;
     final resolvedFocus =
         focusedBorderColor ?? resolvedText.withValues(alpha: 0.45);
-    final resolvedFill =
-        fillColor ?? theme.colorScheme.surfaceContainerHighest;
+    final resolvedFill = fillColor ?? theme.colorScheme.surfaceContainerHighest;
 
     final border = OutlineInputBorder(
       borderRadius: radius,
@@ -114,9 +110,7 @@ class AuthFormField extends StatelessWidget {
           fontWeight: FontWeight.w400,
         ),
         filled: true,
-        fillColor: enabled
-            ? resolvedFill
-            : resolvedFill.withValues(alpha: 0.5),
+        fillColor: enabled ? resolvedFill : resolvedFill.withValues(alpha: 0.5),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,

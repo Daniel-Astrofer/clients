@@ -19,6 +19,7 @@ class ColdWalletPublicMaterial {
   final String derivationPath;
   final String scriptPolicy;
   final ColdWalletSeedKind seedKind;
+
   /// Electrum version prefix (`100`, `01`, …) when [seedKind] is electrum.
   final String? electrumVersion;
 
@@ -123,8 +124,7 @@ class ColdWalletPublicMaterialDeriver {
         'Semente não é Electrum válida (HMAC Seed version).',
       );
     }
-    final path =
-        (derivationPathOverride ?? info.accountDerivationPath).trim();
+    final path = (derivationPathOverride ?? info.accountDerivationPath).trim();
     final seed = ElectrumSeedUtils.mnemonicToSeed(
       info.phrase,
       passphrase: passphrase,
@@ -152,9 +152,7 @@ class ColdWalletPublicMaterialDeriver {
     final keyNet = _bip32KeyNetVersionsForApp();
     final root = Bip32Slip10Secp256k1.fromSeed(seed, keyNet);
     // Path "m" means account = root itself (Electrum standard).
-    final account = path == 'm' || path == "m/"
-        ? root
-        : root.derivePath(path);
+    final account = path == 'm' || path == "m/" ? root : root.derivePath(path);
     final xpub = account.publicKey.toExtended;
     final fingerprint = root.fingerPrint.toHex();
 
@@ -191,9 +189,8 @@ class ColdWalletPublicMaterialDeriver {
       // Electrum standard: receive at m/0/*
       return '$defaultColdWalletScriptPolicy([$fingerprint]$xpub/0/*)';
     }
-    final accountPath = derivationPath
-        .replaceFirst(RegExp(r'^m/'), '')
-        .replaceAll("'", 'h');
+    final accountPath =
+        derivationPath.replaceFirst(RegExp(r'^m/'), '').replaceAll("'", 'h');
     return '$defaultColdWalletScriptPolicy([$fingerprint/$accountPath]$xpub/0/*)';
   }
 }

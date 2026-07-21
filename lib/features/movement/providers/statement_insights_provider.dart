@@ -37,9 +37,8 @@ final statementInsightsReportProvider =
       const <BitcoinAccount>[];
 
   final walletState = ref.watch(walletProvider);
-  final wallets = walletState is WalletLoaded
-      ? walletState.wallets
-      : const <Wallet>[];
+  final wallets =
+      walletState is WalletLoaded ? walletState.wallets : const <Wallet>[];
 
   final languageTag = locale.toLanguageTag();
   final emptyWalletName = switch (locale.languageCode) {

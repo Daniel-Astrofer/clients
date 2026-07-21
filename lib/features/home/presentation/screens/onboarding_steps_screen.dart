@@ -22,14 +22,15 @@ class OnboardingStepsScreen extends ConsumerWidget {
     final completed = progress.completedSteps;
 
     return Scaffold(
-      backgroundColor: AppColors.hexFF000000,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Custom top app bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Row(
                 children: [
                   IconButton(
@@ -37,7 +38,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       HapticFeedback.selectionClick();
                       Navigator.maybePop(context);
                     },
-                    icon: const Icon(KeroseneIcons.back, color: Colors.white, size: 22),
+                    icon: const Icon(KeroseneIcons.back,
+                        color: Colors.white, size: 22),
                     style: IconButton.styleFrom(
                       minimumSize: const Size.square(40),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -87,9 +89,12 @@ class OnboardingStepsScreen extends ConsumerWidget {
                                 child: LinearProgressIndicator(
                                   value: completed / 3.0,
                                   minHeight: 5,
-                                  backgroundColor: Colors.white.withValues(alpha: 0.08),
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.08),
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    isDone ? AppColors.hexFF4ADE80 : Colors.white,
+                                    isDone
+                                        ? AppColors.hexFF4ADE80
+                                        : Colors.white,
                                   ),
                                 ),
                               ),
@@ -111,18 +116,21 @@ class OnboardingStepsScreen extends ConsumerWidget {
                           context: context,
                           index: 1,
                           title: context.tr.onboardingCreateCustodialWallet,
-                          description: 'Crie uma carteira Kerosene oficial para habilitar saldos.',
+                          description:
+                              'Crie uma carteira Kerosene oficial para habilitar saldos.',
                           isCompleted: progress.hasCustodialWallet,
                           onTapAction: () {
                             Navigator.pop(context);
-                            AppPrimaryNavigationBar.navigateTo(context, AppPrimaryDestination.card);
+                            AppPrimaryNavigationBar.navigateTo(
+                                context, AppPrimaryDestination.card);
                           },
                         ),
                         _buildStepItem(
                           context: context,
                           index: 2,
                           title: context.tr.onboardingMakeDeposit,
-                          description: 'Adicione saldo Bitcoin à sua carteira recém-criada.',
+                          description:
+                              'Adicione saldo Bitcoin à sua carteira recém-criada.',
                           isCompleted: progress.hasDeposit,
                           enabled: progress.hasCustodialWallet,
                           onTapAction: () {
@@ -134,7 +142,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
                           context: context,
                           index: 3,
                           title: context.tr.onboardingInternalTransfer,
-                          description: 'Faça uma transferência instantânea sem taxas dentro da rede.',
+                          description:
+                              'Faça uma transferência instantânea sem taxas dentro da rede.',
                           isCompleted: progress.hasInternalTransfer,
                           enabled: progress.hasDeposit,
                           onTapAction: () {
@@ -142,7 +151,10 @@ class OnboardingStepsScreen extends ConsumerWidget {
                             context.go('/send-money');
                           },
                         ),
-                      ].animate(interval: 80.ms).fade(duration: 250.ms).slideY(begin: 0.04, end: 0),
+                      ]
+                          .animate(interval: 80.ms)
+                          .fade(duration: 250.ms)
+                          .slideY(begin: 0.04, end: 0),
                     ),
                   ),
                 ),
@@ -172,8 +184,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.hexFF141517,
-        border: Border.all(color: AppColors.hexFF222222),
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
@@ -194,7 +206,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
                     color: statusColor,
                     width: isCompleted ? 0 : 1.5,
                   ),
-                  color: isCompleted ? AppColors.hexFF4ADE80 : Colors.transparent,
+                  color:
+                      isCompleted ? AppColors.hexFF4ADE80 : Colors.transparent,
                 ),
                 child: isCompleted
                     ? const Icon(
@@ -221,7 +234,9 @@ class OnboardingStepsScreen extends ConsumerWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: enabled ? Colors.white : Colors.white.withValues(alpha: 0.35),
+                        color: enabled
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.35),
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -230,7 +245,9 @@ class OnboardingStepsScreen extends ConsumerWidget {
                     Text(
                       description,
                       style: TextStyle(
-                        color: enabled ? Colors.white.withValues(alpha: 0.55) : Colors.white.withValues(alpha: 0.24),
+                        color: enabled
+                            ? Colors.white.withValues(alpha: 0.55)
+                            : Colors.white.withValues(alpha: 0.24),
                         fontSize: 12.5,
                         fontWeight: FontWeight.w400,
                         height: 1.35,

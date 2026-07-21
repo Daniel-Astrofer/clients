@@ -46,6 +46,7 @@ import 'bitcoin_widgets/bottom_sheets.dart';
 import 'bitcoin_accounts_details.dart';
 import 'bitcoin_accounts_internal_sections.dart';
 import 'bitcoin_accounts_advanced_sections.dart';
+import 'financial_hub_flow/financial_hub_screen.dart';
 import 'widgets/revolut_account_card.dart';
 
 class BitcoinAccountsScreen extends ConsumerStatefulWidget {
@@ -63,115 +64,7 @@ class BitcoinAccountsScreenState extends ConsumerState<BitcoinAccountsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final accounts = ref.watch(bitcoinAccountsProvider);
-    final bottom = AppPrimaryNavigationBar.scaffoldBottomClearance(context);
-    final responsive = context.responsive;
-    final colors = BitcoinAccountsColors.of(context);
-    final authState = ref.watch(authControllerProvider);
-    final userDisplayName =
-        authState is AuthAuthenticated ? authState.user.name.trim() : '';
-
-    return accounts.when(
-      loading: () => const TorNavigationLoadingScreen(),
-      error: (_, __) => Scaffold(
-        backgroundColor: AppColors.hexFF000000,
-        body: Stack(
-          children: [
-            SafeArea(
-              child: BitcoinAccountsEmptyLayout(
-                bottomClearance: bottom,
-                onBack: handleHeaderBack,
-                onCreateInternalAccount: openInternalAccountFlow,
-                onCreateColdWallet: openColdWalletFlow,
-                onRefresh: () =>
-                    ref.read(bitcoinAccountsProvider.notifier).refresh(),
-              ),
-            ),
-            AppPrimaryNavigationBar.overlay(
-              currentDestination: AppPrimaryDestination.card,
-            ),
-          ],
-        ),
-      ),
-      data: (visibleAccounts) {
-        final isEmptyState = visibleAccounts.isEmpty;
-
-        return Scaffold(
-          backgroundColor:
-              isEmptyState ? AppColors.hexFF000000 : colors.background,
-          body: Stack(
-            children: [
-              SafeArea(
-                child: isEmptyState
-                    ? BitcoinAccountsEmptyLayout(
-                        bottomClearance: bottom,
-                        onBack: handleHeaderBack,
-                        onCreateInternalAccount: openInternalAccountFlow,
-                        onCreateColdWallet: openColdWalletFlow,
-                        onRefresh: () => ref
-                            .read(bitcoinAccountsProvider.notifier)
-                            .refresh(),
-                      )
-                    : RefreshIndicator(
-                        color: colors.text,
-                        backgroundColor: colors.surface,
-                        onRefresh: () => ref
-                            .read(bitcoinAccountsProvider.notifier)
-                            .refresh(),
-                        child: ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(
-                            responsive.horizontalPadding,
-                            responsive.isTinyPhone ? 14 : 18,
-                            responsive.horizontalPadding,
-                            bottom,
-                          ),
-                          children: [
-                            KeroseneAppColumn(
-                              maxWidth: responsive.mobileContentMaxWidth,
-                              child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    BitcoinAccountsHeader(
-                                      onBack: handleHeaderBack,
-                                    ),
-                                    const SizedBox(height: AppSpacing.lg),
-                                    AccountsContent(
-                                      accounts: visibleAccounts,
-                                      userDisplayName: userDisplayName,
-                                      selectedAccountIndex:
-                                          selectedAccountIndex,
-                                      receiveAddressOverrides:
-                                          receiveAddressOverrides,
-                                      onAccountChanged: (index) => setState(() {
-                                        selectedAccountIndex = index;
-                                      }),
-                                      onReceiveAddressRotated: (request) {
-                                        setState(() {
-                                          receiveAddressOverrides[
-                                              request.accountId] = request;
-                                        });
-                                      },
-                                      onCreateInternalAccount:
-                                          openInternalAccountFlow,
-                                      onCreateColdWallet: openColdWalletFlow,
-                                    ),
-                                  ],
-                                ),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-              AppPrimaryNavigationBar.overlay(
-                currentDestination: AppPrimaryDestination.card,
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    return const FinancialHubScreen();
   }
 
   Future<void> openInternalAccountFlow() async {
@@ -729,7 +622,8 @@ class FocusedAccountCard extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 InlineCopyButton(
                                   value: displayIdentifier,
-                                  semanticLabel: context.tr.btcAccountsCopyAddress,
+                                  semanticLabel:
+                                      context.tr.btcAccountsCopyAddress,
                                 ),
                               ],
                             ),

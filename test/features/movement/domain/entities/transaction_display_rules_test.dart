@@ -138,7 +138,9 @@ void main() {
       expect(tx.showsOnchainConfirmations, isFalse);
     });
 
-    test('on-chain inbound receipt parses amount when receiverAmountSats is 0 or missing', () {
+    test(
+        'on-chain inbound receipt parses amount when receiverAmountSats is 0 or missing',
+        () {
       final tx = Transaction.fromJson({
         'rail': 'ONCHAIN',
         'direction': 'INBOUND',
@@ -158,7 +160,8 @@ void main() {
       expect(tx.signedDisplayAmountBTC, 0.0005);
     });
 
-    test('on-chain inbound receipt parses amount from amountSats or amountBtc', () {
+    test('on-chain inbound receipt parses amount from amountSats or amountBtc',
+        () {
       final tx = Transaction.fromJson({
         'rail': 'ONCHAIN',
         'direction': 'INBOUND',
@@ -176,7 +179,9 @@ void main() {
       expect(tx.amountBTC, 0.00075);
     });
 
-    test('on-chain outbound recovers amount from totalDebitSats when gross is 0', () {
+    test(
+        'on-chain outbound recovers amount from totalDebitSats when gross is 0',
+        () {
       final tx = Transaction.fromJson({
         'rail': 'ONCHAIN',
         'direction': 'OUTBOUND',

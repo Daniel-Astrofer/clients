@@ -25,6 +25,7 @@ class SendWalletSelectionStep extends StatelessWidget {
   final ValueChanged<Wallet> onWalletConfirmed;
 
   final PaymentRail? selectedRail;
+
   /// When non-null, only these wallet ids (from capabilities) may be offered.
   final Set<String>? eligibleWalletIds;
 
@@ -272,7 +273,8 @@ class _WalletList extends StatefulWidget {
   State<_WalletList> createState() => _WalletListState();
 }
 
-class _WalletListState extends State<_WalletList> with SingleTickerProviderStateMixin {
+class _WalletListState extends State<_WalletList>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _staggerController;
   late final PageController _pageController;
   int _currentIndex = 0;
@@ -284,24 +286,25 @@ class _WalletListState extends State<_WalletList> with SingleTickerProviderState
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
+
     // Find initial selected index
     final walletsList = _orderedCompatible(_getCompatibleWallets());
     int initialIndex = 0;
     if (widget.selectedWallet != null) {
-      final index = walletsList.indexWhere((w) => w.id == widget.selectedWallet!.id);
+      final index =
+          walletsList.indexWhere((w) => w.id == widget.selectedWallet!.id);
       if (index != -1) initialIndex = index;
     }
-    
+
     _currentIndex = initialIndex;
     _pageController = PageController(
       viewportFraction: 0.85,
       initialPage: initialIndex,
     );
-    
+
     _staggerController.forward();
   }
-  
+
   bool _isBackendEligible(Wallet wallet) {
     final ids = widget.eligibleWalletIds;
     if (ids == null) return true;
@@ -577,9 +580,7 @@ class _PremiumWalletCard extends StatelessWidget {
                     : tokens.textPrimary.withValues(alpha: 0.05),
             width: selected ? 2 : 1,
           ),
-          boxShadow: selected
-              ? tokens.cardShadow
-              : const <BoxShadow>[],
+          boxShadow: selected ? tokens.cardShadow : const <BoxShadow>[],
         ),
         child: ClipRRect(
           borderRadius: tokens.cardBorderRadius,
@@ -604,7 +605,7 @@ class _PremiumWalletCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Bottom left glowing orb
               Positioned(
                 bottom: -20,
@@ -615,11 +616,12 @@ class _PremiumWalletCard extends StatelessWidget {
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: selected ? 0.03 : 0.01),
+                    color:
+                        Colors.white.withValues(alpha: selected ? 0.03 : 0.01),
                   ),
                 ),
               ),
-              
+
               Padding(
                 padding: const EdgeInsets.all(28.0),
                 child: Column(
@@ -638,19 +640,24 @@ class _PremiumWalletCard extends StatelessWidget {
                             ),
                           ),
                           child: Icon(
-                            wallet.isColdWallet ? KeroseneIcons.lock : KeroseneIcons.wallet,
+                            wallet.isColdWallet
+                                ? KeroseneIcons.lock
+                                : KeroseneIcons.wallet,
                             color: Colors.white,
                             size: 24,
                           ),
                         ),
                         if (isRecommended)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: KeroseneBrandTokens.success.withValues(alpha: 0.15),
+                              color: KeroseneBrandTokens.success
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: KeroseneBrandTokens.success.withValues(alpha: 0.3),
+                                color: KeroseneBrandTokens.success
+                                    .withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
@@ -679,9 +686,9 @@ class _PremiumWalletCard extends StatelessWidget {
                     Text(
                       'Saldo Disponível', // Available Balance
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SendWalletSelectionStep.internalMutedText,
-                        letterSpacing: 0.5,
-                      ),
+                            color: SendWalletSelectionStep.internalMutedText,
+                            letterSpacing: 0.5,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -697,9 +704,9 @@ class _PremiumWalletCard extends StatelessWidget {
                     Text(
                       wallet.name,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w500,
-                      ),
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

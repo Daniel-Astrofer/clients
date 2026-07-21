@@ -108,8 +108,7 @@ final class TransactionAxes {
     if (tx.type == TransactionType.withdrawal) return TxProduct.withdraw;
     if (tx.type == TransactionType.fee) return TxProduct.fee;
     if (tx.type == TransactionType.swap) return TxProduct.swap;
-    if (tx.type == TransactionType.send ||
-        tx.type == TransactionType.receive) {
+    if (tx.type == TransactionType.send || tx.type == TransactionType.receive) {
       return TxProduct.transfer;
     }
     return TxProduct.other;

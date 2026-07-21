@@ -7,9 +7,7 @@ import 'package:kerosene/features/movement/data/payment_security_guards.dart';
 String coldWalletDerivationPathFor(BitcoinNetworkKind network) {
   return switch (network) {
     BitcoinNetworkKind.mainnet => "m/84'/0'/0'",
-    BitcoinNetworkKind.testnet ||
-    BitcoinNetworkKind.regtest =>
-      "m/84'/1'/0'",
+    BitcoinNetworkKind.testnet || BitcoinNetworkKind.regtest => "m/84'/1'/0'",
     BitcoinNetworkKind.unknown => coldWalletDerivationPathFor(
         expectedBitcoinNetwork,
       ),

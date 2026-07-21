@@ -13,8 +13,7 @@ class DeviceHelper {
 
   // Prefs keys are profile-scoped so primary/secondary Linux instances never
   // share install id, device hash, or bound username on the same machine.
-  static String get _deviceHashKey =>
-      'device_hash_key_${keroseneProfileTag()}';
+  static String get _deviceHashKey => 'device_hash_key_${keroseneProfileTag()}';
   static String get _deviceInstallIdKey =>
       'device_install_id_${keroseneProfileTag()}';
   static String get _deviceBoundUsernameKey =>
@@ -158,7 +157,8 @@ class DeviceHelper {
   /// Username of the account currently bound to this install (local cache).
   static Future<String?> getDeviceBoundUsername() async {
     final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(_deviceBoundUsernameKey)?.trim().toLowerCase();
+    final value =
+        prefs.getString(_deviceBoundUsernameKey)?.trim().toLowerCase();
     if (value == null || value.isEmpty) {
       return null;
     }

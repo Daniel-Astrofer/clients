@@ -120,7 +120,8 @@ void main() {
 
     test('rejects reserve unlock and outbound contexts', () {
       expect(
-        isInboundBalanceCredit(amountBtc: 0.01, context: 'liberação de reserva'),
+        isInboundBalanceCredit(
+            amountBtc: 0.01, context: 'liberação de reserva'),
         isFalse,
       );
       expect(

@@ -47,9 +47,7 @@ class HomeSceneNotifier extends Notifier<HomeScene> {
               !next.id.startsWith('local-') &&
               next.id != _override!.id) {
             _override = null;
-          } else if (!next.isActive &&
-              _override!.local &&
-              next.id.isEmpty) {
+          } else if (!next.isActive && _override!.local && next.id.isEmpty) {
             // Stage cleared — keep override only if still local active.
           }
         }
@@ -112,7 +110,8 @@ class HomeSceneNotifier extends Notifier<HomeScene> {
     }
     _override = scene;
     state = scene;
-    debugPrint('[homeScene] present id=${scene.id} layout=${scene.layout.name}');
+    debugPrint(
+        '[homeScene] present id=${scene.id} layout=${scene.layout.name}');
   }
 
   /// Clear local override; fall back to surface stage / resting.

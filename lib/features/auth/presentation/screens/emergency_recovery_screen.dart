@@ -295,7 +295,8 @@ class _EmergencyRecoveryScreenState
         _RecoveryNotice(
           icon: KeroseneIcons.success,
           title: context.tr.emergencyRecoveryCredentialsRotated,
-          message: context.tr.emergencyRecoveryAccountRotatedBody(finished?.username ?? ''),
+          message: context.tr
+              .emergencyRecoveryAccountRotatedBody(finished?.username ?? ''),
           tone: _RecoveryNoticeTone.success,
         ),
         const SizedBox(height: AppSpacing.xl2),

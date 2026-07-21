@@ -6,8 +6,7 @@ import 'package:kerosene/features/movement/presentation/receive/receive_method.d
 class ReceiveMoneyCopy {
   const ReceiveMoneyCopy._();
 
-  static String hubTitle(BuildContext context) =>
-      switch (_language(context)) {
+  static String hubTitle(BuildContext context) => switch (_language(context)) {
         'en' => 'How do you want to receive?',
         'es' => '¿Cómo deseas recibir?',
         _ => 'Como deseja receber?',
@@ -22,8 +21,7 @@ class ReceiveMoneyCopy {
     if (isCold) {
       return switch (_language(context)) {
         'en' => 'Choose QR or payment link to receive into this cold wallet.',
-        'es' =>
-          'Elige QR o link de pago para recibir en esta cold wallet.',
+        'es' => 'Elige QR o link de pago para recibir en esta cold wallet.',
         _ =>
           'Escolha QR Code ou link de pagamento para receber nesta carteira fria.',
       };
@@ -115,6 +113,14 @@ class ReceiveMoneyCopy {
         _ => 'Quanto deseja receber?',
       };
 
+  /// Top-bar fallback when auth username is unavailable.
+  static String receiveDestinationFallback(BuildContext context) =>
+      switch (_language(context)) {
+        'en' => 'Receive',
+        'es' => 'Recibir',
+        _ => 'Receber',
+      };
+
   static String networkPickTitle(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Choose the network',
@@ -136,8 +142,7 @@ class ReceiveMoneyCopy {
         _ => 'Melhor custo',
       };
 
-  static String p2pTitle(BuildContext context) =>
-      switch (_language(context)) {
+  static String p2pTitle(BuildContext context) => switch (_language(context)) {
         'en' => 'P2P',
         'es' => 'P2P',
         _ => 'P2P',
@@ -203,13 +208,15 @@ class ReceiveMoneyCopy {
     };
   }
 
-  static String lightningTitle(BuildContext context) => switch (_language(context)) {
+  static String lightningTitle(BuildContext context) =>
+      switch (_language(context)) {
         'en' => 'Lightning invoice',
         'es' => 'Factura Lightning',
         _ => 'Fatura Lightning',
       };
 
-  static String lightningSubtitle(BuildContext context) => switch (_language(context)) {
+  static String lightningSubtitle(BuildContext context) =>
+      switch (_language(context)) {
         'en' => 'Create a BOLT11 invoice to receive instantly',
         'es' => 'Crea una factura BOLT11 para recibir al instante',
         _ => 'Crie uma fatura BOLT11 para receber na hora',
@@ -341,8 +348,7 @@ class ReceiveMoneyCopy {
       switch (_language(context)) {
         'en' => 'Could not prepare tracking for this receive request.',
         'es' => 'No se pudo preparar el seguimiento de este cobro.',
-        _ =>
-          'Não foi possível preparar o acompanhamento deste recebimento.',
+        _ => 'Não foi possível preparar o acompanhamento deste recebimento.',
       };
 
   static String nfcIdMissing(BuildContext context) =>

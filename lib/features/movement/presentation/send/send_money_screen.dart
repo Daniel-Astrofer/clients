@@ -61,7 +61,6 @@ import 'package:kerosene/features/movement/presentation/send/send_security_profi
 import 'package:kerosene/features/movement/presentation/send/send_wallet_resolver.dart';
 import 'package:kerosene/features/movement/presentation/send/send_wallet_selection_step.dart';
 
-
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_analyzer.dart';
 import 'package:kerosene/features/movement/presentation/send/send_amount_step.dart';
@@ -98,26 +97,36 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   static const Duration _navDuration = kKeroseneFlowNavDuration;
   static const Curve _navCurve = kKeroseneFlowNavCurve;
   String? _pendingPaymentLinkId;
-  NetworkFeeTier get _selectedFeeTier => ref.read(sendMoneyFlowProvider).value?.selectedFeeTier ?? NetworkFeeTier.standard;
-  set _selectedFeeTier(NetworkFeeTier value) => ref.read(sendMoneyFlowProvider.notifier).setFeeTier(value);
+  NetworkFeeTier get _selectedFeeTier =>
+      ref.read(sendMoneyFlowProvider).value?.selectedFeeTier ??
+      NetworkFeeTier.standard;
+  set _selectedFeeTier(NetworkFeeTier value) =>
+      ref.read(sendMoneyFlowProvider.notifier).setFeeTier(value);
   SendDestinationType? _lastHapticDestinationType;
-  String get _lockedRecipientAddress => ref.read(sendMoneyFlowProvider).value?.lockedRecipientAddress ?? '';
-  set _lockedRecipientAddress(String value) => ref.read(sendMoneyFlowProvider.notifier).updateDestination(
-    ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
-    lockedAddress: value,
-  );
+  String get _lockedRecipientAddress =>
+      ref.read(sendMoneyFlowProvider).value?.lockedRecipientAddress ?? '';
+  set _lockedRecipientAddress(String value) =>
+      ref.read(sendMoneyFlowProvider.notifier).updateDestination(
+            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+            lockedAddress: value,
+          );
   String? _recentDestinationAddressForSave;
-  double get _lockedAmountBtc => ref.read(sendMoneyFlowProvider).value?.lockedAmountBtc ?? 0.0;
-  set _lockedAmountBtc(double value) => ref.read(sendMoneyFlowProvider.notifier).updateDestination(
-    ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
-    lockedAmount: value,
-  );
-  String? get _lockedRecipientLabel => ref.read(sendMoneyFlowProvider).value?.lockedRecipientLabel;
-  set _lockedRecipientLabel(String? value) => ref.read(sendMoneyFlowProvider.notifier).updateDestination(
-    ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
-    lockedLabel: value,
-  );
-  Wallet? get _selectedWallet => ref.read(sendMoneyFlowProvider).value?.selectedWallet;
+  double get _lockedAmountBtc =>
+      ref.read(sendMoneyFlowProvider).value?.lockedAmountBtc ?? 0.0;
+  set _lockedAmountBtc(double value) =>
+      ref.read(sendMoneyFlowProvider.notifier).updateDestination(
+            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+            lockedAmount: value,
+          );
+  String? get _lockedRecipientLabel =>
+      ref.read(sendMoneyFlowProvider).value?.lockedRecipientLabel;
+  set _lockedRecipientLabel(String? value) =>
+      ref.read(sendMoneyFlowProvider.notifier).updateDestination(
+            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+            lockedLabel: value,
+          );
+  Wallet? get _selectedWallet =>
+      ref.read(sendMoneyFlowProvider).value?.selectedWallet;
   set _selectedWallet(Wallet? value) {
     final notifier = ref.read(sendMoneyFlowProvider.notifier);
     if (value != null) {
@@ -126,6 +135,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       notifier.clearSelectedWallet();
     }
   }
+
   bool _destinationResolutionBusy = false;
   int _destinationEditVersion = 0;
 
@@ -157,7 +167,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   late final RaspGuard _raspGuard;
 
-  int get _currentStep => ref.read(sendMoneyFlowProvider).value?.currentStep ?? 0;
+  int get _currentStep =>
+      ref.read(sendMoneyFlowProvider).value?.currentStep ?? 0;
 
   int get _firstStep => 0;
 
@@ -300,7 +311,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   @override
   Widget build(BuildContext context) {
-    final currentStepWatch = ref.watch(sendMoneyFlowProvider).value?.currentStep ?? 0;
+    final currentStepWatch =
+        ref.watch(sendMoneyFlowProvider).value?.currentStep ?? 0;
     ref.watch(balanceWebSocketServiceProvider);
     var isLoading = false;
     if (currentStepWatch == 2) {
@@ -893,7 +905,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       return null;
     }
 
-    if (handler.id == 'lightning' || handler.id == 'internal' || handler.id == 'payment_link') {
+    if (handler.id == 'lightning' ||
+        handler.id == 'internal' ||
+        handler.id == 'payment_link') {
       final quoted = handler.quote(
         SendQuoteRequest(
           wallet: wallet,
@@ -954,8 +968,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       selectedWallet: _selectedWallet,
     );
   }
-
-
 
   Widget _buildWalletSelectionStep(
     BuildContext context,
@@ -1086,8 +1098,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
           );
           return;
         }
-        if (_liveResolvedIntent != null &&
-            !_liveResolvedIntent!.canContinue) {
+        if (_liveResolvedIntent != null && !_liveResolvedIntent!.canContinue) {
           final msg = _liveResolvedIntent!.blockers.isNotEmpty
               ? _liveResolvedIntent!.blockers.first.message
               : context.tr.errReceiverNotReady;
@@ -1104,8 +1115,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     final intent = const PaymentIntentParser().parse(_receiverController.text);
     if (!shouldLiveResolveInternal(intent)) {
       // Local-only resolve for external destinations (network/self-pay hints).
-      final wallet = _selectedWallet ??
-          (_resolveWallet(ref.read(walletProvider)));
+      final wallet =
+          _selectedWallet ?? (_resolveWallet(ref.read(walletProvider)));
       final local = PaymentIntentResolver.instance.resolveLocal(
         intent: intent,
         source: sourceCustodyOf(wallet),
@@ -1117,9 +1128,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       if (!intent.isEmpty && !intent.isInvalid && !intent.isInternal) {
         setState(() {
           _liveResolvedIntent = local;
-          _liveResolveError = local.blockers.isNotEmpty
-              ? local.blockers.first.message
-              : null;
+          _liveResolveError =
+              local.blockers.isNotEmpty ? local.blockers.first.message : null;
         });
       }
       return;
@@ -1154,8 +1164,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
           .read(kfeReceivingCapabilitiesServiceProvider)
           .receivingCapabilities(intent.normalizedValue);
       if (!mounted || token != _liveResolveToken) return;
-      final resolved =
-          PaymentIntentResolver.instance.resolveWithCapabilities(
+      final resolved = PaymentIntentResolver.instance.resolveWithCapabilities(
         intent: intent,
         source: source,
         capabilities: capabilities,
@@ -1270,8 +1279,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         }
       });
 
-      if (_liveResolvedIntent != null && _liveResolvedIntent!.alternatives.isNotEmpty) {
-        final selectedRail = await _showCapabilitiesBottomSheet(_liveResolvedIntent!, destination);
+      if (_liveResolvedIntent != null &&
+          _liveResolvedIntent!.alternatives.isNotEmpty) {
+        final selectedRail = await _showCapabilitiesBottomSheet(
+            _liveResolvedIntent!, destination);
         if (selectedRail == null) {
           // User dismissed the bottom sheet
           return;
@@ -1342,7 +1353,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                     title = 'Transferência Instantânea (Zero taxas)';
                     subtitle = 'Chega na hora';
                   }
-                  final isRecommended = option.rail == resolvedIntent.selectedRail;
+                  final isRecommended =
+                      option.rail == resolvedIntent.selectedRail;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
@@ -1356,8 +1368,11 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             border: isRecommended
-                                ? Border.all(color: KeroseneBrandTokens.textPrimary, width: 2)
-                                : Border.all(color: Colors.transparent, width: 2),
+                                ? Border.all(
+                                    color: KeroseneBrandTokens.textPrimary,
+                                    width: 2)
+                                : Border.all(
+                                    color: Colors.transparent, width: 2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
@@ -1377,7 +1392,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                                     Text(
                                       title,
                                       style: AppTypography.inter(
-                                        color: SendMoneyScreenState.internalText,
+                                        color:
+                                            SendMoneyScreenState.internalText,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -1386,7 +1402,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                                     Text(
                                       subtitle,
                                       style: AppTypography.inter(
-                                        color: SendMoneyScreenState.internalMutedText,
+                                        color: SendMoneyScreenState
+                                            .internalMutedText,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -1795,7 +1812,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       btcEur: btcEur,
       btcBrl: btcBrl,
       isPaymentLink: isPaymentLink,
-      onConfirm: (confirmationContext, {required firstSendAcknowledgedInReview}) =>
+      onConfirm: (confirmationContext,
+              {required firstSendAcknowledgedInReview}) =>
           _confirmPayment(
         confirmationContext: confirmationContext,
         wallet: wallet,

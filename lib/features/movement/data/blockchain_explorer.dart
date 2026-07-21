@@ -39,7 +39,8 @@ class BlockchainExplorer {
     return Uri.parse('https://mempool.space/testnet/address/$addr');
   }
 
-  static Future<bool> openTx(String? blockchainTxid, {String? networkHint}) async {
+  static Future<bool> openTx(String? blockchainTxid,
+      {String? networkHint}) async {
     final uri = txUri(blockchainTxid, networkHint: networkHint);
     if (uri == null) return false;
     try {

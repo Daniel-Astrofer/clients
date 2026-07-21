@@ -19,6 +19,7 @@ class TheaterCatalogPiece {
   final TheaterAtmospherePreset atmosphere;
   final int showDurationMs;
   final HomeStageCta? cta;
+
   /// Optional context tags: cold, onchain, platform, noTotp, hasWallet…
   final Set<String> contextTags;
 
@@ -265,7 +266,8 @@ TheaterCatalogPiece? theaterPieceById(String id) {
 TheaterTextBlock _h2(String text, {String? emoji}) =>
     TheaterTextBlock(role: TheaterBlockRole.h2, text: text, emoji: emoji);
 
-TheaterTextBlock _body(String text, {List<TheaterTextSpanMark> spans = const []}) =>
+TheaterTextBlock _body(String text,
+        {List<TheaterTextSpanMark> spans = const []}) =>
     TheaterTextBlock(role: TheaterBlockRole.body, text: text, spans: spans);
 
 TheaterTextBlock _bullet(String text, {String? emoji}) =>

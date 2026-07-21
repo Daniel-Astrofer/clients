@@ -9,8 +9,10 @@ class GatewayMovementProvider implements MovementEntryProvider {
   const GatewayMovementProvider();
 
   @override
-  List<MovementEntry> entriesFor(BuildContext context, Wallet? wallet, MovementCapability caps) {
-    final isInternal = wallet == null || (!wallet.isColdWallet && !wallet.isCustodialOnchain);
+  List<MovementEntry> entriesFor(
+      BuildContext context, Wallet? wallet, MovementCapability caps) {
+    final isInternal =
+        wallet == null || (!wallet.isColdWallet && !wallet.isCustodialOnchain);
     if (!isInternal) {
       return [];
     }

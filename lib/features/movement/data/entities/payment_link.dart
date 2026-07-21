@@ -33,6 +33,7 @@ class PaymentLink extends Equatable {
   final String? settlementReference;
   final bool terminal;
   final int confirmations;
+
   /// BOLT11 invoice when [paymentRail] is LIGHTNING.
   final String? paymentRequest;
   final String? paymentHash;
@@ -218,8 +219,8 @@ class PaymentLink extends Equatable {
           data['payment_request']?.toString() ??
           data['bolt11']?.toString() ??
           metadataPaymentRequest(data),
-      paymentHash: data['paymentHash']?.toString() ??
-          data['payment_hash']?.toString(),
+      paymentHash:
+          data['paymentHash']?.toString() ?? data['payment_hash']?.toString(),
     );
   }
 
@@ -311,13 +312,14 @@ class PaymentLink extends Equatable {
 
     final bolt11 = paymentRequest?.trim();
     final hash = paymentHash?.trim();
-    final displayDestination = isLightningRail && bolt11 != null && bolt11.isNotEmpty
-        ? bolt11
-        : depositAddress.isNotEmpty
-            ? depositAddress
-            : (referenceLabel?.trim().isNotEmpty == true
-                ? referenceLabel!.trim()
-                : 'Carteira receptora');
+    final displayDestination =
+        isLightningRail && bolt11 != null && bolt11.isNotEmpty
+            ? bolt11
+            : depositAddress.isNotEmpty
+                ? depositAddress
+                : (referenceLabel?.trim().isNotEmpty == true
+                    ? referenceLabel!.trim()
+                    : 'Carteira receptora');
 
     final openQuote = !isCompleted &&
         !cancelledOrExpired &&

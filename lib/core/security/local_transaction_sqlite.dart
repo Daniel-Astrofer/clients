@@ -23,8 +23,8 @@ class LocalTransactionSqlite {
     if (kIsWeb) return null;
     if (_db != null) return _db;
     try {
-      if (defaultTargetPlatform == TargetPlatform.linux || 
-          defaultTargetPlatform == TargetPlatform.windows || 
+      if (defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.macOS) {
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;

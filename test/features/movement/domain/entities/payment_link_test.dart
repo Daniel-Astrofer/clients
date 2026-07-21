@@ -46,15 +46,14 @@ void main() {
         'amountBtc': 0.0001,
         'description': 'Lightning invoice',
         'paymentRail': 'LIGHTNING',
-        'paymentRequest':
-            'lntb100n1pexamplebolt11invoicepayloadforqrencoding',
+        'paymentRequest': 'lntb100n1pexamplebolt11invoicepayloadforqrencoding',
         'paymentHash': 'abc123paymenthash',
         'status': 'pending',
       });
 
       expect(link.isLightningPaymentRequest, isTrue);
-      expect(link.shareablePaymentPayload,
-          startsWith('lntb100n1pexamplebolt11'));
+      expect(
+          link.shareablePaymentPayload, startsWith('lntb100n1pexamplebolt11'));
       expect(link.paymentHash, 'abc123paymenthash');
 
       final tx = link.toTransaction();

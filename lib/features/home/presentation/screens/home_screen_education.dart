@@ -38,9 +38,8 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
     final remoteAsync = ref.watch(homeFeedProvider);
     final remoteFromLegacy = remoteAsync.asData?.value;
     // Prefer surface feed items when the envelope already carried them.
-    final remote = surfaceFeed.items.isNotEmpty
-        ? surfaceFeed.items
-        : remoteFromLegacy;
+    final remote =
+        surfaceFeed.items.isNotEmpty ? surfaceFeed.items : remoteFromLegacy;
     final cards = resolveHomeFeedCards(
       context: context,
       view: view,
@@ -73,110 +72,110 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
           child: SizedBox(
             height: feedHeight,
             child: PageView.builder(
-            controller: _pageController,
-            physics: const BouncingScrollPhysics(),
-            itemCount: cards.length,
-            onPageChanged: (index) {
-              HapticFeedback.selectionClick();
-              setState(() => _activeIndex = index);
-            },
-            itemBuilder: (context, index) {
-              final card = cards[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: index == 0 ? 0 : gap / 2,
-                  right: index == cards.length - 1 ? 0 : gap / 2,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(homeSize(16)),
-                    onTap: card.cta?.isNavigate == true
-                        ? () => _openFeedCta(context, card.cta!)
-                        : null,
-                    child: HomeGlassPanel(
+              controller: _pageController,
+              physics: const BouncingScrollPhysics(),
+              itemCount: cards.length,
+              onPageChanged: (index) {
+                HapticFeedback.selectionClick();
+                setState(() => _activeIndex = index);
+              },
+              itemBuilder: (context, index) {
+                final card = cards[index];
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: index == 0 ? 0 : gap / 2,
+                    right: index == cards.length - 1 ? 0 : gap / 2,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(homeSize(16)),
-                      padding: EdgeInsets.all(cardPadding),
-                      child: Row(
-                        children: [
-                          _HomeFeedMediaThumb(
-                            media: card.media,
-                            kind: card.kind,
-                            feedItem: card,
-                          ),
-                          SizedBox(width: homeSize(16)),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  card.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.newsreader(
-                                    textStyle: theme.textTheme.titleMedium,
-                                    color: Colors.white,
-                                    fontSize: homeFontSize(20),
-                                    fontWeight: FontWeight.w300,
-                                    height: 1.1,
-                                    letterSpacing: 0,
-                                  ),
-                                ),
-                                SizedBox(height: homeSize(8)),
-                                Text(
-                                  card.body,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: homeMutedTextColor,
-                                    fontSize: homeFontSize(12),
-                                    height: 1.45,
-                                    letterSpacing: 0,
-                                  ),
-                                ),
-                                SizedBox(height: homeSize(12)),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        card.tag.toUpperCase(),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style:
-                                            theme.textTheme.labelSmall?.copyWith(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.72),
-                                          fontSize: homeFontSize(10),
-                                          fontWeight: FontWeight.w300,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                    if (card.cta?.isNavigate == true)
-                                      Text(
-                                        card.cta!.label,
-                                        style:
-                                            theme.textTheme.labelSmall?.copyWith(
-                                          color: homeAmberColor,
-                                          fontSize: homeFontSize(10),
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.4,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
+                      onTap: card.cta?.isNavigate == true
+                          ? () => _openFeedCta(context, card.cta!)
+                          : null,
+                      child: HomeGlassPanel(
+                        borderRadius: BorderRadius.circular(homeSize(16)),
+                        padding: EdgeInsets.all(cardPadding),
+                        child: Row(
+                          children: [
+                            _HomeFeedMediaThumb(
+                              media: card.media,
+                              kind: card.kind,
+                              feedItem: card,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: homeSize(16)),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    card.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.newsreader(
+                                      textStyle: theme.textTheme.titleMedium,
+                                      color: Colors.white,
+                                      fontSize: homeFontSize(20),
+                                      fontWeight: FontWeight.w300,
+                                      height: 1.1,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                  SizedBox(height: homeSize(8)),
+                                  Text(
+                                    card.body,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: homeMutedTextColor,
+                                      fontSize: homeFontSize(12),
+                                      height: 1.45,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                  SizedBox(height: homeSize(12)),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          card.tag.toUpperCase(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.72),
+                                            fontSize: homeFontSize(10),
+                                            fontWeight: FontWeight.w300,
+                                            letterSpacing: 1.2,
+                                          ),
+                                        ),
+                                      ),
+                                      if (card.cta?.isNavigate == true)
+                                        Text(
+                                          card.cta!.label,
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                            color: homeAmberColor,
+                                            fontSize: homeFontSize(10),
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
           ),
         ),
         SizedBox(height: homeSize(12)),
@@ -227,8 +226,7 @@ class _HomeFeedMediaThumb extends StatelessWidget {
     // Skip legacy mock product shots under assets/feed/cards/.
     final isLegacyMockCard = imageUrl.contains('feed/cards/');
     final isAsset = imageUrl.startsWith('asset:');
-    final assetPath =
-        isAsset ? imageUrl.substring('asset:'.length) : imageUrl;
+    final assetPath = isAsset ? imageUrl.substring('asset:'.length) : imageUrl;
 
     final isImageCard = !isLegacyMockCard &&
         (media.type == HomeFeedMediaType.image ||
@@ -417,7 +415,7 @@ class _HomeFundsDistributionSectionState
         HomeWalletDistributionEntry(
           wallet: displayWallets[index],
           color: displayWallets.length == 1
-              ? _singleWalletDistributionColor
+              ? Theme.of(context).disabledColor
               : _walletDistributionColor(index),
           share: totalBalance > 0
               ? math.max(0, displayWallets[index].balance) / totalBalance
@@ -760,6 +758,7 @@ class HomeDistributionLegendItem extends StatelessWidget {
 
 class HomeDistributionChartPainter extends CustomPainter {
   final List<HomeWalletDistributionEntry> entries;
+
   /// 0 → 1 reveal; arcs ease into their final positions.
   final double progress;
 
@@ -841,8 +840,6 @@ Color _walletDistributionColor(int index) {
   };
 }
 
-const Color _singleWalletDistributionColor = AppColors.hexFF444748;
-
 String _homeDistributionPercentLabel(double percent) {
   if (percent.isNaN || percent.isInfinite || percent <= 0) return '0%';
   if ((percent - percent.round()).abs() < 0.05) {
@@ -920,6 +917,7 @@ class HomeActivityFilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+
   /// Red circle when there are cancelled txs the user has not opened yet.
   final bool showUnseenDot;
 
@@ -1026,8 +1024,7 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
     HomeActivityFilter.failed => context.tr.activityFilterProblems,
     HomeActivityFilter.cancelled =>
       context.tr.financialStatementFilterCancelled,
-    HomeActivityFilter.archived =>
-      context.tr.financialStatementFilterArchived,
+    HomeActivityFilter.archived => context.tr.financialStatementFilterArchived,
   };
 }
 
@@ -1055,8 +1052,7 @@ class HomeSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tooltip =
-        actionTooltip ?? context.tr.statementScreenTitle;
+    final tooltip = actionTooltip ?? context.tr.statementScreenTitle;
 
     return Row(
       children: [

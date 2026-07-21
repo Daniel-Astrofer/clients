@@ -38,8 +38,8 @@ class DeviceCredentialChallenge {
     final kind = (json['kind'] ?? fallbackKind ?? '').toString();
     return DeviceCredentialChallenge(
       kind: kind,
-      challengeId: json['challengeId']?.toString() ??
-          json['challenge_id']?.toString(),
+      challengeId:
+          json['challengeId']?.toString() ?? json['challenge_id']?.toString(),
       challenge: (json['challenge'] ?? '').toString(),
       expiresInSeconds: (json['expiresInSeconds'] as num?)?.toInt() ??
           (json['expires_in_seconds'] as num?)?.toInt(),
@@ -112,10 +112,9 @@ class PasskeyActionRequired {
           json['totp_fallback_available'] == true,
       linkNewPasskeyAllowed: json['linkNewPasskeyAllowed'] == true ||
           json['link_new_passkey_allowed'] == true,
-      linkPasskeyPath: (json['linkPasskeyPath'] ??
-              json['link_passkey_path'] ??
-              '')
-          .toString(),
+      linkPasskeyPath:
+          (json['linkPasskeyPath'] ?? json['link_passkey_path'] ?? '')
+              .toString(),
       guidance: (json['guidance'] ?? '').toString(),
       passkeys: json['passkeys'] is Map
           ? PasskeyInventory.fromJson(

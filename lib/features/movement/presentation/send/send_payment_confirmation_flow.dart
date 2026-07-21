@@ -119,7 +119,8 @@ Future<dynamic> confirmSendPayment({
   }
 
   if (handler.id == 'payment_link' && isColdSource) {
-    SnackbarHelper.showError(SendMoneyCopy.coldNoPaymentLink(confirmationContext));
+    SnackbarHelper.showError(
+        SendMoneyCopy.coldNoPaymentLink(confirmationContext));
     return null;
   }
 
@@ -142,4 +143,3 @@ Future<dynamic> confirmSendPayment({
     ),
   );
 }
-

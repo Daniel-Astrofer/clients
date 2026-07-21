@@ -592,15 +592,15 @@ class ReceiveFlowPrimaryButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-          child: isLoading
-              ? CupertinoActivityIndicator(
-                  radius: 9,
-                  color: foregroundColor,
-                )
-              : Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+        child: isLoading
+            ? CupertinoActivityIndicator(
+                radius: 9,
+                color: foregroundColor,
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
                       Icon(icon, size: 15, color: foregroundColor),

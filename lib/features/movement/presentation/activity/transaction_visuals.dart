@@ -405,7 +405,8 @@ class TransactionVisualSpec {
   static bool _looksCancelled(Transaction transaction) {
     if (transaction.isCancelled) return true;
     final external = (transaction.externalTransferStatus ?? '').toUpperCase();
-    if (const {'CANCELLED', 'CANCELED', 'EXPIRED', 'HIDDEN'}.contains(external)) {
+    if (const {'CANCELLED', 'CANCELED', 'EXPIRED', 'HIDDEN'}
+        .contains(external)) {
       return true;
     }
     final description = (transaction.description ?? '').toLowerCase();

@@ -363,8 +363,7 @@ class _TransactionDetailScreenState
         backgroundColor: KeroseneBrandTokens.background,
         body: SafeArea(
           child: Semantics(
-            label:
-                '$actionTitle. $amountLabel. $network. $statusLabel',
+            label: '$actionTitle. $amountLabel. $network. $statusLabel',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -425,8 +424,7 @@ class _TransactionDetailScreenState
                       FadeTransition(
                         opacity: CurvedAnimation(
                           parent: _entrance,
-                          curve:
-                              const Interval(0, 0.35, curve: Curves.easeOut),
+                          curve: const Interval(0, 0.35, curve: Curves.easeOut),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,8 +535,7 @@ class _TransactionDetailScreenState
                           onTap: () {
                             HapticFeedback.selectionClick();
                             setState(
-                              () =>
-                                  _technicalExpanded = !_technicalExpanded,
+                              () => _technicalExpanded = !_technicalExpanded,
                             );
                           },
                           borderRadius: BorderRadius.circular(12),
@@ -572,8 +569,7 @@ class _TransactionDetailScreenState
                             _StaggeredDetailRow(
                               animation: _entrance,
                               index: i + primaryRows.length,
-                              total:
-                                  primaryRows.length + technicalRows.length,
+                              total: primaryRows.length + technicalRows.length,
                               row: technicalRows[i],
                             ),
                       ],
@@ -616,7 +612,6 @@ class _TransactionDetailScreenState
       ),
     );
   }
-
 }
 
 class _DetailRowData {

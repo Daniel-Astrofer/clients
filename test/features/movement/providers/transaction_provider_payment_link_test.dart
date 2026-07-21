@@ -63,7 +63,8 @@ void main() {
     expect(repository.paymentRequestPublicIds, [null]);
   });
 
-  test('pays a LIGHTNING platform link via INTERNAL ledger (not LND)', () async {
+  test('pays a LIGHTNING platform link via INTERNAL ledger (not LND)',
+      () async {
     final repository = _PaymentLinkRepository(
       _link(
         paymentRail: 'LIGHTNING',
@@ -292,7 +293,8 @@ void main() {
     );
   });
 
-  test('clears error when passkey assertion is cancelled by the user', () async {
+  test('clears error when passkey assertion is cancelled by the user',
+      () async {
     final repository = _PaymentLinkRepository(
       _link(
         paymentRail: 'INTERNAL',
@@ -504,5 +506,4 @@ class _PaymentLinkRepository implements TransactionRepository {
   Future<PaymentLink> cancelPaymentRequest(String requestId) async {
     throw UnimplementedError();
   }
-
 }

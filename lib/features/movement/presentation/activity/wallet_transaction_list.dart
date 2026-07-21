@@ -52,8 +52,7 @@ class TransactionList extends StatelessWidget {
       child = _StateContainer(
         icon: KeroseneIcons.history,
         title: context.tr.walletTxEmptyTitle,
-        message:
-            context.tr.walletTxEmptyBody,
+        message: context.tr.walletTxEmptyBody,
       );
     } else {
       child = ListView.separated(

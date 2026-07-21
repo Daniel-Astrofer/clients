@@ -772,7 +772,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<Map<String, dynamic>> deviceKeyRegisterStart() async {
     try {
-      final response = await apiClient.post(AppConfig.authDeviceKeyRegisterStart);
+      final response =
+          await apiClient.post(AppConfig.authDeviceKeyRegisterStart);
       return _asStringKeyedMap(response.data);
     } catch (e) {
       if (e is AppException) rethrow;
@@ -853,7 +854,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (e) {
       if (e is AppException) rethrow;
       throw ServerException(
-        message: 'Não conseguimos iniciar a entrada com a chave do dispositivo.',
+        message:
+            'Não conseguimos iniciar a entrada com a chave do dispositivo.',
       );
     }
   }

@@ -26,6 +26,7 @@ class KeroseneIcons {
   static const IconData internalTransfer = PhosphorIconsRegular.arrowsLeftRight;
   static const IconData onchain = PhosphorIconsRegular.link;
   static const IconData lightning = PhosphorIconsRegular.lightning;
+
   /// Alias used by receive hub / Lightning notification visuals.
   static const IconData bolt = lightning;
   static const IconData bitcoin = PhosphorIconsRegular.currencyBtc;
@@ -33,18 +34,25 @@ class KeroseneIcons {
   // Activity glyph layers — rail (primary) + direction (badge) + product (pip)
   /// Primary: Lightning Network.
   static const IconData railLightning = lightning;
+
   /// Primary: Bitcoin on-chain.
   static const IconData railOnchain = onchain;
+
   /// Primary: Kerosene internal ledger.
   static const IconData railInternal = internalTransfer;
+
   /// Primary: cold / watch-only observed.
   static const IconData railCold = coldWallet;
+
   /// Direction badge: funds in.
   static const IconData dirIn = receive;
+
   /// Direction badge: funds out.
   static const IconData dirOut = send;
+
   /// Product: payment link / invoice (QR) — never internal ↔ arrows.
   static const IconData productPaymentLink = qr;
+
   /// @Deprecated Prefer rail pip via ActivityGlyphSpec; kept for call-sites.
   static const IconData productLinkPip = qr;
   static const IconData fee = PhosphorIconsRegular.percent;
@@ -102,7 +110,8 @@ class KeroseneIcons {
   static const IconData up = PhosphorIconsRegular.arrowUp;
   static const IconData down = PhosphorIconsRegular.arrowDown;
   static const IconData search = PhosphorIconsRegular.magnifyingGlass;
-  static const IconData searchUnavailable = PhosphorIconsRegular.magnifyingGlassMinus;
+  static const IconData searchUnavailable =
+      PhosphorIconsRegular.magnifyingGlassMinus;
   static const IconData check = PhosphorIconsRegular.check;
   static const IconData circle = PhosphorIconsRegular.circle;
   static const IconData plus = PhosphorIconsRegular.plus;
@@ -151,7 +160,7 @@ class KeroseneIcons {
   static const IconData globe = PhosphorIconsRegular.globe;
   static const IconData sync = PhosphorIconsRegular.pulse;
   static const IconData activity = PhosphorIconsRegular.pulse;
-  
+
   // Additional semantic aliases
   static const IconData wifiOff = serverUnavailable;
   static const IconData chart = trendUp;
@@ -181,7 +190,7 @@ class KeroseneIcons {
   static const IconData receipt = invoice;
   static const IconData verified = success;
   static const IconData cancel = closeCircle;
-  
+
   // Admin/dashboard aliases
   static const IconData analytics = chart;
   static const IconData badge = userCheck;

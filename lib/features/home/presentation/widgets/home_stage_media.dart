@@ -59,7 +59,8 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     final media = widget.media;
     if (media.type != HomeStageMediaType.video) return;
     final url = media.url?.trim() ?? '';
-    if (url.isEmpty || !(url.startsWith('https://') || url.startsWith('http://'))) {
+    if (url.isEmpty ||
+        !(url.startsWith('https://') || url.startsWith('http://'))) {
       setState(() => _failed = true);
       return;
     }
@@ -106,7 +107,9 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
           size: homeSize(28),
         ),
       HomeStageMediaType.image || HomeStageMediaType.lottie => _networkOrAsset(
-          media.posterUrl?.isNotEmpty == true ? media.posterUrl! : (media.url ?? ''),
+          media.posterUrl?.isNotEmpty == true
+              ? media.posterUrl!
+              : (media.url ?? ''),
           h,
         ),
       HomeStageMediaType.video => _buildVideo(h),
@@ -140,7 +143,8 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
         children: [
           _networkOrAsset(poster, h),
           if (!_failed)
-            Icon(Icons.play_circle_fill, color: Colors.white70, size: homeSize(36)),
+            Icon(Icons.play_circle_fill,
+                color: Colors.white70, size: homeSize(36)),
         ],
       );
     }
@@ -157,8 +161,14 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     final isAsset = url.startsWith('asset:');
     final path = isAsset ? url.substring('asset:'.length) : url;
     final child = isAsset
-        ? Image.asset(path, height: h, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())
-        : Image.network(path, height: h, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink());
+        ? Image.asset(path,
+            height: h,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink())
+        : Image.network(path,
+            height: h,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink());
     return ClipRRect(
       borderRadius: BorderRadius.circular(homeSize(12)),
       child: child,

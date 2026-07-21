@@ -195,8 +195,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
     if (destination == null || !mounted) return;
 
     // Fail-closed: network must match app network.
-    final networkError =
-        networkMismatchMessage(destination, context: context);
+    final networkError = networkMismatchMessage(destination, context: context);
     if (networkError != null) {
       AppNotice.showError(
         context,
@@ -319,9 +318,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
         walletState is WalletLoaded ? walletState.wallets : const <Wallet>[];
     final keroseneTargets = wallets
         .where((w) =>
-            !w.isColdWallet &&
-            !w.isSelfCustody &&
-            w.address.trim().isNotEmpty)
+            !w.isColdWallet && !w.isSelfCustody && w.address.trim().isNotEmpty)
         .toList(growable: false);
 
     return Scaffold(
@@ -464,7 +461,8 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
               child: TextButton(
                 onPressed: _busy
                     ? null
-                    : () => setState(() => _showAdvancedFee = !_showAdvancedFee),
+                    : () =>
+                        setState(() => _showAdvancedFee = !_showAdvancedFee),
                 child: Text(
                   _showAdvancedFee
                       ? 'Ocultar taxa avançada'

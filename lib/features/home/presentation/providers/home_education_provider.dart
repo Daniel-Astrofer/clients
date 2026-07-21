@@ -9,6 +9,7 @@ import 'package:kerosene/features/home/presentation/providers/theater_catalog.da
 enum HomeEducationKind {
   totpRecommend,
   incomingTransfer,
+
   /// Recurring catalog tip (blockchain, product, security…).
   educationTip,
 }
@@ -21,6 +22,7 @@ class HomeEducationEvent {
   final String? walletName;
   final String? networkLabel;
   final String? subtitle;
+
   /// Catalog piece id when [kind] is [HomeEducationKind.educationTip].
   final String? catalogPieceId;
 
@@ -63,7 +65,8 @@ class HomeEducationQueue extends Notifier<List<HomeEducationEvent>> {
   List<HomeEducationEvent> build() => const [];
 
   void enqueue(HomeEducationEvent event) {
-    if (_sessionSeenIds.contains(event.id) || state.any((e) => e.id == event.id)) {
+    if (_sessionSeenIds.contains(event.id) ||
+        state.any((e) => e.id == event.id)) {
       return;
     }
     _sessionSeenIds.add(event.id);
@@ -171,10 +174,8 @@ HomeStage _educationTipStage(HomeEducationEvent event, String lang) {
     return HomeStage.idle();
   }
   final copy = piece.copyFor(lang);
-  final plain = copy.blocks
-      .where((b) => b.hasVisibleText)
-      .map((b) => b.text)
-      .join('\n');
+  final plain =
+      copy.blocks.where((b) => b.hasVisibleText).map((b) => b.text).join('\n');
 
   return HomeStage(
     id: event.id,

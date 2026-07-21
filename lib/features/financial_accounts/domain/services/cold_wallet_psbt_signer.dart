@@ -209,8 +209,7 @@ class ColdWalletPsbtSigner {
           // Legacy P2PKH for standard Electrum wallets.
           if (seedKind == ColdWalletSeedKind.electrum &&
               !ElectrumSeedUtils.detect(mnemonic)!.isSegwit) {
-            final legacy =
-                priv.getPublic().toAddress().toAddress(network);
+            final legacy = priv.getPublic().toAddress().toAddress(network);
             keys[legacy] = priv;
           }
         }

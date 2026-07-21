@@ -11,6 +11,15 @@ final homeAuroraShaderProvider = FutureProvider<FragmentProgram>((ref) async {
   }
 });
 
+final geminiGlowShaderProvider = FutureProvider<FragmentProgram>((ref) async {
+  try {
+    return await FragmentProgram.fromAsset('assets/shaders/gemini_glow.frag');
+  } catch (error) {
+    debugPrint('Error loading gemini glow shader: $error');
+    rethrow;
+  }
+});
+
 /// Central provider for loading and caching FragmentPrograms (Shaders)
 final woodShaderProvider = FutureProvider<FragmentProgram>((ref) async {
   try {

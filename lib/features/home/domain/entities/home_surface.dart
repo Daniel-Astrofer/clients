@@ -126,7 +126,8 @@ class HomeActionVisibility {
     final raw = json['visible'];
     if (raw is bool) return HomeActionVisibility(visible: raw);
     if (raw == null) return const HomeActionVisibility();
-    return HomeActionVisibility(visible: raw.toString().toLowerCase() != 'false');
+    return HomeActionVisibility(
+        visible: raw.toString().toLowerCase() != 'false');
   }
 
   Map<String, dynamic> toJson() => {'visible': visible};
@@ -297,7 +298,8 @@ class HomeGreetingMessage {
           HomeGreetingAnimation.unknown => 'FADE',
         },
         'style': style.toJson(),
-        if (expiresAt != null) 'expiresAt': expiresAt!.toUtc().toIso8601String(),
+        if (expiresAt != null)
+          'expiresAt': expiresAt!.toUtc().toIso8601String(),
       };
 
   bool get isExpired {
@@ -377,7 +379,8 @@ class HomeGreetingPresentation {
         pushRaw is num ? pushRaw : num.tryParse('$pushRaw'),
         fallback: 28,
       ),
-      compressLayoutWhilePlaying: _bool(json['compressLayoutWhilePlaying'], true),
+      compressLayoutWhilePlaying:
+          _bool(json['compressLayoutWhilePlaying'], true),
     );
   }
 
@@ -444,7 +447,8 @@ class HomeGreetingConfig {
       messages: rawMessages is List
           ? rawMessages
               .whereType<Map>()
-              .map((e) => HomeGreetingMessage.fromJson(Map<String, dynamic>.from(e)))
+              .map((e) =>
+                  HomeGreetingMessage.fromJson(Map<String, dynamic>.from(e)))
               .where((m) => m.text.isNotEmpty)
               .toList(growable: false)
           : const [],
@@ -470,7 +474,9 @@ class HomeGreetingConfig {
       };
 
   List<HomeGreetingMessage> get activeMessages {
-    final active = messages.where((m) => !m.isExpired && m.text.isNotEmpty).toList()
+    final active = messages
+        .where((m) => !m.isExpired && m.text.isNotEmpty)
+        .toList()
       ..sort((a, b) => b.priority.compareTo(a.priority));
     return active;
   }
@@ -642,10 +648,13 @@ class HomeFeedSurface {
         fallback: 18,
       ),
       gap: clampHomeSpacing(
-        json['gap'] is num ? json['gap'] as num : num.tryParse('${json['gap']}'),
+        json['gap'] is num
+            ? json['gap'] as num
+            : num.tryParse('${json['gap']}'),
         fallback: 8,
       ),
-      defaultAnimation: parseFeedAnimationToken(json['defaultAnimation']?.toString()),
+      defaultAnimation:
+          parseFeedAnimationToken(json['defaultAnimation']?.toString()),
       items: rawItems is List
           ? rawItems
               .whereType<Map>()
@@ -736,6 +745,7 @@ class HomeSurface {
   final HomeLayoutConfig layout;
   final HomeHeaderConfig header;
   final HomeFeedSurface feed;
+
   /// Communication theater (schema v2). Idle when none.
   final HomeStage stage;
   final HomeRestingHeader restingHeader;
@@ -888,6 +898,7 @@ enum HomeUiEventType {
   feedDelta,
   stage,
   stageClear,
+
   /// Scene-Driven UI payload (layout/background/media/content — not widgets).
   scene,
   sceneClear,
@@ -998,7 +1009,9 @@ HomeSurface applyHomeUiEvent(HomeSurface current, HomeUiEvent event) {
 }
 
 HomeSurface _applyFeedDelta(HomeSurface current, Map<String, dynamic> payload) {
-  final op = (payload['op'] ?? payload['operation'] ?? 'REPLACE').toString().toUpperCase();
+  final op = (payload['op'] ?? payload['operation'] ?? 'REPLACE')
+      .toString()
+      .toUpperCase();
   final itemsRaw = payload['items'];
   final items = itemsRaw is List
       ? itemsRaw
@@ -1028,7 +1041,9 @@ HomeSurface _applyFeedDelta(HomeSurface current, Map<String, dynamic> payload) {
     );
   }
   // Partial feed property patch (heightToken etc.)
-  final feedPatch = Map<String, dynamic>.from(payload)..remove('op')..remove('operation');
+  final feedPatch = Map<String, dynamic>.from(payload)
+    ..remove('op')
+    ..remove('operation');
   if (feedPatch.isNotEmpty) {
     final mergedFeed = deepMergeMaps(current.feed.toJson(), feedPatch);
     // Preserve full item objects when patch only touches tokens.

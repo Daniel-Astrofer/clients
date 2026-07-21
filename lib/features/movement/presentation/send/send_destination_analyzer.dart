@@ -46,7 +46,8 @@ SendDestinationAnalysis analyzeSendDestination(String raw) {
   );
 }
 
-SendDestinationAnalysis sendDestinationAnalysisFromIntent(PaymentIntent intent) {
+SendDestinationAnalysis sendDestinationAnalysisFromIntent(
+    PaymentIntent intent) {
   return SendDestinationAnalysis(
     type: _mapKind(intent.kind),
     normalizedValue: intent.normalizedValue,

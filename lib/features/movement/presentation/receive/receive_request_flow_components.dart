@@ -247,8 +247,7 @@ class ReceiveActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground =
-        primary ? KeroseneBrandTokens.background : _receiveText;
+    final foreground = primary ? KeroseneBrandTokens.background : _receiveText;
     return SizedBox(
       height: 56,
       child: TextButton.icon(

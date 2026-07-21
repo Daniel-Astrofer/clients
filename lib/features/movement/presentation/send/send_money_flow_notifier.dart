@@ -50,7 +50,8 @@ class SendMoneyFlowState {
   }) {
     return SendMoneyFlowState(
       currentStep: currentStep ?? this.currentStep,
-      lockedRecipientAddress: lockedRecipientAddress ?? this.lockedRecipientAddress,
+      lockedRecipientAddress:
+          lockedRecipientAddress ?? this.lockedRecipientAddress,
       lockedRecipientLabel: lockedRecipientLabel ?? this.lockedRecipientLabel,
       lockedAmountBtc: lockedAmountBtc ?? this.lockedAmountBtc,
       selectedWallet: selectedWallet ?? this.selectedWallet,
@@ -74,7 +75,8 @@ class SendMoneyFlowNotifier extends AsyncNotifier<SendMoneyFlowState> {
     state = AsyncValue.data(state.value!.copyWith(currentStep: step));
   }
 
-  void updateDestination(SendDestinationAnalysis? destination, {
+  void updateDestination(
+    SendDestinationAnalysis? destination, {
     String? lockedAddress,
     String? lockedLabel,
     double? lockedAmount,
@@ -83,7 +85,8 @@ class SendMoneyFlowNotifier extends AsyncNotifier<SendMoneyFlowState> {
   }) {
     state = AsyncValue.data(state.value!.copyWith(
       destinationAnalysis: destination ?? state.value!.destinationAnalysis,
-      lockedRecipientAddress: lockedAddress ?? state.value!.lockedRecipientAddress,
+      lockedRecipientAddress:
+          lockedAddress ?? state.value!.lockedRecipientAddress,
       lockedRecipientLabel: lockedLabel ?? state.value!.lockedRecipientLabel,
       lockedAmountBtc: lockedAmount ?? state.value!.lockedAmountBtc,
       liveResolvedIntent: liveIntent ?? state.value!.liveResolvedIntent,
@@ -128,6 +131,7 @@ class SendMoneyFlowNotifier extends AsyncNotifier<SendMoneyFlowState> {
   }
 }
 
-final sendMoneyFlowProvider = AsyncNotifierProvider<SendMoneyFlowNotifier, SendMoneyFlowState>(() {
+final sendMoneyFlowProvider =
+    AsyncNotifierProvider<SendMoneyFlowNotifier, SendMoneyFlowState>(() {
   return SendMoneyFlowNotifier();
 });

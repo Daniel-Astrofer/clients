@@ -96,9 +96,8 @@ Dio _buildBackgroundDio({
       connectTimeout: const Duration(seconds: 25),
       receiveTimeout: const Duration(seconds: 25),
       headers: {
-        'Authorization': authToken.startsWith('Bearer ')
-            ? authToken
-            : 'Bearer $authToken',
+        'Authorization':
+            authToken.startsWith('Bearer ') ? authToken : 'Bearer $authToken',
         'Accept': 'application/json',
       },
     ),

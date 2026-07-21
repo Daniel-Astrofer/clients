@@ -84,8 +84,7 @@ class SendMoneyCopy {
           'This wallet does not support instant sends. Use your insured balance.',
         'es' =>
           'Esta billetera no admite envíos instantáneos. Usa tu saldo asegurado.',
-        _ =>
-          'Esta carteira não faz envio instantâneo. Use o saldo assegurado.',
+        _ => 'Esta carteira não faz envio instantâneo. Use o saldo assegurado.',
       };
 
   static String walletUnavailableOnchain(BuildContext context) =>
@@ -226,8 +225,7 @@ class SendMoneyCopy {
   static String coldNoLightning(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Cold wallets cannot send Lightning. Use an on-chain address.',
-        'es' =>
-          'La cold no envía Lightning. Usa una dirección on-chain.',
+        'es' => 'La cold no envía Lightning. Usa una dirección on-chain.',
         _ => 'Carteira fria não envia Lightning. Use um endereço on-chain.',
       };
 
@@ -532,15 +530,18 @@ class SendMoneyCopy {
   static String authNextDevicePin(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Next: app PIN. Device biometrics come after.',
-        'es' => 'Siguiente: PIN de la app. La biometría del dispositivo viene después.',
+        'es' =>
+          'Siguiente: PIN de la app. La biometría del dispositivo viene después.',
         _ => 'Em seguida: PIN do app. Biometria do dispositivo vem depois.',
       };
 
   static String authNextPinAndTotp(BuildContext context) =>
       switch (_language(context)) {
         'en' => 'Next: app PIN, then biometrics and your authenticator code',
-        'es' => 'Siguiente: PIN de la app, luego biometría y el código del autenticador',
-        _ => 'Em seguida: PIN do app, depois biometria e o código do autenticador',
+        'es' =>
+          'Siguiente: PIN de la app, luego biometría y el código del autenticador',
+        _ =>
+          'Em seguida: PIN do app, depois biometria e o código do autenticador',
       };
 
   static String receiptSubtitleConfirmed(BuildContext context) =>
@@ -631,8 +632,7 @@ class SendMoneyCopy {
         _ => 'No aparelho · seed local',
       };
 
-  static String feeFree(BuildContext context) =>
-      switch (_language(context)) {
+  static String feeFree(BuildContext context) => switch (_language(context)) {
         'en' => 'Free',
         'es' => 'Gratis',
         _ => 'Grátis',
@@ -787,8 +787,7 @@ class SendMoneyCopy {
         _ => 'De',
       };
 
-  static String detailTo(BuildContext context) =>
-      switch (_language(context)) {
+  static String detailTo(BuildContext context) => switch (_language(context)) {
         'en' => 'To',
         'es' => 'Para',
         _ => 'Para',

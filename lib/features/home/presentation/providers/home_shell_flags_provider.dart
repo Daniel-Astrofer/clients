@@ -93,8 +93,8 @@ final homeShellFlagsProvider = Provider<HomeShellFlags>((ref) {
   final hasBalance = ref.watch(
     walletProvider.select((w) {
       if (w is! WalletLoaded) return false;
-      final active = w.selectedWallet ??
-          (w.wallets.isNotEmpty ? w.wallets.first : null);
+      final active =
+          w.selectedWallet ?? (w.wallets.isNotEmpty ? w.wallets.first : null);
       return (active?.balance ?? 0) > 0;
     }),
   );

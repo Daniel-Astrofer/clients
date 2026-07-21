@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart';
@@ -9,13 +10,41 @@ import 'package:kerosene/features/movement/presentation/receive/receive_wallet_s
 const Duration _receiveWalletToHubDuration = Duration(milliseconds: 520);
 const Curve _receiveWalletToHubCurve = Curves.easeInOutCubic;
 
+/// Opens the receive method hub with a wallet already chosen (skips picker).
+Future<void> pushReceiveHub({
+  required BuildContext context,
+  required Wallet wallet,
+  required double amountBtc,
+}) {
+  return Navigator.of(context).push<void>(
+    keroseneHorizontalRoute<void>(
+      builder: (context) => Scaffold(
+        backgroundColor: KeroseneBrandTokens.background,
+        body: MovementHubScreen(
+          wallet: wallet,
+          amountBtc: amountBtc,
+          onBack: () => Navigator.of(context).maybePop(),
+        ),
+      ),
+    ),
+  );
+}
+
 /// Bottom sheet wallet picker → expand animation → receive method hub.
 /// Back on the hub reverses to the wallet sheet (not the amount screen).
 Future<void> pushReceiveWalletToHub({
   required BuildContext context,
   required List<Wallet> wallets,
   required double amountBtc,
+  Wallet? initialWallet,
 }) {
+  if (initialWallet != null) {
+    return pushReceiveHub(
+      context: context,
+      wallet: initialWallet,
+      amountBtc: amountBtc,
+    );
+  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -130,8 +159,8 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
         animation: _transitionController,
         builder: (context, _) {
           final expand = _selectedWallet == null ? 0.0 : _expand.value;
-          final sheetHeight = contentHeight +
-              (expandedHeight - contentHeight) * expand;
+          final sheetHeight =
+              contentHeight + (expandedHeight - contentHeight) * expand;
           final sheetOpacity =
               _selectedWallet == null ? 1.0 : (1 - _sheetFade.value);
 
@@ -141,74 +170,74 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
               height: sheetHeight,
               width: double.infinity,
               child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: KeroseneBrandTokens.background,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(ReceiveFlowLayout.sheetBorderRadius),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: ReceiveFlowLayout.sheetBorderColor,
-                    width: ReceiveFlowLayout.sheetBorderWidth,
-                  ),
-                  left: BorderSide(
-                    color: ReceiveFlowLayout.sheetBorderColor,
-                    width: ReceiveFlowLayout.sheetBorderWidth,
-                  ),
-                  right: BorderSide(
-                    color: ReceiveFlowLayout.sheetBorderColor,
-                    width: ReceiveFlowLayout.sheetBorderWidth,
-                  ),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(ReceiveFlowLayout.sheetBorderRadius),
-                ),
-                child: ColoredBox(
+                decoration: BoxDecoration(
                   color: KeroseneBrandTokens.background,
-                  child: Stack(
-                    clipBehavior: Clip.hardEdge,
-                    children: [
-                      if (_selectedWallet != null)
-                        Positioned.fill(
-                          child: SlideTransition(
-                            position: _hubSlide,
-                            child: FadeTransition(
-                              opacity: _hubFade,
-                              child: MovementHubScreen(
-                                wallet: _selectedWallet,
-                                amountBtc: widget.amountBtc,
-                                onBack: _onHubBack,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(ReceiveFlowLayout.sheetBorderRadius),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                      color: ReceiveFlowLayout.sheetBorderColor,
+                      width: ReceiveFlowLayout.sheetBorderWidth,
+                    ),
+                    left: BorderSide(
+                      color: ReceiveFlowLayout.sheetBorderColor,
+                      width: ReceiveFlowLayout.sheetBorderWidth,
+                    ),
+                    right: BorderSide(
+                      color: ReceiveFlowLayout.sheetBorderColor,
+                      width: ReceiveFlowLayout.sheetBorderWidth,
+                    ),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(ReceiveFlowLayout.sheetBorderRadius),
+                  ),
+                  child: ColoredBox(
+                    color: KeroseneBrandTokens.background,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        if (_selectedWallet != null)
+                          Positioned.fill(
+                            child: SlideTransition(
+                              position: _hubSlide,
+                              child: FadeTransition(
+                                opacity: _hubFade,
+                                child: MovementHubScreen(
+                                  wallet: _selectedWallet,
+                                  amountBtc: widget.amountBtc,
+                                  onBack: _onHubBack,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      if (_selectedWallet == null || sheetOpacity > 0.02)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: contentHeight,
-                          child: IgnorePointer(
-                            ignoring: _selectedWallet != null && expand > 0.2,
-                            child: Opacity(
-                              opacity: sheetOpacity.clamp(0, 1),
-                              child: ReceiveWalletPickerPanel(
-                                wallets: widget.wallets,
-                                selectedWallet: _selectedWallet,
-                                onWalletSelected: _onWalletSelected,
-                                shrinkWrap: true,
+                        if (_selectedWallet == null || sheetOpacity > 0.02)
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: contentHeight,
+                            child: IgnorePointer(
+                              ignoring: _selectedWallet != null && expand > 0.2,
+                              child: Opacity(
+                                opacity: sheetOpacity.clamp(0, 1),
+                                child: ReceiveWalletPickerPanel(
+                                  wallets: widget.wallets,
+                                  selectedWallet: _selectedWallet,
+                                  onWalletSelected: _onWalletSelected,
+                                  shrinkWrap: true,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           );
         },
       ),

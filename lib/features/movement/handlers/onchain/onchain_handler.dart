@@ -10,7 +10,8 @@ class OnchainMovementProvider implements MovementEntryProvider {
   const OnchainMovementProvider();
 
   @override
-  List<MovementEntry> entriesFor(BuildContext context, Wallet? wallet, MovementCapability caps) {
+  List<MovementEntry> entriesFor(
+      BuildContext context, Wallet? wallet, MovementCapability caps) {
     return [
       MovementEntry(
         id: 'qrcode',

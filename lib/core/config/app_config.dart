@@ -95,7 +95,8 @@ class AppConfig {
   static const String authPasskeyVerify = '/auth/passkey/verify';
   static const String authPasskeyDevices = '/auth/passkey/devices';
   static const String authDeviceKeyChallenge = '/auth/device-key/challenge';
-  static const String authDeviceKeyRegisterStart = '/auth/device-key/register/start';
+  static const String authDeviceKeyRegisterStart =
+      '/auth/device-key/register/start';
   static const String authDeviceKeyRegisterFinish =
       '/auth/device-key/register/finish';
   static const String authDeviceKeyVerify = '/auth/device-key/verify';

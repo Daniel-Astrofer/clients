@@ -68,7 +68,8 @@ enum HomeStageCurveToken {
   unknown,
 }
 
-HomeStageKind parseStageKind(String? raw) => switch ((raw ?? '').toUpperCase()) {
+HomeStageKind parseStageKind(String? raw) =>
+    switch ((raw ?? '').toUpperCase()) {
       'MARKET' => HomeStageKind.market,
       'NEWS' => HomeStageKind.news,
       'FEATURE' => HomeStageKind.feature,
@@ -153,7 +154,8 @@ HomeStageCurveToken parseStageCurve(String? raw) =>
       _ => HomeStageCurveToken.unknown,
     };
 
-int clampMotionMs(num? raw, {int fallback = 400, int min = 120, int max = 2000}) {
+int clampMotionMs(num? raw,
+    {int fallback = 400, int min = 120, int max = 2000}) {
   if (raw == null) return fallback;
   return raw.toInt().clamp(min, max);
 }
@@ -311,7 +313,8 @@ class TheaterTextBlock {
     final spans = rawSpans is List
         ? rawSpans
             .whereType<Map>()
-            .map((e) => TheaterTextSpanMark.fromJson(Map<String, dynamic>.from(e)))
+            .map((e) =>
+                TheaterTextSpanMark.fromJson(Map<String, dynamic>.from(e)))
             .where((s) => s.isValid)
             .toList(growable: false)
         : const <TheaterTextSpanMark>[];
@@ -354,6 +357,7 @@ class HomeStageContent {
   final HomeStageTextMode textMode;
   final bool includeNamePlaceholder;
   final HomeStageCta? cta;
+
   /// Structured hierarchy (H2/body/bullets). When non-empty, wins over plain body.
   final List<TheaterTextBlock> blocks;
 
@@ -382,7 +386,8 @@ class HomeStageContent {
         ? rawBlocks
             .whereType<Map>()
             .map((e) => TheaterTextBlock.fromJson(Map<String, dynamic>.from(e)))
-            .where((b) => b.role != TheaterBlockRole.unknown || b.hasVisibleText)
+            .where(
+                (b) => b.role != TheaterBlockRole.unknown || b.hasVisibleText)
             .toList(growable: false)
         : const <TheaterTextBlock>[];
     return HomeStageContent(
@@ -703,7 +708,9 @@ class HomeStageLayout {
         fallback: 0,
       ),
       paddingBottom: clampHomeSpacing(
-        padMap?['bottom'] is num ? padMap!['bottom'] as num : num.tryParse('${json['paddingBottom']}'),
+        padMap?['bottom'] is num
+            ? padMap!['bottom'] as num
+            : num.tryParse('${json['paddingBottom']}'),
         fallback: 8,
       ),
       paddingHorizontal: clampHomeSpacing(
@@ -711,18 +718,20 @@ class HomeStageLayout {
         fallback: 0,
       ),
       gap: clampHomeSpacing(
-        json['gap'] is num ? json['gap'] as num : num.tryParse('${json['gap']}'),
+        json['gap'] is num
+            ? json['gap'] as num
+            : num.tryParse('${json['gap']}'),
         fallback: 8,
       ),
       minHeight: (json['minHeight'] is num
-              ? (json['minHeight'] as num).toDouble()
-              : double.tryParse('${json['minHeight']}'))
-          ?.clamp(0, 320) ??
+                  ? (json['minHeight'] as num).toDouble()
+                  : double.tryParse('${json['minHeight']}'))
+              ?.clamp(0, 320) ??
           0,
       maxHeight: (json['maxHeight'] is num
-              ? (json['maxHeight'] as num).toDouble()
-              : double.tryParse('${json['maxHeight']}'))
-          ?.clamp(48, 320) ??
+                  ? (json['maxHeight'] as num).toDouble()
+                  : double.tryParse('${json['maxHeight']}'))
+              ?.clamp(48, 320) ??
           180,
       actions: HomeStageActionsLayout.fromJson(
         json['actions'] is Map
@@ -836,7 +845,8 @@ class HomeStageBodyShift {
         off is num ? off : num.tryParse('$off'),
         fallback: 36,
       ),
-      durationMs: clampMotionMs(json['durationMs'], fallback: 480, min: 200, max: 2000),
+      durationMs:
+          clampMotionMs(json['durationMs'], fallback: 480, min: 200, max: 2000),
       curve: parseStageCurve(json['curve']?.toString()),
       fadeBody: json['fadeBody'] is bool
           ? json['fadeBody'] as bool
@@ -938,8 +948,8 @@ class HomeStageLifecycle {
   factory HomeStageLifecycle.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const HomeStageLifecycle();
     return HomeStageLifecycle(
-      showDurationMs:
-          clampMotionMs(json['showDurationMs'], fallback: 9000, min: 1500, max: 60000),
+      showDurationMs: clampMotionMs(json['showDurationMs'],
+          fallback: 9000, min: 1500, max: 60000),
       restoreOnComplete: json['restoreOnComplete'] is bool
           ? json['restoreOnComplete'] as bool
           : json['restoreOnComplete']?.toString() != 'false',
@@ -967,6 +977,7 @@ class HomeStage {
   final HomeStageLayout layout;
   final HomeStageMotion motion;
   final HomeStageLifecycle lifecycle;
+
   /// Top-level atmosphere (preferred). Falls back to [layout.atmosphere].
   final HomeStageAtmosphere atmosphere;
 
@@ -1080,9 +1091,8 @@ class HomeStage {
 
     final first = msgs.first;
     final title = first.text;
-    final duration = first.durationMs > 0
-        ? first.durationMs
-        : greeting.rotation.intervalMs;
+    final duration =
+        first.durationMs > 0 ? first.durationMs : greeting.rotation.intervalMs;
     final once = greeting.isEphemeralOnce;
     final push = greeting.presentation.pushDownBalanceWhilePlaying
         ? greeting.presentation.pushDownBalancePx

@@ -37,13 +37,9 @@ class ElectrumSeedInfo {
 
   /// Account-level path whose `/0/*` and `/1/*` children are receive/change.
   String get accountDerivationPath => switch (type) {
-        ElectrumSeedType.segwit ||
-        ElectrumSeedType.twoFactorSegwit =>
-          "m/0'",
+        ElectrumSeedType.segwit || ElectrumSeedType.twoFactorSegwit => "m/0'",
         // Standard Electrum: children hang off the master (`m`).
-        ElectrumSeedType.standard ||
-        ElectrumSeedType.twoFactor =>
-          'm',
+        ElectrumSeedType.standard || ElectrumSeedType.twoFactor => 'm',
       };
 
   bool get isSegwit =>
@@ -58,7 +54,8 @@ class ElectrumSeedUtils {
   static const int seedLength = 64;
 
   /// Normalize like Electrum (`normalize_text`): collapse whitespace.
-  static String normalize(String raw) => Bip39MnemonicUtils.normalizePhrase(raw);
+  static String normalize(String raw) =>
+      Bip39MnemonicUtils.normalizePhrase(raw);
 
   /// HMAC-SHA512 hex of `Seed version` || phrase (Electrum seed version system).
   static String versionHmacHex(String phrase) {

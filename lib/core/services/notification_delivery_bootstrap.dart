@@ -160,6 +160,7 @@ class NotificationDeliveryBootstrap {
 }
 
 /// Watches auth + pin unlock and bootstraps native notification delivery.
-final notificationDeliveryBootstrapProvider = Provider<NotificationDeliveryBootstrap>((ref) {
+final notificationDeliveryBootstrapProvider =
+    Provider<NotificationDeliveryBootstrap>((ref) {
   return NotificationDeliveryBootstrap(ref);
 });

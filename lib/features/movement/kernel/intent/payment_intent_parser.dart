@@ -77,7 +77,8 @@ class PaymentIntentParser {
         amountBtc: parsed?.amountBtc,
         label: parsed?.label,
         message: parsed?.message,
-        detectedOnchainNetwork: inferBitcoinNetworkFromAddress(onchainCandidate),
+        detectedOnchainNetwork:
+            inferBitcoinNetworkFromAddress(onchainCandidate),
       );
     }
 
@@ -99,8 +100,9 @@ class PaymentIntentParser {
           amountBtc: parsed.amountBtc,
           label: parsed.label,
           message: parsed.message,
-          detectedOnchainNetwork:
-              isBtc ? inferBitcoinNetworkFromAddress(address) : BitcoinNetworkKind.unknown,
+          detectedOnchainNetwork: isBtc
+              ? inferBitcoinNetworkFromAddress(address)
+              : BitcoinNetworkKind.unknown,
         );
       }
     }

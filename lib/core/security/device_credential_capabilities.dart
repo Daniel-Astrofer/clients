@@ -174,8 +174,8 @@ class DeviceCredentialCapabilitiesResolver {
       canCheck = await _localAuthentication.canCheckBiometrics;
       supported = await _localAuthentication.isDeviceSupported();
       if (canCheck) {
-        enrolled = (await _localAuthentication.getAvailableBiometrics())
-            .isNotEmpty;
+        enrolled =
+            (await _localAuthentication.getAvailableBiometrics()).isNotEmpty;
       }
     } catch (error) {
       debugPrint(
@@ -205,8 +205,8 @@ class DeviceCredentialCapabilitiesResolver {
     final caps = await resolve(appPinConfigured: appPinConfigured);
     if (!caps.canEnrollDeviceCredential) {
       throw DeviceCredentialCapabilityException(
-        code: caps.enrollBlockReasonCode ??
-            'ERR_AUTH_DEVICE_KEY_ENROLL_BLOCKED',
+        code:
+            caps.enrollBlockReasonCode ?? 'ERR_AUTH_DEVICE_KEY_ENROLL_BLOCKED',
         message: caps.enrollBlockReasonMessage ??
             'Não é possível registrar a chave deste dispositivo neste ambiente.',
       );

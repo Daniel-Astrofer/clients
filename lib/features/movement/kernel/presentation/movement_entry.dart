@@ -27,5 +27,6 @@ class MovementEntry {
 }
 
 abstract class MovementEntryProvider {
-  List<MovementEntry> entriesFor(BuildContext context, Wallet? wallet, MovementCapability caps);
+  List<MovementEntry> entriesFor(
+      BuildContext context, Wallet? wallet, MovementCapability caps);
 }

@@ -36,9 +36,7 @@ class ColdWalletSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final seedOk = result.seedStored;
-    final title = seedOk
-        ? 'Carteira fria pronta'
-        : 'Cold wallet só observação';
+    final title = seedOk ? 'Carteira fria pronta' : 'Cold wallet só observação';
     final seedNote = seedOk
         ? 'A semente ficou só neste aparelho. A Kerosene só observa saldo on-chain.'
         : 'A semente NÃO foi salva neste aparelho. Você vê o saldo, mas não pode gastar daqui até restaurar a seed.';
@@ -84,7 +82,8 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                     color: KeroseneBrandTokens.warning.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: KeroseneBrandTokens.warning.withValues(alpha: 0.35),
+                      color:
+                          KeroseneBrandTokens.warning.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Text(

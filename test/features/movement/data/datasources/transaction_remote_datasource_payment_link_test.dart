@@ -56,7 +56,8 @@ void main() {
     expect(link.paymentUri, isNull);
   });
 
-  test('maps LIGHTNING payment request bolt11 into shareable payload', () async {
+  test('maps LIGHTNING payment request bolt11 into shareable payload',
+      () async {
     final apiClient = _PaymentRequestApiClient(walletId: walletId);
     final dataSource = TransactionRemoteDataSourceImpl(apiClient);
     const bolt11 = 'lntb100n1pkerosenetestinvoiceforfrontend';
@@ -143,7 +144,8 @@ class _PaymentRequestApiClient implements ApiClient {
             : lightning
                 ? ''
                 : 'bcrt1qpaymentrequest',
-        if (lightning) 'paymentRequest': 'lntb100n1pkerosenetestinvoiceforfrontend',
+        if (lightning)
+          'paymentRequest': 'lntb100n1pkerosenetestinvoiceforfrontend',
         if (lightning) 'paymentHash': 'hash-lightning-1',
         'rail': rail,
         'status': 'OPEN',

@@ -151,13 +151,15 @@ String colorToSceneHex(Color c) {
   final b = (c.b * 255).round().clamp(0, 255);
   if (a >= 255) {
     return '#${r.toRadixString(16).padLeft(2, '0')}'
-        '${g.toRadixString(16).padLeft(2, '0')}'
-        '${b.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
+            '${g.toRadixString(16).padLeft(2, '0')}'
+            '${b.toRadixString(16).padLeft(2, '0')}'
+        .toUpperCase();
   }
   return '#${a.toRadixString(16).padLeft(2, '0')}'
-      '${r.toRadixString(16).padLeft(2, '0')}'
-      '${g.toRadixString(16).padLeft(2, '0')}'
-      '${b.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
+          '${r.toRadixString(16).padLeft(2, '0')}'
+          '${g.toRadixString(16).padLeft(2, '0')}'
+          '${b.toRadixString(16).padLeft(2, '0')}'
+      .toUpperCase();
 }
 
 @immutable
@@ -214,10 +216,13 @@ class SceneBackground {
 @immutable
 class SceneMedia {
   final SceneMediaType type;
+
   /// Logical asset key (e.g. `lightning_intro`) — never a full path from BE.
   final String asset;
+
   /// Optional remote URL when asset is network-hosted.
   final String? url;
+
   /// Rive state machine input / state name (e.g. `receive_success`).
   final String? state;
   final String? iconKey;
@@ -254,9 +259,8 @@ class SceneMedia {
         final k = (json['iconKey'] ?? json['icon'] ?? '').toString().trim();
         return k.isEmpty ? null : k;
       }(),
-      aspectRatio: ar is num
-          ? ar.toDouble()
-          : double.tryParse('${ar ?? ''}') ?? 1.0,
+      aspectRatio:
+          ar is num ? ar.toDouble() : double.tryParse('${ar ?? ''}') ?? 1.0,
       autoplay: json['autoplay'] is bool
           ? json['autoplay'] as bool
           : json['autoplay']?.toString() != 'false',
@@ -279,7 +283,9 @@ class SceneMedia {
 
   bool get hasVisual =>
       type != SceneMediaType.none &&
-      (asset.isNotEmpty || (url?.isNotEmpty ?? false) || (iconKey?.isNotEmpty ?? false));
+      (asset.isNotEmpty ||
+          (url?.isNotEmpty ?? false) ||
+          (iconKey?.isNotEmpty ?? false));
 
   @override
   bool operator ==(Object other) {
@@ -310,6 +316,7 @@ class SceneMedia {
 @immutable
 class SceneMotion {
   final SceneMotionPreset preset;
+
   /// Full cycle seconds for continuous presets (breathe / orbit / …).
   final int durationSec;
 
@@ -323,9 +330,7 @@ class SceneMotion {
     // Accept flat string: "motion":"orbit" or object form.
     if (json.containsKey('preset') || json.containsKey('duration')) {
       final d = json['duration'] ?? json['durationSec'] ?? json['duration_s'];
-      final sec = d is num
-          ? d.toInt()
-          : int.tryParse('${d ?? ''}') ?? 18;
+      final sec = d is num ? d.toInt() : int.tryParse('${d ?? ''}') ?? 18;
       return SceneMotion(
         preset: parseSceneMotionPreset(json['preset']?.toString()),
         durationSec: sec.clamp(4, 120),
@@ -438,16 +443,15 @@ class SceneLifecycle {
 
   factory SceneLifecycle.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const SceneLifecycle();
-    final ms = json['showDurationMs'] ?? json['showDuration'] ?? json['durationMs'];
+    final ms =
+        json['showDurationMs'] ?? json['showDuration'] ?? json['durationMs'];
     final onceRaw = json['once'] ?? json['playOnce'];
     return SceneLifecycle(
       showDurationMs: () {
         if (ms is num) return ms.toInt().clamp(1500, 60000);
         return int.tryParse('${ms ?? ''}')?.clamp(1500, 60000) ?? 15000;
       }(),
-      once: onceRaw is bool
-          ? onceRaw
-          : onceRaw?.toString() != 'false',
+      once: onceRaw is bool ? onceRaw : onceRaw?.toString() != 'false',
       restoreOnComplete: json['restoreOnComplete'] is bool
           ? json['restoreOnComplete'] as bool
           : json['restoreOnComplete']?.toString() != 'false',
@@ -506,8 +510,10 @@ class HomeScene {
   final SceneContent content;
   final SceneCta cta;
   final SceneLifecycle lifecycle;
+
   /// Optional decoration keys (e.g. `sparkle`, `grid`) — renderer interprets.
   final List<String> decorations;
+
   /// Client-only: true when injected locally (education catalog, receive).
   final bool local;
 
@@ -524,7 +530,8 @@ class HomeScene {
     this.local = false,
   });
 
-  factory HomeScene.idle() => const HomeScene(id: 'idle', layout: SceneLayout.idle);
+  factory HomeScene.idle() =>
+      const HomeScene(id: 'idle', layout: SceneLayout.idle);
 
   factory HomeScene.fromJson(Map<String, dynamic>? json) {
     if (json == null) return HomeScene.idle();

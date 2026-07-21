@@ -115,7 +115,8 @@ abstract class AuthRepository {
   );
 
   /// Device Key — onboarding start (returns challenge map).
-  Future<Either<Failure, Map<String, dynamic>>> deviceKeyRegisterOnboardingStart({
+  Future<Either<Failure, Map<String, dynamic>>>
+      deviceKeyRegisterOnboardingStart({
     required String sessionId,
     String? username,
   });

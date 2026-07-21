@@ -432,7 +432,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> deviceKeyRegisterOnboardingStart({
+  Future<Either<Failure, Map<String, dynamic>>>
+      deviceKeyRegisterOnboardingStart({
     required String sessionId,
     String? username,
   }) async {

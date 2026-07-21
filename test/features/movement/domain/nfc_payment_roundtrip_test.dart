@@ -56,7 +56,8 @@ void main() {
     });
 
     test('garbage is rejected for NFC encode', () {
-      expect(NfcPaymentRequestCodec.isPaymentPayload('!!!not-valid!!!'), isFalse);
+      expect(
+          NfcPaymentRequestCodec.isPaymentPayload('!!!not-valid!!!'), isFalse);
       expect(
         () => NfcPaymentRequestCodec.encodeUri('!!!not-valid!!!'),
         throwsA(isA<FormatException>()),

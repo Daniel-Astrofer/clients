@@ -205,7 +205,8 @@ class PasskeyService {
   }
 
   /// Persist the signature counter after a successful passkey verify response.
-  Future<void> commitAuthenticationCounter(Map<String, dynamic> credential) async {
+  Future<void> commitAuthenticationCounter(
+      Map<String, dynamic> credential) async {
     final counter = credential['_signatureCounter'];
     final subject = credential['_subject']?.toString();
     if (counter is int) {

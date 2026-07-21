@@ -170,7 +170,7 @@ class _TransactionStatementScreenState
 
     return FinancialSecureScope(
       child: Scaffold(
-      backgroundColor: _StatementColors.background,
+      backgroundColor: _StatementColors.background(context),
       body: Stack(
         children: [
           SafeArea(
@@ -292,7 +292,7 @@ class _TransactionStatementScreenState
 
     final format = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: _StatementColors.surface,
+      backgroundColor: _StatementColors.surface(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -308,7 +308,7 @@ class _TransactionStatementScreenState
                 Text(
                   tr.statementExportTitle,
                   style: AppTypography.newsreader(
-                    color: _StatementColors.textPrimary,
+                    color: _StatementColors.textPrimary(context),
                     fontSize: 22,
                     fontWeight: FontWeight.w500,
                   ),
@@ -317,7 +317,7 @@ class _TransactionStatementScreenState
                 Text(
                   tr.statementExportLongAddressesNote,
                   style: AppTypography.inter(
-                    color: _StatementColors.textMuted,
+                    color: _StatementColors.textMuted(context),
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -325,27 +325,27 @@ class _TransactionStatementScreenState
                 const SizedBox(height: 16),
                 ListTile(
                   leading: Icon(KeroseneIcons.download,
-                      color: _StatementColors.textPrimary),
+                      color: _StatementColors.textPrimary(context)),
                   title: Text(
                     'CSV',
-                    style: TextStyle(color: _StatementColors.textPrimary),
+                    style: TextStyle(color: _StatementColors.textPrimary(context)),
                   ),
                   subtitle: Text(
                     tr.statementExportCsvSubtitle,
-                    style: TextStyle(color: _StatementColors.textMuted),
+                    style: TextStyle(color: _StatementColors.textMuted(context)),
                   ),
                   onTap: () => Navigator.of(ctx).pop('csv'),
                 ),
                 ListTile(
                   leading: Icon(KeroseneIcons.receipt,
-                      color: _StatementColors.textPrimary),
+                      color: _StatementColors.textPrimary(context)),
                   title: Text(
                     'PDF',
-                    style: TextStyle(color: _StatementColors.textPrimary),
+                    style: TextStyle(color: _StatementColors.textPrimary(context)),
                   ),
                   subtitle: Text(
                     tr.statementExportShareLimit,
-                    style: TextStyle(color: _StatementColors.textMuted),
+                    style: TextStyle(color: _StatementColors.textMuted(context)),
                   ),
                   onTap: () => Navigator.of(ctx).pop('pdf'),
                 ),
@@ -485,7 +485,7 @@ class _StatementHeader extends StatelessWidget {
         Text(
           context.tr.statementScreenTitle,
           style: AppTypography.newsreader(
-            color: _StatementColors.textPrimary,
+            color: _StatementColors.textPrimary(context),
             fontSize: MediaQuery.sizeOf(context).width >= 720 ? 36 : 32,
             fontWeight: FontWeight.w500,
             height: 1.12,
@@ -519,7 +519,7 @@ class _StatementTabSwitcher extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _StatementColors.border),
+        border: Border.all(color: _StatementColors.border(context)),
       ),
       child: Row(
         children: [
@@ -557,7 +557,7 @@ class _StatementTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? _StatementColors.surfaceHigh : Colors.transparent,
+      color: selected ? _StatementColors.surfaceHigh(context) : Colors.transparent,
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
@@ -567,8 +567,8 @@ class _StatementTabButton extends StatelessWidget {
             label,
             style: AppTypography.label.copyWith(
               color: selected
-                  ? _StatementColors.textPrimary
-                  : _StatementColors.textMuted,
+                  ? _StatementColors.textPrimary(context)
+                  : _StatementColors.textMuted(context),
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               letterSpacing: 0,
             ),
@@ -644,32 +644,32 @@ class _StatementSearchField extends StatelessWidget {
         controller: controller,
         textInputAction: TextInputAction.search,
         style: AppTypography.bodyMedium.copyWith(
-          color: _StatementColors.textPrimary,
+          color: _StatementColors.textPrimary(context),
         ),
-        cursorColor: _StatementColors.textPrimary,
+        cursorColor: _StatementColors.textPrimary(context),
         decoration: InputDecoration(
           hintText: context.tr.financialStatementSearchHint,
           hintStyle: AppTypography.bodyMedium.copyWith(
-            color: _StatementColors.textMuted,
+            color: _StatementColors.textMuted(context),
           ),
-          prefixIcon: const Icon(
+          prefixIcon: Icon(
             KeroseneIcons.search,
-            color: _StatementColors.textMuted,
+            color: _StatementColors.textMuted(context),
             size: 20,
           ),
           filled: true,
-          fillColor: _StatementColors.surface,
+          fillColor: _StatementColors.surface(context),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.base,
             vertical: AppSpacing.base,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _StatementColors.border),
+            borderSide: BorderSide(color: _StatementColors.border(context)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _StatementColors.borderHigh),
+            borderSide: BorderSide(color: _StatementColors.borderHigh(context)),
           ),
         ),
       ),
@@ -722,7 +722,7 @@ class _StatementFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? _StatementColors.surfaceHigh : Colors.transparent,
+      color: selected ? _StatementColors.surfaceHigh(context) : Colors.transparent,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -735,16 +735,16 @@ class _StatementFilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: selected
-                  ? _StatementColors.borderHigh
-                  : _StatementColors.border,
+                  ? _StatementColors.borderHigh(context)
+                  : _StatementColors.border(context),
             ),
           ),
           child: Text(
             label,
             style: AppTypography.caption.copyWith(
               color: selected
-                  ? _StatementColors.textPrimary
-                  : _StatementColors.textSecondary,
+                  ? _StatementColors.textPrimary(context)
+                  : _StatementColors.textSecondary(context),
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               letterSpacing: 0,
             ),
@@ -814,7 +814,7 @@ class _StatementDateHeader extends StatelessWidget {
     return Text(
       label,
       style: AppTypography.caption.copyWith(
-        color: _StatementColors.textMuted,
+        color: _StatementColors.textMuted(context),
         fontWeight: FontWeight.w700,
         letterSpacing: 0,
       ),
@@ -837,8 +837,8 @@ class _StatementNoResults extends StatelessWidget {
         onPressed: onClearFilters,
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(48, 48),
-          foregroundColor: _StatementColors.textPrimary,
-          side: const BorderSide(color: _StatementColors.borderHigh),
+          foregroundColor: _StatementColors.textPrimary(context),
+          side: BorderSide(color: _StatementColors.borderHigh(context)),
         ),
         child: Text(context.tr.financialStatementClearFilters),
       ),
@@ -880,9 +880,9 @@ class _RoundIconButton extends StatelessWidget {
       dimension: 48,
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(icon, color: _StatementColors.textPrimary, size: 20),
+        icon: Icon(icon, color: _StatementColors.textPrimary(context), size: 20),
         style: IconButton.styleFrom(
-          backgroundColor: _StatementColors.surface,
+          backgroundColor: _StatementColors.surface(context),
           shape: const CircleBorder(),
           minimumSize: const Size.square(48),
           tapTargetSize: MaterialTapTargetSize.padded,
@@ -913,13 +913,13 @@ class _StatementMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: _StatementColors.textMuted, size: 30),
+            Icon(icon, color: _StatementColors.textMuted(context), size: 30),
             const SizedBox(height: AppSpacing.md),
             Text(
               title,
               textAlign: TextAlign.center,
               style: AppTypography.h3Small.copyWith(
-                color: _StatementColors.textPrimary,
+                color: _StatementColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -927,7 +927,7 @@ class _StatementMessage extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: AppTypography.bodySmall.copyWith(
-                color: _StatementColors.textMuted,
+                color: _StatementColors.textMuted(context),
                 height: 1.35,
               ),
             ),
@@ -943,14 +943,14 @@ class _StatementMessage extends StatelessWidget {
 }
 
 class _StatementColors {
-  static const background = AppColors.hexFF050505;
-  static const surface = AppColors.hexFF0D0D0D;
-  static const surfaceHigh = AppColors.hexFF161616;
-  static const border = AppColors.hexFF222222;
-  static const borderHigh = AppColors.hexFF525252;
-  static const textPrimary = AppColors.hexFFFFFFFF;
-  static const textSecondary = AppColors.hexFFB8BCC2;
-  static const textMuted = AppColors.hexFF8A8A8E;
+  static Color background(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
+  static Color surface(BuildContext context) => Theme.of(context).colorScheme.surface;
+  static Color surfaceHigh(BuildContext context) => Theme.of(context).colorScheme.surfaceContainerHighest;
+  static Color border(BuildContext context) => Theme.of(context).dividerColor;
+  static Color borderHigh(BuildContext context) => Theme.of(context).dividerColor;
+  static Color textPrimary(BuildContext context) => Theme.of(context).colorScheme.onSurface;
+  static Color textSecondary(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
+  static Color textMuted(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
 }
 
 String _filterLabel(BuildContext context, _StatementFilter filter) {

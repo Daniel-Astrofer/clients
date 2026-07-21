@@ -59,7 +59,8 @@ void main() {
       });
 
       expect(capabilities.eligibleSourceWallets, hasLength(2));
-      expect(capabilities.eligibleSourceWalletIds, {'src-internal', 'src-cold'});
+      expect(
+          capabilities.eligibleSourceWalletIds, {'src-internal', 'src-cold'});
       expect(
         capabilities.eligibleSourceWallets.first.compatibleRails,
         ['INTERNAL', 'ONCHAIN'],

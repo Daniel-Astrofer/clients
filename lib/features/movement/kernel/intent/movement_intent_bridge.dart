@@ -34,7 +34,8 @@ PaymentIntent paymentIntentFromMovement(MovementIntent intent) {
   );
 }
 
-MovementIntent movementIntentFromDestination(SendDestinationAnalysis destination) {
+MovementIntent movementIntentFromDestination(
+    SendDestinationAnalysis destination) {
   return MovementIntent(
     kind: _kindFromDestination(destination.type),
     rawInput: destination.normalizedValue,
@@ -47,7 +48,8 @@ MovementIntent movementIntentFromDestination(SendDestinationAnalysis destination
   );
 }
 
-PaymentIntent paymentIntentFromDestination(SendDestinationAnalysis destination) {
+PaymentIntent paymentIntentFromDestination(
+    SendDestinationAnalysis destination) {
   return paymentIntentFromMovement(movementIntentFromDestination(destination));
 }
 

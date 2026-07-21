@@ -70,7 +70,9 @@ SceneMedia _mediaFor(HomeStage stage) {
     HomeStageMediaType.image => SceneMediaType.image,
     HomeStageMediaType.lottie => SceneMediaType.lottie,
     HomeStageMediaType.video => SceneMediaType.video,
-    HomeStageMediaType.none || HomeStageMediaType.unknown => SceneMediaType.none,
+    HomeStageMediaType.none ||
+    HomeStageMediaType.unknown =>
+      SceneMediaType.none,
   };
   if (type == SceneMediaType.none) return const SceneMedia();
 
@@ -142,9 +144,8 @@ SceneContent _contentFor(HomeStage stage) {
 SceneCta _ctaFor(HomeStage stage) {
   final c = stage.content.cta;
   if (c == null || c.label.trim().isEmpty) return const SceneCta();
-  final action = c.isNavigate
-      ? c.target
-      : (c.action.trim().isEmpty ? c.target : c.action);
+  final action =
+      c.isNavigate ? c.target : (c.action.trim().isEmpty ? c.target : c.action);
   return SceneCta(label: c.label, action: action);
 }
 

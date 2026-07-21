@@ -24,6 +24,7 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
   late final AnimationController _retryController;
   Timer? _retryTimer;
   int _retryCount = 0;
+
   /// User dismissed the blocking sheet to browse cached balances.
   bool _dismissedForReadOnly = false;
 
@@ -123,8 +124,7 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
           'We will automatically retry up to $_maxAutomaticRetries times.',
         'es' =>
           'Reintentaremos automáticamente hasta $_maxAutomaticRetries veces.',
-        _ =>
-          'Tentaremos automaticamente até $_maxAutomaticRetries vezes.',
+        _ => 'Tentaremos automaticamente até $_maxAutomaticRetries vezes.',
       };
     }
     if (_retryCount >= _maxAutomaticRetries) {
@@ -133,8 +133,7 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
           'Automatic retries paused. Use Try again to check connectivity.',
         'es' =>
           'Reintentos automáticos en pausa. Usa Reintentar para comprobar de nuevo.',
-        _ =>
-          context.tr.offlineSubtitle,
+        _ => context.tr.offlineSubtitle,
       };
     }
     return switch (lang) {
@@ -165,7 +164,8 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                 color: KeroseneBrandTokens.warning.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
                       Icon(
@@ -176,7 +176,8 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          switch (Localizations.localeOf(context).languageCode) {
+                          switch (
+                              Localizations.localeOf(context).languageCode) {
                             'en' => 'Offline · showing cached data',
                             'es' => 'Sin conexión · datos en caché',
                             _ => 'Offline · exibindo dados em cache',
@@ -264,7 +265,8 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                                 const SizedBox(height: 12),
                                 TextButton(
                                   onPressed: () {
-                                    setState(() => _dismissedForReadOnly = true);
+                                    setState(
+                                        () => _dismissedForReadOnly = true);
                                   },
                                   child: Text(
                                     _browseCached(context),

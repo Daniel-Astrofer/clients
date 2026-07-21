@@ -129,7 +129,8 @@ class SendDestinationStep extends StatelessWidget {
                                   return const SizedBox.shrink();
                                 }
                                 return Padding(
-                                  padding: EdgeInsets.only(top: tokens.spaceMd - 4),
+                                  padding:
+                                      EdgeInsets.only(top: tokens.spaceMd - 4),
                                   child: Column(
                                     children: [
                                       _DestinationFeedback(
@@ -245,8 +246,7 @@ class SendDestinationStep extends StatelessWidget {
     return all.where((dest) {
       final label = (dest.label ?? '').toLowerCase();
       final address = dest.address.toLowerCase();
-      final labelBare =
-          label.startsWith('@') ? label.substring(1) : label;
+      final labelBare = label.startsWith('@') ? label.substring(1) : label;
       final addressBare =
           address.startsWith('@') ? address.substring(1) : address;
       return labelBare.contains(needle) ||
@@ -301,7 +301,8 @@ class _ReceiverProfileCard extends StatelessWidget {
       displayName = 'Endereço On-chain';
       final address = analysis.normalizedValue;
       if (address.length > 12) {
-        subtext = '${address.substring(0, 6)}...${address.substring(address.length - 6)}';
+        subtext =
+            '${address.substring(0, 6)}...${address.substring(address.length - 6)}';
       } else {
         subtext = address;
       }

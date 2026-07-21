@@ -56,6 +56,7 @@ final financialPollAllowedProvider = Provider<bool>((ref) {
 mixin FinancialSurfaceMixin<T extends ConsumerStatefulWidget>
     on ConsumerState<T> {
   bool _financialSurfaceHeld = false;
+
   /// Cached while the element is alive — never [ref.read] in [dispose].
   FinancialSurfaceGateNotifier? _gate;
 

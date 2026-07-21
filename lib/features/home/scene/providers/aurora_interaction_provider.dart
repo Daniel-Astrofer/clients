@@ -45,7 +45,8 @@ class HomeAuroraInteractionController extends ChangeNotifier {
       (localPosition.dx / viewport.width).clamp(0.0, 1.0),
       (localPosition.dy / viewport.height).clamp(0.0, 1.0),
     );
-    if ((next - _pointer).distanceSquared < 0.000004 && _pointerEnergy >= 0.99) {
+    if ((next - _pointer).distanceSquared < 0.000004 &&
+        _pointerEnergy >= 0.99) {
       return;
     }
     _pointer = next;

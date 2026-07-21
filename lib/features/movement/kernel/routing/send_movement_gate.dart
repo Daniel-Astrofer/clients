@@ -23,7 +23,10 @@ class SendMovementDecision {
   });
 
   bool get canContinue =>
-      handler != null && route != null && route!.canContinue && errorMessage == null;
+      handler != null &&
+      route != null &&
+      route!.canContinue &&
+      errorMessage == null;
 
   List<String> get blockers => route?.blockers ?? const [];
 

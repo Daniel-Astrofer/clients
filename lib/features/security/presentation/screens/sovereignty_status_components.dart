@@ -260,8 +260,8 @@ class SecurityStatusCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          const Divider(color: AppColors.surfaceLight, height: 1),
+            const SizedBox(height: 18),
+            Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
           const SizedBox(height: 16),
           for (final row in rows) ...[
             Row(

@@ -118,8 +118,7 @@ class KeroseneResponsiveMetrics {
   BoxConstraints get appColumnConstraints =>
       BoxConstraints(maxWidth: appColumnMaxWidth);
 
-  BoxConstraints get formConstraints =>
-      BoxConstraints(maxWidth: formMaxWidth);
+  BoxConstraints get formConstraints => BoxConstraints(maxWidth: formMaxWidth);
 
   double compactFontSize({
     required double compact,

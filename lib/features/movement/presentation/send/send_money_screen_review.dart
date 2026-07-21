@@ -237,8 +237,7 @@ class InternalTransferReviewScreenState<T>
                           builder: (context, constraints) {
                             return SingleChildScrollView(
                               physics: const BouncingScrollPhysics(),
-                              padding:
-                                  const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: constraints.maxHeight - 32,
@@ -253,8 +252,7 @@ class InternalTransferReviewScreenState<T>
                                       _ReviewBody(
                                         title: title,
                                         card: widget.card,
-                                        onBack:
-                                            _isSubmitting ? null : _dismiss,
+                                        onBack: _isSubmitting ? null : _dismiss,
                                       ),
                                       if (widget.requiresFirstSendAck) ...[
                                         const SizedBox(height: 20),
@@ -332,8 +330,6 @@ class InternalTransferReviewScreenState<T>
     );
   }
 }
-
-
 
 class SendPaymentReceiptScreen<T> extends StatefulWidget {
   final SendPaymentReceiptData data;
@@ -439,7 +435,8 @@ class _ReviewBody extends StatelessWidget {
   static const double _rowGap = 19.5; // 15 * 1.3
   static const double _afterTopDividerGap = 20.8; // sectionGap * 0.8
   static const double _beforeTotalGap = 36.4; // headerGap * 0.8
-  static const double _cardWidthFactor = 1.0; // 0.92 * 1.10, capped at full width
+  static const double _cardWidthFactor =
+      1.0; // 0.92 * 1.10, capped at full width
 
   @override
   Widget build(BuildContext context) {
@@ -563,8 +560,7 @@ class _ReviewBody extends StatelessWidget {
                     if (card.transactionFeeLabel != null) ...[
                       const SizedBox(height: _rowGap),
                       _AmountBlock(
-                        label:
-                            SendMoneyCopy.reviewTransactionFeeLabel(context),
+                        label: SendMoneyCopy.reviewTransactionFeeLabel(context),
                         amount: card.transactionFeeLabel!,
                         fiat: card.transactionFeeFiatLabel ?? '',
                       ),
@@ -858,9 +854,7 @@ class _FirstSendAckBlock extends StatelessWidget {
           const SizedBox(height: 4),
           CheckboxListTile(
             value: acknowledged,
-            onChanged: enabled
-                ? (value) => onChanged(value ?? false)
-                : null,
+            onChanged: enabled ? (value) => onChanged(value ?? false) : null,
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
             dense: true,
@@ -998,7 +992,7 @@ class _SkeuomorphicReceiptPainter extends CustomPainter {
 
     const segmentWidth = 12.0;
     final segments = (size.width / segmentWidth).ceil();
-    
+
     // Jagged top edge
     path.moveTo(0, 0);
     for (int i = 0; i <= segments; i++) {
@@ -1081,9 +1075,7 @@ class _AuthorizeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: Ink(
             decoration: BoxDecoration(
-              color: ready
-                  ? _C.text
-                  : _C.surfaceHigh.withValues(alpha: 0.64),
+              color: ready ? _C.text : _C.surfaceHigh.withValues(alpha: 0.64),
               border: Border.all(
                 color: ready ? _C.text : _C.border,
               ),
@@ -1323,6 +1315,7 @@ class _C {
   static const secondary = KeroseneBrandTokens.textSecondary;
   static const muted = KeroseneBrandTokens.textMuted;
   static const success = KeroseneBrandTokens.success;
+
   /// Dark authorize chrome (pre-wipe), matching original send review button.
   static const button = KeroseneBrandTokens.surfaceElevated;
   static const buttonText = KeroseneBrandTokens.textSecondary;

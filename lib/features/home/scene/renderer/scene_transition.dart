@@ -25,7 +25,8 @@ class SceneTransition extends StatelessWidget {
 
     return AnimatedSwitcher(
       duration: d,
-      reverseDuration: reduce ? Duration.zero : const Duration(milliseconds: 360),
+      reverseDuration:
+          reduce ? Duration.zero : const Duration(milliseconds: 360),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       layoutBuilder: (currentChild, previousChildren) {

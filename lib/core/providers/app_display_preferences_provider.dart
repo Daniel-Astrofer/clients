@@ -10,8 +10,10 @@ import 'shared_preferences_provider.dart';
 class AppDisplayPreferencesState {
   final Locale locale;
   final Currency currency;
+
   /// IANA or UTC±HH:MM id used for API content personalization and local clocks.
   final String timeZoneId;
+
   /// When true, timezone tracks the device automatically.
   final bool timeZoneFollowDevice;
 
@@ -32,8 +34,7 @@ class AppDisplayPreferencesState {
       locale: locale ?? this.locale,
       currency: currency ?? this.currency,
       timeZoneId: timeZoneId ?? this.timeZoneId,
-      timeZoneFollowDevice:
-          timeZoneFollowDevice ?? this.timeZoneFollowDevice,
+      timeZoneFollowDevice: timeZoneFollowDevice ?? this.timeZoneFollowDevice,
     );
   }
 }
@@ -64,9 +65,8 @@ class AppDisplayPreferencesNotifier
     final currency = _parseCurrency(prefs.getString(_currencyKey));
     final followDevice = prefs.getBool(_timeZoneFollowKey) ?? true;
     final storedTz = prefs.getString(_timeZoneKey);
-    final timeZoneId = followDevice
-        ? AppTimezone.detectId()
-        : AppTimezone.resolve(storedTz);
+    final timeZoneId =
+        followDevice ? AppTimezone.detectId() : AppTimezone.resolve(storedTz);
 
     // Best-effort secure mirror restore is async — kick off without blocking build.
     Future.microtask(_hydrateFromSecureMirror);
@@ -183,9 +183,7 @@ class AppDisplayPreferencesNotifier
     final detected = AppTimezone.detectId();
     if (detected == state.timeZoneId) return;
     state = state.copyWith(timeZoneId: detected);
-    await ref
-        .read(sharedPreferencesProvider)
-        .setString(_timeZoneKey, detected);
+    await ref.read(sharedPreferencesProvider).setString(_timeZoneKey, detected);
     await _mirrorSecure(_secureTimeZoneKey, detected);
   }
 

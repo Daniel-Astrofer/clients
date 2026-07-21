@@ -30,35 +30,14 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 // one layer must NOT rebuild siblings. HomeScreen itself watches almost nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Ambient aurora / theater glow — full-screen, own repaint boundary.
-/// Cached picture (no continuous ticker). Always visible; scroll does not
-/// strip the glow (that was an accidental visual regression).
-class HomeAuroraLayer extends ConsumerWidget {
+/// Debug-only A/B chip for aurora renderer. Glow itself lives in the
+/// scrollable header so it moves with the balance.
+class HomeAuroraLayer extends StatelessWidget {
   const HomeAuroraLayer({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final overscroll = ref.watch(homeOverscrollProvider);
-
-    Widget aurora = const HomeAuroraBackground();
-
-    if (overscroll > 0) {
-      // Reaja de forma explosiva/sólida no topo quando o utilizador puxa a tela
-      final scale = 1.0 + (overscroll / 100).clamp(0.0, 1.8);
-      final translateY = (overscroll / 3).clamp(0.0, 60.0);
-
-      aurora = Transform(
-        alignment: Alignment.topCenter,
-        transform: Matrix4.identity()
-          ..translate(0.0, translateY)
-          ..scale(scale, scale),
-        child: aurora,
-      );
-    }
-
-    return Positioned.fill(
-      child: RepaintBoundary(child: aurora),
-    );
+  Widget build(BuildContext context) {
+    return const HomeAuroraRendererDebugToggle();
   }
 }
 
@@ -145,7 +124,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
           } else if (n is ScrollEndNotification) {
             busy.setBusy(false);
           }
-          
+
           if (n.metrics.axis == Axis.vertical) {
             final pixels = n.metrics.pixels;
             final overscroll = pixels < 0 ? pixels.abs() : 0.0;
@@ -153,8 +132,8 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             final now = DateTime.now().millisecondsSinceEpoch;
             final delta = (currentOverscroll - overscroll).abs();
             final shouldPublish = n is ScrollEndNotification ||
-                delta > 2.0 ||
-                (now - _lastOverscrollPublishMs) > 32;
+                delta > 1.2 ||
+                (now - _lastOverscrollPublishMs) > 16;
             if (shouldPublish &&
                 (delta > 0.5 || (overscroll == 0 && currentOverscroll != 0))) {
               _lastOverscrollPublishMs = now;
@@ -165,10 +144,11 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
               });
             }
           }
-          
+
           return false;
         },
         child: CustomScrollView(
+          clipBehavior: Clip.none,
           scrollCacheExtent: const ScrollCacheExtent.pixels(720),
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
@@ -430,9 +410,7 @@ class HomeHeaderLayer extends ConsumerWidget {
     final walletState = ref.read(walletProvider);
     final activeWallet = walletState is WalletLoaded
         ? (walletState.selectedWallet ??
-            (walletState.wallets.isNotEmpty
-                ? walletState.wallets.first
-                : null))
+            (walletState.wallets.isNotEmpty ? walletState.wallets.first : null))
         : null;
 
     return RepaintBoundary(
@@ -454,9 +432,8 @@ class HomeHeaderLayer extends ConsumerWidget {
 String _walletHeaderFingerprint(WalletState w) {
   if (w is! WalletLoaded) return w.runtimeType.toString();
   final sel = w.selectedWallet?.id ?? '';
-  final parts = w.wallets
-      .map((x) => '${x.id}:${(x.balance * 1e5).round()}')
-      .join('|');
+  final parts =
+      w.wallets.map((x) => '${x.id}:${(x.balance * 1e5).round()}').join('|');
   return '$sel|$parts';
 }
 
@@ -658,5 +635,3 @@ class HomeWideFeedBody extends ConsumerWidget {
     );
   }
 }
-
-

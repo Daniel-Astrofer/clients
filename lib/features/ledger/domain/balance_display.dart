@@ -52,7 +52,8 @@ class BalanceDisplayRules {
       observedSats: observedSats,
       pendingSats: pendingSats,
       lockedSats: lockedSats,
-      updatedAt: updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      updatedAt:
+          updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
     );
   }
 }

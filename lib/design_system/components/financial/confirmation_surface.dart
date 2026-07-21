@@ -145,17 +145,15 @@ class _MovementConfirmationDetailRow extends StatelessWidget {
     final valueStyle = row.numeric || row.technical
         ? AppTypography.financial(
             color: AppColors.hexFFFFFFFF,
-            fontSize: row.emphasize
-                ? (compact ? 15.0 : 16.0)
-                : (compact ? 13.5 : 14),
+            fontSize:
+                row.emphasize ? (compact ? 15.0 : 16.0) : (compact ? 13.5 : 14),
             fontWeight: row.emphasize ? FontWeight.w700 : FontWeight.w600,
             height: 1.3,
           )
         : AppTypography.inter(
             color: AppColors.hexFFFFFFFF,
-            fontSize: row.emphasize
-                ? (compact ? 15.0 : 16.0)
-                : (compact ? 13.5 : 14),
+            fontSize:
+                row.emphasize ? (compact ? 15.0 : 16.0) : (compact ? 13.5 : 14),
             fontWeight: row.emphasize ? FontWeight.w700 : FontWeight.w400,
             height: 1.3,
           );

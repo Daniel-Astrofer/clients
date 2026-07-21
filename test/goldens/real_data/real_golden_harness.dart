@@ -195,7 +195,8 @@ Widget wrapRealGolden(Widget child) {
           remainingCodes: 8,
         ),
       ),
-      balanceSettingsProvider.overrideWith(() => _RealBalanceSettingsNotifier()),
+      balanceSettingsProvider
+          .overrideWith(() => _RealBalanceSettingsNotifier()),
       biometricProvider.overrideWith(() => _RealBiometricNotifier()),
       walletProvider.overrideWith(
         () => _RealWalletNotifier(

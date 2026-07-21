@@ -788,7 +788,8 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
                           _showProviderUnavailable(context, provider),
                     ),
                     data: (urls) {
-                      final hasAny = urls.values.any((v) => v.trim().isNotEmpty);
+                      final hasAny =
+                          urls.values.any((v) => v.trim().isNotEmpty);
                       if (!hasAny) {
                         return _GatewayEmptyState(
                           message:
@@ -938,8 +939,12 @@ class _GatewayProviderList extends StatelessWidget {
               if (index > 0) const SizedBox(height: 24),
               _GatewayProviderTile(
                 provider: section.providers[index],
-                available: isLoading ? true : section.providers[index].resolveUrl(urls) != null,
-                onTap: isLoading ? () {} : () => onSelect(section.providers[index]),
+                available: isLoading
+                    ? true
+                    : section.providers[index].resolveUrl(urls) != null,
+                onTap: isLoading
+                    ? () {}
+                    : () => onSelect(section.providers[index]),
                 isLoading: isLoading,
               ),
             ],

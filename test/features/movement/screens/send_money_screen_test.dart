@@ -515,5 +515,4 @@ class _UnusedTransactionRepository implements TransactionRepository {
   Future<PaymentLink> cancelPaymentRequest(String requestId) async {
     throw UnimplementedError();
   }
-
 }

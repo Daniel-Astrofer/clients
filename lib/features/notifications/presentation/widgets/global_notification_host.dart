@@ -68,8 +68,8 @@ class _GlobalNotificationHostState
                   ref.read(notificationSidebarProvider.notifier).close(),
             ),
           ),
-      const _TopNotificationBanner(),
-    ],
+        const _TopNotificationBanner(),
+      ],
     );
   }
 }
@@ -314,17 +314,23 @@ class _NotificationBannerCard extends ConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  NotificationTranslator.resolveTitle(context, notification).isEmpty
+                                  NotificationTranslator.resolveTitle(
+                                              context, notification)
+                                          .isEmpty
                                       ? _fallbackTitle(context)
-                                      : NotificationTranslator.resolveTitle(context, notification),
+                                      : NotificationTranslator.resolveTitle(
+                                          context, notification),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: titleStyle,
                                 ),
-                                if (NotificationTranslator.resolveBody(context, notification).isNotEmpty) ...[
+                                if (NotificationTranslator.resolveBody(
+                                        context, notification)
+                                    .isNotEmpty) ...[
                                   const SizedBox(height: 5),
                                   Text(
-                                    NotificationTranslator.resolveBody(context, notification),
+                                    NotificationTranslator.resolveBody(
+                                        context, notification),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: bodyStyle,
@@ -428,7 +434,8 @@ class _NotificationBannerCard extends ConsumerWidget {
     };
   }
 
-  static String _localizedNow(BuildContext context) => context.tr.notifBannerNow;
+  static String _localizedNow(BuildContext context) =>
+      context.tr.notifBannerNow;
 
   static String _localizedAction(BuildContext context) =>
       context.tr.notifBannerOpen;

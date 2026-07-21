@@ -134,9 +134,7 @@ class LedgerMerge {
     if (id.isEmpty) return const [];
     return rows
         .where(
-          (r) =>
-              r.sourceWalletId == id ||
-              r.destinationWalletId == id,
+          (r) => r.sourceWalletId == id || r.destinationWalletId == id,
         )
         .toList(growable: false);
   }

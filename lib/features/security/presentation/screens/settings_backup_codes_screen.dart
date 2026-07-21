@@ -248,7 +248,8 @@ class _SettingsBackupCodesScreenState
                                     ),
                                     const SizedBox(height: AppSpacing.sm),
                                     Text(
-                                      context.tr.securityBackupCodesLockedSubtitle,
+                                      context
+                                          .tr.securityBackupCodesLockedSubtitle,
                                       style: AppTypography.inter(
                                         color: KeroseneBrandTokens.textMuted,
                                         fontSize: 14,
@@ -261,7 +262,8 @@ class _SettingsBackupCodesScreenState
                                         pushSettingsDeferred(
                                           context,
                                           security_totp.loadLibrary,
-                                          (_) => security_totp.SecurityTotpScreen(),
+                                          (_) => security_totp
+                                              .SecurityTotpScreen(),
                                         );
                                       },
                                       style: FilledButton.styleFrom(
@@ -283,8 +285,8 @@ class _SettingsBackupCodesScreenState
                                 children: [
                                   SecuritySectionCard(
                                     title: context.tr.securityBackupCodesTitle,
-                                    subtitle: context.tr
-                                        .securityBackupCodesRemaining(
+                                    subtitle:
+                                        context.tr.securityBackupCodesRemaining(
                                       backup.remainingCodes,
                                     ),
                                     actionLabel: _busy

@@ -52,6 +52,20 @@ final class _HomeStatementSnapshot {
 const _homeStatementSnapshotCacheMax = 96;
 final _homeStatementSnapshotCache = <String, _HomeStatementSnapshot>{};
 
+bool _fiatRateReady(
+  Currency currency,
+  double? btcUsd,
+  double? btcEur,
+  double? btcBrl,
+) {
+  return switch (currency) {
+    Currency.btc => true,
+    Currency.usd => (btcUsd ?? 0) > 0,
+    Currency.eur => (btcEur ?? 0) > 0,
+    Currency.brl => (btcBrl ?? 0) > 0,
+  };
+}
+
 String _homeSnapshotKey(
   Transaction tx,
   Currency currency,
@@ -195,8 +209,13 @@ class StatementTransactionCard extends ConsumerWidget {
         ? ref.read(moneyFormatConfigProvider)
         : ref.watch(moneyFormatConfigProvider);
     final selectedCurrency = money.currency;
-    // Home list: snapshot prices/wallets once — live watches rebuild every
-    // visible card on each BTC tick and destroy scroll FPS. Extrato keeps live.
+    // Home: watch only rate *readiness* (bool), not every tick — otherwise
+    // first paint with null prices caches R$0 forever and never updates.
+    if (isHome) {
+      ref.watch(latestBtcPriceProvider.select((p) => (p ?? 0) > 0));
+      ref.watch(btcEurPriceProvider.select((p) => (p ?? 0) > 0));
+      ref.watch(btcBrlPriceProvider.select((p) => (p ?? 0) > 0));
+    }
     final btcUsd = isHome
         ? ref.read(latestBtcPriceProvider)
         : ref.watch(latestBtcPriceProvider);
@@ -204,9 +223,14 @@ class StatementTransactionCard extends ConsumerWidget {
         isHome ? ref.read(btcEurPriceProvider) : ref.watch(btcEurPriceProvider);
     final btcBrl =
         isHome ? ref.read(btcBrlPriceProvider) : ref.watch(btcBrlPriceProvider);
+    // Prefer BTC until the selected fiat rate exists — never flash +R$ 0,00.
+    final displayCurrency = (isHome &&
+            !_fiatRateReady(selectedCurrency, btcUsd, btcEur, btcBrl) &&
+            transaction.amountSatoshis != 0)
+        ? Currency.btc
+        : selectedCurrency;
     final wallets = isHome ? _walletsFromRefRead(ref) : _walletsFromRef(ref);
-    final accounts =
-        isHome ? _accountsFromRefRead(ref) : _accountsFromRef(ref);
+    final accounts = isHome ? _accountsFromRefRead(ref) : _accountsFromRef(ref);
 
     final TransactionPresentation presentation;
     final TransactionCardColors colors;
@@ -216,7 +240,7 @@ class StatementTransactionCard extends ConsumerWidget {
         transaction: transaction,
         wallets: wallets,
         accounts: accounts,
-        currency: selectedCurrency,
+        currency: displayCurrency,
         locale: money.locale,
         btcUsd: btcUsd,
         btcEur: btcEur,
@@ -230,7 +254,7 @@ class StatementTransactionCard extends ConsumerWidget {
         transaction,
         wallets: wallets,
         accounts: accounts,
-        displayCurrency: selectedCurrency,
+        displayCurrency: displayCurrency,
         btcUsd: btcUsd,
         btcEur: btcEur,
         btcBrl: btcBrl,
@@ -390,38 +414,32 @@ class StatementTransactionCard extends ConsumerWidget {
             ),
           ],
         ),
-        // 0.8s ease-in-out: slow start → fast middle → slow end (open & close).
-        AnimatedSize(
+        // Keep details in the tree while height collapses — swapping to an
+        // empty child makes content vanish before the close animation can run.
+        _CollapsingDetails(
+          expanded: expanded,
           duration: KeroseneMotion.duration(
             context,
             const Duration(milliseconds: 800),
           ),
-          curve: Curves.easeInOutCubic,
-          alignment: Alignment.topCenter,
-          clipBehavior: Clip.hardEdge,
-          child: expanded
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: isHome
-                      ? _HomeQuickExpand(
-                          transaction: transaction,
-                          presentation: presentation,
-                          colors: colors,
-                          wallets: wallets,
-                          accounts: accounts,
-                          displayCurrency: selectedCurrency,
-                          btcUsd: btcUsd,
-                          btcEur: btcEur,
-                          btcBrl: btcBrl,
-                          appLocale: money.locale,
-                        )
-                      : _TransactionDetailsTable(
-                          transaction: transaction,
-                          presentation: presentation,
-                          colors: colors,
-                        ),
+          detailsBuilder: (context) => isHome
+              ? _HomeQuickExpand(
+                  transaction: transaction,
+                  presentation: presentation,
+                  colors: colors,
+                  wallets: wallets,
+                  accounts: accounts,
+                  displayCurrency: displayCurrency,
+                  btcUsd: btcUsd,
+                  btcEur: btcEur,
+                  btcBrl: btcBrl,
+                  appLocale: money.locale,
                 )
-              : const SizedBox(width: double.infinity),
+              : _TransactionDetailsTable(
+                  transaction: transaction,
+                  presentation: presentation,
+                  colors: colors,
+                ),
         ),
       ],
     );
@@ -453,6 +471,99 @@ List<Wallet> _walletsFromRef(WidgetRef ref) {
   final state = ref.watch(walletProvider);
   if (state is WalletLoaded) return state.wallets;
   return const [];
+}
+
+/// Expands/collapses details with height animation while keeping content
+/// painted during the close (unlike AnimatedSize + empty swap).
+class _CollapsingDetails extends StatefulWidget {
+  final bool expanded;
+  final Duration duration;
+  final WidgetBuilder detailsBuilder;
+
+  const _CollapsingDetails({
+    required this.expanded,
+    required this.duration,
+    required this.detailsBuilder,
+  });
+
+  @override
+  State<_CollapsingDetails> createState() => _CollapsingDetailsState();
+}
+
+class _CollapsingDetailsState extends State<_CollapsingDetails>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  Widget? _heldChild;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    if (widget.expanded) {
+      _heldChild = widget.detailsBuilder(context);
+      _controller.value = 1;
+    }
+    _controller.addStatusListener(_onStatus);
+  }
+
+  @override
+  void didUpdateWidget(covariant _CollapsingDetails oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration) {
+      _controller.duration = widget.duration;
+    }
+    if (widget.expanded) {
+      // Refresh content while open; capture snapshot for close animation.
+      _heldChild = widget.detailsBuilder(context);
+      if (_controller.status != AnimationStatus.forward &&
+          _controller.value < 1) {
+        _controller.forward();
+      }
+    } else if (oldWidget.expanded && !widget.expanded) {
+      // Keep last open details — do NOT rebuild via detailsBuilder: the parent
+      // may already be collapsed (empty expand payload / zero fields).
+      _controller.reverse();
+    }
+  }
+
+  void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed && !widget.expanded) {
+      if (_heldChild == null) return;
+      setState(() => _heldChild = null);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeStatusListener(_onStatus);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final details = _heldChild;
+    if (details == null && _controller.isDismissed) {
+      return const SizedBox(width: double.infinity);
+    }
+
+    return ClipRect(
+      child: AnimatedBuilder(
+        animation: _controller,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: details ?? const SizedBox.shrink(),
+        ),
+        builder: (context, child) {
+          return Align(
+            alignment: Alignment.topCenter,
+            heightFactor: Curves.easeInOutCubic.transform(_controller.value),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
 }
 
 List<Wallet> _walletsFromRefRead(WidgetRef ref) {
@@ -627,7 +738,6 @@ class _BankStatementTransactionRow extends StatelessWidget {
   }
 }
 
-
 class _DarkStatusPill extends StatelessWidget {
   final Transaction transaction;
 
@@ -682,12 +792,9 @@ class _TransactionDetailsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = presentation.expandedFields;
-    final labelColor =
-        dark ? const Color(0xFFC8CCD4) : const Color(0xFF1C1C1F);
-    final valueColor =
-        dark ? const Color(0xFFF4F5F7) : const Color(0xFF0A0A0B);
-    final lineColor =
-        dark ? const Color(0xFF3A3A40) : const Color(0xFFD4D4D8);
+    final labelColor = dark ? const Color(0xFFC8CCD4) : const Color(0xFF1C1C1F);
+    final valueColor = dark ? const Color(0xFFF4F5F7) : const Color(0xFF0A0A0B);
+    final lineColor = dark ? const Color(0xFF3A3A40) : const Color(0xFFD4D4D8);
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -918,7 +1025,8 @@ class _ActivityExpandedActionsState
     }
     final tr = context.tr;
     final error = Theme.of(context).colorScheme.error;
-    final foreground = widget.dark ? TransactionPalette.inkOnDark : Colors.black;
+    final foreground =
+        widget.dark ? TransactionPalette.inkOnDark : Colors.black;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -975,7 +1083,8 @@ class _PresentationFieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isConf = field.key == 'confirmations' && field.hasConfirmationProgress;
+    final isConf =
+        field.key == 'confirmations' && field.hasConfirmationProgress;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1106,8 +1215,7 @@ class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
   bool get _isComplete => widget.current >= widget.target;
 
   /// e.g. 1 conf of 4 → 25%; of 6 → ~16.7%. Uses conf/target.
-  double get _filled =>
-      (widget.current / widget.target).clamp(0.0, 1.0);
+  double get _filled => (widget.current / widget.target).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
@@ -1274,8 +1382,10 @@ class _ActivityStatusIcon extends StatefulWidget {
   final TransactionCardColors colors;
   final double iconSize;
   final TransactionAxes? axes;
+
   /// When true, status badge is larger so ✓ is obvious on open cards.
   final bool expanded;
+
   /// Pause ring spinners while the home list scrolls (120 Hz scroll path).
   final bool pauseWhileScrolling;
 
@@ -1338,7 +1448,9 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     final mode = _ringMode(widget.transaction);
     final needsSpin =
         mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
-    if (needsSpin && _spinController != null && !(_spinController!.isAnimating)) {
+    if (needsSpin &&
+        _spinController != null &&
+        !(_spinController!.isAnimating)) {
       _spinController!.repeat();
     }
   }
@@ -1478,8 +1590,10 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
         _isConfirmedLike(tx);
     // Fully confirmed on-chain only when live confs reached the target.
     final fullOnchain = settled && onchain && conf >= target;
-    final confirmingOnchain =
-        onchain && !failed && !fullOnchain && (mode == _RingMode.greenProgress ||
+    final confirmingOnchain = onchain &&
+        !failed &&
+        !fullOnchain &&
+        (mode == _RingMode.greenProgress ||
             mode == _RingMode.yellowSpin ||
             conf < target);
 
@@ -1548,8 +1662,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     }
 
     // Fully confirmed on-chain: green check only (no hardcoded "6" pip).
-    final showSettledCheck =
-        widget.expanded && fullOnchain && !failed;
+    final showSettledCheck = widget.expanded && fullOnchain && !failed;
 
     return SizedBox(
       width: widget.iconSize,
@@ -1601,8 +1714,10 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 enum _RingMode {
   yellowSpin,
   greenProgress,
+
   /// On-chain fully confirmed — segmented green ring (6 slices).
   settled,
+
   /// Internal / Lightning confirmed — continuous solid green ring.
   settledSolid,
   failed,
@@ -1723,5 +1838,3 @@ class _RingConfirmationPainter extends CustomPainter {
         loadValue != oldDelegate.loadValue;
   }
 }
-
-

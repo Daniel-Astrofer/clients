@@ -4,9 +4,9 @@ import 'package:kerosene/features/movement/kernel/capability/movement_capability
 
 class MovementRouter {
   final List<MovementHandler> _handlers;
-  
+
   const MovementRouter(this._handlers);
-  
+
   MovementHandler? findHandler(MovementIntent intent, MovementCapability caps) {
     for (final handler in _handlers) {
       if (handler.canHandle(intent, caps)) return handler;

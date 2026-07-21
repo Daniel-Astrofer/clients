@@ -67,6 +67,7 @@ class BitcoinMarketChartRequest {
   final String symbol;
   final Currency quoteCurrency;
   final BitcoinMarketChartRange range;
+
   /// When set, overrides [range.startDate] (custom last-N or calendar window).
   final DateTime? customStart;
   final DateTime? customEnd;
@@ -318,8 +319,7 @@ class BitcoinMarketChartService {
     }
 
     final uri = _binanceRestBaseUri.replace(queryParameters: query);
-    final timeout =
-        request.degraded ? _httpTimeoutDegraded : _httpTimeout;
+    final timeout = request.degraded ? _httpTimeoutDegraded : _httpTimeout;
     final response = await _httpClient.get(uri).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('HTTP ${response.statusCode} from Binance klines.');
@@ -447,9 +447,8 @@ class BitcoinMarketChartService {
 
     final envelope = _decodeMap(data);
     final payloadRaw = envelope['data'];
-    final payload = payloadRaw is Map
-        ? Map<String, dynamic>.from(payloadRaw)
-        : envelope;
+    final payload =
+        payloadRaw is Map ? Map<String, dynamic>.from(payloadRaw) : envelope;
     final eventType = payload['e'];
     if (eventType == 'serverShutdown') {
       unawaited(

@@ -68,6 +68,7 @@ abstract interface class SovereignKeyStore {
   Future<Uint8List?> readCredentialId({String? subject});
   Future<Uint8List?> readPrivateKeySeed({String? subject});
   Future<Uint8List?> readPublicKey({String? subject});
+
   /// Peeks next counter without persisting (commit after successful server verify).
   Future<int> nextSignatureCounter({String? subject});
   Future<void> commitSignatureCounter(int counter, {String? subject});

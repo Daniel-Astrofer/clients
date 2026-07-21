@@ -134,7 +134,10 @@ void main() {
         source: rows,
         activity: ActivityFilter.instant,
       );
-      expect(r.every((e) => e.id == 'in' || e.id == 'out' || e.id == 'pend' || e.id == 'rec'), isTrue);
+      expect(
+          r.every((e) =>
+              e.id == 'in' || e.id == 'out' || e.id == 'pend' || e.id == 'rec'),
+          isTrue);
       expect(r.any((e) => e.id == 'ln' || e.id == 'on'), isFalse);
     });
 

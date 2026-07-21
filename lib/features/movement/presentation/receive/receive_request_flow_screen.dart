@@ -51,8 +51,10 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final int? initialConfirmations;
   final int? requiredConfirmations;
   final DateTime? identifiedAt;
+
   /// When no [initialPaymentLink] is provided, the screen creates one using this TTL.
   final int paymentLinkExpiresInMinutes;
+
   /// When true, show network picker before any backend create call.
   final bool deferNetworkUntilChosen;
 
@@ -81,8 +83,7 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _ReceiveRequestFlowScreenState
-    extends ConsumerState<ReceiveRequestFlowScreen>
-    with FinancialSurfaceMixin {
+    extends ConsumerState<ReceiveRequestFlowScreen> with FinancialSurfaceMixin {
   Timer? _statusTimer;
   Timer? _expiryTicker;
   late ReceiveRequestStage _stage;
@@ -281,24 +282,24 @@ class _ReceiveRequestFlowScreenState
     try {
       final paymentLink =
           await ref.read(transactionRepositoryProvider).createPaymentLink(
-                amount: widget.amountBtc,
-                description: ReceiveMoneyCopy.paymentLinkDescription(
-                  context,
-                  widget.wallet.name,
-                ),
-                expiresInMinutes: widget.paymentLinkExpiresInMinutes,
-                visibility: 'PRIVATE',
-                confirmationMode: 'USER_ACTION_REQUIRED',
-                amountLocked: true,
-                referenceLabel: widget.wallet.name,
-                metadata: {
-                  'walletId': widget.wallet.id,
-                  'walletName': widget.wallet.name,
-                  'rail': _paymentRequestRail(),
-                  'method': widget.method.name,
-                  'source': 'receive_flow',
-                },
-              );
+        amount: widget.amountBtc,
+        description: ReceiveMoneyCopy.paymentLinkDescription(
+          context,
+          widget.wallet.name,
+        ),
+        expiresInMinutes: widget.paymentLinkExpiresInMinutes,
+        visibility: 'PRIVATE',
+        confirmationMode: 'USER_ACTION_REQUIRED',
+        amountLocked: true,
+        referenceLabel: widget.wallet.name,
+        metadata: {
+          'walletId': widget.wallet.id,
+          'walletName': widget.wallet.name,
+          'rail': _paymentRequestRail(),
+          'method': widget.method.name,
+          'source': 'receive_flow',
+        },
+      );
       if (!mounted) return;
       setState(() {
         _link = paymentLink;
@@ -554,7 +555,8 @@ class _ReceiveRequestFlowScreenState
         (!onChain && !isLightning && link.isPaid) ||
         (onChain &&
             link.isPaid &&
-            (link.confirmations >= _requiredConfirmations || settledSettlement));
+            (link.confirmations >= _requiredConfirmations ||
+                settledSettlement));
     if (complete) {
       _stage = ReceiveRequestStage.identified;
       _identifiedAt = link.completedAt ?? link.paidAt ?? DateTime.now();
@@ -602,9 +604,7 @@ class _ReceiveRequestFlowScreenState
     if (link == null) return null;
     // Lightning: QR must encode the BOLT11 invoice, not a truncated address.
     final bolt11 = link.paymentRequest?.trim();
-    if (link.isLightningPaymentRequest &&
-        bolt11 != null &&
-        bolt11.isNotEmpty) {
+    if (link.isLightningPaymentRequest && bolt11 != null && bolt11.isNotEmpty) {
       return bolt11;
     }
     final shareable = link.shareablePaymentPayload;
@@ -749,7 +749,10 @@ class _ReceiveRequestFlowScreenState
       _ => () {
           final network = (_allocation?.network ?? '').trim().toLowerCase();
           return switch (network) {
-            'testnet' || 'testnet4' || 'testnet3' => 'On-chain · Bitcoin Testnet',
+            'testnet' ||
+            'testnet4' ||
+            'testnet3' =>
+              'On-chain · Bitcoin Testnet',
             'regtest' => 'On-chain · Bitcoin Regtest',
             _ => 'On-chain · Bitcoin Mainnet',
           };
@@ -852,9 +855,11 @@ class _ReceiveRequestFlowScreenState
   bool get _linkCanCancel {
     final link = _link;
     if (link == null || _cancelling) return false;
-    return link.isPending && !link.isCancelled && !link.isExpired && !link.isPaid;
+    return link.isPending &&
+        !link.isCancelled &&
+        !link.isExpired &&
+        !link.isPaid;
   }
-
 
   Future<void> _confirmAndCancelPaymentLink() async {
     final link = _link;
@@ -917,7 +922,6 @@ class _ReceiveRequestFlowScreenState
       );
     }
   }
-
 
   void _goHome() {
     HapticFeedback.selectionClick();
@@ -1150,7 +1154,8 @@ class _ReceiveRequestFlowScreenState
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Icon(KeroseneIcons.copy, size: 12, color: _receiveMuted),
+                  const Icon(KeroseneIcons.copy,
+                      size: 12, color: _receiveMuted),
                 ],
               ),
             ),
@@ -1208,8 +1213,9 @@ class _ReceiveRequestFlowScreenState
                   onChainWallet: _isOnChainReceive,
                   lightning: _isLightningReceive,
                   identified: _stage == ReceiveRequestStage.identified,
-                  currentConfirmations:
-                      _currentConfirmations.clamp(0, _requiredConfirmations).toInt(),
+                  currentConfirmations: _currentConfirmations
+                      .clamp(0, _requiredConfirmations)
+                      .toInt(),
                   requiredConfirmations: _requiredConfirmations,
                 ),
                 const SizedBox(height: 18),
@@ -1250,7 +1256,8 @@ class _ReceiveRequestFlowScreenState
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
             child: MovementConfirmationSurface(
-              leading: ReceiveSuccessGraphic(animation: const AlwaysStoppedAnimation(1)),
+              leading: ReceiveSuccessGraphic(
+                  animation: const AlwaysStoppedAnimation(1)),
               title: identifiedLabel,
               amountLabel: _amountLabel,
               supportingLabel: _fiatLabel,
@@ -1384,7 +1391,8 @@ class _ReceiveRequestFlowScreenState
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
-      style: AppTypography.amountInput(isBtc: true, color: _receiveText).copyWith(
+      style:
+          AppTypography.amountInput(isBtc: true, color: _receiveText).copyWith(
         fontSize: 26,
         height: 1.12,
         letterSpacing: 0,

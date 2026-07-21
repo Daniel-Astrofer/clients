@@ -60,52 +60,52 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
               child: KeroseneAppColumn(
                 maxWidth: responsive.mobileContentMaxWidth,
                 child: Column(
-                    children: [
-                      const Expanded(
-                        child: Center(
-                          child: _BitcoinAccountsEmptyContent(),
+                  children: [
+                    const Expanded(
+                      child: Center(
+                        child: _BitcoinAccountsEmptyContent(),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        minimumSize: const Size.fromHeight(56),
+                        textStyle: AppTypography.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          minimumSize: const Size.fromHeight(56),
-                          textStyle: AppTypography.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                      onPressed: onCreateInternalAccount,
+                      child: Text(context.tr.bitcoinAccountsNewKeroseneCard),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.text,
+                        side: BorderSide(
+                          color: colors.text.withValues(alpha: 0.22),
                         ),
-                        onPressed: onCreateInternalAccount,
-                        child: Text(context.tr.bitcoinAccountsNewKeroseneCard),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: colors.text,
-                          side: BorderSide(
-                            color: colors.text.withValues(alpha: 0.22),
-                          ),
-                          minimumSize: const Size.fromHeight(54),
-                          textStyle: AppTypography.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                        minimumSize: const Size.fromHeight(54),
+                        textStyle: AppTypography.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
-                        onPressed: onCreateColdWallet,
-                        child: const Text('Criar Cold Wallet'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ],
-                  ),
+                      onPressed: onCreateColdWallet,
+                      child: const Text('Criar Cold Wallet'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

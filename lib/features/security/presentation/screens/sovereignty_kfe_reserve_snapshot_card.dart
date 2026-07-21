@@ -264,9 +264,9 @@ Widget buildKfeReserveSnapshotCard({
             );
           },
         ),
-        const SizedBox(height: 18),
-        const Divider(color: AppColors.surfaceLight, height: 1),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
+          Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
+          const SizedBox(height: 16),
         KfeReserveDetailRow(
           label: copy(
             pt: 'Carteiras frias acompanhadas',

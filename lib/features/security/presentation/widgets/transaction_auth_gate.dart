@@ -127,8 +127,7 @@ class TransactionAuthGate {
         onCancelled?.call();
         return const TransactionAuthResult.cancelled();
       }
-      if (deviceAuthOutcome.status ==
-              TransactionDeviceAuthStatus.unavailable &&
+      if (deviceAuthOutcome.status == TransactionDeviceAuthStatus.unavailable &&
           !allowDeviceAuthUnavailable) {
         onCancelled?.call();
         return const TransactionAuthResult.unavailable();

@@ -797,4 +797,3 @@ String _timeLabel(BuildContext context, DateTime timestamp) {
         MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? false,
   );
 }
-

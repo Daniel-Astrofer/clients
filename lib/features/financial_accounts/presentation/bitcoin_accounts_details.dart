@@ -370,13 +370,19 @@ IconData accountOptionIcon(String title) {
   // Match labels regardless of locale (compare against known ARB values).
   final normalized = title.trim().toUpperCase();
   if (normalized.contains('STATUS')) return KeroseneIcons.security;
-  if (normalized.contains('RECEB') || normalized.contains('RECEIVE') || normalized.contains('RECEPCI')) {
+  if (normalized.contains('RECEB') ||
+      normalized.contains('RECEIVE') ||
+      normalized.contains('RECEPCI')) {
     return KeroseneIcons.download;
   }
-  if (normalized.contains('NOME') || normalized.contains('NAME') || normalized.contains('NOMBRE')) {
+  if (normalized.contains('NOME') ||
+      normalized.contains('NAME') ||
+      normalized.contains('NOMBRE')) {
     return KeroseneIcons.user;
   }
-  if (normalized.contains('PÚBLICO') || normalized.contains('PUBLIC') || normalized.contains('MATERIAL')) {
+  if (normalized.contains('PÚBLICO') ||
+      normalized.contains('PUBLIC') ||
+      normalized.contains('MATERIAL')) {
     return KeroseneIcons.settings;
   }
   if (normalized.contains('UTXO')) return KeroseneIcons.database;
@@ -534,8 +540,18 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
       label = 'Ontem';
     } else {
       final months = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        'Janeiro',
+        'Fevereiro',
+        'Março',
+        'Abril',
+        'Maio',
+        'Junho',
+        'Julho',
+        'Agosto',
+        'Setembro',
+        'Outubro',
+        'Novembro',
+        'Dezembro'
       ];
       label = '${date.day} de ${months[date.month - 1]}';
     }
@@ -601,8 +617,8 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
             var history = transactions;
             // Cold: fill PSBT broadcasts that are not yet in KFE history.
             if (widget.account.isWatchOnly) {
-              final coldId = (widget.account.coldWalletId ?? widget.account.id)
-                  .trim();
+              final coldId =
+                  (widget.account.coldWalletId ?? widget.account.id).trim();
               if (coldId.isNotEmpty) {
                 final psbts = ref
                         .watch(bitcoinColdWalletPsbtsProvider(coldId))
@@ -635,13 +651,14 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
               itemGap: 12,
               itemBuilder: (context, index) {
                 final tx = rows[index];
-                
+
                 Widget? dateHeader;
                 if (index == 0) {
                   dateHeader = _buildDateHeader(tx.timestamp.toLocal());
                 } else {
                   final previousTx = rows[index - 1];
-                  if (!_isSameDay(tx.timestamp.toLocal(), previousTx.timestamp.toLocal())) {
+                  if (!_isSameDay(
+                      tx.timestamp.toLocal(), previousTx.timestamp.toLocal())) {
                     dateHeader = _buildDateHeader(tx.timestamp.toLocal());
                   }
                 }

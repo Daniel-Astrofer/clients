@@ -105,8 +105,8 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
   );
 
   // First-send lives on the review surface (checkbox), not a post-CTA dialog.
-  final requiresFirstSendAck = destination.isOnChain &&
-      !(await isKnownOnchainSendAddress(toAddress));
+  final requiresFirstSendAck =
+      destination.isOnChain && !(await isKnownOnchainSendAddress(toAddress));
   if (!context.mounted) return null;
 
   final authNextStep = coldSource
@@ -119,8 +119,8 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
   final firstSendPreview =
       requiresFirstSendAck ? firstSendAddressPreview(toAddress) : null;
 
-  final showPlatformFee =
-      destination.isExternal && (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
+  final showPlatformFee = destination.isExternal &&
+      (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
   final showMiningFee = destination.isExternal;
   final canShowMiningFeeFiat = showMiningFee &&
       feeQuote.networkFeeCertainty != NetworkFeeCertainty.unknownUntilPay &&
@@ -259,12 +259,10 @@ List<SendPaymentReviewRowData> _buildReviewRows({
   required String fiatAmountLabel,
   bool coldSource = false,
 }) {
-  final receiverGets = destination.isExternal
-      ? feeQuote.receiverAmountBtc
-      : requestedAmount;
-  final youPay = destination.isExternal
-      ? feeQuote.totalDebitedBtc
-      : requestedAmount;
+  final receiverGets =
+      destination.isExternal ? feeQuote.receiverAmountBtc : requestedAmount;
+  final youPay =
+      destination.isExternal ? feeQuote.totalDebitedBtc : requestedAmount;
 
   // Primary: amounts / ETA / total.
   // Detail (collapsible): destination, network, wallet, signature.

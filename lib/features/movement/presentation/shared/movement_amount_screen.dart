@@ -202,9 +202,8 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
             btcUsd: btcUsd,
             btcEur: btcEur,
             btcBrl: btcBrl,
-            fiatCurrency: money.currency == Currency.btc
-                ? Currency.brl
-                : money.currency,
+            fiatCurrency:
+                money.currency == Currency.btc ? Currency.brl : money.currency,
             appLocale: money.locale,
           )
         : '≈ ${MoneyDisplay.formatCompact(
@@ -292,12 +291,11 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       btcEur: btcEur,
       btcBrl: btcBrl,
     );
-    final nextCurrency =
-        _selectedCurrency == Currency.btc
-            ? (ref.read(moneyFormatConfigProvider).currency == Currency.btc
-                ? Currency.brl
-                : ref.read(moneyFormatConfigProvider).currency)
-            : Currency.btc;
+    final nextCurrency = _selectedCurrency == Currency.btc
+        ? (ref.read(moneyFormatConfigProvider).currency == Currency.btc
+            ? Currency.brl
+            : ref.read(moneyFormatConfigProvider).currency)
+        : Currency.btc;
     final nextAmount = nextCurrency == Currency.btc
         ? amountBtc
         : MoneyDisplay.convertFromBtcAmount(

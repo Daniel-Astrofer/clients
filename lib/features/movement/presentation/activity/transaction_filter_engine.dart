@@ -16,6 +16,7 @@ enum ActivityFilter {
   problems, // failed + unconfirmedExpired
   /// Cancelled but not yet archived (still visible in main flow until opened).
   cancelled,
+
   /// Local archive after user opens a cancelled item.
   archived,
 }
@@ -64,13 +65,11 @@ abstract final class TransactionFilterEngine {
       ActivityFilter.onchain => axes.rail == TxRail.onchain,
       ActivityFilter.lightning => axes.rail == TxRail.lightning,
       ActivityFilter.cold => axes.rail == TxRail.cold,
-      ActivityFilter.inProgress =>
-        axes.lifecycle == TxLifecycle.pending ||
-            axes.lifecycle == TxLifecycle.confirming ||
-            axes.lifecycle == TxLifecycle.reconciling,
-      ActivityFilter.problems =>
-        axes.lifecycle == TxLifecycle.failed ||
-            axes.lifecycle == TxLifecycle.unconfirmedExpired,
+      ActivityFilter.inProgress => axes.lifecycle == TxLifecycle.pending ||
+          axes.lifecycle == TxLifecycle.confirming ||
+          axes.lifecycle == TxLifecycle.reconciling,
+      ActivityFilter.problems => axes.lifecycle == TxLifecycle.failed ||
+          axes.lifecycle == TxLifecycle.unconfirmedExpired,
       ActivityFilter.cancelled => axes.lifecycle == TxLifecycle.cancelled,
       ActivityFilter.archived => isArchived,
     };

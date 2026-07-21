@@ -36,7 +36,6 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     super.dispose();
   }
 
-
   void _publishPlayback({
     required HomeGreetingConfig greeting,
     required bool playing,
@@ -137,9 +136,8 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
             greeting.isEphemeralOnce);
 
     final showMarket = playing && active.isNotEmpty;
-    final message = showMarket
-        ? active[_index.clamp(0, active.length - 1)]
-        : null;
+    final message =
+        showMarket ? active[_index.clamp(0, active.length - 1)] : null;
     final text = showMarket
         ? message!.resolveText(widget.userName)
         : _localizedTimeOfDay(context, widget.userName, greeting.fallback);
@@ -213,4 +211,3 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     return context.tr.homeGreetingEvening(userName);
   }
 }
-

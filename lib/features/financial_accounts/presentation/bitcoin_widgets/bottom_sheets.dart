@@ -501,8 +501,8 @@ List<Transaction> mergeColdPsbtBroadcastsIntoHistory({
   for (final workflow in workflows) {
     final status = workflow.status.toUpperCase();
     if (status != 'BROADCAST' && status != 'BROADCASTED') continue;
-    final txid = (workflow.broadcastTxid ?? workflow.broadcastTxidRef ?? '')
-        .trim();
+    final txid =
+        (workflow.broadcastTxid ?? workflow.broadcastTxidRef ?? '').trim();
     if (txid.isEmpty) continue;
     if (existingTxids.contains(txid.toLowerCase())) continue;
 
@@ -812,9 +812,8 @@ String transactionStatusLabel(
     TransactionStatus.pending => context.tr.bitcoinReceiveStatusWaiting,
     TransactionStatus.confirming => context.tr.bitcoinReceiveStatusConfirming,
     TransactionStatus.confirmed => context.tr.bitcoinReceiveStatusPaid,
-    TransactionStatus.cancelled =>
-      context.tr.financialStatementFilterCancelled,
+    TransactionStatus.cancelled => context.tr.financialStatementFilterCancelled,
     TransactionStatus.reconciling => 'Em análise',
-      TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
+    TransactionStatus.failed => context.tr.bitcoinReceiveStatusProtected,
   };
 }

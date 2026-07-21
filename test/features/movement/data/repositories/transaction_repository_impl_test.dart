@@ -67,7 +67,6 @@ class _SpyTransactionRemoteDataSource implements TransactionRemoteDataSource {
   Future<PaymentLink> cancelPaymentRequest(String requestId) async {
     throw UnimplementedError();
   }
-
 }
 
 class _SpyAuthLocalDataSource implements AuthLocalDataSource {

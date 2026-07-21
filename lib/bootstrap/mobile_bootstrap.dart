@@ -134,7 +134,19 @@ Future<void> _bootstrapGraphics(ProviderContainer container) async {
 
   // Warm fragment programs + prefetch deferred libs after first frame so
   // navigation is not first-use of loadLibrary / SkSL on the gesture path.
+  // Prefetch send/home/etc in parallel with shaders — never wait on SkSL
+  // before loading the send deferred unit (first Enviar tap hitch).
   WidgetsBinding.instance.addPostFrameCallback((_) {
+    prefetchDeferredLibraries([
+      (load: home.loadLibrary, key: DeferredLibraryKeys.home),
+      (load: settings.loadLibrary, key: DeferredLibraryKeys.settings),
+      (load: deposits.loadLibrary, key: DeferredLibraryKeys.deposits),
+      (
+        load: bitcoin_accounts.loadLibrary,
+        key: DeferredLibraryKeys.bitcoinAccounts
+      ),
+      (load: send_money.loadLibrary, key: DeferredLibraryKeys.sendMoney),
+    ]);
     unawaited(() async {
       try {
         await container.read(homeAuroraShaderProvider.future);
@@ -142,18 +154,15 @@ Future<void> _bootstrapGraphics(ProviderContainer container) async {
         debugPrint('home aurora shader warm-up failed: $error\n$stack');
       }
       try {
+        await container.read(geminiGlowShaderProvider.future);
+      } catch (error, stack) {
+        debugPrint('gemini glow shader warm-up failed: $error\n$stack');
+      }
+      try {
         await container.read(metalShaderProvider.future);
       } catch (error, stack) {
         debugPrint('metal shader warm-up failed: $error\n$stack');
       }
-      // Adjacent mobile surfaces — shared Future with DeferredPage.
-      prefetchDeferredLibraries([
-        home.loadLibrary,
-        settings.loadLibrary,
-        deposits.loadLibrary,
-        bitcoin_accounts.loadLibrary,
-        send_money.loadLibrary,
-      ]);
     }());
   });
 }

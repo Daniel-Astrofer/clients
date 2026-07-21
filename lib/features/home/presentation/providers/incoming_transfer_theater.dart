@@ -58,10 +58,7 @@ String _trimTrailingZeros(String amount) {
 /// Pulls BTC amount text from notification metadata / body.
 String extractNotificationAmount(SessionNotificationItem notification) {
   final meta = notification.metadata;
-  final raw = meta['amount'] ??
-      meta['amountBtc'] ??
-      meta['amount_btc'] ??
-      '';
+  final raw = meta['amount'] ?? meta['amountBtc'] ?? meta['amount_btc'] ?? '';
   if (raw.isNotEmpty) {
     return _trimTrailingZeros(raw);
   }
@@ -80,8 +77,8 @@ String extractNotificationAmount(SessionNotificationItem notification) {
   }
 
   final body = '${notification.title} ${notification.body}';
-  final btcMatch =
-      RegExp(r'([\d]+(?:[.,][\d]+)?)\s*BTC', caseSensitive: false).firstMatch(body);
+  final btcMatch = RegExp(r'([\d]+(?:[.,][\d]+)?)\s*BTC', caseSensitive: false)
+      .firstMatch(body);
   if (btcMatch != null) {
     return _trimTrailingZeros(btcMatch.group(1)!.replaceAll(',', '.'));
   }
@@ -123,11 +120,10 @@ String extractNotificationWalletName(SessionNotificationItem notification) {
 }
 
 String extractNotificationNetworkLabel(SessionNotificationItem notification) {
-  final rail = (notification.metadata['rail'] ??
-          notification.metadata['network'] ??
-          '')
-      .trim()
-      .toUpperCase();
+  final rail =
+      (notification.metadata['rail'] ?? notification.metadata['network'] ?? '')
+          .trim()
+          .toUpperCase();
   if (rail.contains('LIGHT')) return 'Lightning';
   if (rail.contains('ONCHAIN') || rail.contains('ON-CHAIN') || rail == 'BTC') {
     return 'Onchain';
@@ -138,8 +134,7 @@ String extractNotificationNetworkLabel(SessionNotificationItem notification) {
 
   if (notification.kind == SessionNotificationItem.kindDepositDetected ||
       notification.kind == SessionNotificationItem.kindDepositConfirmed) {
-    final combined =
-        '${notification.title} ${notification.body}'.toLowerCase();
+    final combined = '${notification.title} ${notification.body}'.toLowerCase();
     if (combined.contains('lightning')) return 'Lightning';
     return 'Onchain';
   }

@@ -31,10 +31,13 @@ class KeroseneUiCopy {
   static String nfcTagDetected(AppLocalizations l10n) => l10n.nfcTagDetected;
   static String offlineTitle(AppLocalizations l10n) => l10n.offlineTitle;
   static String offlineSubtitle(AppLocalizations l10n) => l10n.offlineSubtitle;
-  static String offlineRetryHint(AppLocalizations l10n) => l10n.offlineRetryHint;
+  static String offlineRetryHint(AppLocalizations l10n) =>
+      l10n.offlineRetryHint;
   static String pinIncorrect(AppLocalizations l10n) => l10n.pinIncorrect;
   static String pinSetupTitle(AppLocalizations l10n) => l10n.pinSetupTitle;
   static String pinEnterTitle(AppLocalizations l10n) => l10n.pinEnterTitle;
-  static String pinSetupSubtitle(AppLocalizations l10n) => l10n.pinSetupSubtitle;
-  static String pinEnterSubtitle(AppLocalizations l10n) => l10n.pinEnterSubtitle;
+  static String pinSetupSubtitle(AppLocalizations l10n) =>
+      l10n.pinSetupSubtitle;
+  static String pinEnterSubtitle(AppLocalizations l10n) =>
+      l10n.pinEnterSubtitle;
 }

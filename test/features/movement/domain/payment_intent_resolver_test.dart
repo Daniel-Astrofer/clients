@@ -72,7 +72,8 @@ void main() {
       );
       expect(resolved.canContinue, isFalse);
       expect(
-        resolved.blockers.any((b) => b.code == PaymentBlockerCode.networkMismatch),
+        resolved.blockers
+            .any((b) => b.code == PaymentBlockerCode.networkMismatch),
         isTrue,
       );
     });
@@ -123,7 +124,8 @@ void main() {
       );
     });
 
-    test('dest internal+onchain + internal source → both rails, default internal',
+    test(
+        'dest internal+onchain + internal source → both rails, default internal',
         () {
       final intent = parser.parse('bob_user');
       final resolved = resolver.resolveWithCapabilities(
@@ -190,7 +192,8 @@ void main() {
       expect(resolved.alternatives.first.rail, PaymentRail.onchain);
     });
 
-    test('availableSources internal+custodial keeps both rails for internal source',
+    test(
+        'availableSources internal+custodial keeps both rails for internal source',
         () {
       final intent = parser.parse('bob_user');
       final resolved = resolver.resolveWithCapabilities(
@@ -368,7 +371,7 @@ void main() {
           spendable: spendable,
         );
       }
-      
+
       final internalSpendable = wallet('1', 'KEROSENE', true);
       final internalNotSpendable = wallet('2', 'KEROSENE', false);
       final custodialSpendable = wallet('3', 'CUSTODIAL_ONCHAIN', true);
@@ -376,17 +379,24 @@ void main() {
       final cold = wallet('5', 'SELF_CUSTODY', true);
 
       // Internal rail
-      expect(walletMatchesSendRail(internalSpendable, PaymentRail.internal), isTrue);
-      expect(walletMatchesSendRail(internalNotSpendable, PaymentRail.internal), isFalse);
+      expect(walletMatchesSendRail(internalSpendable, PaymentRail.internal),
+          isTrue);
+      expect(walletMatchesSendRail(internalNotSpendable, PaymentRail.internal),
+          isFalse);
 
       // Lightning rail
-      expect(walletMatchesSendRail(internalSpendable, PaymentRail.lightning), isTrue);
-      expect(walletMatchesSendRail(custodialSpendable, PaymentRail.lightning), isFalse);
+      expect(walletMatchesSendRail(internalSpendable, PaymentRail.lightning),
+          isTrue);
+      expect(walletMatchesSendRail(custodialSpendable, PaymentRail.lightning),
+          isFalse);
 
       // Onchain rail
-      expect(walletMatchesSendRail(internalSpendable, PaymentRail.onchain), isTrue);
-      expect(walletMatchesSendRail(custodialSpendable, PaymentRail.onchain), isTrue);
-      expect(walletMatchesSendRail(custodialNotSpendable, PaymentRail.onchain), isFalse);
+      expect(walletMatchesSendRail(internalSpendable, PaymentRail.onchain),
+          isTrue);
+      expect(walletMatchesSendRail(custodialSpendable, PaymentRail.onchain),
+          isTrue);
+      expect(walletMatchesSendRail(custodialNotSpendable, PaymentRail.onchain),
+          isFalse);
       expect(walletMatchesSendRail(cold, PaymentRail.onchain), isTrue);
       expect(walletMatchesSendRail(cold, PaymentRail.coldOnchain), isTrue);
     });

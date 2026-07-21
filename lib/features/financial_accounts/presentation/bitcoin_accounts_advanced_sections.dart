@@ -302,7 +302,8 @@ class UtxoRow extends StatelessWidget {
         onTap: utxo.txidRef.trim().isEmpty
             ? null
             : () async {
-                await Clipboard.setData(ClipboardData(text: utxo.txidRef.trim()));
+                await Clipboard.setData(
+                    ClipboardData(text: utxo.txidRef.trim()));
                 if (!context.mounted) return;
                 AppNotice.showSuccess(
                   context,

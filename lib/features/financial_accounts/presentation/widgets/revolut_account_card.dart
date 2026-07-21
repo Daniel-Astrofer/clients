@@ -9,6 +9,7 @@ import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.da
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_widgets/bottom_sheets.dart';
+import '../financial_hub_flow/theme/financial_hub_tokens.dart';
 
 /// Revolut-style account card carousel with tap-to-flip (front ↔ back).
 class RevolutAccountCardPager extends StatefulWidget {
@@ -51,8 +52,7 @@ class _RevolutAccountCardPagerState extends State<RevolutAccountCardPager> {
     );
   }
 
-  int get _maxIndex =>
-      widget.accounts.isEmpty ? 0 : widget.accounts.length - 1;
+  int get _maxIndex => widget.accounts.isEmpty ? 0 : widget.accounts.length - 1;
 
   @override
   void didUpdateWidget(covariant RevolutAccountCardPager oldWidget) {
@@ -204,15 +204,11 @@ class _RevolutAccountCardPagerState extends State<RevolutAccountCardPager> {
             ],
             const SizedBox(height: 8),
             Text(
-              _flippedIds
-                      .contains(accounts[_pageIndex.clamp(0, _maxIndex)].id)
+              _flippedIds.contains(accounts[_pageIndex.clamp(0, _maxIndex)].id)
                   ? 'Toque para voltar'
                   : 'Toque no cartão para ver detalhes',
-              style: AppTypography.inter(
+              style: FinancialHubTokens.caption(
                 color: colors.mutedText,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0,
               ),
             ),
           ],
@@ -545,9 +541,8 @@ class _CardFront extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final owner = userDisplayName.trim().isEmpty
-        ? 'Usuário'
-        : userDisplayName.trim();
+    final owner =
+        userDisplayName.trim().isEmpty ? 'Usuário' : userDisplayName.trim();
     final custody = custodyFrontLabel(account);
     final addressLine = formatOnchainAddressGroups(
       resolveReceiveAddress(account, receiveRequest),
@@ -579,11 +574,9 @@ class _CardFront extends StatelessWidget {
                     owner,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.inter(
+                    style: FinancialHubTokens.titleH2(
                       color: palette.ink,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
+                      fontSize: 18,
                     ),
                   ),
                 ),
@@ -592,11 +585,8 @@ class _CardFront extends StatelessWidget {
                   custody,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.inter(
+                  style: FinancialHubTokens.caption(
                     color: palette.inkMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
                   ),
                 ),
               ],
@@ -630,11 +620,8 @@ class _CardFront extends StatelessWidget {
                     children: [
                       Text(
                         balanceCaption,
-                        style: AppTypography.inter(
+                        style: FinancialHubTokens.caption(
                           color: palette.inkMuted,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.0,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -642,11 +629,9 @@ class _CardFront extends StatelessWidget {
                         balanceLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.inter(
+                        style: FinancialHubTokens.titleH2(
                           color: palette.ink,
                           fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.1,
                         ),
                       ),
                       if (heldLabel != null) ...[
@@ -655,10 +640,8 @@ class _CardFront extends StatelessWidget {
                           heldLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.inter(
+                          style: FinancialHubTokens.caption(
                             color: palette.inkMuted,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -668,10 +651,8 @@ class _CardFront extends StatelessWidget {
                           chainLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.inter(
+                          style: FinancialHubTokens.caption(
                             color: palette.inkMuted,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -760,11 +741,8 @@ class _CardBack extends StatelessWidget {
                 Expanded(
                   child: Text(
                     kKeroseneBrandLabel,
-                    style: AppTypography.inter(
+                    style: FinancialHubTokens.caption(
                       color: palette.inkMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
                     ),
                   ),
                 ),
@@ -795,11 +773,8 @@ class _CvvBadge extends StatelessWidget {
         children: [
           Text(
             'CVV',
-            style: AppTypography.inter(
+            style: FinancialHubTokens.caption(
               color: KeroseneBrandTokens.textMuted,
-              fontSize: 8,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
             ),
           ),
           Text(

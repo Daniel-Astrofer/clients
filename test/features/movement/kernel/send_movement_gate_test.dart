@@ -41,7 +41,8 @@ void main() {
 
   group('movementIntent bridge', () {
     test('round-trips payment intent kinds', () {
-      final payment = parser.parse('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx');
+      final payment =
+          parser.parse('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx');
       final movement = movementIntentFromPayment(payment);
       final back = paymentIntentFromMovement(movement);
       expect(back.kind, payment.kind);
@@ -57,7 +58,8 @@ void main() {
       final decision = await decideSendMovement(
         router: router,
         destination: destination,
-        sourceWallet: wallet(id: 'cold', mode: 'SELF_CUSTODY', spendable: false),
+        sourceWallet:
+            wallet(id: 'cold', mode: 'SELF_CUSTODY', spendable: false),
         expectedNetwork: BitcoinNetworkKind.testnet,
       );
       expect(decision.handler?.id, 'onchain');
@@ -73,7 +75,8 @@ void main() {
       final decision = await decideSendMovement(
         router: router,
         destination: destination,
-        sourceWallet: wallet(id: 'cold', mode: 'SELF_CUSTODY', spendable: false),
+        sourceWallet:
+            wallet(id: 'cold', mode: 'SELF_CUSTODY', spendable: false),
       );
       expect(decision.handler?.id, 'lightning');
       expect(decision.canContinue, isFalse);

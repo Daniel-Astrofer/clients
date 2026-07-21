@@ -78,7 +78,8 @@ Future<File> captureNativeScreen({
 Future<Uint8List?> _rasterizeTester(WidgetTester tester) async {
   try {
     // Prefer an explicit capture boundary if the harness inserted one.
-    final boundaryFinder = find.byKey(const ValueKey('visual_e2e_capture_root'));
+    final boundaryFinder =
+        find.byKey(const ValueKey('visual_e2e_capture_root'));
     RenderRepaintBoundary? boundary;
     if (boundaryFinder.evaluate().isNotEmpty) {
       boundary = tester.renderObject(boundaryFinder) as RenderRepaintBoundary;

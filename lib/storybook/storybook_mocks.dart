@@ -635,7 +635,8 @@ class MockTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<PaymentLink?> lookupPlatformLightningInvoice(String invoiceOrHash) async {
+  Future<PaymentLink?> lookupPlatformLightningInvoice(
+      String invoiceOrHash) async {
     return null;
   }
 

@@ -10,7 +10,8 @@ class PaymentLinkMovementProvider implements MovementEntryProvider {
   const PaymentLinkMovementProvider();
 
   @override
-  List<MovementEntry> entriesFor(BuildContext context, Wallet? wallet, MovementCapability caps) {
+  List<MovementEntry> entriesFor(
+      BuildContext context, Wallet? wallet, MovementCapability caps) {
     return [
       MovementEntry(
         id: 'payment_link',

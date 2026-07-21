@@ -4,7 +4,8 @@ import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 
 void main() {
-  test('merge by id keeps inbound and outbound with same chain txid as two rows',
+  test(
+      'merge by id keeps inbound and outbound with same chain txid as two rows',
       () {
     final local = [
       _tx(

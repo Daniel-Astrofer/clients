@@ -30,7 +30,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _probeLegacyMigration());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _probeLegacyMigration());
   }
 
   Future<void> _probeLegacyMigration() async {
@@ -171,7 +172,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     if (result.isSuccess) {
                                       AppNotice.showInfo(
                                         context,
-                                        title: context.tr.settingsDevicesPasskeyRegistered,
+                                        title: context.tr
+                                            .settingsDevicesPasskeyRegistered,
                                         message:
                                             'Chave do dispositivo vinculada. A lista foi atualizada.',
                                       );
@@ -185,7 +187,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     } else if (result.isFailure) {
                                       AppNotice.showError(
                                         context,
-                                        title: context.tr.settingsDevicesRegisterFail,
+                                        title: context
+                                            .tr.settingsDevicesRegisterFail,
                                         message: ErrorTranslator.translate(
                                           context.tr,
                                           result.message,
@@ -243,7 +246,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     onPressed: () => ref.invalidate(
                                       accountSecurityProfileProvider,
                                     ),
-                                    child: Text(context.tr.settingsDevicesRetry),
+                                    child:
+                                        Text(context.tr.settingsDevicesRetry),
                                   ),
                                 ],
                               ),

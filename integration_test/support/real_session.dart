@@ -56,7 +56,8 @@ Future<String> bootstrapTorRelay({TorService? tor}) async {
   try {
     final started = await service.start();
     if (!started) {
-      debugPrint('[visual-e2e] TorService.start returned false; trying relay anyway');
+      debugPrint(
+          '[visual-e2e] TorService.start returned false; trying relay anyway');
     }
   } catch (e) {
     debugPrint('[visual-e2e] TorService.start: $e');
@@ -75,7 +76,10 @@ Dio _dio(String baseUrl) {
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 45),
       receiveTimeout: const Duration(seconds: 45),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
       validateStatus: (s) => s != null && s < 500,
     ),
   );
@@ -106,17 +110,18 @@ Future<RealSession> createEphemeralSession(String apiBaseUrl) async {
     },
   );
   if (signupRes.statusCode != 200 && signupRes.statusCode != 201) {
-    throw StateError('Signup failed: ${signupRes.statusCode} ${signupRes.data}');
+    throw StateError(
+        'Signup failed: ${signupRes.statusCode} ${signupRes.data}');
   }
 
   final body = signupRes.data;
-  final otpUri =
-      body['otpUri'] ?? body['qrCodeUri'] ?? body['data']?['otpUri'];
+  final otpUri = body['otpUri'] ?? body['qrCodeUri'] ?? body['data']?['otpUri'];
   String? totpSecret;
   if (otpUri != null) {
     totpSecret = Uri.tryParse(otpUri.toString())?.queryParameters['secret'];
   }
-  totpSecret ??= (body['totpSecret'] ?? body['data']?['totpSecret'])?.toString();
+  totpSecret ??=
+      (body['totpSecret'] ?? body['data']?['totpSecret'])?.toString();
   if (totpSecret == null || totpSecret.isEmpty) {
     throw StateError('Signup did not return TOTP secret');
   }

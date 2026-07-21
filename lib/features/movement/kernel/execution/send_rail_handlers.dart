@@ -99,9 +99,8 @@ class PaymentLinkMovementHandler implements MovementHandler {
 
   @override
   Future<Object?> execute(SendExecuteContext context) {
-    final linkId = context.pendingPaymentLinkId ??
-        context.destination.paymentLinkId ??
-        '';
+    final linkId =
+        context.pendingPaymentLinkId ?? context.destination.paymentLinkId ?? '';
     return executePaymentLinkSend(
       confirmationContext: context.confirmationContext,
       ref: context.ref,
@@ -224,7 +223,8 @@ class OnchainMovementHandler implements MovementHandler {
         feeQuote: context.feeQuote,
         toAddress: context.toAddress,
         authResult: context.authResult,
-        showSentTransactionNotification: context.showSentTransactionNotification,
+        showSentTransactionNotification:
+            context.showSentTransactionNotification,
         resolveRecentDestinationLabel: context.resolveRecentDestinationLabel,
         isMounted: context.isMounted,
       );

@@ -95,7 +95,8 @@ class _AuthMotionEntranceState extends State<AuthMotionEntrance>
     if (total == Duration.zero) {
       return widget.child;
     }
-    final start = (delay.inMicroseconds / total.inMicroseconds).clamp(0.0, 0.98);
+    final start =
+        (delay.inMicroseconds / total.inMicroseconds).clamp(0.0, 0.98);
     final curved = CurvedAnimation(
       parent: _controller,
       curve: Interval(start, 1, curve: KeroseneMotion.entrance),

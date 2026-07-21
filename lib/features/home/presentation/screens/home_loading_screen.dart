@@ -14,8 +14,11 @@ import 'package:kerosene/features/financial_accounts/presentation/providers/wall
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     deferred as home;
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
+    deferred as send_money;
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
+import 'package:kerosene/core/navigation/deferred_page.dart';
 
 /// Single post-PIN loading surface: Tor dots only.
 ///
@@ -46,8 +49,12 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
   void initState() {
     super.initState();
 
-    // Preload home UI while dots are up so navigation never shows DeferredPage.
+    // Preload home + send while dots are up so first Enviar never loads mid-slide.
     unawaited(_preloadHomeLibrary());
+    unawaited(loadDeferredLibrary(
+      send_money.loadLibrary,
+      key: DeferredLibraryKeys.sendMoney,
+    ));
 
     _timeoutTimer = Timer(KeroseneMotion.loadingTimeout, () {
       if (mounted && !_hasError && !_isNavigating) {

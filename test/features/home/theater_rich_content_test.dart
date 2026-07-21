@@ -48,7 +48,8 @@ void main() {
             role: TheaterBlockRole.body,
             text: 'Hello world',
             spans: [
-              TheaterTextSpanMark(start: 0, end: 5, weight: TheaterTextWeight.bold),
+              TheaterTextSpanMark(
+                  start: 0, end: 5, weight: TheaterTextWeight.bold),
             ],
           ),
         ],

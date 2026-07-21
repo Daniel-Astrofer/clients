@@ -65,9 +65,7 @@ Future<Uint8List> buildStatementPdfBytes(List<Transaction> transactions) async {
                   tx.type.name,
                   _network(tx),
                   _direction(tx),
-                  (tx.isDebit
-                          ? -tx.signedDisplaySatoshis
-                          : tx.amountSatoshis)
+                  (tx.isDebit ? -tx.signedDisplaySatoshis : tx.amountSatoshis)
                       .toString(),
                   _party(tx),
                   _short(tx.blockchainTxid ?? ''),
@@ -149,8 +147,7 @@ Future<StatementExportResult> exportStatementPdf(
 
   try {
     final dir = await getTemporaryDirectory();
-    final stamp =
-        DateTime.now().toUtc().toIso8601String().replaceAll(':', '-');
+    final stamp = DateTime.now().toUtc().toIso8601String().replaceAll(':', '-');
     final file = File('${dir.path}/${filePrefix}_$stamp.pdf');
     await file.writeAsBytes(bytes, flush: true);
     await SharePlus.instance.share(

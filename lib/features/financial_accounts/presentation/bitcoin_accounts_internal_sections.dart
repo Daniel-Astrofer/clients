@@ -687,7 +687,7 @@ class CompactLoadingPanel extends StatelessWidget {
 
     return SizedBox(
       height: 88,
-        child: CupertinoActivityIndicator(color: colors.text, radius: 10),
+      child: CupertinoActivityIndicator(color: colors.text, radius: 10),
     );
   }
 }

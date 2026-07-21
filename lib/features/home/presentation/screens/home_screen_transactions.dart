@@ -27,8 +27,7 @@ ActivityFilter _mapHomeActivityFilter(HomeActivityFilter filter) {
   };
 }
 
-final filteredHomeTransactionsProvider =
-    Provider<List<Transaction>>((ref) {
+final filteredHomeTransactionsProvider = Provider<List<Transaction>>((ref) {
   ref.keepAlive();
   final transactionsAsync = ref.watch(transactionHistoryProvider);
   final lastHistory = ref.watch(lastTransactionHistoryProvider);
@@ -39,9 +38,8 @@ final filteredHomeTransactionsProvider =
 
   final filter = ref.watch(homeActivityFilterProvider);
   final walletState = ref.watch(walletProvider);
-  final wallets = walletState is WalletLoaded
-      ? walletState.wallets
-      : const <Wallet>[];
+  final wallets =
+      walletState is WalletLoaded ? walletState.wallets : const <Wallet>[];
   final accounts = ref.watch(bitcoinAccountsProvider).asData?.value ??
       const <BitcoinAccount>[];
   final archivedIds = ref.watch(activityArchiveProvider);
@@ -203,10 +201,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     return built;
   }
 
-  String _steadyTileCacheKey(Transaction tx, bool expanded) {
+  String _steadyTileCacheKey(Transaction tx) {
     return [
       tx.id,
-      expanded,
       tx.status.name,
       tx.displayStatus.name,
       tx.confirmations,
@@ -215,20 +212,19 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   }
 
   void _pruneSteadyTileCache(List<Transaction> txs) {
-    final live = <String>{
-      for (final tx in txs) ...[
-        _steadyTileCacheKey(tx, false),
-        _steadyTileCacheKey(tx, true),
-      ],
-    };
+    final live = <String>{for (final tx in txs) _steadyTileCacheKey(tx)};
     _steadyTileCache.removeWhere((key, _) => !live.contains(key));
   }
 
   Widget _steadyTile(Transaction tx, {required bool expanded}) {
-    final key = _steadyTileCacheKey(tx, expanded);
+    // Expanded cards must not come from a separate cache entry — that swaps the
+    // Element and drops collapse animation state. Same ValueKey → in-place update.
+    if (expanded) {
+      return _buildTransactionTile(tx, expanded: true);
+    }
     return _steadyTileCache.putIfAbsent(
-      key,
-      () => _buildTransactionTile(tx, expanded: expanded),
+      _steadyTileCacheKey(tx),
+      () => _buildTransactionTile(tx, expanded: false),
     );
   }
 
@@ -249,8 +245,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
     final lastSync = ref.watch(transactionHistoryLastSyncProvider);
     final isOnline = ref.watch(networkStatusProvider);
-    final hasWallet = ref.watch(walletProvider.select(
-        (state) => state is WalletLoaded && state.wallets.isNotEmpty));
+    final hasWallet = ref.watch(walletProvider
+        .select((state) => state is WalletLoaded && state.wallets.isNotEmpty));
     final hasBalance = ref.watch(walletProvider.select((state) {
       if (state is WalletLoaded) {
         final w = state.selectedWallet ??
@@ -286,8 +282,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     }
 
     final filterIsAll = selectedFilter == HomeActivityFilter.all;
-    final filterIsCancelled =
-        selectedFilter == HomeActivityFilter.cancelled;
+    final filterIsCancelled = selectedFilter == HomeActivityFilter.cancelled;
 
     if (filteredTxs.isNotEmpty) {
       _pruneSteadyTileCache(filteredTxs);
@@ -359,7 +354,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
               }
               return;
             }
-            unawaited(refreshFinancialProjectionUi(ref, forceFullHistory: true));
+            unawaited(
+                refreshFinancialProjectionUi(ref, forceFullHistory: true));
           },
           showAction: showPrimaryAction || showClearOnCancelled,
           subtleAction: showClearOnCancelled,
@@ -380,9 +376,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       if (filteredTxs.isEmpty) {
         return SliverToBoxAdapter(child: body);
       }
-      final tiles = _playEntranceReveal
-          ? _ensureEntranceCache(filteredTxs)
-          : null;
+      final tiles =
+          _playEntranceReveal ? _ensureEntranceCache(filteredTxs) : null;
       final count = filteredTxs.length;
       final AnimationController? entranceCtrl = _entrance;
       final bool animate = _playEntranceReveal && entranceCtrl != null;
@@ -390,7 +385,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
       Widget itemBuilder(BuildContext context, int index) {
         final tx = filteredTxs[index];
-        
+
         final expanded = _expandedTransactionIds.contains(tx.id);
         final tile = tiles != null && index < tiles.length
             ? tiles[index]
@@ -435,7 +430,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (index > 0) SizedBox(height: homeSize(AppSpacing.base) - gap),
+                  if (index > 0)
+                    SizedBox(height: homeSize(AppSpacing.base) - gap),
                   Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
                   SizedBox(height: homeSize(AppSpacing.sm)),
                   revealed,
@@ -520,7 +516,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           : animate
               ? _buildTransactionTile(tx, expanded: expanded)
               : _steadyTile(tx, expanded: expanded);
-      
+
       final cachedTile = RepaintBoundary(child: tile);
 
       Widget? dateHeader;
@@ -607,7 +603,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
   }
 
-
   Widget _buildTransactionTile(
     Transaction tx, {
     required bool expanded,
@@ -621,6 +616,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       button: true,
       excludeSemantics: true,
       child: StatementTransactionCard(
+        key: ValueKey('home_tx_${tx.id}'),
         transaction: tx,
         expanded: expanded,
         mode: StatementTransactionCardMode.stacked,
@@ -628,7 +624,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() {
-            if (expanded) {
+            if (_expandedTransactionIds.contains(tx.id)) {
               _expandedTransactionIds.remove(tx.id);
             } else {
               _expandedTransactionIds.add(tx.id);
@@ -639,7 +635,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
   }
 }
-
 
 /// Skeleton for the home transaction feed.
 ///
@@ -845,6 +840,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
   final IconData actionIcon;
   final VoidCallback onAction;
   final bool showAction;
+
   /// Quiet text control (e.g. clear cancelled filter) instead of filled CTA.
   final bool subtleAction;
   final bool blackSurface;
@@ -910,7 +906,8 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             ),
           ),
           if (showAction) ...[
-            SizedBox(height: homeSize(subtleAction ? AppSpacing.md : AppSpacing.lg)),
+            SizedBox(
+                height: homeSize(subtleAction ? AppSpacing.md : AppSpacing.lg)),
             if (subtleAction)
               Center(
                 child: TextButton(

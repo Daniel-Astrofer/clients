@@ -79,7 +79,8 @@ void main() {
       expect(brlPrice, isNull);
     });
 
-    test('calculates BRL price when real usdBrl rate is provided by backend', () {
+    test('calculates BRL price when real usdBrl rate is provided by backend',
+        () {
       final container = ProviderContainer(
         overrides: [
           latestBtcPriceProvider.overrideWith((ref) => 60000.0),

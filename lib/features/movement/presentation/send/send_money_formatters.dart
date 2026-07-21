@@ -91,7 +91,8 @@ String _recentInternalDestinationKindLabel(
   return recentDestinationKindLabel(kind);
 }
 
-String formatBtcValue(double value, {int decimalPlaces = 8, Locale? appLocale}) {
+String formatBtcValue(double value,
+    {int decimalPlaces = 8, Locale? appLocale}) {
   return MoneyDisplay.format(
     amount: value,
     currency: Currency.btc,

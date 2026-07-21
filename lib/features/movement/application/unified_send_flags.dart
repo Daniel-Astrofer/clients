@@ -21,7 +21,8 @@ const String kUnifiedSendV2PrefsKey = 'feature.unified_send_v2';
 final unifiedSendV2EnabledProvider = Provider<bool>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   if (prefs.containsKey(kUnifiedSendV2PrefsKey)) {
-    return prefs.getBool(kUnifiedSendV2PrefsKey) ?? kUnifiedSendV2CompileDefault;
+    return prefs.getBool(kUnifiedSendV2PrefsKey) ??
+        kUnifiedSendV2CompileDefault;
   }
   return kUnifiedSendV2CompileDefault;
 });

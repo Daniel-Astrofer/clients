@@ -68,7 +68,8 @@ class NotificationsScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CupertinoActivityIndicator(radius: 10)),
+        loading: () =>
+            const Center(child: CupertinoActivityIndicator(radius: 10)),
         error: (err, stack) => Center(
           child: Text(
             AdminCopy.loadFailure('notificações'),

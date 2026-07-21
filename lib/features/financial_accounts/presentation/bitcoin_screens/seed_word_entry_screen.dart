@@ -10,6 +10,7 @@ import 'package:kerosene/features/financial_accounts/domain/services/electrum_se
 class SeedImportResult {
   final String mnemonic;
   final String passphrase;
+
   /// When true, phrase words are BIP39-english but checksum is non-standard.
   final bool allowInvalidChecksum;
 
@@ -99,7 +100,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
 
     setState(() {
       _suggestions = matches;
-      _inlineError = matches.isEmpty ? 'Palavra fora da lista BIP39 inglesa' : null;
+      _inlineError =
+          matches.isEmpty ? 'Palavra fora da lista BIP39 inglesa' : null;
     });
   }
 
@@ -206,9 +208,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
       return;
     }
     final words = parsed.words;
-    final count = words.length == 24
-        ? 24
-        : (words.length == 12 ? 12 : words.length);
+    final count =
+        words.length == 24 ? 24 : (words.length == 12 ? 12 : words.length);
     HapticFeedback.mediumImpact();
     setState(() {
       _totalWords = count;
@@ -466,8 +467,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         const SizedBox(height: 12),
                         TextButton(
                           onPressed: () {
-                            final tokens =
-                                Bip39MnemonicUtils.tokenize(_pasteController.text);
+                            final tokens = Bip39MnemonicUtils.tokenize(
+                                _pasteController.text);
                             if (tokens.isEmpty) return;
                             tokens[tokens.length - 1] = _suggestedLastWord!;
                             _pasteController.text = tokens.join(' ');
@@ -541,8 +542,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           _suggestions.first == tokens.first) {
                         // Only auto-accept when the typed token is the full word.
                         _confirmWord(_suggestions.first);
-                      } else if (_suggestions.contains(
-                          tokens.isEmpty ? '' : tokens.first)) {
+                      } else if (_suggestions
+                          .contains(tokens.isEmpty ? '' : tokens.first)) {
                         _confirmWord(tokens.first);
                       } else {
                         setState(() {
@@ -581,8 +582,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                             color: Colors.white,
                           ),
                           decoration: InputDecoration(
-                            hintText:
-                                context.tr.seedPassphrase25th,
+                            hintText: context.tr.seedPassphrase25th,
                             hintStyle: AppTypography.bodySmall.copyWith(
                               color: Colors.white38,
                             ),
@@ -630,8 +630,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () =>
-                              _finish(forceInvalidChecksum: true),
+                          onPressed: () => _finish(forceInvalidChecksum: true),
                           child: Text(
                             context.tr.seedImportLiteralInvalidChecksum,
                             style: AppTypography.bodySmall.copyWith(
@@ -673,8 +672,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
               Expanded(
                 child: _complete
                     ? const SizedBox.shrink()
-                    : _suggestions.isEmpty &&
-                            _wordController.text.isNotEmpty
+                    : _suggestions.isEmpty && _wordController.text.isNotEmpty
                         ? Center(
                             child: Text(
                               _inlineError ?? 'Palavra inválida',
@@ -700,8 +698,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                                     color: Colors.transparent,
                                     borderRadius: BorderRadius.circular(30),
                                     border: Border.all(
-                                      color: Colors.white
-                                          .withValues(alpha: 0.2),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.2),
                                     ),
                                   ),
                                   child: Text(
@@ -746,8 +744,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         alignment: WrapAlignment.center,
-                        children:
-                            List.generate(_selectedWords.length, (index) {
+                        children: List.generate(_selectedWords.length, (index) {
                           return Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -802,9 +799,8 @@ class _WordCountChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.25),
+            color:
+                selected ? Colors.white : Colors.white.withValues(alpha: 0.25),
           ),
           color: selected
               ? Colors.white.withValues(alpha: 0.12)

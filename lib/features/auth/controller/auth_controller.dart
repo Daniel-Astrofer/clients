@@ -748,8 +748,7 @@ class AuthController extends Notifier<AuthState> {
       return true;
     }
     final data = failure.data;
-    if (data is Map &&
-        data['action']?.toString() == 'CONFIRM_UNLINK_DEVICE') {
+    if (data is Map && data['action']?.toString() == 'CONFIRM_UNLINK_DEVICE') {
       return true;
     }
     return false;

@@ -116,7 +116,9 @@ class TransactionLedgerAdapter {
       status: _toTxStatus(row.status),
       type: shell.type,
       // Lightning/internal never carry block confirmations through the ledger.
-      confirmations: shell.isLightningEffective || shell.isInternal || a.isLightningEffective
+      confirmations: shell.isLightningEffective ||
+              shell.isInternal ||
+              a.isLightningEffective
           ? 0
           : row.confirmations,
       timestamp: row.createdAt,

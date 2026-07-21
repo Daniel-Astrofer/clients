@@ -61,9 +61,12 @@ class TxStatus extends Equatable {
     final rawGrossAmountSats = (data['grossAmountSats'] as num?)?.toInt() ??
         (data['amountSats'] as num?)?.toInt() ??
         (data['amountSatoshis'] as num?)?.toInt();
-    final receiverAmountSats = (rawReceiverAmountSats != null && rawReceiverAmountSats > 0)
-        ? rawReceiverAmountSats
-        : (rawGrossAmountSats != null && rawGrossAmountSats > 0 ? rawGrossAmountSats : rawReceiverAmountSats);
+    final receiverAmountSats =
+        (rawReceiverAmountSats != null && rawReceiverAmountSats > 0)
+            ? rawReceiverAmountSats
+            : (rawGrossAmountSats != null && rawGrossAmountSats > 0
+                ? rawGrossAmountSats
+                : rawReceiverAmountSats);
     final totalDebitSats = (data['totalDebitSats'] as num?)?.toInt();
 
     return TxStatus(

@@ -139,20 +139,18 @@ List<Transaction> _mergeExternalHistory({
     final ph = (t.paymentHash ?? '').trim().toLowerCase();
     if (ph.isNotEmpty) kfeRefs.add(ph);
   }
-  final uniqueExternal = externalTransfers
-      .map((t) => t.toTransaction())
-      .where((t) {
-        final id = t.id.trim().toLowerCase();
-        if (id.isNotEmpty && kfeIds.contains(id)) return false;
-        final txid = (t.blockchainTxid ?? '').trim().toLowerCase();
-        if (txid.isNotEmpty && kfeRefs.contains(txid)) return false;
-        final ph = (t.paymentHash ?? '').trim().toLowerCase();
-        if (ph.isNotEmpty && kfeRefs.contains(ph)) return false;
-        // Drop dashboard-mirrored KFE rows (provider KFE + UUID id style).
-        if ((t.provider ?? '').toUpperCase() == 'KFE') return false;
-        return true;
-      })
-      .toList(growable: false);
+  final uniqueExternal =
+      externalTransfers.map((t) => t.toTransaction()).where((t) {
+    final id = t.id.trim().toLowerCase();
+    if (id.isNotEmpty && kfeIds.contains(id)) return false;
+    final txid = (t.blockchainTxid ?? '').trim().toLowerCase();
+    if (txid.isNotEmpty && kfeRefs.contains(txid)) return false;
+    final ph = (t.paymentHash ?? '').trim().toLowerCase();
+    if (ph.isNotEmpty && kfeRefs.contains(ph)) return false;
+    // Drop dashboard-mirrored KFE rows (provider KFE + UUID id style).
+    if ((t.provider ?? '').toUpperCase() == 'KFE') return false;
+    return true;
+  }).toList(growable: false);
 
   final extras = <Transaction>[...uniqueExternal, ...linkRows];
   final merged = extras.isEmpty
@@ -1469,12 +1467,12 @@ Future<void> _tryAutoEnrollDeviceKey({
   required String username,
 }) async {
   try {
-    final caps =
-        await DeviceCredentialCapabilitiesResolver.instance.resolve();
+    final caps = await DeviceCredentialCapabilitiesResolver.instance.resolve();
     if (!caps.canEnrollDeviceCredential) {
       return;
     }
-    final start = await ref.read(authRepositoryProvider).deviceKeyRegisterStart();
+    final start =
+        await ref.read(authRepositoryProvider).deviceKeyRegisterStart();
     final challengeJson = start.fold((_) => null, (v) => v);
     if (challengeJson == null) return;
 
@@ -1484,8 +1482,9 @@ Future<void> _tryAutoEnrollDeviceKey({
       username: username,
       sessionId: '',
     );
-    final finish =
-        await ref.read(authRepositoryProvider).deviceKeyRegisterFinish(credential);
+    final finish = await ref
+        .read(authRepositoryProvider)
+        .deviceKeyRegisterFinish(credential);
     finish.fold((_) {}, (_) {
       // Bound locally for subsequent signs.
     });
@@ -1500,9 +1499,9 @@ Future<DeviceKeyChallenge> _fetchDeviceKeyAuthChallenge({
 }) async {
   try {
     final response = await ref.read(apiClientProvider).get(
-          AppConfig.authDeviceKeyChallenge,
-          queryParameters: {'username': username},
-        );
+      AppConfig.authDeviceKeyChallenge,
+      queryParameters: {'username': username},
+    );
     final data = response.data;
     if (data is Map<String, dynamic>) {
       final challenge = DeviceKeyChallenge.fromJson(data);

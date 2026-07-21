@@ -48,10 +48,8 @@ class Bip39MnemonicUtils {
         .toList(growable: false);
   }
 
-  static String joinWords(Iterable<String> words) => words
-      .map(_normalizeToken)
-      .where((w) => w.isNotEmpty)
-      .join(' ');
+  static String joinWords(Iterable<String> words) =>
+      words.map(_normalizeToken).where((w) => w.isNotEmpty).join(' ');
 
   /// Validates and returns a normalized phrase, or a structured error.
   ///
@@ -72,8 +70,7 @@ class Bip39MnemonicUtils {
     if (!supportedWordCounts.contains(words.length)) {
       return Bip39MnemonicParseResult.invalid(
         code: Bip39MnemonicErrorCode.wordCount,
-        message:
-            'São ${words.length} palavras. Use 12 ou 24 (BIP39). '
+        message: 'São ${words.length} palavras. Use 12 ou 24 (BIP39). '
             'Se a carteira for Electrum com seed próprio, não é BIP39.',
         words: words,
       );
@@ -86,14 +83,11 @@ class Bip39MnemonicUtils {
       }
     }
     if (unknown.isNotEmpty) {
-      final preview = unknown
-          .take(3)
-          .map((i) => '#${i + 1} “${words[i]}”')
-          .join(', ');
+      final preview =
+          unknown.take(3).map((i) => '#${i + 1} “${words[i]}”').join(', ');
       return Bip39MnemonicParseResult.invalid(
         code: Bip39MnemonicErrorCode.unknownWord,
-        message:
-            'Palavra(s) fora da lista BIP39 inglesa: $preview. '
+        message: 'Palavra(s) fora da lista BIP39 inglesa: $preview. '
             'Confira typos (ex.: abandon ≠ abandoned).',
         words: words,
         problemIndexes: unknown,
@@ -115,8 +109,7 @@ class Bip39MnemonicUtils {
           : ' Se a última palavra for typo, o checksum da mesma entropia pede “${suggestion.lastWord}”.';
       return Bip39MnemonicParseResult.invalid(
         code: Bip39MnemonicErrorCode.checksum,
-        message:
-            'As palavras existem no BIP39, mas o checksum não fecha.$hint '
+        message: 'As palavras existem no BIP39, mas o checksum não fecha.$hint '
             'Ordem errada, typo (ex.: pole/poem), ou carteira que aceita seed sem checksum. '
             'Use “Importar mesmo assim” só se o backup for literalmente esta frase.',
         words: words,

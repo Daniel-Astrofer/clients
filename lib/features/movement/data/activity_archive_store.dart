@@ -27,7 +27,10 @@ class ActivityArchiveStore {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return {};
-      return decoded.map((e) => e.toString()).where((e) => e.isNotEmpty).toSet();
+      return decoded
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty)
+          .toSet();
     } catch (_) {
       return {};
     }

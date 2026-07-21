@@ -33,7 +33,9 @@ class SessionNotificationSidebar extends ConsumerWidget {
     final clearLabel = context.tr.notifCenterClear;
     final emptyStateTitle = context.tr.notifCenterEmptyAlerts;
     final emptyStateMessage = context.tr.notifSidebarEmptyHint;
-    final alertLabel = unreadCount == 1 ? context.tr.notifSidebarUnreadSingular : context.tr.notifSidebarUnreadPlural;
+    final alertLabel = unreadCount == 1
+        ? context.tr.notifSidebarUnreadSingular
+        : context.tr.notifSidebarUnreadPlural;
     final unreadLabel = '$unreadCount $alertLabel';
     final responsive = context.responsive;
     final sidebarWidth = math.min(
@@ -212,8 +214,10 @@ class SessionNotificationSidebar extends ConsumerWidget {
                           child: Stack(
                             children: [
                               PushNotificationCard(
-                                title: NotificationTranslator.resolveTitle(context, item),
-                                message: NotificationTranslator.resolveBody(context, item),
+                                title: NotificationTranslator.resolveTitle(
+                                    context, item),
+                                message: NotificationTranslator.resolveBody(
+                                    context, item),
                                 footerLabel: buildNotificationFooterLabel(
                                   context,
                                   item,
@@ -270,7 +274,6 @@ class SessionNotificationSidebar extends ConsumerWidget {
       ),
     );
   }
-
 
   String _footerLabel(BuildContext context, DateTime timestamp) {
     final now = DateTime.now();

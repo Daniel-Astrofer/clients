@@ -184,8 +184,7 @@ class _LedgerTelemetryRow extends ConsumerWidget {
       data: (s) => SettingsSectionRow(
         icon: KeroseneIcons.history,
         title: context.tr.settingsSecurityLedgerDiagTitle,
-        subtitle:
-            'Pulls: ${s.fullPulls} full / ${s.incrementalPulls} incr. · '
+        subtitle: 'Pulls: ${s.fullPulls} full / ${s.incrementalPulls} incr. · '
             'offline: ${s.offlineServed} · fallback: ${s.statementFallback} · '
             'MAC: ${s.macDiscarded} · conf↑: ${s.mergeUpgraded}',
         onTap: () async {
@@ -370,7 +369,8 @@ class _SecurityAdvancedContent extends StatelessWidget {
               icon: KeroseneIcons.verified,
               title: context.tr.settingsSecurityTotpTitle,
               subtitle: profile.requiresTotp
-                  ? context.tr.settingsSecurityTotpOn(settingsSecurityModeLabel(profile.mode))
+                  ? context.tr.settingsSecurityTotpOn(
+                      settingsSecurityModeLabel(profile.mode))
                   : context.tr.settingsSecurityTotpOff,
               onTap: onOpenTotpSecurity,
             ),
@@ -386,7 +386,8 @@ class _SecurityAdvancedContent extends StatelessWidget {
               subtitle: firstDevice == null
                   ? context.tr.settingsSecurityNoPasskeyDevice
                   : deviceCount == 1
-                      ? context.tr.settingsSecurityOneDeviceManage(firstDevice.deviceName)
+                      ? context.tr.settingsSecurityOneDeviceManage(
+                          firstDevice.deviceName)
                       : context.tr.settingsSecurityNDevicesManage(deviceCount),
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -436,7 +437,8 @@ class _SecurityAdvancedContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          context.tr.settingsSecurityAppPinLabel(settingsPinAttemptsLabel(appPin)),
+          context.tr
+              .settingsSecurityAppPinLabel(settingsPinAttemptsLabel(appPin)),
           style: AppTypography.inter(
             color: KeroseneBrandTokens.textMuted,
             fontSize: 12,

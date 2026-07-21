@@ -207,6 +207,7 @@ class RegisterColdWalletResult {
 /// Navigation outcome after create/import success (hub / wizard).
 class ColdWalletFlowOutcome {
   final RegisterColdWalletResult registration;
+
   /// When true, open unified [SendMoneyScreen] with the new wallet.
   final bool openSend;
 

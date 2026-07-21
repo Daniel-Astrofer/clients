@@ -91,8 +91,8 @@ class _TorLoadingDotsState extends State<TorLoadingDots>
 
     // Fixed box: layout never shifts. Vertical travel is optional; scale/alpha
     // always pulse so travel:0 still looks alive.
-    final boxHeight = widget.dotSize +
-        (travel > 0 ? travel : widget.dotSize * 0.4);
+    final boxHeight =
+        widget.dotSize + (travel > 0 ? travel : widget.dotSize * 0.4);
     return SizedBox(
       width: width,
       height: boxHeight,

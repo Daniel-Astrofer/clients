@@ -466,9 +466,7 @@ String resolveTransactionToParty(
       memo.contains('carteira fria') ||
       memo.contains('detectado');
   if (isColdExternal) {
-    return compactHash
-        ? l10n.txListPartyOffApp
-        : l10n.txListPartyOnchainOffApp;
+    return compactHash ? l10n.txListPartyOffApp : l10n.txListPartyOnchainOffApp;
   }
 
   final txid = tx.blockchainTxid?.trim() ?? '';

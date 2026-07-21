@@ -21,8 +21,10 @@ class TheaterSchedulerContext {
   final String? userId;
   final String lang;
   final Set<String> tags;
+
   /// True when receive / high-priority local stage is live.
   final bool highPriorityBusy;
+
   /// Milliseconds since home stage went idle (null if still active).
   final Duration? idleFor;
 
@@ -85,7 +87,8 @@ TheaterCatalogPiece? pickNextTheaterPiece({
   }
 
   if (session.lastEducationAt != null &&
-      clock.difference(session.lastEducationAt!) < config.minGapBetweenEducation) {
+      clock.difference(session.lastEducationAt!) <
+          config.minGapBetweenEducation) {
     return null;
   }
 

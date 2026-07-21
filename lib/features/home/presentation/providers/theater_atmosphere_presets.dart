@@ -218,7 +218,10 @@ TheaterAtmospherePreset? parseTheaterAtmospherePreset(String? raw) {
     'positive' || 'success' || 'receive' => TheaterAtmospherePreset.positive,
     'brand' || 'warm' || 'product' => TheaterAtmospherePreset.brand,
     'marketup' || 'market_up' || 'up' => TheaterAtmospherePreset.marketUp,
-    'marketdown' || 'market_down' || 'down' => TheaterAtmospherePreset.marketDown,
+    'marketdown' ||
+    'market_down' ||
+    'down' =>
+      TheaterAtmospherePreset.marketDown,
     _ => null,
   };
 }

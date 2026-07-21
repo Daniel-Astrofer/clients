@@ -50,8 +50,8 @@ class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = ref.watch(appEntryPinUnlockedProvider) ||
-        AppEntryPinSession.unlocked;
+    final unlocked =
+        ref.watch(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked;
     if (unlocked) {
       if (!ref.read(appEntryPinUnlockedProvider) &&
           AppEntryPinSession.unlocked) {
@@ -285,7 +285,8 @@ class _AppEntryPinLockScreen extends ConsumerStatefulWidget {
       _AppEntryPinLockScreenState();
 }
 
-class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> {
+class _AppEntryPinLockScreenState
+    extends ConsumerState<_AppEntryPinLockScreen> {
   final ValueNotifier<String> _pinNotifier = ValueNotifier('');
   final ValueNotifier<String?> _errorNotifier = ValueNotifier(null);
 
@@ -295,12 +296,15 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
   set _errorMessage(String? val) => _errorNotifier.value = val;
 
   bool _busy = false;
+
   /// Captured at first frame — never changes mid-entry (no provider watch).
   late final int _minPinLength = widget.status.minPinLength.clamp(4, 8);
   late final int _maxPinLength = widget.status.maxPinLength.clamp(4, 8);
+
   /// When min==max we know the length → auto-submit. Otherwise wait for confirm.
   late final bool _fixedLength = _minPinLength == _maxPinLength;
-  late final int _pinTargetLength = _fixedLength ? _minPinLength : _maxPinLength;
+  late final int _pinTargetLength =
+      _fixedLength ? _minPinLength : _maxPinLength;
 
   @override
   void dispose() {
@@ -455,8 +459,7 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
         msg.contains('pin numerico incorreto') ||
         msg.contains('pin incorreto') ||
         msg.contains('pin atual incorreto');
-    final isLocked =
-        code == 'AUTH_020' || code == 'ERR_AUTH_APP_PIN_LOCKED';
+    final isLocked = code == 'AUTH_020' || code == 'ERR_AUTH_APP_PIN_LOCKED';
     // Server has no PIN for this device hash (common on new Linux/desktop
     // installs). Flip local hint to setup — keep the digits already typed so
     // the user only confirms once (no full re-create after unlock attempt).
@@ -519,11 +522,10 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen> 
           onDelete: _deleteDigit,
           // Confirm always available when length is flexible; with fixed length
           // auto-submit covers most cases but confirm still works as fallback.
-          onConfirm: widget.status.locked ||
-                  _busy ||
-                  _pin.length < _minPinLength
-              ? null
-              : _submit,
+          onConfirm:
+              widget.status.locked || _busy || _pin.length < _minPinLength
+                  ? null
+                  : _submit,
           onCancel: () async {
             await ref.read(authControllerProvider.notifier).logout();
           },

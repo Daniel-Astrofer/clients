@@ -17,8 +17,7 @@ abstract final class NativeNotificationChannels {
 
   static const transactionsDesc =
       'Recebimentos, envios e depósitos Bitcoin em tempo real.';
-  static const securityDesc =
-      'Login, recuperação e alertas críticos de conta.';
+  static const securityDesc = 'Login, recuperação e alertas críticos de conta.';
   static const systemDesc = 'Avisos gerais da plataforma Kerosene.';
   static const foregroundDesc =
       'Mantém o monitoramento de carteiras com o app em segundo plano.';
@@ -126,7 +125,9 @@ class NativeNotificationPresenter {
         ),
       NativeNotificationFamily.system => (
           _shortTitle(resolvedTitle, fallback: 'Kerosene'),
-          resolvedBody.trim().isEmpty ? 'Atualização da plataforma.' : resolvedBody.trim(),
+          resolvedBody.trim().isEmpty
+              ? 'Atualização da plataforma.'
+              : resolvedBody.trim(),
           'Kerosene',
         ),
     };
@@ -233,7 +234,6 @@ class NativeNotificationPresenter {
     return NativeNotificationFamily.system;
   }
 
-
   static String _securityBody(String body) {
     final t = body.trim();
     if (t.isEmpty) {
@@ -249,14 +249,12 @@ class NativeNotificationPresenter {
     return '${t.substring(0, 45)}…';
   }
 
-
   static String? _extractAmountLabel(
     Map<String, String> metadata,
     String body,
   ) {
-    final rawBtc = metadata['amount'] ??
-        metadata['amountBtc'] ??
-        metadata['amount_btc'];
+    final rawBtc =
+        metadata['amount'] ?? metadata['amountBtc'] ?? metadata['amount_btc'];
     if (rawBtc != null && rawBtc.trim().isNotEmpty) {
       return '${_trimZeros(rawBtc.trim())} BTC';
     }
@@ -303,11 +301,12 @@ class NativeNotificationPresenter {
     String title,
     String body,
   ) {
-    final rail = (metadata['rail'] ?? metadata['network'] ?? '')
-        .trim()
-        .toUpperCase();
+    final rail =
+        (metadata['rail'] ?? metadata['network'] ?? '').trim().toUpperCase();
     if (rail.contains('LIGHT')) return 'Lightning';
-    if (rail.contains('ONCHAIN') || rail.contains('ON-CHAIN') || rail == 'BTC') {
+    if (rail.contains('ONCHAIN') ||
+        rail.contains('ON-CHAIN') ||
+        rail == 'BTC') {
       return 'On-chain';
     }
     if (rail.contains('INTERNAL')) return 'Interna';

@@ -28,7 +28,7 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Material(
-        color: AppColors.hexFF141517, // homeCardColor
+        color: Theme.of(context).colorScheme.surface, // homeCardColor
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -41,7 +41,7 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.hexFF2A2A2A, // homePanelBorderColor
+                color: Theme.of(context).dividerColor, // homePanelBorderColor
                 width: 1,
               ),
             ),
@@ -166,7 +166,8 @@ class _SegmentedPieChartPainter extends CustomPainter {
       ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
 
-    double startAngle = -math.pi / 2 + gapAngle / 2; // start from top (12 o'clock)
+    double startAngle =
+        -math.pi / 2 + gapAngle / 2; // start from top (12 o'clock)
 
     for (int i = 0; i < totalSteps; i++) {
       paint.color = i < completedSteps ? activeColor : inactiveColor;

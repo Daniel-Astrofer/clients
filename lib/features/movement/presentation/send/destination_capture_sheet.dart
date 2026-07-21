@@ -18,14 +18,16 @@ class DestinationCaptureSheet extends StatelessWidget {
   });
 
   /// Shows the sheet and returns a non-empty payment payload, or null if cancelled.
-  static Future<String?> show(BuildContext context, {bool? nfcSupported}) async {
+  static Future<String?> show(BuildContext context,
+      {bool? nfcSupported}) async {
     final supported = nfcSupported ?? await keroseneDeviceSupportsNfc();
     if (!context.mounted) return null;
     return showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) => DestinationCaptureSheet(nfcSupported: supported),
+      builder: (sheetContext) =>
+          DestinationCaptureSheet(nfcSupported: supported),
     );
   }
 
@@ -305,4 +307,3 @@ class _CaptureOption extends StatelessWidget {
     );
   }
 }
-

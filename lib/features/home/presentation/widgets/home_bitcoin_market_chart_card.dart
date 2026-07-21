@@ -105,7 +105,8 @@ class _HomeBitcoinMarketChartCardState
     final displayPoint =
         selectedPoint ?? (points.isNotEmpty ? points.last : null);
     final isPositive = snapshot.isPositivePeriod;
-    final trendColor = isPositive ? homePositiveColor : AppColors.hexFFFF5A67;
+    final trendColor =
+        isPositive ? homePositiveColor : Theme.of(context).colorScheme.error;
 
     final displayPrice = displayPoint?.price ?? snapshot.lastPrice;
     final money = ref.watch(moneyFormatConfigProvider);
@@ -245,8 +246,11 @@ class _HomeBitcoinMarketChartCardState
                                       lineStrokeWidth: _lineStrokeWidth,
                                       lineGlowWidth: _lineGlowWidth,
                                       lineGlowAlpha: _lineGlowAlpha,
-                                      labelColor:
-                                          Colors.white.withValues(alpha: 0.42),
+                                      labelColor: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.surface,
                                       priceLabelFormatter: (value) =>
                                           _compactPrice(
                                         value,
@@ -349,7 +353,7 @@ class _HomeBitcoinMarketChartCardState
                 painter: _BitcoinLoadingChartPainter(
                   padding: _chartPadding,
                   lineColor: homePositiveColor.withValues(alpha: 0.4),
-                  gridColor: AppColors.hexFF2A2A2A,
+                  gridColor: Theme.of(context).dividerColor,
                 ),
               ),
             ),
@@ -440,7 +444,7 @@ class _HomeBitcoinMarketChartCardState
     final current = ref.read(homeBitcoinMarketChartCustomDaysProvider) ?? 90;
     final picked = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: AppColors.hexFF0E0E0E,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(homeSize(16))),
       ),
@@ -799,6 +803,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
   final double lineGlowWidth;
   final double lineGlowAlpha;
   final Color labelColor;
+  final Color backgroundColor;
   final String Function(double value) priceLabelFormatter;
   final String Function(DateTime time) timeLabelFormatter;
 
@@ -812,6 +817,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     required this.lineGlowWidth,
     required this.lineGlowAlpha,
     required this.labelColor,
+    required this.backgroundColor,
     required this.priceLabelFormatter,
     required this.timeLabelFormatter,
   });
@@ -997,7 +1003,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
       Offset(offset.dx, plotRect.bottom),
       selectionPaint,
     );
-    canvas.drawCircle(offset, 5.5, Paint()..color = AppColors.hexFF0E0E0E);
+    canvas.drawCircle(offset, 5.5, Paint()..color = backgroundColor);
     canvas.drawCircle(offset, 4.0, Paint()..color = Colors.white);
     canvas.drawCircle(offset, 2.6, Paint()..color = accent);
   }

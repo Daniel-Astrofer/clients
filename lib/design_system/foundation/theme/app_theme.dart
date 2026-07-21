@@ -11,10 +11,13 @@ class AppRadius {
   static final BorderRadius small = BorderRadius.circular(AppSpacing.sm);
   static final BorderRadius medium = BorderRadius.circular(AppSpacing.md);
   static final BorderRadius large = BorderRadius.circular(AppSpacing.lg);
+
   /// Text fields / compact controls.
   static final BorderRadius input = BorderRadius.circular(14);
+
   /// Information cards / panels.
   static final BorderRadius card = BorderRadius.circular(24);
+
   /// Primary CTAs (pill).
   static final BorderRadius pill = BorderRadius.circular(999);
 }
@@ -39,7 +42,7 @@ class AppShadows {
   ];
 }
 
-class AppThemePalette {
+class AppThemePalette extends ThemeExtension<AppThemePalette> {
   final Color background;
   final Color backgroundTop;
   final Color backgroundMid;
@@ -63,6 +66,47 @@ class AppThemePalette {
         end: Alignment.bottomCenter,
         colors: [backgroundTop, backgroundMid, backgroundBottom],
       );
+
+  @override
+  ThemeExtension<AppThemePalette> copyWith({
+    Color? background,
+    Color? backgroundTop,
+    Color? backgroundMid,
+    Color? backgroundBottom,
+    Color? surface,
+    Color? border,
+    Color? inputFill,
+  }) {
+    return AppThemePalette(
+      background: background ?? this.background,
+      backgroundTop: backgroundTop ?? this.backgroundTop,
+      backgroundMid: backgroundMid ?? this.backgroundMid,
+      backgroundBottom: backgroundBottom ?? this.backgroundBottom,
+      surface: surface ?? this.surface,
+      border: border ?? this.border,
+      inputFill: inputFill ?? this.inputFill,
+    );
+  }
+
+  @override
+  ThemeExtension<AppThemePalette> lerp(
+    covariant ThemeExtension<AppThemePalette>? other,
+    double t,
+  ) {
+    if (other is! AppThemePalette) {
+      return this;
+    }
+    return AppThemePalette(
+      background: Color.lerp(background, other.background, t)!,
+      backgroundTop: Color.lerp(backgroundTop, other.backgroundTop, t)!,
+      backgroundMid: Color.lerp(backgroundMid, other.backgroundMid, t)!,
+      backgroundBottom:
+          Color.lerp(backgroundBottom, other.backgroundBottom, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      inputFill: Color.lerp(inputFill, other.inputFill, t)!,
+    );
+  }
 }
 
 class AppTheme {
@@ -147,6 +191,7 @@ class AppTheme {
       scaffoldBackgroundColor: palette.background,
       canvasColor: palette.background,
       dividerColor: palette.border,
+      extensions: [palette, SendFlowTheme.dark()],
       fontFamily: AppTypography.fontFamily,
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -324,9 +369,6 @@ class AppTheme {
         actionTextColor: filledForeground,
         disabledActionTextColor: filledForeground.withValues(alpha: 0.48),
       ),
-      extensions: <ThemeExtension<dynamic>>[
-        SendFlowTheme.dark(),
-      ],
     );
   }
 

@@ -835,7 +835,8 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
       ),
       child: Column(
         children: [
-          _buildDetailRow(context.tr.sendReviewDestination, _shortenAddress(widget.wallet.address)),
+          _buildDetailRow(context.tr.sendReviewDestination,
+              _shortenAddress(widget.wallet.address)),
           const SizedBox(height: 16),
           Divider(color: _border.withValues(alpha: 0.6), height: 1),
           const SizedBox(height: 16),

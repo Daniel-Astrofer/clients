@@ -208,7 +208,8 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
         final isSideBySide = wallets.length > 1 && wallets.length <= 3;
         final isSingle = wallets.length <= 1;
 
-        Widget itemBuilder(Wallet wallet, {required bool fill, required bool isRow}) {
+        Widget itemBuilder(Wallet wallet,
+            {required bool fill, required bool isRow}) {
           final selected = _sameWallet(wallet, selectedWallet);
           final tile = WalletHoldSelectionTile(
             wallet: wallet,
@@ -280,7 +281,8 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
       if (loaded != null) return loaded;
     }
     if (walletState.wallets.length == 3) {
-      final insured = walletState.wallets.firstWhere((w) => w.isInternalCustody, orElse: () => walletState.wallets[1]);
+      final insured = walletState.wallets.firstWhere((w) => w.isInternalCustody,
+          orElse: () => walletState.wallets[1]);
       return insured;
     }
     return walletState.wallets.isNotEmpty ? walletState.wallets.first : null;

@@ -12,7 +12,8 @@ abstract class LedgerRepository {
     DateTime? since,
   });
 
-  Future<Either<Failure, Transaction?>> getTransactionById(String transactionId);
+  Future<Either<Failure, Transaction?>> getTransactionById(
+      String transactionId);
 
   Future<Either<Failure, Map<String, dynamic>>> sendInternalTransaction({
     required String senderWalletName,

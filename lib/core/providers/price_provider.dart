@@ -95,15 +95,19 @@ class BackendBtcRates {
                 ? json['prices'] as Map<String, dynamic>
                 : json));
 
-    final btcUsd = _parseNum(root, ['btcUsd', 'btc_usd', 'BTC_USD', 'usd', 'USD', 'priceUsd']);
-    final btcBrl = _parseNum(root, ['btcBrl', 'btc_brl', 'BTC_BRL', 'brl', 'BRL', 'priceBrl']);
-    final btcEur = _parseNum(root, ['btcEur', 'btc_eur', 'BTC_EUR', 'eur', 'EUR', 'priceEur']);
-    
-    double usdBrl = _parseNum(root, ['usdBrl', 'usd_brl', 'USD_BRL', 'usd_to_brl', 'usdBrlRate', 'brlUsd']);
+    final btcUsd = _parseNum(
+        root, ['btcUsd', 'btc_usd', 'BTC_USD', 'usd', 'USD', 'priceUsd']);
+    final btcBrl = _parseNum(
+        root, ['btcBrl', 'btc_brl', 'BTC_BRL', 'brl', 'BRL', 'priceBrl']);
+    final btcEur = _parseNum(
+        root, ['btcEur', 'btc_eur', 'BTC_EUR', 'eur', 'EUR', 'priceEur']);
+
+    double usdBrl = _parseNum(root,
+        ['usdBrl', 'usd_brl', 'USD_BRL', 'usd_to_brl', 'usdBrlRate', 'brlUsd']);
     if (usdBrl == 0 && btcUsd > 0 && btcBrl > 0) {
       usdBrl = btcBrl / btcUsd;
     }
-    
+
     final finalBtcBrl = btcBrl > 0
         ? btcBrl
         : (btcUsd > 0 && usdBrl > 0 ? btcUsd * usdBrl : 0.0);

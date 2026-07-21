@@ -176,7 +176,10 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                     ),
                   if (transaction != null) ...[
                     _ReceiptRow(
-                      label: _financialCopy(context, pt: 'Valor base', en: 'Base amount', es: 'Monto base'),
+                      label: _financialCopy(context,
+                          pt: 'Valor base',
+                          en: 'Base amount',
+                          es: 'Monto base'),
                       value: money.formatAmountFromBtc(
                         btcAmount: transaction!.amountBTC,
                         currency: Currency.btc,
@@ -189,7 +192,10 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                     ),
                     if (transaction!.showsNetworkFee)
                       _ReceiptRow(
-                        label: _financialCopy(context, pt: context.tr.sendReviewNetworkFee, en: 'Network fee', es: 'Tarifa de red'),
+                        label: _financialCopy(context,
+                            pt: context.tr.sendReviewNetworkFee,
+                            en: 'Network fee',
+                            es: 'Tarifa de red'),
                         value: money.formatAmountFromBtc(
                           btcAmount: transaction!.feeBTC,
                           currency: Currency.btc,
@@ -202,7 +208,10 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                       ),
                     if (transaction!.showsServiceFee)
                       _ReceiptRow(
-                        label: _financialCopy(context, pt: 'Taxa de serviço', en: 'Service fee', es: 'Tarifa de servicio'),
+                        label: _financialCopy(context,
+                            pt: 'Taxa de serviço',
+                            en: 'Service fee',
+                            es: 'Tarifa de servicio'),
                         value: money.formatAmountFromBtc(
                           btcAmount: transaction!.serviceFeeBTC,
                           currency: Currency.btc,
@@ -218,7 +227,10 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                       child: Divider(color: monoBorderStrongColor, height: 1),
                     ),
                     _ReceiptRow(
-                      label: _financialCopy(context, pt: 'Valor total', en: 'Total amount', es: 'Monto total'),
+                      label: _financialCopy(context,
+                          pt: 'Valor total',
+                          en: 'Total amount',
+                          es: 'Monto total'),
                       value: money.formatAmountFromBtc(
                         btcAmount: (transaction!.amountSatoshis +
                                 (transaction!.showsNetworkFee
@@ -247,7 +259,8 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                 _ReceiptSection(
                   children: [
                     _ReceiptRow(
-                      label: _financialCopy(context, pt: 'Rede', en: 'Network', es: 'Red'),
+                      label: _financialCopy(context,
+                          pt: 'Rede', en: 'Network', es: 'Red'),
                       value: transaction!.isLightningEffective
                           ? 'Lightning Network'
                           : 'Bitcoin On-chain',
@@ -280,10 +293,13 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                       ),
                     if (transaction!.showsOnchainConfirmations)
                       _ReceiptRow(
-                        label: _financialCopy(context, pt: 'Confirmações', en: 'Confirmations', es: 'Confirmaciones'),
+                        label: _financialCopy(context,
+                            pt: 'Confirmações',
+                            en: 'Confirmations',
+                            es: 'Confirmaciones'),
                         value: () {
-                          final target =
-                              transaction!.onchainConfirmationTarget.clamp(1, 6);
+                          final target = transaction!.onchainConfirmationTarget
+                              .clamp(1, 6);
                           final conf =
                               transaction!.confirmations.clamp(0, target);
                           if (conf <= 0) return 'Na mempool (0/$target)';
@@ -297,7 +313,8 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                         transaction!.blockHeight != null &&
                         transaction!.blockHeight! > 0)
                       _ReceiptRow(
-                        label: _financialCopy(context, pt: 'Bloco', en: 'Block', es: 'Bloque'),
+                        label: _financialCopy(context,
+                            pt: 'Bloco', en: 'Block', es: 'Bloque'),
                         value: '#${transaction!.blockHeight}',
                         isTechnical: true,
                       ),
@@ -886,9 +903,13 @@ class _ReceiptRow extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontFamily: isTechnical ? AppTypography.monoFontFamily : AppTypography.fontFamily,
+                  fontFamily: isTechnical
+                      ? AppTypography.monoFontFamily
+                      : AppTypography.fontFamily,
                   color: isHighlight ? monoTextColor : monoMutedTextColor,
-                  fontWeight: isHighlight ? FontWeight.w800 : (isTechnical ? FontWeight.w600 : FontWeight.w700),
+                  fontWeight: isHighlight
+                      ? FontWeight.w800
+                      : (isTechnical ? FontWeight.w600 : FontWeight.w700),
                 ),
           ),
         ],
