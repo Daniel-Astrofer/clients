@@ -214,7 +214,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
                 Container(
                   height: 1,
                   width: 52,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  margin: EdgeInsets.only(bottom: AppSpacing.lg),
                   color: monoBorderStrongColor,
                 ),
                 Text(
@@ -225,7 +225,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
                         letterSpacing: 1.8,
                       ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 Text(
                   context.tr.securityBackupCodesBody,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -251,7 +251,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
                           ),
                           child: Text(
                             code,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: monoTextColor,
                               fontFamily: AppTypography.financialFontFamily,
                               fontWeight: FontWeight.w700,
@@ -387,10 +387,10 @@ class _TotpScreenHeader extends StatelessWidget {
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.zero,
             ),
-            side: const BorderSide(color: monoBorderStrongColor),
+            side: BorderSide(color: monoBorderStrongColor),
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,7 +402,7 @@ class _TotpScreenHeader extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 'Configure e valide o código TOTP usado para proteger acessos e transações sensíveis.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -442,9 +442,9 @@ class _TotpOverviewCard extends StatelessWidget {
               borderColor: monoBorderStrongColor,
               showShadow: false,
             ),
-            child: const Icon(KeroseneIcons.verified, color: monoTextColor),
+            child: Icon(KeroseneIcons.verified, color: monoTextColor),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,7 +456,7 @@ class _TotpOverviewCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   totpEnabled
                       ? 'Sua conta exige um código temporário do aplicativo autenticador.'
@@ -491,7 +491,7 @@ class _TotpBusyCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(
+          SizedBox(
             width: 40,
             height: 24,
             child: Center(
@@ -503,7 +503,7 @@ class _TotpBusyCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               context.tr.securityTotpValidating,

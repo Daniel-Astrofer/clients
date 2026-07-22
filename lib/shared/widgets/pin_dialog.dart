@@ -137,7 +137,7 @@ class _PinDialogState extends State<PinDialog> {
                     opacity: value,
                     child: Transform.scale(
                       scale: 0.8 + (0.2 * value),
-                      child: const KeroseneFingerprintScanner(size: 120),
+                      child: KeroseneFingerprintScanner(size: 120),
                     ),
                   );
                 },
@@ -147,21 +147,21 @@ class _PinDialogState extends State<PinDialog> {
                 _title(context),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
                   fontFamily: AppTypography.financialFontFamily,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 _subtitle(context),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Theme.of(context)
                       .colorScheme
-                      .onPrimary
+                      .onSurface
                       .withValues(alpha: 0.6),
                   fontSize: 14,
                   letterSpacing: 0.5,
@@ -177,7 +177,7 @@ class _PinDialogState extends State<PinDialog> {
                   final filled = i < _entered.length;
                   return AnimatedContainer(
                     duration: KeroseneMotion.short,
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                    margin: EdgeInsets.symmetric(horizontal: 10),
                     width: 14,
                     height: 14,
                     decoration: BoxDecoration(
@@ -186,7 +186,7 @@ class _PinDialogState extends State<PinDialog> {
                           ? KeroseneBrandTokens.info
                           : Theme.of(context)
                               .colorScheme
-                              .onPrimary
+                              .onSurface
                               .withValues(alpha: 0.1),
                     ),
                   );
@@ -220,7 +220,7 @@ class _PinDialogState extends State<PinDialog> {
               // Keypad - Futuristic Grid
               _buildModernKeypad(),
 
-              const SizedBox(height: 40),
+              SizedBox(height: 40),
 
               // Cancel Action
               if (!widget.isSetup)
@@ -229,7 +229,7 @@ class _PinDialogState extends State<PinDialog> {
                   style: TextButton.styleFrom(
                     foregroundColor: Theme.of(context)
                         .colorScheme
-                        .onPrimary
+                        .onSurface
                         .withValues(alpha: 0.4),
                   ),
                   child: Text(
@@ -287,12 +287,12 @@ class _PinDialogState extends State<PinDialog> {
                     shape: BoxShape.circle,
                     color: Theme.of(context)
                         .colorScheme
-                        .onPrimary
+                        .onSurface
                         .withValues(alpha: 0.03),
                     border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
-                          .onPrimary
+                          .onSurface
                           .withValues(alpha: 0.05),
                       width: 1,
                     ),
@@ -303,7 +303,7 @@ class _PinDialogState extends State<PinDialog> {
                     style: TextStyle(
                       color: isAction
                           ? KeroseneBrandTokens.info.withValues(alpha: 0.8)
-                          : Theme.of(context).colorScheme.onPrimary,
+                          : Theme.of(context).colorScheme.onSurface,
                       fontSize: key == '⌫' ? 24 : 28,
                       fontWeight: FontWeight.w300,
                     ),

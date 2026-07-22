@@ -212,10 +212,49 @@ class _TransactionStatementScreenState
                       ),
                     ),
                     historyAsync.when(
-                      loading: () => const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: SizedBox.shrink(),
-                      ),
+                      loading: () {
+                        // Keep last projection visible while Tor refresh runs.
+                        if (lastHistory.isEmpty) {
+                          return const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: SizedBox.shrink(),
+                          );
+                        }
+                        final filtered = _filteredTransactions(lastHistory);
+                        if (_selectedTab == _StatementTab.insights) {
+                          return SliverPadding(
+                            padding: EdgeInsets.fromLTRB(
+                              AppSpacing.xl2,
+                              AppSpacing.xl2,
+                              AppSpacing.xl2,
+                              bottomPadding,
+                            ),
+                            sliver: const SliverToBoxAdapter(
+                              child: TransactionStatementInsights(),
+                            ),
+                          );
+                        }
+                        return SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.xl2,
+                            AppSpacing.xl2,
+                            AppSpacing.xl2,
+                            bottomPadding,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: _StatementListSurface(
+                              queryController: _searchController,
+                              selectedFilter: _selectedFilter,
+                              onFilterSelected: _selectFilter,
+                              allTransactions: lastHistory,
+                              transactions: filtered,
+                              expandedTransactionId: _expandedTransactionId,
+                              onTransactionTap: _toggleTransaction,
+                              onClearFilters: _clearFilters,
+                            ),
+                          ),
+                        );
+                      },
                       error: (error, _) => SliverFillRemaining(
                         hasScrollBody: false,
                         child: _StatementMessage(
@@ -228,6 +267,10 @@ class _TransactionStatementScreenState
                         ),
                       ),
                       data: (transactions) {
+                        final projected = mergeTransactionHistoryProjection(
+                          remote: transactions,
+                          last: lastHistory,
+                        );
                         if (_selectedTab == _StatementTab.insights) {
                           return SliverPadding(
                             padding: EdgeInsets.fromLTRB(
@@ -242,7 +285,7 @@ class _TransactionStatementScreenState
                           );
                         }
 
-                        final filtered = _filteredTransactions(transactions);
+                        final filtered = _filteredTransactions(projected);
                         return SliverPadding(
                           padding: EdgeInsets.fromLTRB(
                             AppSpacing.xl2,
@@ -255,7 +298,7 @@ class _TransactionStatementScreenState
                               queryController: _searchController,
                               selectedFilter: _selectedFilter,
                               onFilterSelected: _selectFilter,
-                              allTransactions: transactions,
+                              allTransactions: projected,
                               transactions: filtered,
                               expandedTransactionId: _expandedTransactionId,
                               onTransactionTap: _toggleTransaction,
@@ -945,7 +988,8 @@ class _StatementMessage extends StatelessWidget {
 class _StatementColors {
   static Color background(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
   static Color surface(BuildContext context) => Theme.of(context).colorScheme.surface;
-  static Color surfaceHigh(BuildContext context) => Theme.of(context).colorScheme.surfaceContainerHighest;
+  static Color surfaceHigh(BuildContext context) =>
+      (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
   static Color border(BuildContext context) => Theme.of(context).dividerColor;
   static Color borderHigh(BuildContext context) => Theme.of(context).dividerColor;
   static Color textPrimary(BuildContext context) => Theme.of(context).colorScheme.onSurface;

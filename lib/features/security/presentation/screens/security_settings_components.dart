@@ -7,8 +7,10 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/presentation/widgets/app_notice.dart';
 import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 import 'package:kerosene/features/auth/controller/auth_providers.dart';
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
@@ -46,7 +48,7 @@ class SecurityBannerCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: monoTextColor),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +60,7 @@ class SecurityBannerCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   body,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -145,7 +147,7 @@ class SecurityStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = enabled ? monoTextColor : monoFaintTextColor;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: monochromePanelDecoration(
         color: enabled ? monoSurfaceAltColor : monoSurfaceColor,
         borderColor: enabled ? monoBorderStrongColor : monoBorderColor,
@@ -188,7 +190,7 @@ class PasskeyInventoryCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
             _summaryText(context, inventory),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -208,7 +210,7 @@ class PasskeyInventoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(KeroseneIcons.devices, color: summaryColor),
-                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     _summaryBanner(context, inventory),
@@ -245,13 +247,13 @@ class PasskeyInventoryCard extends StatelessWidget {
           if (inventory?.legacyCredentialsPresent == true) ...[
             const SizedBox(height: AppSpacing.md),
             SecurityBannerCard(
-              color: Colors.white54,
+              color: AppColors.white50,
               icon: KeroseneIcons.historyOff,
               title: context.tr.securityLegacyCredentialsTitle,
               body: context.tr.securityLegacyCredentialsBody,
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           if (inventory == null || !inventory.passkeyRegistered)
             Text(
               context.tr.securityNoAuthenticatedDevice,
@@ -281,15 +283,15 @@ class PasskeyInventoryCard extends StatelessWidget {
 
   static Color _summaryColor(PasskeyInventory? inventory) {
     if (inventory == null || !inventory.passkeyRegistered) {
-      return Colors.white24;
+      return KeroseneBrandTokens.textMuted;
     }
     if (inventory.compatibleForCurrentLogin) {
-      return Colors.white70;
+      return KeroseneBrandTokens.success;
     }
     if (inventory.legacyCredentialsPresent) {
-      return Colors.white54;
+      return KeroseneBrandTokens.warning;
     }
-    return Colors.white24;
+    return KeroseneBrandTokens.textMuted;
   }
 
   static String _summaryText(
@@ -387,7 +389,7 @@ class InventoryContextChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: monochromePanelDecoration(
         color: monoSurfaceAltColor,
         borderColor: monoBorderStrongColor,
@@ -399,14 +401,14 @@ class InventoryContextChip extends StatelessWidget {
           children: [
             TextSpan(
               text: '$label\n',
-              style: const TextStyle(
+              style: TextStyle(
                 color: monoMutedTextColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
             TextSpan(
               text: value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: monoTextColor,
                 fontFamily: AppTypography.financialFontFamily,
                 fontWeight: FontWeight.w600,
@@ -529,7 +531,7 @@ class PasskeyDeviceRowState extends ConsumerState<PasskeyDeviceRow> {
               label: context.tr.securityDeviceRelyingPartyLabel,
               value: device.relyingPartyId,
             ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             device.compatibleWithCurrentLogin
                 ? context.tr.securityDeviceCanUse
@@ -548,7 +550,7 @@ class PasskeyDeviceRowState extends ConsumerState<PasskeyDeviceRow> {
               runSpacing: 8,
               children: [
                 if (_busy)
-                  const SizedBox(
+                  SizedBox(
                     width: 42,
                     height: 28,
                     child: Center(
@@ -683,21 +685,21 @@ class DeviceMetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6),
       child: RichText(
         text: TextSpan(
           style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35),
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(
+              style: TextStyle(
                 color: monoMutedTextColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
             TextSpan(
               text: value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: monoTextColor,
                 fontFamily: AppTypography.financialFontFamily,
               ),
@@ -732,7 +734,7 @@ class PasskeyStatusBadge extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: monochromePanelDecoration(
         color: monoSurfaceColor,
         borderColor: color,
@@ -787,7 +789,7 @@ class SecuritySectionCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -862,7 +864,7 @@ class TotpSetupCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           SelectableText(
             setupSecret,
             textAlign: TextAlign.center,
@@ -876,7 +878,7 @@ class TotpSetupCard extends StatelessWidget {
           TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: monoTextColor),
+            style: TextStyle(color: monoTextColor),
             decoration: monochromeInputDecoration(
               label: context.tr.securityTotpCodeLabel,
               hintText: '000000',
@@ -917,7 +919,7 @@ class SecurityLoadingCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             KeroseneIcons.security,
             color: monoMutedTextColor,
             size: 20,
@@ -950,7 +952,7 @@ class SecurityErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SecurityBannerCard(
-      color: Colors.white24,
+      color: AppColors.white20,
       icon: KeroseneIcons.error,
       title: title,
       body: body,

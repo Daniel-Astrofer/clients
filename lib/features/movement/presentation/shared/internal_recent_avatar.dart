@@ -22,16 +22,16 @@ class InternalRecentAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: KeroseneBrandTokens.surfaceHigh,
+        color: Theme.of(context).colorScheme.surface,
         border: Border.all(
-          color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.10),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
         ),
       ),
       child: Center(
         child: Text(
           initials,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: KeroseneBrandTokens.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: fontSize,
                 fontWeight: FontWeight.w600,
                 height: 1,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme_token_bridge.dart';
+
 /// Kerosene — Core Color Tokens
 class AppColors {
   // Generated compatibility color tokens for migrated feature code.
@@ -251,19 +253,31 @@ class AppColors {
   static const Color grey = Color(0xFF8B929E);
   static const Color darkGrey = Color(0xFF252A31);
 
-  // ─── Transparency Tokens (Legacy/Shortcut) ─────────────
-  static const Color white10 = Color(0x1AFFFFFF);
-  static const Color white20 = Color(0x33FFFFFF);
-  static const Color white30 = Color(0x4DFFFFFF);
-  static const Color white50 = Color(0x80FFFFFF);
-  static const Color white70 = Color(0xB3FFFFFF);
+  // ─── Transparency Tokens (theme-aware ink alphas) ─────────────
+  /// Near-white on dark; near-black on light (same alpha).
+  static Color get white10 => ThemeTokenBridge.isLight
+      ? const Color(0x1A181A17)
+      : const Color(0x1AFFFFFF);
+  static Color get white20 => ThemeTokenBridge.isLight
+      ? const Color(0x33181A17)
+      : const Color(0x33FFFFFF);
+  static Color get white30 => ThemeTokenBridge.isLight
+      ? const Color(0x4D181A17)
+      : const Color(0x4DFFFFFF);
+  static Color get white50 => ThemeTokenBridge.isLight
+      ? const Color(0x80181A17)
+      : const Color(0x80FFFFFF);
+  static Color get white70 => ThemeTokenBridge.isLight
+      ? const Color(0xB3181A17)
+      : const Color(0xB3FFFFFF);
 
   // ─── Extended Tokens for Compatibility ────────────────
   static const Color bgDeep = background;
   static const Color bgCard = surface;
   static const Color border = Color(0xFF2B3037);
-  static const Color textPrimary = white;
-  static const Color textSecondary = white70;
+  static Color get textPrimary =>
+      ThemeTokenBridge.isLight ? const Color(0xFF181A17) : white;
+  static Color get textSecondary => white70;
   static const Color textMuted = grey;
   static const Color neonCyan = accent;
   static const Color bgInput = Color(0xFF101215);

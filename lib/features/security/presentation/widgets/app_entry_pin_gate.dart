@@ -69,14 +69,14 @@ class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
     // dots instead of showing a pad that will be remounted when Tor settles.
     final torSettled = ref.watch(torSettledProvider);
     if (!torSettled) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: TorLoadingDots(
             dotSize: 7,
             spacing: 10,
             travel: 12,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       );
@@ -656,7 +656,7 @@ class _TotpResetSheetState extends ConsumerState<_TotpResetSheet> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm),
             Text(
               context.tr.appEntryResetMessage,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -670,7 +670,7 @@ class _TotpResetSheetState extends ConsumerState<_TotpResetSheet> {
               keyboardType: TextInputType.number,
               obscureText: true,
               maxLength: 6,
-              style: const TextStyle(color: monoTextColor),
+              style: TextStyle(color: monoTextColor),
               decoration: monochromeInputDecoration(
                 label: context.tr.appEntryTotpLabel,
                 counterText: '',
@@ -682,14 +682,14 @@ class _TotpResetSheetState extends ConsumerState<_TotpResetSheet> {
               keyboardType: TextInputType.number,
               obscureText: true,
               maxLength: 8,
-              style: const TextStyle(color: monoTextColor),
+              style: TextStyle(color: monoTextColor),
               decoration: monochromeInputDecoration(
                 label: context.tr.appEntryNewPinLabel,
                 counterText: '',
               ),
             ),
             if (_error != null) ...[
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               Text(
                 _error!.toUpperCase(),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(

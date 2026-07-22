@@ -98,7 +98,7 @@ class TransactionListItem extends ConsumerWidget {
                       .onSurface
                       .withValues(alpha: 0.18),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,15 +107,15 @@ class TransactionListItem extends ConsumerWidget {
                         title,
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onPrimary),
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         displayAddress,
                         style: Theme.of(context).textTheme.labelSmall!.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
-                                .onPrimary
+                                .onSurface
                                 .withValues(alpha: 0.4)),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -133,18 +133,18 @@ class TransactionListItem extends ConsumerWidget {
                           ),
                     ),
                     if (money.currency != Currency.btc) ...[
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         btcAmountLabel,
                         style: Theme.of(context).textTheme.labelSmall!.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
-                                  .onPrimary
+                                  .onSurface
                                   .withValues(alpha: 0.3),
                             ),
                       ),
                     ],
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       AppDateTime.formatRelative(
                         context,
@@ -153,7 +153,7 @@ class TransactionListItem extends ConsumerWidget {
                       style: Theme.of(context).textTheme.labelSmall!.copyWith(
                           color: Theme.of(context)
                               .colorScheme
-                              .onPrimary
+                              .onSurface
                               .withValues(alpha: 0.3)),
                     ),
                   ],

@@ -82,11 +82,11 @@ class _NotificationSettingsScreenState
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md, left: 4),
+      padding: EdgeInsets.only(bottom: AppSpacing.md, left: 4),
       child: Text(
         title,
         style: Theme.of(context).textTheme.labelSmall!.copyWith(
-              color: KeroseneBrandTokens.textMuted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.4,
             ),
@@ -100,26 +100,26 @@ class _NotificationSettingsScreenState
         GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.05),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               ),
             ),
-            child: const Icon(
+            child: Icon(
               KeroseneIcons.back,
-              color: KeroseneBrandTokens.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 20,
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.md),
+        SizedBox(width: AppSpacing.md),
         Text(
           context.tr.notifications,
           style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                color: KeroseneBrandTokens.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 letterSpacing: -0.1,
               ),
         ),
@@ -136,30 +136,30 @@ class _NotificationSettingsScreenState
     IconData icon,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.03),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.05),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.05),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              color: KeroseneBrandTokens.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,15 +167,15 @@ class _NotificationSettingsScreenState
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: KeroseneBrandTokens.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: KeroseneBrandTokens.textMuted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
               ],
@@ -187,9 +187,9 @@ class _NotificationSettingsScreenState
             activeThumbColor: KeroseneBrandTokens.brand,
             activeTrackColor: KeroseneBrandTokens.brand.withValues(alpha: 0.2),
             inactiveThumbColor:
-                KeroseneBrandTokens.textPrimary.withValues(alpha: 0.2),
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             inactiveTrackColor:
-                KeroseneBrandTokens.textPrimary.withValues(alpha: 0.05),
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
           ),
         ],
       ),

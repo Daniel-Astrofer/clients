@@ -45,31 +45,31 @@ class ColdWalletSuccessScreen extends StatelessWidget {
     final icon = seedOk ? KeroseneIcons.success : KeroseneIcons.warning;
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(),
+              Spacer(),
               Icon(icon, size: 56, color: iconColor),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Text(
                 walletLabel,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textMuted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -90,20 +90,20 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                     'Importante: sem a seed neste aparelho, o envio cold não funciona. Guarde a frase e restaure-a antes de tentar gastar.',
                     textAlign: TextAlign.center,
                     style: AppTypography.inter(
-                      color: KeroseneBrandTokens.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
                       height: 1.4,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
               ],
               Text(
                 seedNote,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
                   height: 1.45,
                 ),
@@ -121,22 +121,22 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                     ),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: KeroseneBrandTokens.textPrimary,
-                    foregroundColor: KeroseneBrandTokens.background,
+                    backgroundColor: Theme.of(context).colorScheme.onSurface,
+                    foregroundColor: Theme.of(context).scaffoldBackgroundColor,
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
               ],
               OutlinedButton(
                 onPressed: () => _finish(context, openSend: false),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: KeroseneBrandTokens.textPrimary,
-                  minimumSize: const Size.fromHeight(52),
-                  side: BorderSide(color: KeroseneBrandTokens.border),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  minimumSize: Size.fromHeight(52),
+                  side: BorderSide(color: Theme.of(context).dividerColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

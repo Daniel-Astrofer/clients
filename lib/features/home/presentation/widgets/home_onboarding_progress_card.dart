@@ -28,7 +28,7 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Material(
-        color: Theme.of(context).colorScheme.surface, // homeCardColor
+        color: Theme.of(context).colorScheme.surface, // Theme.of(context).colorScheme.surface
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -41,14 +41,14 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).dividerColor, // homePanelBorderColor
+                color: Theme.of(context).dividerColor, // Theme.of(context).dividerColor
                 width: 1,
               ),
             ),
             child: Row(
               children: [
                 _SegmentedPieChartContainer(completedSteps: completed),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,20 +56,20 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
                       Text(
                         isDone ? 'Ativação Concluída' : 'Ativação da Conta',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontFamily: AppTypography.fontFamily,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         isDone
                             ? 'Sua conta está totalmente ativa.'
                             : 'Complete $completed de 3 etapas essenciais.',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
                           fontFamily: AppTypography.fontFamily,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w400,
@@ -80,7 +80,7 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
                 ),
                 Icon(
                   KeroseneIcons.chevronRight,
-                  color: Colors.white.withValues(alpha: 0.35),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                   size: 18,
                 ),
               ],
@@ -112,13 +112,13 @@ class _SegmentedPieChartContainer extends StatelessWidget {
             painter: _SegmentedPieChartPainter(
               completedSteps: completedSteps,
               totalSteps: 3,
-              activeColor: isDone ? AppColors.hexFF4ADE80 : Colors.white,
-              inactiveColor: Colors.white.withValues(alpha: 0.12),
+              activeColor: isDone ? AppColors.hexFF4ADE80 : Theme.of(context).colorScheme.onSurface,
+              inactiveColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
             ),
           ),
           Center(
             child: isDone
-                ? const Icon(
+                ? Icon(
                     KeroseneIcons.success,
                     color: AppColors.hexFF4ADE80,
                     size: 16,
@@ -126,7 +126,7 @@ class _SegmentedPieChartContainer extends StatelessWidget {
                 : Text(
                     '$completedSteps/3',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontFamily: AppTypography.financialFontFamily,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,

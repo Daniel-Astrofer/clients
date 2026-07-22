@@ -266,9 +266,9 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 420),
         child: Container(
           decoration: BoxDecoration(
-            color: KeroseneBrandTokens.surface,
+            color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.42),
@@ -291,7 +291,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [
                         spec.accent.withValues(alpha: 0.22),
-                        Colors.white.withValues(alpha: 0.035),
+                        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.035),
                       ],
                     ),
                   ),
@@ -318,7 +318,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                             Text(
                               spec.eyebrow,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.62),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
                                 letterSpacing: 0.8,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -328,7 +328,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                               NotificationTranslator.resolveTitle(
                                   context, notification),
                               style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.w800,
                                 height: 1.08,
                               ),
@@ -349,7 +349,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                         NotificationTranslator.resolveBody(
                             context, notification),
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.76),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.76),
                           height: 1.42,
                         ),
                       ),
@@ -369,16 +369,16 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.055),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.055),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.08),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                             ),
                           ),
                           child: Text(
                             spec.note!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.68),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
                               height: 1.35,
                             ),
                           ),
@@ -396,7 +396,7 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                           onPressed: () => Navigator.of(context).pop(false),
                           style: TextButton.styleFrom(
                             foregroundColor:
-                                Colors.white.withValues(alpha: 0.72),
+                                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -410,8 +410,10 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                         child: FilledButton(
                           onPressed: () => Navigator.of(context).pop(true),
                           style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.onSurface,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.surface,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -436,7 +438,7 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DetailRow({required this.label, required this.value});
+  _DetailRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -449,7 +451,7 @@ class _DetailRow extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.labelMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.46),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.46),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -460,7 +462,7 @@ class _DetailRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.88),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
               fontWeight: FontWeight.w700,
             ),
           ),

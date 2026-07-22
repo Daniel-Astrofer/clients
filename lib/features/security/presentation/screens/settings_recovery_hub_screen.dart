@@ -28,7 +28,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
     final viewPadding = MediaQuery.viewPaddingOf(context);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -53,22 +53,22 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                             Navigator.of(context).maybePop();
                           },
                         ),
-                        const SizedBox(height: AppSpacing.xxl),
+                        SizedBox(height: AppSpacing.xxl),
                         Text(
                           context.tr.settingsRecoveryHubTitle,
                           style: AppTypography.newsreader(
-                            color: KeroseneBrandTokens.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 32,
                             fontWeight: FontWeight.w500,
                             height: 1.2,
                             letterSpacing: 0,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        SizedBox(height: AppSpacing.md),
                         Text(
                           context.tr.settingsRecoveryHubSubtitle,
                           style: AppTypography.inter(
-                            color: KeroseneBrandTokens.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                             height: 1.55,
                           ),
@@ -167,11 +167,11 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                               ],
                             );
                           },
-                          loading: () => const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
+                          loading: () => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
                             child: Center(
                               child: CircularProgressIndicator(
-                                color: Colors.white54,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                               ),
                             ),
                           ),
@@ -182,7 +182,7 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                 context.tr,
                                 error.toString(),
                               ),
-                              style: const TextStyle(color: Colors.white70),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
                             ),
                           ),
                         ),

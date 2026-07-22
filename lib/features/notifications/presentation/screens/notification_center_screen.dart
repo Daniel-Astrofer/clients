@@ -157,7 +157,7 @@ class _NotificationCenterScreenState
     final reduceMotion = KeroseneMotion.reduceMotion(context);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -233,7 +233,7 @@ class _NotificationCenterScreenState
                           Text(
                             group.label,
                             style: AppTypography.inter(
-                              color: Colors.white.withValues(alpha: 0.58),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58),
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               height: 1,
@@ -363,7 +363,7 @@ class _NotificationCenterHeader extends StatelessWidget {
           tooltip: context.tr.goBack,
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(KeroseneIcons.back),
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
           iconSize: 24,
           padding: const EdgeInsets.only(right: 14),
           visualDensity: VisualDensity.compact,
@@ -373,7 +373,7 @@ class _NotificationCenterHeader extends StatelessWidget {
           child: Text(
             context.tr.notifCenterTitle,
             style: AppTypography.newsreader(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 30,
               fontWeight: FontWeight.w700,
               height: 1,
@@ -386,10 +386,10 @@ class _NotificationCenterHeader extends StatelessWidget {
           onPressed: () =>
               Navigator.of(context).pushNamed('/settings/notifications'),
           icon: const Icon(KeroseneIcons.settings),
-          color: Colors.white.withValues(alpha: 0.78),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
           iconSize: 18,
           style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: 0.08),
+            backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
             shape: const CircleBorder(),
             fixedSize: const Size(34, 34),
           ),
@@ -463,14 +463,14 @@ class _NotificationCenterActions extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
           ),
           child: Text(
             statusLabel,
             style: AppTypography.inter(
-              color: Colors.white.withValues(alpha: 0.58),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58),
               fontSize: 11,
               fontWeight: FontWeight.w700,
               height: 1,
@@ -509,7 +509,7 @@ class _NotificationActionTextButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: Colors.white.withValues(alpha: enabled ? 0.72 : 0.22),
+        foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.72 : 0.22),
         minimumSize: const Size(0, 30),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -540,10 +540,12 @@ class _NotificationFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? Colors.black : Colors.white;
+    final ink = Theme.of(context).colorScheme.onSurface;
+    final surface = Theme.of(context).scaffoldBackgroundColor;
+    final foreground = selected ? surface : ink;
 
     return Material(
-      color: selected ? Colors.white : Colors.white.withValues(alpha: 0.08),
+      color: selected ? ink : ink.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -554,9 +556,7 @@ class _NotificationFilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: selected
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.10),
+              color: selected ? ink : ink.withValues(alpha: 0.10),
             ),
           ),
           child: Row(
@@ -605,7 +605,7 @@ class _NotificationCenterCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.hexFF141414,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.035)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.035)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -633,7 +633,7 @@ class _NotificationCenterCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.inter(
-                              color: Colors.white.withValues(alpha: 0.92),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.92),
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               height: 1.2,
@@ -645,7 +645,7 @@ class _NotificationCenterCard extends StatelessWidget {
                         Text(
                           _timeLabel(context, item.timestamp),
                           style: AppTypography.inter(
-                            color: Colors.white.withValues(alpha: 0.35),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                             height: 1.2,
@@ -660,7 +660,7 @@ class _NotificationCenterCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
-                        color: Colors.white.withValues(alpha: 0.58),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58),
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         height: 1.42,
@@ -709,14 +709,14 @@ class _NotificationEmptyState extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.hexFF141414,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 KeroseneIcons.notificationsOff,
-                color: Colors.white.withValues(alpha: 0.54),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                 size: 26,
               ),
               const SizedBox(height: 12),
@@ -724,7 +724,7 @@ class _NotificationEmptyState extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: Colors.white.withValues(alpha: 0.86),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.86),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
@@ -735,7 +735,7 @@ class _NotificationEmptyState extends StatelessWidget {
                 context.tr.notifCenterEmptyHint,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: Colors.white.withValues(alpha: 0.48),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
                   fontSize: 12,
                   height: 1.35,
                   letterSpacing: 0,

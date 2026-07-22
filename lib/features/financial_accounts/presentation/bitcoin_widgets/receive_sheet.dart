@@ -53,7 +53,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
             label: context.tr.bitcoinReceiveAmountOptional,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -79,13 +79,13 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
             style: TextStyle(color: colors.mutedText),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
             style: colors.filledButtonStyle(),
             onPressed: busy ? null : createReceiveRequest,
-            icon: const Icon(KeroseneIcons.qr, size: 18),
+            icon: Icon(KeroseneIcons.qr, size: 18),
             label: Text(
               busy
                   ? context.tr.bitcoinReceiveGenerating
@@ -123,7 +123,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         BitcoinAddressBlocks(
           address: currentResult.address,
           style: AppTypography.technicalMono(
@@ -133,7 +133,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
                 ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Wrap(
           alignment: WrapAlignment.center,
           spacing: 8,
@@ -144,9 +144,9 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
               Pill(text: formatSats(currentResult.amountSats!)),
           ],
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         MutedPanel(text: receiveStatusMessage(context, currentResult)),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         LayoutBuilder(
           builder: (context, constraints) {
             final shouldStack = constraints.maxWidth < 360;
@@ -154,13 +154,13 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
               OutlinedButton.icon(
                 style: colors.outlinedButtonStyle(),
                 onPressed: busy ? null : copyAddress,
-                icon: const Icon(KeroseneIcons.copy, size: 18),
+                icon: Icon(KeroseneIcons.copy, size: 18),
                 label: Text(context.tr.copyAddress),
               ),
               OutlinedButton.icon(
                 style: colors.outlinedButtonStyle(),
                 onPressed: busy ? null : () => refreshStatus(silent: false),
-                icon: const Icon(KeroseneIcons.refresh, size: 18),
+                icon: Icon(KeroseneIcons.refresh, size: 18),
                 label: Text(context.tr.bitcoinReceiveRefresh),
               ),
             ];
@@ -170,7 +170,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   buttons[0],
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: AppSpacing.sm),
                   buttons[1],
                 ],
               );
@@ -179,7 +179,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
             return Row(
               children: [
                 Expanded(child: buttons[0]),
-                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: AppSpacing.sm),
                 Expanded(child: buttons[1]),
               ],
             );

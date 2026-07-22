@@ -141,18 +141,18 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
           borderColor: monoBorderStrongColor,
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
                 child: Container(
-                  width: 56,
+                  width: 40,
                   height: 1,
                   color: monoBorderStrongColor,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
               _SummaryHero(
                 statusMeta: statusMeta,
                 leadingIcon: leadingIcon,
@@ -163,7 +163,7 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                 secondaryAmount: secondaryAmount,
                 createdAt: createdAt,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
               _ReceiptSection(
                 children: [
                   if (createdAt != null)
@@ -222,8 +222,8 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                         ),
                         isTechnical: true,
                       ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Divider(color: monoBorderStrongColor, height: 1),
                     ),
                     _ReceiptRow(
@@ -321,14 +321,14 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                   ],
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               if (_primaryAddress != null)
                 _CopyablePanel(
                   title: _primaryAddressLabel,
                   value: _primaryAddress!,
                 ),
               if (hasAdvancedDetails) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 _DisclosurePanel(
                   title: advancedDetailsTitle,
                   children: [
@@ -385,7 +385,7 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                         value: _lightningInvoice!,
                         compact: true,
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                     ],
                     if (_description != null && _description!.trim().isNotEmpty)
                       _DetailPanel(
@@ -395,8 +395,12 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                           ApiDisplayText.message(context, _description),
                           style: Theme.of(context)
                               .textTheme
-                              .bodyLarge
-                              ?.copyWith(color: monoTextColor, height: 1.45),
+                              .bodyMedium
+                              ?.copyWith(
+                                color: monoTextColor,
+                                fontSize: 13,
+                                height: 1.35,
+                              ),
                         ),
                       ),
                   ],
@@ -569,7 +573,7 @@ class _ContextChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: monochromePanelDecoration(
         color: monoSurfaceAltColor,
         borderColor: monoBorderStrongColor,
@@ -580,6 +584,7 @@ class _ContextChip extends StatelessWidget {
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: monoTextColor,
               fontWeight: FontWeight.w700,
+              fontSize: 11,
             ),
       ),
     );
@@ -601,7 +606,7 @@ class _DetailPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 14 : 16),
+      padding: EdgeInsets.all(compact ? 9 : 10),
       decoration: monochromePanelDecoration(
         color: monoSurfaceAltColor,
         borderColor: monoBorderStrongColor,
@@ -612,12 +617,13 @@ class _DetailPanel extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: monoMutedTextColor,
                   fontWeight: FontWeight.w700,
+                  fontSize: 11,
                 ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           child,
         ],
       ),
@@ -641,8 +647,8 @@ class _CopyablePanel extends StatelessWidget {
     final visibleValue = SafeDisplayText.displayIdentifier(
       context,
       value,
-      leading: compact ? 8 : 10,
-      trailing: compact ? 6 : 8,
+      leading: compact ? 6 : 8,
+      trailing: compact ? 4 : 6,
     );
     return _DetailPanel(
       title: title,
@@ -653,14 +659,15 @@ class _CopyablePanel extends StatelessWidget {
           Expanded(
             child: SelectableText(
               visibleValue,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: monoTextColor,
                     fontWeight: FontWeight.w700,
-                    height: 1.35,
+                    fontSize: 13,
+                    height: 1.3,
                   ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           IconButton(
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: value));
@@ -673,11 +680,14 @@ class _CopyablePanel extends StatelessWidget {
                 message: context.tr.apiDisplayCopied,
               );
             },
-            icon: const Icon(KeroseneIcons.copy),
+            icon: const Icon(KeroseneIcons.copy, size: 18),
             color: monoTextColor,
+            visualDensity: VisualDensity.compact,
             style: IconButton.styleFrom(
               backgroundColor: monoSurfaceRaisedColor,
-              side: const BorderSide(color: monoBorderStrongColor),
+              side: BorderSide(color: monoBorderStrongColor),
+              minimumSize: const Size.square(36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
               ),
@@ -712,9 +722,10 @@ class _SummaryHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ~35% smaller visual mass so the sheet feels less top-heavy.
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(13, 13, 13, 14),
       decoration: monochromePanelDecoration(
         color: monoSurfaceAltColor,
         borderColor: monoBorderStrongColor,
@@ -724,68 +735,74 @@ class _SummaryHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
-            margin: const EdgeInsets.only(bottom: 16),
+            width: 34,
+            height: 34,
+            margin: const EdgeInsets.only(bottom: 10),
             decoration: monochromePanelDecoration(
               color: monoSurfaceRaisedColor,
               borderColor: monoBorderStrongColor,
               showShadow: false,
             ),
             alignment: Alignment.center,
-            child: Icon(leadingIcon, color: monoTextColor, size: 24),
+            child: Icon(leadingIcon, color: monoTextColor, size: 16),
           ),
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               FinancialStatusBadge(meta: statusMeta),
               _ContextChip(label: contextLabel),
             ],
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 12),
           Text(
             headline,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: monoTextColor,
                   fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                  height: 1.2,
                 ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 5),
           Text(
             supportingText,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: monoMutedTextColor,
-                  height: 1.45,
+                  fontSize: 13,
+                  height: 1.35,
                 ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 12),
           Text(
             primaryAmount,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: monoTextColor,
                   fontWeight: FontWeight.w800,
+                  fontSize: 22,
                   height: 1,
                 ),
           ),
           if (secondaryAmount != null) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: 5),
             Text(
               secondaryAmount!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: monoMutedTextColor,
                     fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
             ),
           ],
           if (createdAt != null) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: 6),
             Text(
               AppDateTime.formatRelativeWithClock(context, createdAt!),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: monoMutedTextColor,
                     fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
             ),
           ],
@@ -816,8 +833,8 @@ class _DisclosurePanel extends StatelessWidget {
           highlightColor: Colors.transparent,
         ),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          childrenPadding: EdgeInsets.fromLTRB(16, 0, 16, 16),
           iconColor: monoTextColor,
           collapsedIconColor: monoTextColor,
           title: Text(
@@ -843,7 +860,7 @@ class _ReceiptSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: monochromePanelDecoration(
         color: monoSurfaceAltColor,
         borderColor: monoBorderStrongColor,
@@ -873,7 +890,7 @@ class _ReceiptRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -899,7 +916,7 @@ class _ReceiptRow extends StatelessWidget {
               );
             }),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(

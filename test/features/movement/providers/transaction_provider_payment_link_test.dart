@@ -468,6 +468,7 @@ class _PaymentLinkRepository implements TransactionRepository {
     bool isLightning = false,
     double networkFeeBtc = 0,
     double maxRoutingFeeBtc = 0.000001,
+    int? networkFeeSats,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,
     String? description,

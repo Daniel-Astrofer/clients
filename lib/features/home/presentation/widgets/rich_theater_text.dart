@@ -73,20 +73,20 @@ class RichTheaterText extends StatelessWidget {
 
     final h1Style = _theaterStyle(AppTypography.newsreader(
       textStyle: theme.textTheme.titleLarge,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.onSurface,
       fontSize: h1Size,
       fontWeight: FontWeight.w500,
       height: 1.25,
     ));
     final h2Style = _theaterStyle(
       theme.textTheme.titleMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.95),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
             fontSize: h2Size,
             fontWeight: FontWeight.w700,
             height: 1.3,
           ) ??
           TextStyle(
-            color: Colors.white.withValues(alpha: 0.95),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
             fontSize: h2Size,
             fontWeight: FontWeight.w700,
             height: 1.3,
@@ -94,13 +94,13 @@ class RichTheaterText extends StatelessWidget {
     );
     final bodyStyle = _theaterStyle(
       theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.88),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
             fontSize: bodySize,
             fontWeight: FontWeight.w300,
             height: 1.45,
           ) ??
           TextStyle(
-            color: Colors.white.withValues(alpha: 0.88),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
             fontSize: bodySize,
             fontWeight: FontWeight.w300,
             height: 1.45,
@@ -108,17 +108,17 @@ class RichTheaterText extends StatelessWidget {
     );
     final bulletStyle = bodyStyle.copyWith(
       fontWeight: FontWeight.w400,
-      color: Colors.white.withValues(alpha: 0.90),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.90),
     );
     final captionStyle = _theaterStyle(
       theme.textTheme.bodySmall?.copyWith(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
             fontSize: captionSize,
             fontWeight: FontWeight.w300,
             height: 1.35,
           ) ??
           TextStyle(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
             fontSize: captionSize,
             fontWeight: FontWeight.w300,
             height: 1.35,

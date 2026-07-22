@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 
 /// Back affordance inline to the left of a Newsreader H1 — receive flow chrome.
@@ -28,10 +27,10 @@ class ReceiveFlowTitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseH1 = AppTypography.h1.copyWith(
-      color: KeroseneBrandTokens.textPrimary,
+      color: Theme.of(context).colorScheme.onSurface,
     );
     final baseDescription = AppTypography.description.copyWith(
-      color: KeroseneBrandTokens.textSecondary,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
     final titleScale = compact ? ReceiveFlowLayout.walletPickerTitleScale : 1.0;
     final bodyScale = compact ? ReceiveFlowLayout.walletPickerBodyScale : 1.0;
@@ -44,12 +43,14 @@ class ReceiveFlowTitleBar extends StatelessWidget {
           bodyScale,
     );
 
-    final horizontalPad = alignLeft || compact ? 20.0 : 8.0;
+    final horizontalPad = alignLeft || compact
+        ? ReceiveFlowLayout.pageHorizontal - 4
+        : 8.0;
     final backWidth =
         onBack != null ? 48.0 : (alignLeft || compact ? 0.0 : 48.0);
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(horizontalPad, 0, 24, 0),
+      padding: EdgeInsets.fromLTRB(horizontalPad, 0, ReceiveFlowLayout.pageHorizontal, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -60,9 +61,9 @@ class ReceiveFlowTitleBar extends StatelessWidget {
                 IconButton(
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   onPressed: onBack,
-                  icon: const Icon(KeroseneIcons.back, size: 22),
+                  icon: Icon(KeroseneIcons.back, size: 22),
                   style: IconButton.styleFrom(
-                    foregroundColor: KeroseneBrandTokens.textPrimary,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     minimumSize: const Size.square(48),
                     padding: EdgeInsets.zero,
                   ),
@@ -99,12 +100,10 @@ class ReceiveFlowTitleBar extends StatelessWidget {
   }
 }
 
-/// Full-screen receive step: body fills the viewport; H1 floats at a fixed
-/// height without pushing content below.
+/// Full-screen receive step: shared title lead + expanded centered body.
 ///
-/// When [embeddedInSheet] is true (wallet picker → hub expand), use a simple
-/// column so layout tracks the animated sheet height instead of 25% of the
-/// full display.
+/// One vertical system for hub / network / NFC / gateway so steps don't pin
+/// content to the status bar or float H1 at unrelated fractions.
 class ReceiveFlowScreenShell extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
@@ -125,51 +124,40 @@ class ReceiveFlowScreenShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (embeddedInSheet) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SafeArea(
-                bottom: false,
-                child: ReceiveFlowTitleBar(
-                  onBack: onBack,
-                  title: title,
-                  subtitle: subtitle,
-                  titleStyle: titleStyle,
-                  compact: true,
-                  alignLeft: true,
-                ),
-              ),
-              Expanded(
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  child: child,
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportH = constraints.maxHeight.isFinite &&
+                constraints.maxHeight > 0
+            ? constraints.maxHeight
+            : MediaQuery.sizeOf(context).height;
+        final statusPad =
+            embeddedInSheet ? 0.0 : ReceiveFlowLayout.statusTopPad(context);
+        final lead = embeddedInSheet
+            ? 12.0
+            : ReceiveFlowLayout.titleTopLead(viewportH);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(child: child),
-        Positioned(
-          top: ReceiveFlowLayout.titleOverlayTop(context),
-          left: 0,
-          right: 0,
-          child: ReceiveFlowTitleBar(
-            onBack: onBack,
-            title: title,
-            subtitle: subtitle,
-            titleStyle: titleStyle,
-          ),
-        ),
-      ],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: statusPad + lead),
+            ReceiveFlowTitleBar(
+              onBack: onBack,
+              title: title,
+              subtitle: subtitle,
+              titleStyle: titleStyle,
+              compact: embeddedInSheet,
+              alignLeft: embeddedInSheet,
+            ),
+            const SizedBox(height: ReceiveFlowLayout.titleToContentGap),
+            Expanded(
+              child: SizedBox(
+                width: constraints.maxWidth,
+                child: child,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -182,7 +170,7 @@ class ReceiveFlowSheetTopBorder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: ReceiveFlowLayout.sheetTopBorderHeight,
-      color: ReceiveFlowLayout.sheetTopBorderColor,
+      color: ReceiveFlowLayout.sheetTopBorderColorOf(context),
     );
   }
 }

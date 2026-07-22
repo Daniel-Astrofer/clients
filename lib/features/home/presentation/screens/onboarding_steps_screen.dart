@@ -38,8 +38,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       HapticFeedback.selectionClick();
                       Navigator.maybePop(context);
                     },
-                    icon: const Icon(KeroseneIcons.back,
-                        color: Colors.white, size: 22),
+                    icon: Icon(KeroseneIcons.back,
+                        color: Theme.of(context).colorScheme.onSurface, size: 22),
                     style: IconButton.styleFrom(
                       minimumSize: const Size.square(40),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -67,19 +67,19 @@ class OnboardingStepsScreen extends ConsumerWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         Text(
                           isDone
                               ? 'Excelente! Sua conta está 100% ativa.'
                               : 'Complete as etapas essenciais abaixo para habilitar todas as funções da plataforma.',
                           style: AppTypography.newsreader(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 32,
                             fontWeight: FontWeight.w400,
                             height: 1.15,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         // Mini progress info
                         Row(
                           children: [
@@ -90,16 +90,16 @@ class OnboardingStepsScreen extends ConsumerWidget {
                                   value: completed / 3.0,
                                   minHeight: 5,
                                   backgroundColor:
-                                      Colors.white.withValues(alpha: 0.08),
+                                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     isDone
                                         ? AppColors.hexFF4ADE80
-                                        : Colors.white,
+                                        : Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            SizedBox(width: 14),
                             Text(
                               '$completed de 3 concluídos',
                               style: TextStyle(
@@ -111,7 +111,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 38),
+                        SizedBox(height: 38),
                         _buildStepItem(
                           context: context,
                           index: 1,
@@ -178,8 +178,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
     final statusColor = isCompleted
         ? AppColors.hexFF4ADE80
         : enabled
-            ? Colors.white
-            : Colors.white.withValues(alpha: 0.24);
+            ? Theme.of(context).colorScheme.onSurface
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -210,10 +210,10 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       isCompleted ? AppColors.hexFF4ADE80 : Colors.transparent,
                 ),
                 child: isCompleted
-                    ? const Icon(
+                    ? Icon(
                         KeroseneIcons.success,
                         size: 16,
-                        color: Colors.black,
+                        color: Theme.of(context).scaffoldBackgroundColor,
                       )
                     : Center(
                         child: Text(
@@ -226,7 +226,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                         ),
                       ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,19 +235,19 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       title,
                       style: TextStyle(
                         color: enabled
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.35),
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       description,
                       style: TextStyle(
                         color: enabled
-                            ? Colors.white.withValues(alpha: 0.55)
-                            : Colors.white.withValues(alpha: 0.24),
+                            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24),
                         fontSize: 12.5,
                         fontWeight: FontWeight.w400,
                         height: 1.35,
@@ -257,27 +257,27 @@ class OnboardingStepsScreen extends ConsumerWidget {
                 ),
               ),
               if (enabled && !isCompleted) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Align(
                   alignment: Alignment.center,
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       KeroseneIcons.chevronRight,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 14,
                     ),
                   ),
                 ),
               ] else if (!enabled) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Icon(
                   KeroseneIcons.security,
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.16),
                   size: 16,
                 ),
               ],

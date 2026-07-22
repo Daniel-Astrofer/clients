@@ -575,7 +575,7 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
             ),
           ],
           if (_recoveryError != null) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
               _recoveryError!,
               style: Theme.of(context).textTheme.bodySmall!.copyWith(
@@ -623,7 +623,7 @@ class _AuthorizationSheetBase extends StatelessWidget {
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border.all(
-          color: theme.colorScheme.onPrimary.withValues(alpha: 0.08),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: Column(
@@ -633,7 +633,7 @@ class _AuthorizationSheetBase extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: theme.colorScheme.onPrimary.withValues(alpha: 0.18),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -665,7 +665,7 @@ class _AuthorizationSheetBase extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall!.copyWith(
-              color: theme.colorScheme.onPrimary.withValues(alpha: 0.56),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.56),
               height: 1.45,
             ),
           ),
@@ -731,12 +731,12 @@ class _FactorChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
           ),
         ],
@@ -791,7 +791,7 @@ class _LabeledField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.md),
           borderSide: BorderSide(
-            color: theme.colorScheme.onPrimary.withValues(alpha: 0.12),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
           ),
         ),
         focusedBorder: OutlineInputBorder(
@@ -836,7 +836,7 @@ class _ShareField extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppSpacing.md),
           borderSide: BorderSide(
             color:
-                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.12),
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
           ),
         ),
         focusedBorder: OutlineInputBorder(

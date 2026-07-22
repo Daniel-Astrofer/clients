@@ -275,7 +275,8 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       _sessionId = id;
       _lifecycleTimer?.cancel();
       _applyBodyShift(open: false);
-      if (reduce) {
+      final snapClose = reduce || !TickerMode.of(context);
+      if (snapClose) {
         _openCtrl.value = 0;
         setState(() {
           _displayScene = null;
@@ -304,6 +305,11 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     _sessionId = id;
     _finished = false;
 
+    // If an ancestor muted tickers (scroll-busy TickerMode, etc.), forward()
+    // never advances — snap open so copy is visible immediately.
+    final tickersEnabled = TickerMode.of(context);
+    final snapOpen = reduce || !tickersEnabled;
+
     if (isNewPiece && wasOpen && _displayScene != null) {
       final prev = _displayScene!;
       final prevKey = _sceneCacheKey(prev);
@@ -319,7 +325,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       });
       _applyBodyShift(open: true);
       _armLifecycle(scene, stage);
-      if (reduce) {
+      if (snapOpen) {
         _swapCtrl.value = 1;
       } else {
         _swapCtrl.forward(from: 0);
@@ -337,7 +343,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     });
     _applyBodyShift(open: true);
     _armLifecycle(scene, stage);
-    if (reduce) {
+    if (snapOpen) {
       _openCtrl.value = 1;
       _swapCtrl.value = 1;
     } else {
@@ -394,7 +400,8 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
     if (!mounted) return;
     final reduce = KeroseneMotion.reduceMotion(context);
-    if (reduce) {
+    final snapClose = reduce || !TickerMode.of(context);
+    if (snapClose) {
       _openCtrl.value = 0;
       setState(() {
         _displayScene = null;
@@ -459,7 +466,10 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
     final notifKey = widget.notificationButtonKey ?? _localNotifKey;
     final chrome = _HeaderChrome(notificationButtonKey: notifKey);
-    final midTopPad = (screenH * 0.14 - topInset * 0.25).clamp(28.0, 120.0);
+    // Keep copy under chrome, not mid-viewport — long pad buried receive text
+    // into the balance/glow band on short phones.
+    final midTopPad =
+        (screenH * 0.04 - topInset * 0.1).clamp(10.0, 28.0);
 
     final greeting = _RestingGreetingText(
       userName: widget.userName,
@@ -774,7 +784,7 @@ class _RestingGreetingText extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: AppTypography.newsreader(
         textStyle: theme.textTheme.titleLarge,
-        color: Colors.white,
+        color: theme.colorScheme.onSurface,
         fontSize: fontSize,
         fontWeight: FontWeight.w300,
         height: 1.1,

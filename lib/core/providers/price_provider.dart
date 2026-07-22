@@ -4,14 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client_provider.dart';
 import '../services/price_websocket_service.dart';
 
-/// Provider for WebSocket price service
+/// Clearnet exchange feed (Binance/Coinbase) — optional live USD overlay / alerts.
+///
+/// Display quotes for balances prefer [backendBtcRatesProvider] (sovereign
+/// Kerosene API). This external socket is not required for BRL/EUR on home.
 final priceWebSocketServiceProvider =
     Provider.autoDispose<PriceWebSocketService>((ref) {
   final service = PriceWebSocketService();
   service.connect();
 
-  // Keep the provider alive for a brief period after the last listener is removed
-  // to prevent thrashing (connecting/disposing rapidly) during transient rebuilds or navigation.
   final keepAlive = ref.keepAlive();
   Timer? timer;
 
@@ -25,7 +26,6 @@ final priceWebSocketServiceProvider =
     timer?.cancel();
   });
 
-  // Dispose when provider is disposed
   ref.onDispose(() {
     timer?.cancel();
     service.dispose();
@@ -34,7 +34,7 @@ final priceWebSocketServiceProvider =
   return service;
 });
 
-/// Stream provider for BTC price in USD
+/// Stream provider for BTC price in USD (external clearnet feed).
 final btcPriceProvider = StreamProvider.autoDispose<double>((ref) {
   final service = ref.watch(priceWebSocketServiceProvider);
   return service.priceStream;
@@ -46,28 +46,40 @@ final btcTickerProvider =
   return service.tickerStream;
 });
 
+/// 24h change: live WS / backend first, then external ticker if present.
 final btcDailyChangePercentProvider = Provider.autoDispose<double?>((ref) {
+  final live = ref.watch(liveBackendBtcRatesProvider);
+  final fromLive = live?.btcUsdChange24hPercent;
+  if (fromLive != null) {
+    return fromLive;
+  }
+
+  final backend = ref.watch(backendBtcRatesProvider).asData?.value;
+  final fromBackend = backend?.btcUsdChange24hPercent;
+  if (fromBackend != null) {
+    return fromBackend;
+  }
+
   final tickerAsync = ref.watch(btcTickerProvider);
   return tickerAsync.whenOrNull(
     data: (ticker) => ticker.dailyChangePercent,
   );
 });
 
-/// Provider for latest BTC price (synchronous access).
-/// Falls back to backend HTTP price when the external WebSocket feed is unavailable.
+/// Latest BTC/USD for display — live STOMP / HTTP backend first.
+///
+/// External Binance/Coinbase is a last-resort overlay only.
 final latestBtcPriceProvider = Provider.autoDispose<double?>((ref) {
-  final priceAsync = ref.watch(btcPriceProvider);
-  final wsPrice = priceAsync.whenOrNull(data: (price) => price);
-
-  if (wsPrice != null && wsPrice > 0) {
-    return wsPrice;
-  }
-
-  // Fallback: use the backend's cached BTC price
-  final backendRates = ref.watch(backendBtcRatesProvider);
-  final backendPrice = backendRates.asData?.value?.btcUsd;
+  final resolved = ref.watch(resolvedBackendBtcRatesProvider);
+  final backendPrice = resolved?.btcUsd;
   if (backendPrice != null && backendPrice > 0) {
     return backendPrice;
+  }
+
+  final priceAsync = ref.watch(btcPriceProvider);
+  final wsPrice = priceAsync.whenOrNull(data: (price) => price);
+  if (wsPrice != null && wsPrice > 0) {
+    return wsPrice;
   }
 
   return null;
@@ -78,12 +90,14 @@ class BackendBtcRates {
   final double btcBrl;
   final double btcEur;
   final double usdBrl;
+  final double? btcUsdChange24hPercent;
 
   const BackendBtcRates({
     required this.btcUsd,
     required this.btcBrl,
     required this.btcEur,
     required this.usdBrl,
+    this.btcUsdChange24hPercent,
   });
 
   factory BackendBtcRates.fromJson(Map<String, dynamic> json) {
@@ -112,11 +126,19 @@ class BackendBtcRates {
         ? btcBrl
         : (btcUsd > 0 && usdBrl > 0 ? btcUsd * usdBrl : 0.0);
 
+    final change = _parseSignedNum(root, [
+      'btcUsdChange24hPercent',
+      'btc_usd_change_24h_percent',
+      'change24h',
+      'usd_24h_change',
+    ]);
+
     return BackendBtcRates(
       btcUsd: btcUsd,
       btcBrl: finalBtcBrl,
       btcEur: btcEur,
       usdBrl: usdBrl,
+      btcUsdChange24hPercent: change,
     );
   }
 
@@ -131,30 +153,90 @@ class BackendBtcRates {
     }
     return 0;
   }
+
+  static double? _parseSignedNum(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final val = json[key];
+      if (val is num) return val.toDouble();
+      if (val is String) {
+        final parsed = double.tryParse(val.replaceAll(',', '.'));
+        if (parsed != null) return parsed;
+      }
+    }
+    return null;
+  }
 }
 
+/// Live rates from STOMP `/topic/btc-price` (updated each CoinGecko poll).
+final liveBackendBtcRatesProvider =
+    NotifierProvider<LiveBackendBtcRatesNotifier, BackendBtcRates?>(
+  LiveBackendBtcRatesNotifier.new,
+);
+
+class LiveBackendBtcRatesNotifier extends Notifier<BackendBtcRates?> {
+  @override
+  BackendBtcRates? build() => null;
+
+  void apply(BackendBtcRates rates) {
+    if (rates.btcUsd <= 0 && rates.btcBrl <= 0) return;
+    state = rates;
+  }
+
+  void clear() => state = null;
+}
+
+/// Prefer STOMP live rates; fall back to HTTP bootstrap.
+final resolvedBackendBtcRatesProvider = Provider.autoDispose<BackendBtcRates?>((
+  ref,
+) {
+  final live = ref.watch(liveBackendBtcRatesProvider);
+  if (live != null && (live.btcUsd > 0 || live.btcBrl > 0)) {
+    return live;
+  }
+  return ref.watch(backendBtcRatesProvider).asData?.value;
+});
+
+/// Sovereign BTC quotes from Kerosene HTTP (`GET /api/economy/btc-price`).
+///
+/// Bootstrap / fallback when STOMP `/topic/btc-price` has not delivered yet.
+/// Refresh is slower when live WS rates are already present.
 final backendBtcRatesProvider =
     FutureProvider.autoDispose<BackendBtcRates?>((ref) async {
+  final hasLive = ref.read(liveBackendBtcRatesProvider) != null;
+  final refresh = Timer(
+    Duration(minutes: hasLive ? 5 : 2),
+    () {
+      ref.invalidateSelf();
+    },
+  );
+  ref.onDispose(refresh.cancel);
+
   try {
     final apiClient = ref.watch(apiClientProvider);
     final response = await apiClient.get('/api/economy/btc-price');
     final payload = Map<String, dynamic>.from(response.data as Map);
-    return BackendBtcRates.fromJson(payload);
+    final rates = BackendBtcRates.fromJson(payload);
+    // Seed live cache if STOMP has not spoken yet.
+    if (ref.read(liveBackendBtcRatesProvider) == null &&
+        (rates.btcUsd > 0 || rates.btcBrl > 0)) {
+      ref.read(liveBackendBtcRatesProvider.notifier).apply(rates);
+    }
+    return rates;
   } catch (_) {
     return null;
   }
 });
 
 final usdBrlRateProvider = Provider.autoDispose<double?>((ref) {
-  final backendRates = ref.watch(backendBtcRatesProvider).asData?.value;
+  final backendRates = ref.watch(resolvedBackendBtcRatesProvider);
   final rate = backendRates?.usdBrl;
   if (rate != null && rate > 0) return rate;
   return null;
 });
 
-/// Provider for BTC/EUR exchange rate
+/// Provider for BTC/EUR exchange rate (backend only).
 final btcEurPriceProvider = Provider.autoDispose<double?>((ref) {
-  final backendRates = ref.watch(backendBtcRatesProvider).asData?.value;
+  final backendRates = ref.watch(resolvedBackendBtcRatesProvider);
   final btcEur = backendRates?.btcEur;
   if (btcEur != null && btcEur > 0) {
     return btcEur;
@@ -162,9 +244,9 @@ final btcEurPriceProvider = Provider.autoDispose<double?>((ref) {
   return null;
 });
 
-/// Provider for BTC/BRL exchange rate
+/// Provider for BTC/BRL exchange rate (backend first).
 final btcBrlPriceProvider = Provider.autoDispose<double?>((ref) {
-  final backendRates = ref.watch(backendBtcRatesProvider).asData?.value;
+  final backendRates = ref.watch(resolvedBackendBtcRatesProvider);
   final backendBrl = backendRates?.btcBrl;
   if (backendBrl != null && backendBrl > 0) {
     return backendBrl;

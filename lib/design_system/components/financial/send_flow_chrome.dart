@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 
 /// Pins the primary CTA in the thumb zone (lower third) with consistent padding.
+/// Rises with the native keyboard via [MediaQuery.viewInsets].
 class SendFlowThumbDock extends StatelessWidget {
   final Widget child;
   final Color? background;
@@ -16,13 +17,17 @@ class SendFlowThumbDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = SendFlowTheme.of(context);
-    return SafeArea(
-      top: false,
-      child: ColoredBox(
-        color: background ?? tokens.background,
-        child: Padding(
-          padding: tokens.thumbDockPadding,
-          child: child,
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: SafeArea(
+        top: false,
+        child: ColoredBox(
+          color: background ?? tokens.background,
+          child: Padding(
+            padding: tokens.thumbDockPadding,
+            child: child,
+          ),
         ),
       ),
     );
@@ -53,7 +58,7 @@ class SendFlowPrimaryCta extends StatelessWidget {
     final tokens = SendFlowTheme.of(context);
     final ready = enabled && !isLoading && onPressed != null;
     final bg = inverted
-        ? (ready ? tokens.surfaceHigh : tokens.ctaDisabledBackground)
+        ? (ready ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)) : tokens.ctaDisabledBackground)
         : (ready ? tokens.ctaBackground : tokens.ctaDisabledBackground);
     final fg = inverted
         ? (ready ? tokens.textPrimary : tokens.ctaDisabledForeground)
@@ -108,9 +113,9 @@ class SendFlowCard extends StatelessWidget {
     final tokens = SendFlowTheme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: tokens.surfaceHigh,
+        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
         borderRadius: tokens.cardBorderRadius,
-        border: Border.all(color: tokens.border.withValues(alpha: 0.55)),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.55)),
         boxShadow: tokens.cardShadow,
       ),
       child: Padding(

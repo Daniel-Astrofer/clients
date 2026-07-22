@@ -18,13 +18,13 @@ class KeroseneScreenBackground extends StatelessWidget {
     final content = Padding(padding: padding, child: child);
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            KeroseneBrandTokens.backgroundSoft,
-            KeroseneBrandTokens.background,
+            Theme.of(context).scaffoldBackgroundColor,
+            Theme.of(context).scaffoldBackgroundColor,
           ],
         ),
       ),

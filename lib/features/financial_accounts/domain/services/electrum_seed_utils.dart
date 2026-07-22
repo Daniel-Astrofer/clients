@@ -14,7 +14,7 @@ import 'package:kerosene/features/financial_accounts/domain/services/bip39_mnemo
 ///
 /// Version prefixes (hex of HMAC):
 /// - `01`  standard (legacy P2PKH)
-/// - `100` segwit (native P2WPKH) — common on testnet4
+/// - `100` segwit (native P2WPKH) — common on testnet
 /// - `101` 2FA
 /// - `102` 2FA+segwit
 enum ElectrumSeedType {

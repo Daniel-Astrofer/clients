@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -85,9 +84,9 @@ class _SovereigntyStatusScreenState
     final auditStatsAsync = ref.watch(auditStatsProvider);
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.backgroundSoft,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ColoredBox(
-        color: KeroseneBrandTokens.backgroundSoft,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: Column(
             children: [
@@ -123,15 +122,15 @@ class _SovereigntyStatusScreenState
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                 ),
               ),
               child: Icon(
                 KeroseneIcons.back,
-                color: Theme.of(context).colorScheme.onPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 size: 16,
               ),
             ),
@@ -146,7 +145,7 @@ class _SovereigntyStatusScreenState
                   style: AppTypography.buttonText.copyWith(
                     fontSize: 12,
                     letterSpacing: 1.6,
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -157,7 +156,7 @@ class _SovereigntyStatusScreenState
                     es: 'Lectura operativa actualizada automaticamente cada 12 segundos',
                   ),
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.white70,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                   ),
                 ),
               ],
@@ -169,10 +168,10 @@ class _SovereigntyStatusScreenState
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                 ),
               ),
               child: Row(
@@ -180,14 +179,14 @@ class _SovereigntyStatusScreenState
                 children: [
                   Icon(
                     KeroseneIcons.refresh,
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     size: 16,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     _copy(pt: 'Atualizar', en: 'Refresh', es: 'Actualizar'),
                     style: AppTypography.bodySmall.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -207,7 +206,7 @@ class _SovereigntyStatusScreenState
   ) {
     return RefreshIndicator(
       onRefresh: _refreshStatus,
-      color: Theme.of(context).colorScheme.onPrimary,
+      color: Theme.of(context).colorScheme.onSurface,
       backgroundColor: Theme.of(context).colorScheme.surface,
       child: ListView(
         padding: const EdgeInsets.all(24),
@@ -247,7 +246,7 @@ class _SovereigntyStatusScreenState
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: primaryColor.withValues(alpha: allGood ? 0.18 : 0.28),
@@ -290,7 +289,7 @@ class _SovereigntyStatusScreenState
                               es: 'Se requiere atención operativa',
                             ),
                       style: AppTypography.h3.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -307,7 +306,7 @@ class _SovereigntyStatusScreenState
                               es: 'Una o más señales no están en el estado ideal. Revisa los bloques de abajo antes de tratar esta lectura como saludable.',
                             ),
                       style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.white70,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                       ),
                     ),
                   ],
@@ -472,15 +471,15 @@ class _SovereigntyStatusScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
           CupertinoActivityIndicator(
             radius: 11,
-            color: Theme.of(context).colorScheme.onPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -491,7 +490,7 @@ class _SovereigntyStatusScreenState
                 es: 'Consolidando tesorería, liquidez Lightning y reservas auditadas.',
               ),
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.white70,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
               ),
             ),
           ),
@@ -512,9 +511,9 @@ class _SovereigntyStatusScreenState
 
   Widget _buildKfeReserveUnavailableCard(String message) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: Theme.of(context).colorScheme.error.withValues(alpha: 0.18),
@@ -549,7 +548,7 @@ class _SovereigntyStatusScreenState
                     es: 'Tesorería no disponible',
                   ),
                   style: AppTypography.bodyMedium.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -557,7 +556,7 @@ class _SovereigntyStatusScreenState
                 Text(
                   message,
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.white70,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                   ),
                 ),
               ],
@@ -657,7 +656,7 @@ class _SovereigntyStatusScreenState
             child: Padding(
               padding: EdgeInsets.only(right: index == totalNodes - 1 ? 0 : 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: (active
                           ? AppColors.success
@@ -680,11 +679,11 @@ class _SovereigntyStatusScreenState
                           : Theme.of(context).colorScheme.error,
                       size: 14,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       label.toUpperCase(),
                       style: AppTypography.caption.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -786,10 +785,10 @@ class _SovereigntyStatusScreenState
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -798,12 +797,12 @@ class _SovereigntyStatusScreenState
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               KeroseneIcons.schedule,
-              color: Theme.of(context).colorScheme.onPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 18,
             ),
           ),
@@ -815,7 +814,7 @@ class _SovereigntyStatusScreenState
                 Text(
                   context.tr.serverUptime,
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.white70,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -826,7 +825,7 @@ class _SovereigntyStatusScreenState
                     es: 'Disponibilidad acumulada del servicio',
                   ),
                   style: AppTypography.caption.copyWith(
-                    color: AppColors.white50,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50),
                   ),
                 ),
               ],
@@ -836,7 +835,7 @@ class _SovereigntyStatusScreenState
             uptime,
             style: AppTypography.number.copyWith(
               fontFamily: AppTypography.numericFontFamily,
-              color: Theme.of(context).colorScheme.onPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -854,9 +853,9 @@ class _SovereigntyStatusScreenState
         children: [
           CupertinoActivityIndicator(
             radius: 18,
-            color: Theme.of(context).colorScheme.onPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Text(
             _copy(
               pt: 'Coletando sinais de soberania',
@@ -864,7 +863,7 @@ class _SovereigntyStatusScreenState
               es: 'Recolectando señales de soberanía',
             ),
             style: AppTypography.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -876,11 +875,11 @@ class _SovereigntyStatusScreenState
   Widget _buildErrorState(String error) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(32),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.03),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color:
@@ -895,7 +894,7 @@ class _SovereigntyStatusScreenState
                 color: Theme.of(context).colorScheme.error,
                 size: 36,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 _copy(
                   pt: 'Leitura indisponível',
@@ -903,7 +902,7 @@ class _SovereigntyStatusScreenState
                   es: 'Lectura no disponible',
                 ),
                 style: AppTypography.h3.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 10),
@@ -915,7 +914,7 @@ class _SovereigntyStatusScreenState
                 ),
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.white70,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                 ),
               ),
               const SizedBox(height: 8),
@@ -923,14 +922,14 @@ class _SovereigntyStatusScreenState
                 error,
                 textAlign: TextAlign.center,
                 style: AppTypography.caption.copyWith(
-                  color: AppColors.white50,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50),
                 ),
               ),
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: _refreshStatus,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 12,
                   ),
@@ -954,7 +953,7 @@ class _SovereigntyStatusScreenState
                       es: 'Intentar de nuevo',
                     ),
                     style: AppTypography.bodyMedium.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

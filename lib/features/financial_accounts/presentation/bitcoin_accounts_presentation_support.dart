@@ -191,7 +191,7 @@ class BitcoinAccountsColors {
         border: AppColors.hexFFDDE0D8,
         borderStrong: AppColors.hexFFC8CDC3,
         divider: AppColors.hexFFE2E4DE,
-        text: AppColors.hexFF181A17,
+        text: Color(0xFF141517),
         mutedText: AppColors.hexFF62675F,
         faintText: AppColors.hexFF8B9087,
       );

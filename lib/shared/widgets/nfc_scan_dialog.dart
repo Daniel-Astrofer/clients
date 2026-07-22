@@ -107,17 +107,14 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(20),
+      insetPadding: EdgeInsets.all(20),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: KeroseneBrandTokens.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimary
-                  .withValues(alpha: 0.1)),
+              color: KeroseneBrandTokens.border),
           boxShadow: [
             BoxShadow(
               color: KeroseneBrandTokens.info.withValues(alpha: 0.1),
@@ -132,21 +129,18 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
             Text(
               context.tr.nfcScannerTitle,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
+                color: KeroseneBrandTokens.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: 32),
             Container(
               height: 150,
               width: 150,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimary
-                    .withValues(alpha: 0.05),
+                color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.05),
               ),
               child: _isScanning
                   ? const Icon(KeroseneIcons.nfc,
@@ -157,28 +151,22 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
                       color: KeroseneBrandTokens.success,
                     ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: 32),
             Text(
               _status,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimary
-                    .withValues(alpha: 0.7),
+                color: KeroseneBrandTokens.textSecondary,
                 fontSize: 16,
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 context.tr.cancel,
                 style: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onPrimary
-                        .withValues(alpha: 0.54)),
+                    color: KeroseneBrandTokens.textMuted),
               ),
             ),
           ],

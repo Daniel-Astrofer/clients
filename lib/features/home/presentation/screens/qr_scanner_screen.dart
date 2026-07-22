@@ -51,7 +51,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           // ── Camera View ───────────────────────────────────────────────────
@@ -73,14 +73,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.8),
-                    Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.0),
+                    Colors.black.withValues(alpha: 0.8),
+                    Colors.black.withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -90,14 +84,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   children: [
                     IconButton(
                       icon: Icon(KeroseneIcons.back,
-                          color: Theme.of(context).colorScheme.onPrimary,
+                          color: Colors.white,
                           size: 24),
                       onPressed: () => Navigator.of(context).pop(),
                       style: IconButton.styleFrom(
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .onPrimary
-                            .withValues(alpha: 0.1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                       ),
                     ),
                     const Spacer(),
@@ -106,7 +97,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium!
-                          .copyWith(letterSpacing: 2),
+                          .copyWith(
+                            letterSpacing: 2,
+                            color: Colors.white,
+                          ),
                     ),
                     const Spacer(),
                     ValueListenableBuilder(
@@ -119,15 +113,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                                 : KeroseneIcons.unavailable,
                             color: state.torchState == TorchState.on
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onPrimary,
+                                : Colors.white,
                             size: 20,
                           ),
                           onPressed: () => _controller.toggleTorch(),
                           style: IconButton.styleFrom(
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .onPrimary
-                                .withValues(alpha: 0.1),
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.1),
                           ),
                         )
                             .animate(
@@ -136,17 +128,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                             .tint(color: Theme.of(context).colorScheme.primary);
                       },
                     ),
-                    const SizedBox(width: AppSpacing.xs),
+                    SizedBox(width: AppSpacing.xs),
                     IconButton(
                       icon: Icon(KeroseneIcons.refresh,
-                          color: Theme.of(context).colorScheme.onPrimary,
+                          color: Colors.white,
                           size: 20),
                       onPressed: () => _controller.switchCamera(),
                       style: IconButton.styleFrom(
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .onPrimary
-                            .withValues(alpha: 0.1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -164,16 +153,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg, vertical: AppSpacing.md),
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: Colors.black.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(AppSpacing.lg),
-                border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onPrimary
-                        .withValues(alpha: 0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -183,14 +165,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                           size: 24)
                       .animate(onPlay: (c) => c.repeat())
                       .shimmer(duration: 1500.ms),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: AppSpacing.sm),
                   Text(
                     context.tr.qrScannerInstruction,
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onPrimary
-                              .withValues(alpha: 0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontWeight: FontWeight.w600,
                         ),
                     textAlign: TextAlign.center,
@@ -219,14 +198,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             // Dark Overlay
             ColorFiltered(
               colorFilter: ColorFilter.mode(
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                Colors.white.withValues(alpha: 0.6),
                 BlendMode.srcOut,
               ),
               child: Stack(
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Colors.white,
                       backgroundBlendMode: BlendMode.dstOut,
                     ),
                   ),
@@ -237,7 +216,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                       width: scanAreaSize,
                       height: scanAreaSize,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(AppSpacing.lg),
                       ),
                     ),

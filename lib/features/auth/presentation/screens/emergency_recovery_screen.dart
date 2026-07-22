@@ -56,13 +56,18 @@ class _EmergencyRecoveryScreenState
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: (Theme.of(context).brightness == Brightness.light
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light)
+            .copyWith(
         statusBarColor: Colors.transparent,
         systemNavigationBarColor: Colors.black,
-        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light
+                ? Brightness.dark
+                : Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -176,7 +181,7 @@ class _EmergencyRecoveryScreenState
         Text(
           context.tr.emergencyRecoveryCodesLabel,
           style: AppTypography.bodyMedium.copyWith(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -478,7 +483,7 @@ class _RecoveryTopBar extends StatelessWidget {
         IconButton(
           onPressed: onBack,
           icon: const Icon(KeroseneIcons.back, size: 22),
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
         ),
         const Spacer(),
@@ -524,7 +529,7 @@ class _RecoveryTitle extends StatelessWidget {
         Text(
           body,
           textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+          style: AppTypography.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
         ),
       ],
     );
@@ -619,7 +624,7 @@ class _RecoveryNotice extends StatelessWidget {
                   Text(
                     title,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -627,7 +632,7 @@ class _RecoveryNotice extends StatelessWidget {
                   Text(
                     message,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                     ),
                   ),
                 ],
@@ -663,7 +668,7 @@ class _TotpQrPanel extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Padding(
@@ -685,7 +690,7 @@ class _TotpQrPanel extends StatelessWidget {
               data,
               maxLines: 2,
               style: AppTypography.technicalMono(
-                color: Colors.white60,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.60),
                 fontSize: 12,
                 height: 1.35,
               ),
@@ -730,7 +735,7 @@ class _BackupCodesGrid extends StatelessWidget {
               code,
               textAlign: TextAlign.center,
               style: AppTypography.technicalMono(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),

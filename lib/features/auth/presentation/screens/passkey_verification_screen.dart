@@ -465,10 +465,15 @@ class _PasskeyVerificationScreenState
     });
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: (Theme.of(context).brightness == Brightness.light
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light)
+            .copyWith(
         statusBarColor: Colors.transparent,
         systemNavigationBarColor: _authBlack,
-        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light
+                ? Brightness.dark
+                : Brightness.light,
       ),
       child: Scaffold(
         backgroundColor: _authBlack,

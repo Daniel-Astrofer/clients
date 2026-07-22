@@ -6,18 +6,23 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
-const _receiveBackground = KeroseneBrandTokens.background;
-const _receiveSurface = KeroseneBrandTokens.surface;
-const _receiveSurfaceLowest = KeroseneBrandTokens.surfaceMuted;
-const _receiveSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
-const _receiveWarning = KeroseneBrandTokens.warning;
-const _receiveSuccess = KeroseneBrandTokens.success;
-const _receiveSurfaceLow = KeroseneBrandTokens.surfaceElevated;
-const _receiveBorder = KeroseneBrandTokens.border;
-const _receiveText = KeroseneBrandTokens.textPrimary;
-const _receiveMuted = KeroseneBrandTokens.textMuted;
-const _receiveBody = KeroseneBrandTokens.textSecondary;
+Color get _receiveBackground => KeroseneBrandTokens.background;
+Color get _receiveSurface => KeroseneBrandTokens.surface;
+Color get _receiveSurfaceLowest => KeroseneBrandTokens.surfaceMuted;
+Color get _receiveSurfaceHigh => ThemeTokenBridge.isLight
+    ? const Color(0xFFF2F4F7)
+    : const Color(0xFF141517);
+Color get _receiveWarning => KeroseneBrandTokens.warning;
+Color get _receiveSuccess => KeroseneBrandTokens.success;
+Color get _receiveSurfaceLow => ThemeTokenBridge.isLight
+    ? const Color(0xFFF0F1EE)
+    : const Color(0xFF141517);
+Color get _receiveBorder => KeroseneBrandTokens.border;
+Color get _receiveText => KeroseneBrandTokens.textPrimary;
+Color get _receiveMuted => KeroseneBrandTokens.textMuted;
+Color get _receiveBody => KeroseneBrandTokens.textSecondary;
 
 class ReceiveContextHeader extends StatelessWidget {
   final String title;
@@ -80,13 +85,13 @@ class ReceiveShellHeader extends StatelessWidget {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _receiveBackground,
         border: Border(bottom: BorderSide(color: _receiveBorder)),
       ),
       child: Row(
         children: [
-          const Icon(KeroseneIcons.menu, color: _receiveText, size: 22),
+          Icon(KeroseneIcons.menu, color: _receiveText, size: 22),
           const Spacer(),
           Text(
             brandLabel,
@@ -141,7 +146,7 @@ class VaultCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _receiveBorder),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [AppColors.hexFF1A1A1A, _receiveSurface],
@@ -176,7 +181,7 @@ class ReceiveQrFrame extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _receiveBorder),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [AppColors.hexFF1A1A1A, _receiveSurface],
@@ -482,7 +487,7 @@ class InlineNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(KeroseneIcons.warning, color: _receiveWarning, size: 18),
+          Icon(KeroseneIcons.warning, color: _receiveWarning, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -680,7 +685,7 @@ class ReceiveSuccessGraphic extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   KeroseneIcons.success,
                   color: _receiveSuccess,
                   size: 48,

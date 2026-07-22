@@ -84,7 +84,7 @@ class _TorLoadingOverlayState extends ConsumerState<TorLoadingOverlay> {
       opacity: _transitionOpacity,
       duration: KeroseneMotion.calm,
       curve: KeroseneMotion.spring,
-      child: const Center(child: TorLoadingDots()),
+      child: Center(child: TorLoadingDots()),
     );
   }
 }

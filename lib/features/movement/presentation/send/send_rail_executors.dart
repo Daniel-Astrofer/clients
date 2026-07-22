@@ -203,8 +203,7 @@ Future<dynamic> executeExternalSend({
   required String? Function(String toAddress) resolveRecentDestinationLabel,
   required bool Function() isMounted,
 }) async {
-  final feeRate = feeQuote.feeRateSatPerByte;
-  final feeRateInt = feeRate != null && feeRate > 0 ? feeRate.round() : null;
+  final feeRateInt = feeQuote.submitFeeRateSatPerVbyte;
   final result = await ref.read(withdrawProvider.notifier).withdraw(
         fromWalletName: wallet.id,
         toAddress: destination.isOnChain ? toAddress : null,
@@ -213,6 +212,8 @@ Future<dynamic> executeExternalSend({
         totpCode: authResult.totpCode,
         isLightning: destination.isLightning,
         networkFeeBtc: feeQuote.networkFeeBtc,
+        networkFeeSats:
+            destination.isOnChain ? feeQuote.submitNetworkFeeSats : null,
         maxRoutingFeeBtc: defaultLightningRoutingFeeBtc,
         feeRateSatPerVbyte: destination.isOnChain ? feeRateInt : null,
         feeTargetBlocks:

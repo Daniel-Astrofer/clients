@@ -27,7 +27,8 @@ import '../features/auth/presentation/screens/server_unavailable_screen.dart';
 import '../features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
     deferred as bitcoin_accounts;
 import '../features/home/presentation/screens/home_screen.dart'
-    deferred as home;
+    deferred as home
+    hide HomeSurfaceThemeContext;
 import '../features/security/presentation/providers/security_provider.dart';
 import '../features/security/presentation/widgets/app_entry_pin_gate.dart';
 import '../features/security/presentation/screens/settings_screen.dart'
@@ -54,6 +55,7 @@ import '../core/providers/shader_provider.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';
 import '../features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
+import '../core/providers/price_provider.dart';
 import '../app/providers/price_alert_provider.dart';
 import '../core/services/notification_delivery_bootstrap.dart';
 import '../core/utils/native_screen_capture.dart';
@@ -409,9 +411,12 @@ class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
     _applyLifecycle(state);
     if (state == AppLifecycleState.resumed) {
       // Pull balance/extrato if WS marked dirty while backgrounded.
+      // Under Tor flap, always prefer full catch-up when dirty.
       unawaited(refreshFinancialProjectionIfDirty(ref));
       // Rearm STOMP after OS kills / exhausted backoff — poll alone is not enough.
       unawaited(_rearmBalanceRealtimeIfNeeded(ref));
+      // Refresh sovereign BTC quotes from backend HTTP.
+      ref.invalidate(backendBtcRatesProvider);
     }
   }
 
@@ -430,6 +435,8 @@ class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
     final appPinSatisfied = !gateStatus.requiresGate || appUnlocked;
     if (authState is AuthAuthenticated && appPinSatisfied) {
       ref.watch(balanceWebSocketServiceProvider);
+      // Keep backend economy quotes warm for home / send / receive.
+      ref.watch(backendBtcRatesProvider);
       // Trigger market-price alert notifications (BTC up/down X%).
       ref.watch(priceAlertProvider);
       // Permissions + channels + background poll + device token registry.
@@ -454,8 +461,22 @@ Future<void> _rearmBalanceRealtimeIfNeeded(WidgetRef ref) async {
       ref.invalidate(balanceWebSocketServiceProvider);
       return;
     }
+    final wasExhausted = service.reconnectExhausted;
     if (!service.isConnected || service.stoppedReconnecting) {
       await service.ensureConnected(force: service.stoppedReconnecting);
+    }
+    // After Tor reconnect exhaustion, force a full REST ledger pull even if
+    // the dirty flag was already cleared by a partial success earlier.
+    if (wasExhausted || !service.isConnected) {
+      ref.read(financialDirtyProvider.notifier).markDirty();
+      final ok = await refreshFinancialProjectionUi(
+        ref,
+        forceFullHistory: true,
+        scope: FinancialRefreshScope.full,
+      );
+      if (ok) {
+        ref.read(financialDirtyProvider.notifier).clear();
+      }
     }
   } catch (e) {
     if (kDebugMode) {

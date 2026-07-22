@@ -8,6 +8,10 @@ class FeeEstimate extends Equatable {
   final double estimatedFastBtc;
   final double estimatedStandardBtc;
   final double estimatedSlowBtc;
+  /// Backend-reserved fee sats per tier (authoritative for submit).
+  final int fastNetworkFeeSats;
+  final int standardNetworkFeeSats;
+  final int slowNetworkFeeSats;
   final double amountReceived;
   final double totalToSend;
   final double keroseneFeeBtc;
@@ -31,6 +35,9 @@ class FeeEstimate extends Equatable {
     required this.estimatedFastBtc,
     required this.estimatedStandardBtc,
     required this.estimatedSlowBtc,
+    this.fastNetworkFeeSats = 0,
+    this.standardNetworkFeeSats = 0,
+    this.slowNetworkFeeSats = 0,
     required this.amountReceived,
     required this.totalToSend,
     this.keroseneFeeBtc = 0,
@@ -49,14 +56,25 @@ class FeeEstimate extends Equatable {
   });
 
   factory FeeEstimate.fromJson(Map<String, dynamic> json) {
+    int satsFromBtc(double btc) => (btc * 100000000).round();
+    final fastBtc = (json['estimatedFastBtc'] as num?)?.toDouble() ?? 0;
+    final standardBtc =
+        (json['estimatedStandardBtc'] as num?)?.toDouble() ?? 0;
+    final slowBtc = (json['estimatedSlowBtc'] as num?)?.toDouble() ?? 0;
     return FeeEstimate(
       fastSatPerByte: (json['fastSatPerByte'] as num?)?.toDouble() ?? 0,
       standardSatPerByte: (json['standardSatPerByte'] as num?)?.toDouble() ?? 0,
       slowSatPerByte: (json['slowSatPerByte'] as num?)?.toDouble() ?? 0,
-      estimatedFastBtc: (json['estimatedFastBtc'] as num?)?.toDouble() ?? 0,
-      estimatedStandardBtc:
-          (json['estimatedStandardBtc'] as num?)?.toDouble() ?? 0,
-      estimatedSlowBtc: (json['estimatedSlowBtc'] as num?)?.toDouble() ?? 0,
+      estimatedFastBtc: fastBtc,
+      estimatedStandardBtc: standardBtc,
+      estimatedSlowBtc: slowBtc,
+      fastNetworkFeeSats: (json['fastNetworkFeeSats'] as num?)?.toInt() ??
+          satsFromBtc(fastBtc),
+      standardNetworkFeeSats:
+          (json['standardNetworkFeeSats'] as num?)?.toInt() ??
+              satsFromBtc(standardBtc),
+      slowNetworkFeeSats: (json['slowNetworkFeeSats'] as num?)?.toInt() ??
+          satsFromBtc(slowBtc),
       amountReceived: (json['amountReceived'] as num?)?.toDouble() ?? 0,
       totalToSend: (json['totalToSend'] as num?)?.toDouble() ?? 0,
       keroseneFeeBtc: (json['keroseneFeeBtc'] as num?)?.toDouble() ?? 0,
@@ -88,6 +106,9 @@ class FeeEstimate extends Equatable {
         estimatedFastBtc,
         estimatedStandardBtc,
         estimatedSlowBtc,
+        fastNetworkFeeSats,
+        standardNetworkFeeSats,
+        slowNetworkFeeSats,
         amountReceived,
         totalToSend,
         keroseneFeeBtc,

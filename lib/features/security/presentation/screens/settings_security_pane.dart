@@ -132,18 +132,18 @@ class SettingsSecurityPane extends ConsumerWidget {
         Text(
           context.tr.settingsSecurityTitle,
           style: AppTypography.newsreader(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 32,
             fontWeight: FontWeight.w500,
             height: 1.2,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Text(
           context.tr.settingsSecuritySubtitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w400,
             height: 1.55,
@@ -252,18 +252,18 @@ class _LocalLedgerWipeSection extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: KeroseneBrandTokens.surfaceMuted,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(
           context.tr.settingsSecurityWipeConfirmTitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
         content: Text(
           context.tr.settingsSecurityWipeConfirmBody,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             height: 1.45,
           ),
         ),
@@ -435,12 +435,12 @@ class _SecurityAdvancedContent extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
         Text(
           context.tr
               .settingsSecurityAppPinLabel(settingsPinAttemptsLabel(appPin)),
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textMuted,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
             height: 1.35,
             letterSpacing: 0,

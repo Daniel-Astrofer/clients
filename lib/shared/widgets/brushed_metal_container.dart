@@ -191,16 +191,16 @@ class _MetalFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            KeroseneBrandTokens.surfaceElevated,
-            KeroseneBrandTokens.borderStrong,
-            KeroseneBrandTokens.surfaceHigh,
+            (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+            Theme.of(context).dividerColor,
+            (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
           ],
-          stops: [0.1, 0.5, 0.9],
+          stops: const [0.1, 0.5, 0.9],
         ),
       ),
       child: child,

@@ -245,7 +245,7 @@ class SectionTitle extends StatelessWidget {
     final colors = BitcoinAccountsColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -273,7 +273,7 @@ class Pill extends StatelessWidget {
         border: Border.all(color: colors.borderStrong),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        padding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         child: Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -338,7 +338,7 @@ class StatePanel extends StatelessWidget {
       child: Column(
         children: [
           IconFrame(icon: icon),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           Text(
             title,
             textAlign: TextAlign.center,
@@ -347,7 +347,7 @@ class StatePanel extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: AppSpacing.sm),
           Text(
             message,
             textAlign: TextAlign.center,

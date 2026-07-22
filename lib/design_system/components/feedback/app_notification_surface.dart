@@ -18,13 +18,13 @@ class AppNotificationAction {
 }
 
 class AppNotificationStyle {
-  static const Color surfaceColor = KeroseneBrandTokens.surface;
-  static const Color borderColor = KeroseneBrandTokens.border;
-  static const Color buttonColor = KeroseneBrandTokens.surfaceHigh;
-  static const Color closeButtonColor = KeroseneBrandTokens.surfaceElevated;
-  static const Color titleColor = KeroseneBrandTokens.textPrimary;
-  static const Color bodyColor = KeroseneBrandTokens.textSecondary;
-  static const Color metaColor = KeroseneBrandTokens.textMuted;
+  static Color get surfaceColor => KeroseneBrandTokens.surface;
+  static Color get borderColor => KeroseneBrandTokens.border;
+  static Color get buttonColor => KeroseneBrandTokens.textPrimary;
+  static Color get closeButtonColor => KeroseneBrandTokens.textPrimary;
+  static Color get titleColor => KeroseneBrandTokens.textPrimary;
+  static Color get bodyColor => KeroseneBrandTokens.textSecondary;
+  static Color get metaColor => KeroseneBrandTokens.textMuted;
 
   static Color accentFor(AppNotificationTone tone) {
     return switch (tone) {
@@ -242,7 +242,7 @@ class _NotificationCloseButton extends StatelessWidget {
       child: IconButton(
         onPressed: onPressed,
         icon: const Icon(KeroseneIcons.close),
-        color: Colors.white.withValues(alpha: 0.86),
+        color: KeroseneBrandTokens.textInverse.withValues(alpha: 0.86),
         iconSize: 15,
         padding: EdgeInsets.zero,
         style: IconButton.styleFrom(
@@ -286,7 +286,7 @@ class _NotificationActionButton extends StatelessWidget {
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        foregroundColor: Colors.white.withValues(alpha: 0.92),
+        foregroundColor: KeroseneBrandTokens.textInverse.withValues(alpha: 0.92),
         backgroundColor: AppNotificationStyle.buttonColor,
         shape: const RoundedRectangleBorder(),
         textStyle: AppTypography.bodySmall.copyWith(

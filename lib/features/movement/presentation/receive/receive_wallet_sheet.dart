@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 
 const Color _receiveWalletOptionBg = Color(0xFF1A1A1A);
 
-/// Wallet picker panel for the receive flow.
+/// Wallet picker panel for the receive flow (legacy sheet path).
 class ReceiveWalletPickerPanel extends StatelessWidget {
   final List<Wallet> wallets;
   final Wallet? selectedWallet;
@@ -26,11 +26,7 @@ class ReceiveWalletPickerPanel extends StatelessWidget {
     this.shrinkWrap = false,
   });
 
-  static IconData iconFor(Wallet wallet) {
-    if (wallet.isColdWallet) return KeroseneIcons.coldWallet;
-    if (wallet.isCustodialOnchain) return KeroseneIcons.shield;
-    return KeroseneIcons.user;
-  }
+  static IconData iconFor(Wallet wallet) => walletExpandChipIcon(wallet);
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +53,8 @@ class ReceiveWalletPickerPanel extends StatelessWidget {
     );
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: KeroseneBrandTokens.background,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
@@ -70,13 +66,13 @@ class ReceiveWalletPickerPanel extends StatelessWidget {
             const ReceiveFlowSheetTopBorder(),
             if (showHandle)
               Padding(
-                padding: const EdgeInsets.only(top: 12),
+                padding: EdgeInsets.only(top: 12),
                 child: Center(
                   child: Container(
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: KeroseneBrandTokens.border,
+                      color: Theme.of(context).dividerColor,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -123,14 +119,14 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          padding: EdgeInsets.fromLTRB(16, 14, 12, 14),
           decoration: BoxDecoration(
             color: _receiveWalletOptionBg,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: KeroseneBrandTokens.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               width: selected ? 1.2 : 1,
             ),
           ),
@@ -140,17 +136,17 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: KeroseneBrandTokens.background,
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: KeroseneBrandTokens.border),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: Icon(
                   ReceiveWalletPickerPanel.iconFor(wallet),
-                  color: KeroseneBrandTokens.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,19 +154,19 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
                     Text(
                       custody,
                       style: AppTypography.h3.copyWith(
-                        color: KeroseneBrandTokens.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (name.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.captionLarge.copyWith(
-                          color: KeroseneBrandTokens.textMuted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w400,
                           height: 1.3,
                         ),
@@ -181,7 +177,7 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
               ),
               Icon(
                 KeroseneIcons.chevronRight,
-                color: KeroseneBrandTokens.textMuted.withValues(alpha: 0.85),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
                 size: 20,
               ),
             ],

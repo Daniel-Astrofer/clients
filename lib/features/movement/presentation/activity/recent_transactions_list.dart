@@ -25,7 +25,7 @@ class RecentTransactionsList extends ConsumerWidget {
       const emptyStateLabel = 'Nenhuma transação encontrada';
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xxl),
+          padding: EdgeInsets.all(AppSpacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -33,17 +33,17 @@ class RecentTransactionsList extends ConsumerWidget {
                 KeroseneIcons.privateMode,
                 color: Theme.of(context)
                     .colorScheme
-                    .onPrimary
+                    .onSurface
                     .withValues(alpha: 0.1),
                 size: 48,
               ),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               Text(
                 emptyStateLabel,
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       color: Theme.of(context)
                           .colorScheme
-                          .onPrimary
+                          .onSurface
                           .withValues(alpha: 0.3),
                       letterSpacing: 1,
                     ),
@@ -127,7 +127,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                 ? statusColor.withValues(alpha: 0.3)
                 : Theme.of(context)
                     .colorScheme
-                    .onPrimary
+                    .onSurface
                     .withValues(alpha: 0.05),
             width: 1,
           ),
@@ -170,7 +170,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2),
                           Text(
                             AppDateTime.formatRelative(context, t.timestamp),
                             style: Theme.of(context)
@@ -179,7 +179,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                                 .copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
-                                      .onPrimary
+                                      .onSurface
                                       .withValues(alpha: 0.3),
                                   fontWeight: FontWeight.w900,
                                   fontSize: 9,
@@ -198,7 +198,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           statusColor,
                         ),
                         if (money.currency != Currency.btc) ...[
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2),
                           Text(
                             btcAmountLabel,
                             style: Theme.of(context)
@@ -225,7 +225,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                 firstChild: const SizedBox(width: double.infinity, height: 0),
                 secondChild: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(
+                  padding: EdgeInsets.fromLTRB(
                       AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,7 +233,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                       Divider(
                           color: Theme.of(context)
                               .colorScheme
-                              .onPrimary
+                              .onSurface
                               .withValues(alpha: 0.05)),
                       const SizedBox(height: AppSpacing.sm),
                       _buildDetailRow(
@@ -388,9 +388,9 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isProcessing) ...[
-            const CupertinoActivityIndicator(
+            CupertinoActivityIndicator(
                 radius: 3, color: AppColors.warning),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
           ],
           Text(
             text,
@@ -417,7 +417,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
             style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: Theme.of(context)
                       .colorScheme
-                      .onPrimary
+                      .onSurface
                       .withValues(alpha: 0.2),
                   fontWeight: FontWeight.bold,
                   fontSize: 9,
@@ -430,7 +430,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
             style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: Theme.of(context)
                       .colorScheme
-                      .onPrimary
+                      .onSurface
                       .withValues(alpha: 0.5),
                   fontFamily: AppTypography.financialFontFamily,
                   fontSize: 9,

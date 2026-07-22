@@ -441,13 +441,21 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: homeBackgroundColor,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
+      value: Theme.of(context).brightness == Brightness.light
+          ? SystemUiOverlayStyle.dark.copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor:
+                  Theme.of(context).scaffoldBackgroundColor,
+              systemNavigationBarIconBrightness: Brightness.dark,
+            )
+          : SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+              systemNavigationBarColor:
+                  Theme.of(context).scaffoldBackgroundColor,
+              systemNavigationBarIconBrightness: Brightness.light,
+            ),
       child: Scaffold(
-        backgroundColor: homeBackgroundColor,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Stack(
           fit: StackFit.expand,
           children: [

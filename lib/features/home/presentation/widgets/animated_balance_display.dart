@@ -164,11 +164,11 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
         final alpha = _flashOpacity.value;
         final Color textColor = alpha > 0.01
             ? Color.lerp(
-                widget.style.color ?? Theme.of(context).colorScheme.onPrimary,
+                widget.style.color ?? Theme.of(context).colorScheme.onSurface,
                 _flashColor,
                 alpha,
               )!
-            : (widget.style.color ?? Theme.of(context).colorScheme.onPrimary);
+            : (widget.style.color ?? Theme.of(context).colorScheme.onSurface);
         return _buildRow(widget.style.copyWith(color: textColor));
       },
     );
@@ -453,7 +453,7 @@ class _RollingDigitState extends State<_RollingDigit>
             }
 
             final baseColor =
-                widget.style.color ?? Theme.of(context).colorScheme.onPrimary;
+                widget.style.color ?? Theme.of(context).colorScheme.onSurface;
             final visibleDigits = <({double distance, Widget child})>[];
 
             for (int i = 0; i <= totalSteps; i++) {

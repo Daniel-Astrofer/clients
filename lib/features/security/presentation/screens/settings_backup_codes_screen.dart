@@ -34,14 +34,14 @@ class _SettingsBackupCodesScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: KeroseneBrandTokens.surfaceMuted,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(
           context.tr.securityBackupCodesTitle,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         content: Text(
           context.tr.securityBackupCodesBody,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72)),
         ),
         actions: [
           TextButton(
@@ -110,7 +110,7 @@ class _SettingsBackupCodesScreenState
                         letterSpacing: 1.8,
                       ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 Text(
                   context.tr.securityBackupCodesBody,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -136,7 +136,7 @@ class _SettingsBackupCodesScreenState
                           ),
                           child: Text(
                             code,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: monoTextColor,
                               fontFamily: AppTypography.financialFontFamily,
                               fontWeight: FontWeight.w700,
@@ -177,7 +177,7 @@ class _SettingsBackupCodesScreenState
     final viewPadding = MediaQuery.viewPaddingOf(context);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -202,22 +202,22 @@ class _SettingsBackupCodesScreenState
                             Navigator.of(context).maybePop();
                           },
                         ),
-                        const SizedBox(height: AppSpacing.xxl),
+                        SizedBox(height: AppSpacing.xxl),
                         Text(
                           context.tr.settingsBackupTitle,
                           style: AppTypography.newsreader(
-                            color: KeroseneBrandTokens.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 32,
                             fontWeight: FontWeight.w500,
                             height: 1.2,
                             letterSpacing: 0,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        SizedBox(height: AppSpacing.md),
                         Text(
                           context.tr.settingsBackupSubtitle,
                           style: AppTypography.inter(
-                            color: KeroseneBrandTokens.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                             height: 1.55,
                           ),
@@ -232,26 +232,26 @@ class _SettingsBackupCodesScreenState
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       KeroseneIcons.verified,
-                                      color: Colors.white70,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                                       size: 28,
                                     ),
-                                    const SizedBox(height: AppSpacing.md),
+                                    SizedBox(height: AppSpacing.md),
                                     Text(
                                       context.tr.settingsBackupEnableTotpFirst,
                                       style: AppTypography.inter(
-                                        color: KeroseneBrandTokens.textPrimary,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(height: AppSpacing.sm),
+                                    SizedBox(height: AppSpacing.sm),
                                     Text(
                                       context
                                           .tr.securityBackupCodesLockedSubtitle,
                                       style: AppTypography.inter(
-                                        color: KeroseneBrandTokens.textMuted,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                                         fontSize: 14,
                                         height: 1.4,
                                       ),
@@ -267,8 +267,12 @@ class _SettingsBackupCodesScreenState
                                         );
                                       },
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: Colors.black,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .surface,
                                       ),
                                       child: Text(
                                         context.tr.securityEnableTotpAction,
@@ -308,11 +312,11 @@ class _SettingsBackupCodesScreenState
                                   ),
                                 ],
                               ),
-                              loading: () => const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 48),
+                              loading: () => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 48),
                                 child: Center(
                                   child: CircularProgressIndicator(
-                                    color: Colors.white54,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                   ),
                                 ),
                               ),
@@ -323,16 +327,16 @@ class _SettingsBackupCodesScreenState
                                     context.tr,
                                     error.toString(),
                                   ),
-                                  style: const TextStyle(color: Colors.white70),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
                                 ),
                               ),
                             );
                           },
-                          loading: () => const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
+                          loading: () => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
                             child: Center(
                               child: CircularProgressIndicator(
-                                color: Colors.white54,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                               ),
                             ),
                           ),
@@ -343,7 +347,7 @@ class _SettingsBackupCodesScreenState
                                 context.tr,
                                 error.toString(),
                               ),
-                              style: const TextStyle(color: Colors.white70),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
                             ),
                           ),
                         ),

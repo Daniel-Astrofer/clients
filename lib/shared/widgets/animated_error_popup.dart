@@ -168,30 +168,27 @@ class _AnimatedErrorPopupState extends State<AnimatedErrorPopup>
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               // Title
               Text(
                 widget.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: KeroseneBrandTokens.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               // Main Message
               Text(
                 mainMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onPrimary
-                      .withValues(alpha: 0.6),
+                  color: KeroseneBrandTokens.textSecondary,
                   fontSize: 14,
                   height: 1.5,
                 ),

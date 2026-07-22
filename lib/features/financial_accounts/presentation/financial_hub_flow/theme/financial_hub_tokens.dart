@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Styling tokens for the Financial Hub flow.
@@ -10,13 +9,13 @@ class FinancialHubTokens {
 
   // Typography - Titles (Playfair Display)
   static TextStyle titleH1({
-    Color color = AppColors.hexFFFFFFFF,
+    Color? color,
     double fontSize = 28.0,
     FontWeight fontWeight = FontWeight.w400,
     double letterSpacing = -0.5,
   }) {
     return GoogleFonts.playfairDisplay(
-      color: color,
+      color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
       letterSpacing: letterSpacing,
@@ -24,13 +23,13 @@ class FinancialHubTokens {
   }
 
   static TextStyle titleH2({
-    Color color = AppColors.hexFFFFFFFF,
+    Color? color,
     double fontSize = 22.0,
     FontWeight fontWeight = FontWeight.w600,
     double letterSpacing = -0.3,
   }) {
     return GoogleFonts.playfairDisplay(
-      color: color,
+      color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
       letterSpacing: letterSpacing,
@@ -39,13 +38,13 @@ class FinancialHubTokens {
 
   // Typography - Body, Labels and Numbers (Plus Jakarta Sans)
   static TextStyle body({
-    Color color = AppColors.hexFFA1A1A1,
+    Color? color,
     double fontSize = 14.0,
     FontWeight fontWeight = FontWeight.w400,
     double height = 1.4,
   }) {
     return GoogleFonts.plusJakartaSans(
-      color: color,
+      color: color ?? textMuted,
       fontSize: fontSize,
       fontWeight: fontWeight,
       height: height,
@@ -53,13 +52,13 @@ class FinancialHubTokens {
   }
 
   static TextStyle balanceAmount({
-    Color color = AppColors.hexFFFFFFFF,
+    Color? color,
     double fontSize = 36.0,
     FontWeight fontWeight = FontWeight.w700,
     double letterSpacing = -0.8,
   }) {
     return GoogleFonts.plusJakartaSans(
-      color: color,
+      color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
       letterSpacing: letterSpacing,
@@ -67,13 +66,13 @@ class FinancialHubTokens {
   }
 
   static TextStyle numberText({
-    Color color = AppColors.hexFFFFFFFF,
+    Color? color,
     double fontSize = 15.0,
     FontWeight fontWeight = FontWeight.w600,
     double letterSpacing = -0.2,
   }) {
     return GoogleFonts.plusJakartaSans(
-      color: color,
+      color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
       letterSpacing: letterSpacing,
@@ -81,13 +80,13 @@ class FinancialHubTokens {
   }
 
   static TextStyle caption({
-    Color color = AppColors.hexFFA1A1A1,
+    Color? color,
     double fontSize = 12.0,
     FontWeight fontWeight = FontWeight.w500,
     double letterSpacing = 0.1,
   }) {
     return GoogleFonts.plusJakartaSans(
-      color: color,
+      color: color ?? textMuted,
       fontSize: fontSize,
       fontWeight: fontWeight,
       letterSpacing: letterSpacing,
@@ -95,25 +94,26 @@ class FinancialHubTokens {
   }
 
   static TextStyle buttonLabel({
-    Color color = AppColors.hexFFFFFFFF,
+    Color? color,
     double fontSize = 12.0,
     FontWeight fontWeight = FontWeight.w600,
   }) {
     return GoogleFonts.plusJakartaSans(
-      color: color,
+      color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
     );
   }
 
-  // Colors
-  static const Color background = AppColors.hexFF000000;
-  static const Color surface = AppColors.hexFF121212;
-  static const Color surfaceElevated = AppColors.hexFF1E1E1E;
-  static const Color border = Color(0x1FFFFFFF);
-  static const Color textPrimary = AppColors.hexFFFFFFFF;
-  static const Color textMuted = AppColors.hexFFA1A1A1;
-  static const Color accentGold = KeroseneBrandTokens.brand;
+  // Colors — resolve via brand chrome (ThemeTokenBridge).
+  static Color get background => KeroseneBrandTokens.background;
+  static Color get surface => KeroseneBrandTokens.surface;
+  static Color get surfaceElevated => KeroseneBrandTokens.surfaceElevated;
+  static Color get border => KeroseneBrandTokens.borderSubtle;
+  static Color get textPrimary => KeroseneBrandTokens.textPrimary;
+  static Color get textMuted => KeroseneBrandTokens.textMuted;
+  static Color get accentGold => KeroseneBrandTokens.brand;
+  /// Dark island for circular actions (icons stay light on this fill).
   static const Color circularButtonBg = Color(0xFF1E1E2C);
-  static const Color circularButtonIcon = AppColors.hexFFFFFFFF;
+  static const Color circularButtonIcon = Color(0xFFFFFFFF);
 }

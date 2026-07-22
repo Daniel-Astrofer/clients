@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
 import 'signup_flow_components.dart';
 
-const Color _signupPanel = AppColors.hexFF111111;
-const Color _signupBorderSoft = AppColors.hexFF27272A;
+Color get _signupPanel => ThemeTokenBridge.isLight
+    ? const Color(0xFFFFFFFF)
+    : AppColors.hexFF111111;
+Color get _signupBorderSoft => ThemeTokenBridge.isLight
+    ? const Color(0xFFE2E4DE)
+    : AppColors.hexFF27272A;
 
 class SignupSuccessScene extends StatefulWidget {
   final String appTitle;

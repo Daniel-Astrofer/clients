@@ -69,6 +69,7 @@ abstract class TransactionRemoteDataSource {
     String? totpCode,
     bool isLightning = false,
     double networkFeeBtc = 0,
+    int? networkFeeSats,
     double maxRoutingFeeBtc = 0.000001,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,

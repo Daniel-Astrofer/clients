@@ -91,7 +91,7 @@ class WalletBalanceCard extends ConsumerWidget {
                     wallet.isColdWallet
                         ? KeroseneIcons.lock
                         : KeroseneIcons.wallet,
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     size: 40,
                   ),
                 ),
@@ -105,7 +105,7 @@ class WalletBalanceCard extends ConsumerWidget {
             style: TextStyle(
               color: Theme.of(
                 context,
-              ).colorScheme.onPrimary.withValues(alpha: 0.7),
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),
@@ -119,7 +119,7 @@ class WalletBalanceCard extends ConsumerWidget {
             style: TextStyle(
               color: Theme.of(
                 context,
-              ).colorScheme.onPrimary.withValues(alpha: 0.38),
+              ).colorScheme.onSurface.withValues(alpha: 0.38),
               fontSize: 12,
             ),
           ),
@@ -133,7 +133,7 @@ class WalletBalanceCard extends ConsumerWidget {
               child: Text(
                 balanceValueLabel,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: responsive.isTinyPhone ? 30 : 36,
                   fontWeight: FontWeight.bold,
                 ),
@@ -147,14 +147,14 @@ class WalletBalanceCard extends ConsumerWidget {
             style: TextStyle(
               color: Theme.of(
                 context,
-              ).colorScheme.onPrimary.withValues(alpha: 0.54),
+              ).colorScheme.onSurface.withValues(alpha: 0.54),
               fontSize: 14,
             ),
           ),
           // Cold-only short hint (not dual-ledger). Custodial/internal: no extra dialog.
           if (wallet.isObservedOnlyBalance &&
               wallet.custodyExplanation.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               wallet.custodyExplanation,
               textAlign: TextAlign.center,
@@ -163,7 +163,7 @@ class WalletBalanceCard extends ConsumerWidget {
               style: TextStyle(
                 color: Theme.of(context)
                     .colorScheme
-                    .onPrimary
+                    .onSurface
                     .withValues(alpha: 0.42),
                 fontSize: 12,
               ),

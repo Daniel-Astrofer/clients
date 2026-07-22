@@ -301,7 +301,7 @@ class _SmartWalletStackState extends State<SmartWalletStack>
                               Theme.of(context).textTheme.titleMedium!.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
-                                .onPrimary
+                                .onSurface
                                 .withValues(alpha: 0.9),
                             fontSize: 16,
                             fontWeight: FontWeight.w900,

@@ -15,7 +15,8 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
     deferred as bitcoin_accounts;
 import 'package:kerosene/features/home/presentation/screens/home_loading_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    deferred as home;
+    deferred as home
+    hide HomeSurfaceThemeContext;
 import 'package:kerosene/features/home/presentation/screens/onboarding_steps_screen.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_screen.dart'
     deferred as deposits;

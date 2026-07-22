@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'dart:convert';
 
+import 'package:kerosene/core/utils/app_date_time.dart';
+
 class SessionNotificationItem extends Equatable {
   static const severityInfo = 'info';
   static const severitySuccess = 'success';
@@ -121,7 +123,7 @@ class SessionNotificationItem extends Equatable {
       'id': id,
       'title': title,
       'body': body,
-      'timestamp': timestamp.toIso8601String(),
+      'timestamp': timestamp.toUtc().toIso8601String(),
       'kind': kind,
       'severity': severity,
       'deeplink': deeplink,
@@ -154,10 +156,8 @@ class SessionNotificationItem extends Equatable {
   }
 
   static DateTime? _parseDateTime(Object? value) {
-    if (value == null) {
-      return null;
-    }
-    return DateTime.tryParse(value.toString())?.toLocal();
+    // Backend timestamps are Zulu (Instant / UTC). AppDateTime converts to device local.
+    return AppDateTime.parse(value);
   }
 
   @override

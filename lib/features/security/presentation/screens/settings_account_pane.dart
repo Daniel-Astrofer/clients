@@ -22,18 +22,18 @@ class SettingsAccountPane extends ConsumerWidget {
         Text(
           tr.settingsAccountTitle,
           style: AppTypography.newsreader(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 32,
             fontWeight: FontWeight.w500,
             height: 1.2,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Text(
           tr.settingsAccountSubtitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w400,
             height: 1.55,

@@ -58,9 +58,15 @@ void main() {
     float surge = clamp(uSurge, 0.0, 1.0);
 
     float energy = clamp(
-        uIntensity * (1.0 + 0.66 * pull + 0.42 * theater + 0.70 * surge),
+        uIntensity * (
+            1.0
+            // Pull boost collapses during theater so scroll bounce doesn't strobe.
+            + 0.66 * pull * mix(1.0, 0.28, theater)
+            + 0.16 * theater
+            + 0.32 * surge
+        ),
         0.0,
-        1.55
+        1.15
     );
 
     // Rest: soft floor near mid-balance. Pull: modest fill (not to rect bottom).
@@ -77,23 +83,23 @@ void main() {
     float edge = abs(uv.x - 0.5) * 2.0;
     float tall = 0.30 + 0.70 * (edge * edge);
 
-    // Pull: slower, longer fronts — one soft sweep, not rapid multi-wave passes.
-    float speed = mix(1.0, 0.55, pull);
+    // Pull / theater: slower fronts — one soft sweep, not rapid multi-wave passes.
+    float speed = mix(1.0, 0.55, pull) * mix(1.0, 0.62, theater);
     float leftTravel = fract(t * 0.035 * speed + 0.12);
     float rightTravel = fract(t * 0.028 * speed + 0.61);
     // Wider lobes → fewer distinct crests crossing the screen.
     float leftFront = exp(-pow((uv.x - leftTravel * 0.85) * 1.55, 2.0));
     float rightFront = exp(-pow(((1.0 - uv.x) - rightTravel * 0.85) * 1.55, 2.0));
     float travel = 0.42 + 0.58 * max(leftFront, rightFront);
-    travel = mix(travel, 0.50 + 0.50 * max(leftFront, rightFront), theater * 0.5);
+    travel = mix(travel, 0.55 + 0.45 * max(leftFront, rightFront), theater * 0.35);
     // Pull fills gently without snapping travel to a hard floor (that strobes).
     travel = mix(travel, max(travel, 0.55), pull * 0.45);
 
     float n = fbm(vec2(uv.x * 2.4 + t * 0.09 * speed, uv.y * 3.5 - t * 0.06 * speed));
     float n2 = fbm(vec2(uv.x * 3.8 - t * 0.07 * speed, uv.y * 2.2 + t * 0.045 * speed + 4.0));
 
-    float amp = (0.050 + 0.035 * pull + 0.025 * theater) * tall * travel;
-    float y0 = mix(0.34, 0.40, pull) + 0.04 * theater;
+    float amp = (0.050 + 0.035 * pull + 0.012 * theater) * tall * travel;
+    float y0 = mix(0.34, 0.40, pull) + 0.02 * theater;
 
     float thickBoost = 0.090 + 0.04 * pull;
     float r1 = ribbon(uv, y0 + n * 0.04, amp * 1.15, 0.85, t * 0.28 * speed, thickBoost);
@@ -108,7 +114,7 @@ void main() {
     float leftGlow = exp(-dot((uv - leftC) / vec2(leftRad, rightRad), (uv - leftC) / vec2(leftRad, rightRad)));
     float rightGlow = exp(-dot((uv - rightC) / vec2(leftRad, rightRad), (uv - rightC) / vec2(leftRad, rightRad)));
 
-    vec2 crown = vec2(0.50 + 0.04 * sin(t * 0.14), mix(0.12, 0.18, pull) + 0.03 * theater);
+    vec2 crown = vec2(0.50 + 0.04 * sin(t * 0.14), mix(0.12, 0.18, pull) + 0.015 * theater);
     float crownGlow = exp(-dot(
         (uv - crown) / vec2(mix(0.55, 0.68, pull), mix(0.20, 0.30, pull)),
         (uv - crown) / vec2(mix(0.55, 0.68, pull), mix(0.20, 0.30, pull))
@@ -119,7 +125,7 @@ void main() {
 
     float field = r1 * 0.90 + r2 * 0.75 + r3 * 0.55 + r4 * 0.65;
     field += leftGlow * 0.55 * tall + rightGlow * 0.55 * tall;
-    field += crownGlow * (0.70 + 0.45 * theater + 0.55 * surge + 0.40 * pull);
+    field += crownGlow * (0.70 + 0.22 * theater + 0.28 * surge + 0.40 * pull);
     field += pullWash;
     field *= inBand * mix(travel, 0.85 + 0.15 * travel, pull * 0.5);
 
@@ -136,15 +142,18 @@ void main() {
     float mixT = clamp(uv.x + 0.18 * sin(t * 0.28 + uv.y * 3.0) + (n - 0.5) * 0.28, 0.0, 1.0);
     vec3 gemini = mix(blue, mix(purple, pink, mixT), clamp(edge * 0.85 + n2 * 0.25, 0.0, 1.0));
     gemini = mix(gemini, mint, r3 * 0.35);
-    // Rest: soft Gemini palette. Theater: stage/BE colors dominate (green receive,
-    // amber lightning, etc.) so backend atmosphere tokens remain visible.
+    // Rest: soft Gemini palette. Theater: gentle stage tint (receive green /
+    // amber) without neon takeover that strobes on scroll.
     float accentMix = 0.38 + 0.10 * pull;
     float warm = smoothstep(0.35, 0.75, primary.r - primary.b);
     float green = smoothstep(0.18, 0.52, primary.g - max(primary.r, primary.b) * 0.85);
-    accentMix = mix(accentMix, min(accentMix + 0.42, 0.90), warm);
-    accentMix = mix(accentMix, min(accentMix + 0.50, 0.94), green);
-    accentMix = mix(accentMix, min(max(accentMix, 0.72) + 0.18, 0.96), theater);
-    gemini = mix(gemini, mix(primary, secondary, 0.5 + 0.5 * sin(t * 0.18)), accentMix);
+    accentMix = mix(accentMix, min(accentMix + 0.32, 0.72), warm);
+    // Green is perceptually louder — keep tint milder than warm/amber.
+    accentMix = mix(accentMix, min(accentMix + 0.22, 0.62), green);
+    accentMix = mix(accentMix, min(accentMix + 0.14, 0.68), theater);
+    // Slow color breathe (was sin*0.18 full swing → reads frantic at high mix).
+    float breathe = 0.5 + 0.22 * sin(t * 0.11);
+    gemini = mix(gemini, mix(primary, secondary, breathe), accentMix);
 
     float glow = pow(clamp(field, 0.0, 1.8), mix(1.08, 0.96, pull)) * energy * (0.95 + 0.12 * pull);
     glow = glow / (1.0 + glow * mix(0.55, 0.45, pull));

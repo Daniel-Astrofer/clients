@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const kFirstSendAddressesPrefsKey = 'payment.first_send_addresses_v1';
 
-/// App default network for local/test deployments (testnet4 addresses are tb1…).
+/// App default network for local/test deployments (classic testnet / tb1…).
 /// Mainnet builds can override via [expectedBitcoinNetworkOverride].
 BitcoinNetworkKind expectedBitcoinNetworkOverride = BitcoinNetworkKind.testnet;
 
@@ -120,11 +120,11 @@ Future<bool> confirmFirstTimeOnchainAddress({
         builder: (dialogContext) {
           final head = firstSendAddressPreview(trimmed);
           return AlertDialog(
-            backgroundColor: KeroseneBrandTokens.surface,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(
               _title(dialogContext),
               style: AppTypography.inter(
-                color: KeroseneBrandTokens.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
@@ -132,7 +132,7 @@ Future<bool> confirmFirstTimeOnchainAddress({
             content: Text(
               _body(dialogContext, head),
               style: AppTypography.inter(
-                color: KeroseneBrandTokens.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -143,7 +143,7 @@ Future<bool> confirmFirstTimeOnchainAddress({
                 child: Text(
                   _cancel(dialogContext),
                   style: AppTypography.inter(
-                    color: KeroseneBrandTokens.textMuted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -153,7 +153,7 @@ Future<bool> confirmFirstTimeOnchainAddress({
                 child: Text(
                   _confirm(dialogContext),
                   style: AppTypography.inter(
-                    color: KeroseneBrandTokens.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

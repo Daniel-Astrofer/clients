@@ -8,19 +8,36 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/auth/auth_form_field.dart';
 import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-const Color _signupInk = AppColors.hexFF000000;
-const Color _signupSurface = AppColors.hexFF0A0A0A;
-const Color _signupField = AppColors.hexFF1A1A1A;
-const Color _signupBorder = AppColors.hexFF333333;
-const Color _signupBorderSoft = AppColors.hexFF27272A;
-const Color _signupMuted = AppColors.hexFFA1A1AA;
-const Color _signupDim = AppColors.hexFF71717A;
-const Color _signupText = AppColors.hexFFFFFFFF;
+Color get _signupInk => ThemeTokenBridge.isLight
+    ? const Color(0xFFF7F7F5)
+    : AppColors.hexFF000000;
+Color get _signupSurface => ThemeTokenBridge.isLight
+    ? const Color(0xFFFFFFFF)
+    : AppColors.hexFF0A0A0A;
+Color get _signupField => ThemeTokenBridge.isLight
+    ? const Color(0xFFF0F1EE)
+    : AppColors.hexFF1A1A1A;
+Color get _signupBorder => ThemeTokenBridge.isLight
+    ? const Color(0xFFDDE0D8)
+    : AppColors.hexFF333333;
+Color get _signupBorderSoft => ThemeTokenBridge.isLight
+    ? const Color(0xFFE2E4DE)
+    : AppColors.hexFF27272A;
+Color get _signupMuted => ThemeTokenBridge.isLight
+    ? const Color(0xFF62675F)
+    : AppColors.hexFFA1A1AA;
+Color get _signupDim => ThemeTokenBridge.isLight
+    ? const Color(0xFF8B9087)
+    : AppColors.hexFF71717A;
+Color get _signupText => ThemeTokenBridge.isLight
+    ? const Color(0xFF181A17)
+    : AppColors.hexFFFFFFFF;
 
 class SignupTypography {
   const SignupTypography._();
@@ -36,7 +53,7 @@ class SignupTypography {
   }
 
   static TextStyle subtitle() {
-    return const TextStyle(
+    return TextStyle(
       fontFamily: AppTypography.fontFamily,
       color: _signupMuted,
       fontSize: 15,
@@ -47,7 +64,7 @@ class SignupTypography {
   }
 
   static TextStyle label() {
-    return const TextStyle(
+    return TextStyle(
       fontFamily: AppTypography.fontFamily,
       color: _signupText,
       fontSize: 14,
@@ -58,7 +75,7 @@ class SignupTypography {
   }
 
   static TextStyle field() {
-    return const TextStyle(
+    return TextStyle(
       fontFamily: AppTypography.fontFamily,
       color: _signupText,
       fontSize: 16,
@@ -68,10 +85,10 @@ class SignupTypography {
     );
   }
 
-  static TextStyle bodySmall({Color color = _signupMuted}) {
+  static TextStyle bodySmall({Color? color}) {
     return TextStyle(
       fontFamily: AppTypography.fontFamily,
-      color: color,
+      color: color ?? _signupMuted,
       fontSize: 14,
       fontWeight: FontWeight.w400,
       height: 1.35,
@@ -79,10 +96,10 @@ class SignupTypography {
     );
   }
 
-  static TextStyle bodyMedium({Color color = _signupText}) {
+  static TextStyle bodyMedium({Color? color}) {
     return TextStyle(
       fontFamily: AppTypography.fontFamily,
-      color: color,
+      color: color ?? _signupText,
       fontSize: 15,
       fontWeight: FontWeight.w400,
       height: 1.35,
@@ -91,7 +108,7 @@ class SignupTypography {
   }
 
   static TextStyle sectionTitle() {
-    return const TextStyle(
+    return TextStyle(
       fontFamily: AppTypography.fontFamily,
       color: _signupText,
       fontSize: 20,
@@ -123,7 +140,7 @@ class SignupTypography {
   }
 
   static TextStyle successSubtitle() {
-    return const TextStyle(
+    return TextStyle(
       fontFamily: AppTypography.fontFamily,
       color: _signupMuted,
       fontSize: 14,
@@ -181,7 +198,7 @@ class SignupTopBar extends StatelessWidget {
                             ? _signupText.withValues(
                                 alpha: index == step ? 1 : 0.58,
                               )
-                            : Colors.white.withValues(alpha: 0.18),
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
                       ),
                     ),
                   ),
@@ -248,7 +265,7 @@ class SignupInlineFeedback extends StatelessWidget {
           Icon(
             icon,
             size: 18,
-            color: Colors.white.withValues(alpha: 0.82),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.82),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -330,7 +347,7 @@ class SignupTextField extends StatelessWidget {
       suffixIcon: suffixIcon,
       fillColor: _signupField,
       borderColor: _signupBorder,
-      focusedBorderColor: Colors.white.withValues(alpha: 0.45),
+      focusedBorderColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
       textColor: _signupText,
       hintColor: _signupDim,
       cursorColor: _signupText,
@@ -405,7 +422,7 @@ class SignupRiskAcknowledgement extends StatelessWidget {
               border: Border.all(color: checked ? _signupText : _signupDim),
             ),
             child: checked
-                ? const Icon(KeroseneIcons.check, size: 13, color: _signupInk)
+                ? Icon(KeroseneIcons.check, size: 13, color: _signupInk)
                 : null,
           ),
           const SizedBox(width: 12),
@@ -440,9 +457,9 @@ class SignupPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
     final background = outlined
-        ? Colors.white.withValues(alpha: disabled ? 0.02 : 0.03)
+        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: disabled ? 0.02 : 0.03)
         : disabled
-            ? Colors.white.withValues(alpha: 0.42)
+            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42)
             : _signupText;
     final foreground = outlined ? _signupText : _signupInk;
 
@@ -458,7 +475,7 @@ class SignupPrimaryButton extends StatelessWidget {
         backgroundColor: background,
         foregroundColor: foreground,
         borderColor: outlined
-            ? Colors.white.withValues(alpha: 0.16)
+            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.16)
             : Colors.transparent,
         textStyle: SignupTypography.button(color: foreground),
       ),
@@ -594,7 +611,7 @@ class TotpQrBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: data.isEmpty
-          ? const Center(
+          ? Center(
               child: Icon(KeroseneIcons.qr, color: _signupInk, size: 42),
             )
           : QrImageView(data: data, version: QrVersions.auto),
@@ -781,13 +798,13 @@ class RecoveryCodesCopyButton extends StatelessWidget {
       enabled: true,
       child: OutlinedButton.icon(
         onPressed: onCopied,
-        icon: const Icon(KeroseneIcons.copy, size: 20),
+        icon: Icon(KeroseneIcons.copy, size: 20),
         label: Text(_signupCopyRecoveryCodesAction(context)),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
           foregroundColor: _signupText,
           backgroundColor: _signupField,
-          side: const BorderSide(color: _signupBorder),
+          side: BorderSide(color: _signupBorder),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: SignupTypography.button(color: _signupText).copyWith(
             fontSize: 14,

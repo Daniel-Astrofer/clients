@@ -6,24 +6,17 @@ import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
+import 'package:kerosene/design_system/components/financial/amount_calculator_toolbar.dart';
 import 'package:kerosene/design_system/components/financial/amount_entry_surface.dart';
-import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/features/auth/controller/auth_controller.dart';
+import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     show walletProvider;
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/kernel/routing/movement_flow_coordinator.dart';
-import 'package:kerosene/features/movement/presentation/receive/amount_calculator_toolbar.dart';
-import 'package:kerosene/features/movement/presentation/receive/receive_wallet_expand_chip.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_wallet_to_hub_transition.dart';
 
 /// Step 1 of receive: amount + local wallet, then method hub.
-///
-/// Top bar shows the **destination identity** (who is being paid / receive
-/// handle) — not the local settlement wallet (that lives in the chip).
 class ReceiveAmountEntryScreen extends ConsumerStatefulWidget {
   const ReceiveAmountEntryScreen({super.key});
 
@@ -188,30 +181,6 @@ class _ReceiveAmountEntryScreenState
         .setSelectedWallet(wallet);
   }
 
-  /// Public receive destination (handle / name) — never the local wallet label.
-  String _destinationTitle(BuildContext context) {
-    final auth = ref.watch(authControllerProvider);
-    if (auth is AuthAuthenticated) {
-      final handle = auth.user.username.trim();
-      if (handle.isNotEmpty) return handle;
-      final name = auth.user.name.trim();
-      if (name.isNotEmpty) return name;
-    }
-    return ReceiveMoneyCopy.receiveDestinationFallback(context);
-  }
-
-  /// Short receiving wallet hash under the destination name.
-  String? _destinationWalletHash() {
-    final wallet = _selectedWallet;
-    if (wallet == null) return null;
-    final raw = wallet.address.trim().isNotEmpty
-        ? wallet.address.trim()
-        : wallet.id.trim();
-    if (raw.isEmpty) return null;
-    if (raw.length <= 18) return raw;
-    return '${raw.substring(0, 8)}…${raw.substring(raw.length - 6)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final flow = ref.watch(movementFlowCoordinatorProvider);
@@ -255,25 +224,10 @@ class _ReceiveAmountEntryScreenState
           )}';
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
       body: TransactionValueEntrySurface(
         onBack: () => Navigator.of(context).maybePop(),
-        title: _destinationTitle(context),
-        subtitle: _destinationWalletHash(),
-        titleStyle: AppTypography.h2.copyWith(
-          color: KeroseneBrandTokens.textPrimary,
-          // 30% smaller than base H2 (28 → ~20).
-          fontSize: AppTypography.h2.fontSize! * 0.7,
-        ),
-        subtitleStyle: AppTypography.inter(
-          color: KeroseneBrandTokens.textMuted,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          letterSpacing: -0.1,
-        ),
-        inlineHeroTitle: true,
-        centerInlineTitle: true,
         showCurrencyPrefix: true,
         showCurrencyChip: false,
         amountInput: flow.amountInput,
@@ -291,7 +245,7 @@ class _ReceiveAmountEntryScreenState
         onCurrencyTap: () => _toggleAmountCurrency(fiatCurrency),
         configuration: wallets.isEmpty
             ? null
-            : ReceiveWalletExpandChip(
+            : WalletExpandChip(
                 wallets: wallets,
                 selectedWallet: _selectedWallet ?? wallets.first,
                 onWalletSelected: _onWalletSelected,

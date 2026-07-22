@@ -18,19 +18,16 @@ class AmountInputPad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ink = Theme.of(context).colorScheme.onSurface;
     return Container(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
           AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xxl),
       decoration: BoxDecoration(
         color:
             Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
         borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
-        border: Border.all(
-            color: Theme.of(context)
-                .colorScheme
-                .onPrimary
-                .withValues(alpha: 0.05)),
+            BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        border: Border.all(color: ink.withValues(alpha: 0.08)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -38,36 +35,41 @@ class AmountInputPad extends StatelessWidget {
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+            margin: EdgeInsets.only(bottom: AppSpacing.lg),
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimary
-                  .withValues(alpha: 0.2),
+              color: ink.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [_buildKey('1'), _buildKey('2'), _buildKey('3')],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [_buildKey('4'), _buildKey('5'), _buildKey('6')],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [_buildKey('7'), _buildKey('8'), _buildKey('9')],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildKey('.'),
-              _buildKey('0'),
-              _buildActionKey(KeroseneIcons.backspace, onBackspace),
+              _buildKey(context, '1'),
+              _buildKey(context, '2'),
+              _buildKey(context, '3'),
+            ],
+          ),
+          SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              _buildKey(context, '4'),
+              _buildKey(context, '5'),
+              _buildKey(context, '6'),
+            ],
+          ),
+          SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              _buildKey(context, '7'),
+              _buildKey(context, '8'),
+              _buildKey(context, '9'),
+            ],
+          ),
+          SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              _buildKey(context, '.'),
+              _buildKey(context, '0'),
+              _buildActionKey(context, KeroseneIcons.backspace, onBackspace),
             ],
           ),
         ],
@@ -75,13 +77,14 @@ class AmountInputPad extends StatelessWidget {
     );
   }
 
-  Widget _buildKey(String value) {
+  Widget _buildKey(BuildContext context, String value) {
+    final ink = Theme.of(context).colorScheme.onSurface;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: InkWell(
           onTap: () {
-            HapticFeedback.lightImpact();
+            HapticFeedback.mediumImpact();
             if (value == '.') {
               onDecimal();
             } else {
@@ -93,14 +96,14 @@ class AmountInputPad extends StatelessWidget {
             height: 64,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
+              color: ink.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(AppSpacing.md),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: ink.withValues(alpha: 0.08)),
             ),
             child: Text(
               value,
               style: AppTypography.h3.copyWith(
-                color: Colors.white,
+                color: ink,
                 fontWeight: FontWeight.w300,
                 fontFamily: AppTypography.financialFontFamily,
               ),
@@ -111,7 +114,8 @@ class AmountInputPad extends StatelessWidget {
     );
   }
 
-  Widget _buildActionKey(IconData icon, VoidCallback onTap) {
+  Widget _buildActionKey(BuildContext context, IconData icon, VoidCallback onTap) {
+    final ink = Theme.of(context).colorScheme.onSurface;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -125,11 +129,11 @@ class AmountInputPad extends StatelessWidget {
             height: 64,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
+              color: ink.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(AppSpacing.md),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: ink.withValues(alpha: 0.08)),
             ),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: ink, size: 20),
           ),
         ),
       ),

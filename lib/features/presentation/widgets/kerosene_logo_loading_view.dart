@@ -85,19 +85,20 @@ class _KeroseneLogoLoadingViewState extends State<KeroseneLogoLoadingView>
 class KeroseneLogoLoadingMark extends StatelessWidget {
   final double logoSize;
   final Animation<double> controller;
-  final Color foregroundColor;
+  final Color? foregroundColor;
   final bool showGlow;
 
   const KeroseneLogoLoadingMark({
     super.key,
     required this.logoSize,
     required this.controller,
-    this.foregroundColor = KeroseneBrandTokens.textPrimary,
+    this.foregroundColor,
     this.showGlow = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final markColor = foregroundColor ?? KeroseneBrandTokens.textPrimary;
     return SizedBox(
       width: logoSize,
       height: logoSize,
@@ -117,7 +118,7 @@ class KeroseneLogoLoadingMark extends StatelessWidget {
                   opacity: 0.10,
                   child: _KeroseneLoadingGlyph(
                     size: logoSize,
-                    color: KeroseneBrandTokens.textPrimary,
+                    color: markColor,
                   ),
                 ),
                 ClipPath(
@@ -144,7 +145,7 @@ class KeroseneLogoLoadingMark extends StatelessWidget {
                         ),
                       _KeroseneLoadingGlyph(
                         size: logoSize,
-                        color: foregroundColor,
+                        color: markColor,
                       ),
                     ],
                   ),

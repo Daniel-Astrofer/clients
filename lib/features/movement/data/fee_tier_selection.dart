@@ -4,16 +4,23 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 
-/// Picks sat/vB, network fee BTC, and ETA seconds from a [FeeEstimate] by tier.
+/// Picks sat/vB, network fee, and ETA from a backend [FeeEstimate] by tier.
+///
+/// Prefer integer [networkFeeSats] / [feeRateSatPerVbyte] for submit — never
+/// invent FE-side fees when the quote is [FeeEstimate.serverPriced].
 class FeeTierSelection {
   final double networkFeeBtc;
+  final int networkFeeSats;
   final double feeRateSatPerByte;
+  final int feeRateSatPerVbyte;
   final int? estimatedSettlementSeconds;
   final int feeTargetBlocks;
 
   const FeeTierSelection({
     required this.networkFeeBtc,
+    required this.networkFeeSats,
     required this.feeRateSatPerByte,
+    required this.feeRateSatPerVbyte,
     this.estimatedSettlementSeconds,
     this.feeTargetBlocks = 3,
   });
@@ -23,36 +30,63 @@ class FeeTierSelection {
     NetworkFeeTier tier = NetworkFeeTier.standard,
   }) {
     return switch (tier) {
-      NetworkFeeTier.fast => FeeTierSelection(
-          networkFeeBtc: fee.estimatedFastBtc > 0
+      NetworkFeeTier.fast => _pick(
+          feeBtc: fee.estimatedFastBtc > 0
               ? fee.estimatedFastBtc
               : fee.estimatedStandardBtc,
-          feeRateSatPerByte: fee.fastSatPerByte > 0
+          feeSats: fee.fastNetworkFeeSats > 0
+              ? fee.fastNetworkFeeSats
+              : fee.standardNetworkFeeSats,
+          rate: fee.fastSatPerByte > 0
               ? fee.fastSatPerByte
               : fee.standardSatPerByte,
-          estimatedSettlementSeconds:
-              fee.fastEstimatedSeconds ?? fee.standardEstimatedSeconds,
-          feeTargetBlocks: fee.fastTargetBlocks > 0 ? fee.fastTargetBlocks : 2,
+          eta: fee.fastEstimatedSeconds ?? fee.standardEstimatedSeconds,
+          blocks: fee.fastTargetBlocks > 0
+              ? fee.fastTargetBlocks
+              : (fee.standardTargetBlocks > 0 ? fee.standardTargetBlocks : 2),
         ),
-      NetworkFeeTier.standard => FeeTierSelection(
-          networkFeeBtc: fee.estimatedStandardBtc,
-          feeRateSatPerByte: fee.standardSatPerByte,
-          estimatedSettlementSeconds: fee.standardEstimatedSeconds,
-          feeTargetBlocks:
-              fee.standardTargetBlocks > 0 ? fee.standardTargetBlocks : 3,
+      NetworkFeeTier.standard => _pick(
+          feeBtc: fee.estimatedStandardBtc,
+          feeSats: fee.standardNetworkFeeSats,
+          rate: fee.standardSatPerByte,
+          eta: fee.standardEstimatedSeconds,
+          blocks: fee.standardTargetBlocks > 0 ? fee.standardTargetBlocks : 3,
         ),
-      NetworkFeeTier.slow => FeeTierSelection(
-          networkFeeBtc: fee.estimatedSlowBtc > 0
+      NetworkFeeTier.slow => _pick(
+          feeBtc: fee.estimatedSlowBtc > 0
               ? fee.estimatedSlowBtc
               : fee.estimatedStandardBtc,
-          feeRateSatPerByte: fee.slowSatPerByte > 0
+          feeSats: fee.slowNetworkFeeSats > 0
+              ? fee.slowNetworkFeeSats
+              : fee.standardNetworkFeeSats,
+          rate: fee.slowSatPerByte > 0
               ? fee.slowSatPerByte
               : fee.standardSatPerByte,
-          estimatedSettlementSeconds:
-              fee.slowEstimatedSeconds ?? fee.standardEstimatedSeconds,
-          feeTargetBlocks: fee.slowTargetBlocks > 0 ? fee.slowTargetBlocks : 6,
+          eta: fee.slowEstimatedSeconds ?? fee.standardEstimatedSeconds,
+          blocks: fee.slowTargetBlocks > 0
+              ? fee.slowTargetBlocks
+              : (fee.standardTargetBlocks > 0 ? fee.standardTargetBlocks : 6),
         ),
     };
+  }
+
+  static FeeTierSelection _pick({
+    required double feeBtc,
+    required int feeSats,
+    required double rate,
+    required int? eta,
+    required int blocks,
+  }) {
+    final sats = feeSats > 0 ? feeSats : (feeBtc * 100000000).round();
+    final rateInt = rate > 0 ? rate.round() : 0;
+    return FeeTierSelection(
+      networkFeeBtc: sats > 0 ? sats / 100000000.0 : feeBtc,
+      networkFeeSats: sats,
+      feeRateSatPerByte: rateInt > 0 ? rateInt.toDouble() : rate,
+      feeRateSatPerVbyte: rateInt,
+      estimatedSettlementSeconds: eta,
+      feeTargetBlocks: blocks,
+    );
   }
 
   static String tierLabel(NetworkFeeTier tier, AppLocalizations l10n) {

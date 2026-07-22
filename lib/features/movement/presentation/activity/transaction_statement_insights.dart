@@ -8,18 +8,19 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/movement/data/entities/statement_report.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 
-const _primary = AppColors.hexFFFFFFFF;
-const _onSurfaceVariant = AppColors.hexFFC4C7C8;
-const _surfaceVariant = AppColors.hexFF353534;
-const _surface = AppColors.hexFF101010;
-const _border = AppColors.hexFF2A2A2A;
-const _surfaceContainerLow = AppColors.hexFF1C1B1B;
-const _singleWalletColor = AppColors.hexFF444748;
+Color get _primary => KeroseneBrandTokens.textPrimary;
+Color get _onSurfaceVariant => KeroseneBrandTokens.textSecondary;
+Color get _surfaceVariant => KeroseneBrandTokens.surfaceElevated;
+Color get _surface => KeroseneBrandTokens.surface;
+Color get _border => KeroseneBrandTokens.border;
+Color get _surfaceContainerLow => KeroseneBrandTokens.surfaceHigh;
+Color get _singleWalletColor => KeroseneBrandTokens.textMuted;
 const _chartMinimumFraction = 0.055;
 const _positive = AppColors.hexFF63FEA7;
 const _negative = AppColors.hexFFFF6B6B;
@@ -56,7 +57,7 @@ class _TransactionStatementInsightsState
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(
           children: [
-            const Icon(KeroseneIcons.warning,
+            Icon(KeroseneIcons.warning,
                 color: _onSurfaceVariant, size: 28),
             const SizedBox(height: 12),
             Text(
@@ -176,7 +177,7 @@ class _KpiSummaryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(KeroseneIcons.chart,
+              Icon(KeroseneIcons.chart,
                   color: _onSurfaceVariant, size: 18),
               const SizedBox(width: 10),
               Expanded(
@@ -368,9 +369,9 @@ class _KpiTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: _primary.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: _border.withValues(alpha: 0.85)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -545,9 +546,9 @@ class _RangeSelector extends StatelessWidget {
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
+          color: _primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
+          border: Border.all(color: _border.withValues(alpha: 0.9)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -563,7 +564,7 @@ class _RangeSelector extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(
+              Icon(
                 KeroseneIcons.chevronDown,
                 color: _onSurfaceVariant,
                 size: 14,

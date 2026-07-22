@@ -69,7 +69,7 @@ class TheaterTopWashStyle {
 
   Color get solidColor => Color.alphaBlend(
         accent.withValues(alpha: peakAlpha.clamp(0.0, 0.72)),
-        const Color(0xFF000000),
+        homeBackgroundColor,
       );
 }
 
@@ -124,7 +124,7 @@ TheaterTopWashStyle watchTheaterTopWashStyle(WidgetRef ref) {
   );
 }
 
-/// Scaffold stays pure black — glow lives only in the aurora layer.
+/// Scaffold follows the active home surface — glow lives only in the aurora layer.
 final theaterScaffoldSolidColorProvider = Provider<Color>((ref) {
   return homeBackgroundColor;
 });

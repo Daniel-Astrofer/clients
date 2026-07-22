@@ -115,7 +115,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTypography.newsreader(
                                       textStyle: theme.textTheme.titleMedium,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: homeFontSize(20),
                                       fontWeight: FontWeight.w300,
                                       height: 1.1,
@@ -128,7 +128,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: homeMutedTextColor,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontSize: homeFontSize(12),
                                       height: 1.45,
                                       letterSpacing: 0,
@@ -144,7 +144,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                           overflow: TextOverflow.ellipsis,
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
-                                            color: Colors.white
+                                            color: Theme.of(context).colorScheme.onSurface
                                                 .withValues(alpha: 0.72),
                                             fontSize: homeFontSize(10),
                                             fontWeight: FontWeight.w300,
@@ -214,9 +214,9 @@ class _HomeFeedMediaThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = switch (kind) {
       HomeFeedKind.promo => homeAmberColor,
-      HomeFeedKind.announcement => Colors.white70,
+      HomeFeedKind.announcement => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
       HomeFeedKind.feature => const Color(0xFF5EE9A0),
-      _ => Colors.white,
+      _ => Theme.of(context).colorScheme.onSurface,
     };
 
     Widget child;
@@ -278,10 +278,10 @@ class _HomeFeedMediaThumb extends StatelessWidget {
       height: thumbH,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(homeSize(12)),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -416,7 +416,7 @@ class _HomeFundsDistributionSectionState
           wallet: displayWallets[index],
           color: displayWallets.length == 1
               ? Theme.of(context).disabledColor
-              : _walletDistributionColor(index),
+              : _walletDistributionColor(context, index),
           share: totalBalance > 0
               ? math.max(0, displayWallets[index].balance) / totalBalance
               : 0,
@@ -452,7 +452,7 @@ class _HomeFundsDistributionSectionState
                 child: Text(
                   homeFundsDistributionTitle(context),
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: homeFontSize(14),
                     fontWeight: FontWeight.w300,
                     letterSpacing: 0,
@@ -462,7 +462,7 @@ class _HomeFundsDistributionSectionState
               TextButton(
                 onPressed: widget.onViewStatement,
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white.withValues(alpha: 0.78),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
                   padding: EdgeInsets.symmetric(horizontal: homeSize(8)),
                   minimumSize: Size(0, homeSize(32)),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -479,7 +479,7 @@ class _HomeFundsDistributionSectionState
           ),
           SizedBox(height: homeSize(14)),
           if (entries.isEmpty)
-            const HomeDistributionEmptyState()
+            HomeDistributionEmptyState()
           else
             AnimatedBuilder(
               animation: _progress,
@@ -496,7 +496,7 @@ class _HomeFundsDistributionSectionState
                         children: [
                           CustomPaint(
                             size: Size.square(homeSize(142)),
-                            painter: HomeDistributionChartPainter(
+                            painter: HomeDistributionChartPainter(context: context, 
                               entries: entries,
                               progress: t,
                             ),
@@ -515,7 +515,7 @@ class _HomeFundsDistributionSectionState
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.labelSmall?.copyWith(
                                       color:
-                                          Colors.white.withValues(alpha: 0.84),
+                                          Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.84),
                                       fontSize: homeFontSize(10),
                                       fontWeight: FontWeight.w600,
                                       height: 1.15,
@@ -531,7 +531,7 @@ class _HomeFundsDistributionSectionState
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.labelLarge?.copyWith(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: homeFontSize(17),
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0,
@@ -591,7 +591,7 @@ class HomeWalletDistributionEntry {
 }
 
 class HomeDistributionEmptyState extends StatelessWidget {
-  const HomeDistributionEmptyState();
+  HomeDistributionEmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -600,9 +600,9 @@ class HomeDistributionEmptyState extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(homeSize(16)),
       decoration: BoxDecoration(
-        color: homeCardColor,
+        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
         borderRadius: BorderRadius.circular(homeSize(14)),
-        border: Border.all(color: homePanelBorderColor),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -610,12 +610,12 @@ class HomeDistributionEmptyState extends StatelessWidget {
             width: homeSize(36),
             height: homeSize(36),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.055),
+              color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
               shape: BoxShape.circle,
             ),
             child: Icon(
               KeroseneIcons.wallet,
-              color: Colors.white.withValues(alpha: 0.84),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.84),
               size: homeSize(18),
             ),
           ),
@@ -629,7 +629,7 @@ class HomeDistributionEmptyState extends StatelessWidget {
                 es: 'No hay billeteras disponibles para distribuir fondos.',
               ),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: homeMutedTextColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: homeFontSize(12),
                 height: 1.35,
                 fontWeight: FontWeight.w300,
@@ -683,7 +683,7 @@ class HomeDistributionLegendItem extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: homeMutedTextColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: homeFontSize(12),
                 fontWeight: FontWeight.w400,
                 height: 1.2,
@@ -705,7 +705,7 @@ class HomeDistributionLegendItem extends StatelessWidget {
                     width: width,
                     height: barHeight,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       borderRadius: BorderRadius.circular(homeSize(99)),
                     ),
                   ),
@@ -723,7 +723,7 @@ class HomeDistributionLegendItem extends StatelessWidget {
                 vertical: homeSize(2),
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 borderRadius: BorderRadius.circular(homeSize(6)),
               ),
               child: Text(
@@ -731,7 +731,7 @@ class HomeDistributionLegendItem extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: Colors.black,
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   fontSize: homeFontSize(12),
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
@@ -744,7 +744,7 @@ class HomeDistributionLegendItem extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: homeFontSize(12),
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0,
@@ -758,11 +758,12 @@ class HomeDistributionLegendItem extends StatelessWidget {
 
 class HomeDistributionChartPainter extends CustomPainter {
   final List<HomeWalletDistributionEntry> entries;
+  final BuildContext context;
 
   /// 0 → 1 reveal; arcs ease into their final positions.
   final double progress;
 
-  const HomeDistributionChartPainter({
+  const HomeDistributionChartPainter({required this.context, 
     required this.entries,
     this.progress = 1,
   });
@@ -774,7 +775,7 @@ class HomeDistributionChartPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) / 2 - homeSize(12);
     final strokeWidth = homeSize(16);
     final basePaint = Paint()
-      ..color = homePanelBorderColor.withValues(alpha: 0.72 * (0.35 + 0.65 * t))
+      ..color = Theme.of(context).dividerColor.withValues(alpha: 0.72 * (0.35 + 0.65 * t))
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.butt;
@@ -829,14 +830,14 @@ class HomeDistributionChartPainter extends CustomPainter {
   }
 }
 
-Color _walletDistributionColor(int index) {
+Color _walletDistributionColor(BuildContext context, int index) {
   return switch (index % 6) {
-    0 => Colors.white,
-    1 => Colors.white.withValues(alpha: 0.78),
-    2 => Colors.white.withValues(alpha: 0.62),
-    3 => Colors.white.withValues(alpha: 0.48),
-    4 => Colors.white.withValues(alpha: 0.34),
-    _ => Colors.white.withValues(alpha: 0.24),
+    0 => Theme.of(context).colorScheme.onSurface,
+    1 => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
+    2 => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
+    3 => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
+    4 => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.34),
+    _ => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24),
   };
 }
 
@@ -944,10 +945,10 @@ class HomeActivityFilterChip extends StatelessWidget {
                 vertical: homeSize(7),
               ),
               decoration: BoxDecoration(
-                color: selected ? Colors.white : homeCardColor,
+                color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(homeSize(999)),
                 border: Border.all(
-                  color: selected ? Colors.white : homePanelBorderColor,
+                  color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).dividerColor,
                 ),
               ),
               child: Text(
@@ -955,7 +956,7 @@ class HomeActivityFilterChip extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.label.copyWith(
-                  color: selected ? Colors.black : homeMutedTextColor,
+                  color: selected ? Theme.of(context).scaffoldBackgroundColor : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: homeFontSize(12),
                   fontWeight: FontWeight.w300,
                   letterSpacing: 0,
@@ -972,7 +973,7 @@ class HomeActivityFilterChip extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE53935),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 1),
+                    border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1),
                   ),
                 ),
               ),
@@ -1062,7 +1063,7 @@ class HomeSectionHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.newsreader(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: homeFontSize(22),
               fontWeight: FontWeight.w400,
               letterSpacing: 0,
@@ -1074,7 +1075,7 @@ class HomeSectionHeader extends StatelessWidget {
           TextButton(
             onPressed: onAction,
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withValues(alpha: 0.88),
+              foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               minimumSize: const Size(0, 36),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1093,7 +1094,7 @@ class HomeSectionHeader extends StatelessWidget {
                   Icon(
                     KeroseneIcons.chevronRight,
                     size: homeSize(16),
-                    color: Colors.white.withValues(alpha: 0.88),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
                   ),
                 ],
               ],
@@ -1108,7 +1109,7 @@ class HomeSectionHeader extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             icon: Icon(
               actionIcon,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               size: homeSize(22),
             ),
           ),

@@ -9,6 +9,7 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:kerosene/features/presentation/widgets/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
@@ -17,12 +18,24 @@ import 'signup_flow_components.dart';
 import 'signup_flow_copy.dart';
 import 'signup_success_scene.dart';
 
-const Color _signupInk = AppColors.hexFF000000;
-const Color _signupPanel = AppColors.hexFF111111;
-const Color _signupField = AppColors.hexFF1A1A1A;
-const Color _signupBorderSoft = AppColors.hexFF27272A;
-const Color _signupMuted = AppColors.hexFFA1A1AA;
-const Color _signupText = AppColors.hexFFFFFFFF;
+Color get _signupInk => ThemeTokenBridge.isLight
+    ? const Color(0xFFF7F7F5)
+    : AppColors.hexFF000000;
+Color get _signupPanel => ThemeTokenBridge.isLight
+    ? const Color(0xFFFFFFFF)
+    : AppColors.hexFF111111;
+Color get _signupField => ThemeTokenBridge.isLight
+    ? const Color(0xFFF0F1EE)
+    : AppColors.hexFF1A1A1A;
+Color get _signupBorderSoft => ThemeTokenBridge.isLight
+    ? const Color(0xFFE2E4DE)
+    : AppColors.hexFF27272A;
+Color get _signupMuted => ThemeTokenBridge.isLight
+    ? const Color(0xFF62675F)
+    : AppColors.hexFFA1A1AA;
+Color get _signupText => ThemeTokenBridge.isLight
+    ? const Color(0xFF181A17)
+    : AppColors.hexFFFFFFFF;
 
 enum _SignupErrorTarget {
   username,
@@ -184,11 +197,11 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
           backgroundColor: _signupPanel,
           title: Text(
             l10n.authDeviceUnlinkTitle,
-            style: const TextStyle(color: _signupText),
+            style: TextStyle(color: _signupText),
           ),
           content: Text(
             l10n.authDeviceUnlinkBody(previous, guidance),
-            style: const TextStyle(color: _signupMuted),
+            style: TextStyle(color: _signupMuted),
           ),
           actions: [
             TextButton(
@@ -424,10 +437,15 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
     final isLoading = authState is AuthLoading;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: (Theme.of(context).brightness == Brightness.light
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light)
+            .copyWith(
         statusBarColor: Colors.transparent,
         systemNavigationBarColor: _signupInk,
-        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light
+                ? Brightness.dark
+                : Brightness.light,
       ),
       child: Scaffold(
         backgroundColor: _signupInk,
@@ -717,14 +735,14 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
               Icon(
                 KeroseneIcons.shield,
                 size: 82,
-                color: Colors.white.withValues(alpha: 0.92),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.92),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 14),
                 child: Icon(
                   KeroseneIcons.lock,
                   size: 28,
-                  color: Colors.white.withValues(alpha: 0.92),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.92),
                 ),
               ),
             ],
@@ -842,7 +860,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
               border: Border.all(color: _signupBorderSoft),
               color: _signupPanel,
             ),
-            child: const Icon(
+            child: Icon(
               KeroseneIcons.userCheck,
               size: 48,
               color: _signupText,

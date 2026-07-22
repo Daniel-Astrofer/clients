@@ -19,8 +19,19 @@ bool isValidInternalDestination(String value) {
   final uuid = RegExp(
     r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
   );
-  final username = RegExp(r'^[a-z0-9_]{3,30}$');
-  return uuid.hasMatch(trimmed) || username.hasMatch(trimmed);
+  return uuid.hasMatch(trimmed) || isKeroseneUsername(trimmed);
+}
+
+/// Kerosene @username only — not UUID, address, invoice, or payment link.
+bool isKeroseneUsername(String value) {
+  final trimmed = normalizeInternalDestination(value);
+  if (trimmed.isEmpty) return false;
+  if (RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  ).hasMatch(trimmed)) {
+    return false;
+  }
+  return RegExp(r'^[a-z0-9_]{3,30}$').hasMatch(trimmed);
 }
 
 String normalizeInternalDestination(String value) {
@@ -48,12 +59,8 @@ String recentInternalDestinationTitle(
 
 String recentInternalDestinationSubtitle(
     RecentTransactionDestination destination) {
-  final label = _stripLeadingAt(destination.label);
-  if (label == null || label.isEmpty) {
-    return _recentInternalDestinationKindLabel(destination.kind);
-  }
-  return compactInternalValue(
-      _stripLeadingAt(destination.address) ?? destination.address);
+  // Username contacts never show wallet hash — it can change over time.
+  return '';
 }
 
 String? _stripLeadingAt(String? value) {
@@ -84,11 +91,6 @@ String recentDestinationKindLabel(
     RecentTransactionDestinationKind.onChain => 'Endereço on-chain',
     RecentTransactionDestinationKind.lightning => 'Invoice Lightning',
   };
-}
-
-String _recentInternalDestinationKindLabel(
-    RecentTransactionDestinationKind kind) {
-  return recentDestinationKindLabel(kind);
 }
 
 String formatBtcValue(double value,

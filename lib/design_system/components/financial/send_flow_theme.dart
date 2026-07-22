@@ -74,25 +74,26 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
   final EdgeInsets pagePadding;
   final EdgeInsets thumbDockPadding;
 
-  /// Dark send-flow defaults (current product surface).
+  /// Dark send-flow defaults (current product surface — do not change).
   static SendFlowTheme dark() {
     return SendFlowTheme(
-      background: KeroseneBrandTokens.background,
-      surface: KeroseneBrandTokens.surface,
-      surfaceHigh: KeroseneBrandTokens.surfaceHigh,
-      border: KeroseneBrandTokens.border,
-      textPrimary: KeroseneBrandTokens.textPrimary,
-      textSecondary: KeroseneBrandTokens.textSecondary,
-      textMuted: KeroseneBrandTokens.textMuted,
+      background: KeroseneBrandTheme.dark.background,
+      surface: KeroseneBrandTheme.dark.surface,
+      surfaceHigh: KeroseneBrandTheme.dark.surfaceHigh,
+      border: KeroseneBrandTheme.dark.border,
+      textPrimary: KeroseneBrandTheme.dark.textPrimary,
+      textSecondary: KeroseneBrandTheme.dark.textSecondary,
+      textMuted: KeroseneBrandTheme.dark.textMuted,
       feedbackError: KeroseneBrandTokens.error,
       feedbackSuccess: KeroseneBrandTokens.success,
       feedbackWarning: KeroseneBrandTokens.warning,
-      ctaBackground: KeroseneBrandTokens.textPrimary,
-      ctaForeground: KeroseneBrandTokens.background,
+      ctaBackground: KeroseneBrandTheme.dark.textPrimary,
+      ctaForeground: KeroseneBrandTheme.dark.background,
       ctaDisabledBackground:
-          KeroseneBrandTokens.surfaceHigh.withValues(alpha: 0.64),
-      ctaDisabledForeground: KeroseneBrandTokens.textMuted,
-      inputFocusRing: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.28),
+          KeroseneBrandTheme.dark.surfaceHigh.withValues(alpha: 0.64),
+      ctaDisabledForeground: KeroseneBrandTheme.dark.textMuted,
+      inputFocusRing:
+          KeroseneBrandTheme.dark.textPrimary.withValues(alpha: 0.28),
       cardShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.08),
@@ -121,8 +122,60 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     );
   }
 
+  /// Light send-flow — inverse of dark chrome; accents unchanged.
+  static SendFlowTheme light() {
+    final brand = KeroseneBrandTheme.light;
+    return SendFlowTheme(
+      background: brand.background,
+      surface: brand.surface,
+      surfaceHigh: brand.surfaceHigh,
+      border: brand.border,
+      textPrimary: brand.textPrimary,
+      textSecondary: brand.textSecondary,
+      textMuted: brand.textMuted,
+      feedbackError: KeroseneBrandTokens.error,
+      feedbackSuccess: KeroseneBrandTokens.success,
+      feedbackWarning: KeroseneBrandTokens.warning,
+      ctaBackground: brand.textPrimary,
+      ctaForeground: brand.textInverse,
+      ctaDisabledBackground: brand.surfaceHigh.withValues(alpha: 0.64),
+      ctaDisabledForeground: brand.textMuted,
+      inputFocusRing: brand.textPrimary.withValues(alpha: 0.22),
+      cardShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
+      ],
+      spaceXs: AppSpacing.xs,
+      spaceSm: AppSpacing.sm,
+      spaceMd: AppSpacing.base,
+      spaceLg: AppSpacing.xl2,
+      spaceXl: AppSpacing.module,
+      spaceSection: AppSpacing.section,
+      minTouch: AppSpacing.minTouch,
+      ctaHeight: AppSpacing.xxxl,
+      radiusPill: 999,
+      radiusInput: 14,
+      radiusCard: 24,
+      pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
+      thumbDockPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl2,
+        AppSpacing.sm,
+        AppSpacing.xl2,
+        AppSpacing.xl2,
+      ),
+    );
+  }
+
+  static SendFlowTheme forVariant(Brightness brightness) {
+    return brightness == Brightness.light ? light() : dark();
+  }
+
   static SendFlowTheme of(BuildContext context) {
-    return Theme.of(context).extension<SendFlowTheme>() ?? SendFlowTheme.dark();
+    return Theme.of(context).extension<SendFlowTheme>() ??
+        forVariant(Theme.of(context).brightness);
   }
 
   BorderRadius get pillBorderRadius => BorderRadius.circular(radiusPill);

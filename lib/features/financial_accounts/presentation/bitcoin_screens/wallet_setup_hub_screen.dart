@@ -25,29 +25,29 @@ class WalletSetupHubScreen extends ConsumerWidget {
     final networkLabel = coldWalletNetworkLabel(expectedBitcoinNetwork);
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 'Novo cofre',
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                 ),
@@ -57,7 +57,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
               Text(
                 'Rede do app: $networkLabel · path ${appColdWalletDerivationPath}',
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textMuted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -202,22 +202,22 @@ class WalletSetupHubScreen extends ConsumerWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor: KeroseneBrandTokens.surface,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             context.tr.coldCreateWalletName,
             style: AppTypography.inter(
-              color: KeroseneBrandTokens.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
           ),
           content: TextField(
             controller: controller,
             autofocus: true,
-            style: AppTypography.inter(color: KeroseneBrandTokens.textPrimary),
+            style: AppTypography.inter(color: Theme.of(context).colorScheme.onSurface),
             decoration: InputDecoration(
               hintText: context.tr.walletSetupNameExample,
               hintStyle:
-                  AppTypography.inter(color: KeroseneBrandTokens.textMuted),
+                  AppTypography.inter(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           actions: [
@@ -258,10 +258,10 @@ class _HubCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = enabled
-        ? KeroseneBrandTokens.textPrimary
-        : KeroseneBrandTokens.textMuted.withValues(alpha: 0.45);
+        ? Theme.of(context).colorScheme.onSurface
+        : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
     return Material(
-      color: KeroseneBrandTokens.surfaceHigh,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -281,11 +281,11 @@ class _HubCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 subtitle,
                 style: AppTypography.inter(
-                  color: enabled ? KeroseneBrandTokens.textMuted : fg,
+                  color: enabled ? Theme.of(context).colorScheme.onSurfaceVariant : fg,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),

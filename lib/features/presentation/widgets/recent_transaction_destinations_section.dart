@@ -6,12 +6,11 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
-const Color _recentDestinationPanelColor = KeroseneBrandTokens.surface;
-const Color _recentDestinationBorderColor = KeroseneBrandTokens.border;
-const Color _recentDestinationTextColor = KeroseneBrandTokens.textPrimary;
-const Color _recentDestinationMutedTextColor =
-    KeroseneBrandTokens.textSecondary;
-const Color _recentDestinationFaintTextColor = KeroseneBrandTokens.textMuted;
+Color _recentDestinationPanelColor(BuildContext context) => Theme.of(context).colorScheme.surface;
+Color _recentDestinationBorderColor(BuildContext context) => Theme.of(context).dividerColor;
+Color _recentDestinationTextColor(BuildContext context) => Theme.of(context).colorScheme.onSurface;
+Color _recentDestinationMutedTextColor(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
+Color _recentDestinationFaintTextColor(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
 
 class RecentTransactionDestinationsSection extends StatelessWidget {
   final List<RecentTransactionDestination> destinations;
@@ -53,7 +52,7 @@ class RecentTransactionDestinationsSection extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: _recentDestinationFaintTextColor,
+                      color: _recentDestinationFaintTextColor(context),
                       letterSpacing: 1.1,
                       fontWeight: FontWeight.w700,
                     ),
@@ -65,7 +64,7 @@ class RecentTransactionDestinationsSection extends StatelessWidget {
                 icon: const Icon(KeroseneIcons.trash, size: 14),
                 label: Text(clearAllLabel),
                 style: TextButton.styleFrom(
-                  foregroundColor: _recentDestinationMutedTextColor,
+                  foregroundColor: _recentDestinationMutedTextColor(context),
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(
@@ -82,9 +81,9 @@ class RecentTransactionDestinationsSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Container(
           decoration: BoxDecoration(
-            color: _recentDestinationPanelColor,
+            color: _recentDestinationPanelColor(context),
             borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: _recentDestinationBorderColor),
+            border: Border.all(color: _recentDestinationBorderColor(context)),
           ),
           child: Column(
             children: [
@@ -102,7 +101,7 @@ class RecentTransactionDestinationsSection extends StatelessWidget {
                 if (index != visibleDestinations.length - 1)
                   Divider(
                     height: 1,
-                    color: _recentDestinationBorderColor,
+                    color: _recentDestinationBorderColor(context),
                   ),
               ],
             ],
@@ -152,7 +151,7 @@ class _RecentDestinationRow extends StatelessWidget {
                     Icon(
                       _iconFor(destination.kind),
                       size: 17,
-                      color: _recentDestinationMutedTextColor,
+                      color: _recentDestinationMutedTextColor(context),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -167,7 +166,7 @@ class _RecentDestinationRow extends StatelessWidget {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: _recentDestinationTextColor,
+                                  color: _recentDestinationTextColor(context),
                                   fontWeight: FontWeight.w600,
                                   fontFamily: AppTypography.financialFontFamily,
                                 ),
@@ -179,7 +178,7 @@ class _RecentDestinationRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: _recentDestinationMutedTextColor,
+                                      color: _recentDestinationMutedTextColor(context),
                                       fontWeight: FontWeight.w400,
                                     ),
                           ),
@@ -195,14 +194,14 @@ class _RecentDestinationRow extends StatelessWidget {
               Icon(
                 KeroseneIcons.next,
                 size: 16,
-                color: _recentDestinationFaintTextColor,
+                color: _recentDestinationFaintTextColor(context),
               )
             else
               IconButton(
                 onPressed: onRemove,
                 tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
                 icon: const Icon(KeroseneIcons.trash, size: 16),
-                color: _recentDestinationFaintTextColor,
+                color: _recentDestinationFaintTextColor(context),
                 style: IconButton.styleFrom(
                   minimumSize: const Size.square(34),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -22,20 +22,20 @@ class SettingsSection extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textMuted,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 11,
             fontWeight: FontWeight.w800,
             height: 1.2,
             letterSpacing: 1.65,
           ),
         ),
-        const SizedBox(height: AppSpacing.base),
+        SizedBox(height: AppSpacing.base),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: KeroseneBrandTokens.surfaceMuted,
-              border: Border.all(color: AppColors.hexFF1A1A1A),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              border: Border.all(color: KeroseneBrandTokens.border),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -50,7 +50,7 @@ class SettingsSection extends StatelessWidget {
                       child: Divider(
                         height: 1,
                         thickness: 1,
-                        color: AppColors.hexFF1A1A1A.withValues(alpha: 0.20),
+                        color: KeroseneBrandTokens.border.withValues(alpha: 0.20),
                       ),
                     ),
                 ],
@@ -83,10 +83,10 @@ class SettingsSectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final trailingWidget = trailing ??
         (onTap == null
-            ? const SizedBox.shrink()
-            : const Icon(
+            ? SizedBox.shrink()
+            : Icon(
                 KeroseneIcons.chevronRight,
-                color: KeroseneBrandTokens.textMuted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 20,
               ));
 
@@ -113,7 +113,7 @@ class SettingsSectionRow extends StatelessWidget {
                 ),
                 child: Icon(
                   icon,
-                  color: KeroseneBrandTokens.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: 20,
                 ),
               ),
@@ -127,19 +127,19 @@ class SettingsSectionRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
-                        color: KeroseneBrandTokens.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
+                    SizedBox(height: AppSpacing.xs),
                     Text(
                       subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
-                        color: KeroseneBrandTokens.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         height: 1.25,
@@ -171,7 +171,9 @@ class SettingsReadonlySwitch extends StatelessWidget {
       width: 44,
       height: 24,
       decoration: BoxDecoration(
-        color: value ? Colors.white : AppColors.hexFF353534,
+        color: value
+            ? Theme.of(context).colorScheme.onSurface
+            : AppColors.hexFF353534,
         borderRadius: BorderRadius.circular(999),
       ),
       child: AnimatedAlign(
@@ -184,7 +186,9 @@ class SettingsReadonlySwitch extends StatelessWidget {
           margin: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: value ? Colors.black : Colors.white,
+            color: value
+                ? Theme.of(context).scaffoldBackgroundColor
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),

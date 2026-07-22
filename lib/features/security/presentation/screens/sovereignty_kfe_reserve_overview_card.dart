@@ -31,7 +31,7 @@ Widget buildKfeReserveOverviewCard({
       return Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: liquidityColor.withValues(alpha: 0.18),
@@ -68,7 +68,7 @@ Widget buildKfeReserveOverviewCard({
                           es: 'Tesorería operativa',
                         ),
                         style: AppTypography.bodyMedium.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -80,7 +80,7 @@ Widget buildKfeReserveOverviewCard({
                           es: 'Lectura en vivo de reservas on-chain, liquidez Lightning y fondos reservados por salidas aún pendientes.',
                         ),
                         style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.white70,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                         ),
                       ),
                     ],
@@ -114,7 +114,7 @@ Widget buildKfeReserveOverviewCard({
             Text(
               liquiditySummary,
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.white70,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                 height: 1.5,
               ),
             ),
@@ -238,7 +238,7 @@ Widget buildKfeReserveOverviewCard({
                 );
               },
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
             const SizedBox(height: 16),
             KfeReserveDetailRow(

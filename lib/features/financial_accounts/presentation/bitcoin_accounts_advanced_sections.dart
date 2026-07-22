@@ -145,7 +145,7 @@ class ColdWalletTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Text(
                 account.xpubFingerprint ?? account.coldWalletId ?? '',
                 style: AppTypography.technicalMono(
@@ -608,7 +608,7 @@ class TaxEventRow extends ConsumerWidget {
                     letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5),
                 Text(
                   transferLabel,
                   maxLines: 1,

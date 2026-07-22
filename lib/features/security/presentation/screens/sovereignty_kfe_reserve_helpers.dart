@@ -18,21 +18,21 @@ Widget buildKfeReserveLoadingCard({required BuildContext context}) {
   return Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.03),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
     ),
     child: Row(
       children: [
         CupertinoActivityIndicator(
           radius: 11,
-          color: Theme.of(context).colorScheme.onPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Text(
             SovereigntyKfeReserveCopy.syncingOperationalTreasury,
-            style: AppTypography.bodySmall.copyWith(color: AppColors.white70),
+            style: AppTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
           ),
         ),
       ],
@@ -46,9 +46,9 @@ Widget buildKfeReserveUnavailableCard({
   required SovereigntyCopy copy,
 }) {
   return Container(
-    padding: const EdgeInsets.all(20),
+    padding: EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.03),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
       borderRadius: BorderRadius.circular(22),
       border: Border.all(
         color: Theme.of(context).colorScheme.error.withValues(alpha: 0.18),
@@ -82,7 +82,7 @@ Widget buildKfeReserveUnavailableCard({
                   es: 'Tesorería no disponible',
                 ),
                 style: AppTypography.bodyMedium.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -90,7 +90,7 @@ Widget buildKfeReserveUnavailableCard({
               Text(
                 message,
                 style:
-                    AppTypography.bodySmall.copyWith(color: AppColors.white70),
+                    AppTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
               ),
             ],
           ),

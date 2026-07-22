@@ -47,7 +47,7 @@ class AuthColors {
         field: AppColors.hexFFF0F1EE,
         border: AppColors.hexFFDDE0D8,
         borderSoft: AppColors.hexFFE2E4DE,
-        text: AppColors.hexFF181A17,
+        text: Color(0xFF141517),
         muted: AppColors.hexFF62675F,
         dim: AppColors.hexFF8B9087,
         success: AppColors.hexFF16A34A,

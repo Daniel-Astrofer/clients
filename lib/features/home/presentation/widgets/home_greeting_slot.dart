@@ -176,8 +176,8 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
       'positive' => homePositiveColor,
       'danger' => AppColors.hexFFFF5A67,
       'amber' => homeAmberColor,
-      'muted' => homeMutedTextColor,
-      _ => Colors.white,
+      'muted' => Theme.of(context).colorScheme.onSurfaceVariant,
+      _ => Theme.of(context).colorScheme.onSurface,
     };
   }
 

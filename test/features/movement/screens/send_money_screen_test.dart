@@ -19,7 +19,7 @@ import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 
 void main() {
-  testWidgets('wallet selection step confirms send wallet by hold',
+  testWidgets('send opens on destination, not a wallet selection screen',
       (tester) async {
     final wallets = [
       _wallet(name: 'Conta Assegurada', balance: 0.12),
@@ -58,25 +58,17 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Enviar'), findsNothing);
-    expect(find.text('CONTINUAR'), findsNothing);
-    expect(find.text('Conta Assegurada'), findsOneWidget);
-    expect(find.text('Reserva on-chain'), findsOneWidget);
-    expect(find.textContaining('BTC'), findsWidgets);
-
-    final secondWalletFinder = find.byKey(
-      ValueKey('send-wallet-option-${wallets[1].id}'),
-    );
-    final gesture = await tester.startGesture(
-      tester.getCenter(secondWalletFinder),
-    );
-    await tester.pump(const Duration(milliseconds: 1000));
-    expect(find.text('Para quem deseja enviar?'), findsNothing);
-    await tester.pump(const Duration(milliseconds: 1100));
-    await gesture.up();
-    await tester.pumpAndSettle();
-
     expect(find.text('Para quem deseja enviar?'), findsOneWidget);
+    expect(find.text('CONTINUAR'), findsOneWidget);
+    // Legacy full-screen wallet picker keys must not appear.
+    expect(
+      find.byKey(ValueKey('send-wallet-option-${wallets[0].id}')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(ValueKey('send-wallet-option-${wallets[1].id}')),
+      findsNothing,
+    );
   });
 
   testWidgets('shows transfer destination screen with frequent contacts',
@@ -126,9 +118,10 @@ void main() {
     );
 
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('Para quem deseja enviar?'), findsOneWidget);
-    expect(find.text('Usuário, endereço Bitcoin ou link'), findsWidgets);
+    expect(find.text('Nome de usuario, endereço, ou link'), findsWidgets);
     expect(find.text('Destinos frequentes'), findsOneWidget);
     expect(find.text('Todos os destinos'), findsOneWidget);
     expect(find.text('Edinaldo Bezerra'), findsWidgets);
@@ -140,7 +133,11 @@ void main() {
 
     final input = tester.widget<TextField>(find.byType(TextField));
     expect(input.textAlign, TextAlign.left);
-    expect(input.decoration?.hintText, 'Usuário, endereço Bitcoin ou link');
+    expect(input.decoration?.hintText, 'Nome de usuario, endereço, ou link');
+
+    // Flush FinancialSurfaceMixin deferred release Future.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   testWidgets('shows transfer destination screen with empty contacts state',
@@ -171,9 +168,10 @@ void main() {
     );
 
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('Para quem deseja enviar?'), findsOneWidget);
-    expect(find.text('Usuário, endereço Bitcoin ou link'), findsWidgets);
+    expect(find.text('Nome de usuario, endereço, ou link'), findsWidgets);
     expect(find.text('Nenhum destino recente ainda.'), findsOneWidget);
     expect(
       find.text(
@@ -186,7 +184,10 @@ void main() {
 
     final input = tester.widget<TextField>(find.byType(TextField));
     expect(input.textAlign, TextAlign.left);
-    expect(input.decoration?.hintText, 'Usuário, endereço Bitcoin ou link');
+    expect(input.decoration?.hintText, 'Nome de usuario, endereço, ou link');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   testWidgets('amount step native field updates the send amount',

@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
-import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/utils/money_display.dart';
-import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/data/fee_tier_selection.dart';
+import 'package:kerosene/design_system/components/financial/amount_calculator_toolbar.dart';
 import 'package:kerosene/design_system/components/financial/amount_entry_surface.dart';
-import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_chrome.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
-import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
-import 'package:flutter/services.dart';
+import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
+import 'package:kerosene/features/movement/data/fee_tier_selection.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 
-class SendAmountStep extends StatelessWidget {
+class SendAmountStep extends StatefulWidget {
   final VoidCallback onBack;
   final ValueNotifier<String> amount;
   final Currency selectedCurrency;
@@ -23,6 +25,8 @@ class SendAmountStep extends StatelessWidget {
   final double? btcEur;
   final double? btcBrl;
   final Wallet? wallet;
+  final List<Wallet> wallets;
+  final ValueChanged<Wallet>? onWalletSelected;
   final SendDestinationAnalysis destination;
   final String destinationLabel; // kept for call-site compatibility
   final SendFeeQuote feeQuote;
@@ -45,6 +49,8 @@ class SendAmountStep extends StatelessWidget {
     required this.btcEur,
     required this.btcBrl,
     required this.wallet,
+    this.wallets = const [],
+    this.onWalletSelected,
     required this.destination,
     required this.destinationLabel,
     required this.feeQuote,
@@ -58,19 +64,64 @@ class SendAmountStep extends StatelessWidget {
   });
 
   @override
+  State<SendAmountStep> createState() => _SendAmountStepState();
+}
+
+class _SendAmountStepState extends State<SendAmountStep> {
+  AmountCalculatorState _calc = const AmountCalculatorState();
+
+  @override
+  void didUpdateWidget(covariant SendAmountStep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedCurrency != widget.selectedCurrency) {
+      _calc = AmountCalculatorState(display: widget.amount.value);
+    }
+  }
+
+  void _onAmountTextChanged(String value) {
+    final next = value.trim().isEmpty ? '0' : value;
+    final calc = AmountCalculator.onInput(
+      state: _calc,
+      nextDisplay: next,
+      currency: widget.selectedCurrency,
+    );
+    setState(() => _calc = calc);
+    widget.onAmountChanged(calc.display);
+  }
+
+  void _onCalculatorOp(String op) {
+    final next = AmountCalculator.onOperator(
+      state: _calc.copyWith(display: widget.amount.value),
+      operator: op,
+      currency: widget.selectedCurrency,
+    );
+    setState(() => _calc = next);
+    widget.onAmountChanged(next.display);
+    if (next.justResolved) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_calc.justResolved) {
+          setState(() => _calc = _calc.copyWith(justResolved: false));
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
-      valueListenable: amount,
+      valueListenable: widget.amount,
       builder: (context, amountValue, child) {
         final appLocale = Localizations.localeOf(context);
-        final amountBtc = resolveAmountBtc(amountValue);
-        final amountLocked = hasPaymentLink || lockedAmountBtc > 0;
-        final secondaryLabel = selectedCurrency == Currency.btc
+        final amountBtc = widget.resolveAmountBtc(amountValue);
+        final amountLocked =
+            widget.hasPaymentLink || widget.lockedAmountBtc > 0;
+        final secondaryLabel = widget.selectedCurrency == Currency.btc
             ? formatFiatReference(
                 btcAmount: amountBtc,
-                btcUsd: btcUsd,
-                btcEur: btcEur,
-                btcBrl: btcBrl,
+                btcUsd: widget.btcUsd,
+                btcEur: widget.btcEur,
+                btcBrl: widget.btcBrl,
                 appLocale: appLocale,
               )
             : '≈ ${MoneyDisplay.formatCompact(
@@ -79,73 +130,108 @@ class SendAmountStep extends StatelessWidget {
                 maxDecimalPlaces: 8,
                 appLocale: appLocale,
               )}';
-        final totalDebitedBtc =
-            destination.isExternal ? feeQuote.totalDebitedBtc : amountBtc;
-        final insufficientBalance = wallet != null &&
+        final totalDebitedBtc = widget.destination.isExternal
+            ? widget.feeQuote.totalDebitedBtc
+            : amountBtc;
+        final insufficientBalance = widget.wallet != null &&
             amountBtc > 0 &&
-            !feeQuote.isLoading &&
-            feeQuote.networkFeeCertainty != NetworkFeeCertainty.loading &&
-            totalDebitedBtc > wallet!.balance + 0.000000009;
-        final quoteExpired = destination.isOnChain && feeQuote.isQuoteExpired;
+            !widget.feeQuote.isLoading &&
+            widget.feeQuote.networkFeeCertainty !=
+                NetworkFeeCertainty.loading &&
+            totalDebitedBtc > widget.wallet!.balance + 0.000000009;
+        final quoteExpired =
+            widget.destination.isOnChain && widget.feeQuote.isQuoteExpired;
         final canContinue = amountBtc > 0 &&
-            !isLoading &&
+            !widget.isLoading &&
             !quoteExpired &&
-            (!destination.isOnChain || feeQuote.isReadyForOnchainSubmit) &&
-            !(destination.isLightning && feeQuote.isLoading) &&
-            !insufficientBalance;
+            (!widget.destination.isOnChain ||
+                widget.feeQuote.isReadyForOnchainSubmit) &&
+            !(widget.destination.isLightning && widget.feeQuote.isLoading) &&
+            !insufficientBalance &&
+            widget.wallet != null;
 
         final warningLabel = insufficientBalance
             ? SendMoneyCopy.insufficientBalance(context)
             : (quoteExpired ? context.tr.sendFeeQuoteExpired : null);
 
+        final chip = widget.wallets.isEmpty || widget.onWalletSelected == null
+            ? null
+            : WalletExpandChip(
+                wallets: widget.wallets,
+                selectedWallet: widget.wallet ?? widget.wallets.first,
+                onWalletSelected: widget.onWalletSelected!,
+              );
+
         return TransactionValueEntrySurface(
-          onBack: onBack,
+          onBack: widget.onBack,
+          showCurrencyPrefix: true,
+          showCurrencyChip: false,
           amountInput: amountValue,
-          unitLabel: MoneyDisplay.tickerSymbolFor(selectedCurrency),
-          currency: selectedCurrency,
+          expressionLabel: amountLocked
+              ? null
+              : _calc.expressionLabel(
+                  currency: widget.selectedCurrency,
+                  locale: appLocale,
+                ),
+          resolveAmount: _calc.justResolved,
+          unitLabel: MoneyDisplay.tickerSymbolFor(widget.selectedCurrency),
+          currency: widget.selectedCurrency,
           fiatReference: secondaryLabel,
-          configuration: _TransparencyHierarchyPanel(
-            destination: destination,
-            feeQuote: feeQuote,
-            feeTier: feeTier,
-            onFeeTierChanged: onFeeTierChanged,
+          configuration: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (chip != null) ...[
+                chip,
+                const SizedBox(height: 16),
+              ],
+              _TransparencyHierarchyPanel(
+                destination: widget.destination,
+                feeQuote: widget.feeQuote,
+                feeTier: widget.feeTier,
+                onFeeTierChanged: widget.onFeeTierChanged,
+              ),
+            ],
           ),
           showKeypad: false,
           useSystemKeyboard: !amountLocked,
-          onAmountTextChanged: amountLocked ? null : onAmountChanged,
-          onCurrencyTap: amountLocked ? null : onFiatReferenceTap,
-          availableLabel: wallet == null
+          onAmountTextChanged: amountLocked ? null : _onAmountTextChanged,
+          onCurrencyTap: amountLocked ? null : widget.onFiatReferenceTap,
+          availableLabel: widget.wallet == null
               ? null
               : MoneyDisplay.formatCompact(
-                  amount: wallet!.balance,
+                  amount: widget.wallet!.balance,
                   currency: Currency.btc,
                   maxDecimalPlaces: 8,
                   appLocale: appLocale,
                 ),
           feeLabel: null,
           warningLabel: warningLabel,
-          quickActions: amountLocked || wallet == null
+          // Order: cotação → % → disponível
+          quickActions: amountLocked || widget.wallet == null
               ? const []
               : const [
                   (label: '25%', key: 'pct_25'),
                   (label: '50%', key: 'pct_50'),
                   (label: '100%', key: 'pct_100'),
                 ],
-          onQuickAction: amountLocked || wallet == null
+          onQuickAction: amountLocked || widget.wallet == null
               ? null
               : (key) => _applyQuickPercent(
                     key: key,
-                    amountBtcAvailable: wallet!.balance,
-                    feeBtc: destination.isExternal &&
-                            feeQuote.networkFeeCertainty ==
+                    amountBtcAvailable: widget.wallet!.balance,
+                    feeBtc: widget.destination.isExternal &&
+                            widget.feeQuote.networkFeeCertainty ==
                                 NetworkFeeCertainty.known
-                        ? feeQuote.networkFeeBtc
+                        ? widget.feeQuote.networkFeeBtc
                         : 0,
                   ),
+          bottomAccessory: amountLocked
+              ? null
+              : AmountCalculatorToolbar(onOperator: _onCalculatorOp),
           ctaLabel: context.tr.continueButton,
           ctaEnabled: canContinue,
-          isBusy: isLoading || feeQuote.isLoading,
-          onCta: onContinue,
+          isBusy: widget.isLoading || widget.feeQuote.isLoading,
+          onCta: widget.onContinue,
         );
       },
     );
@@ -169,23 +255,23 @@ class SendAmountStep extends StatelessWidget {
         (amountBtcAvailable - feeBtc).clamp(0.0, amountBtcAvailable);
     final targetBtc = spendable * fraction;
     if (targetBtc <= 0) {
-      onAmountChanged('0');
+      _onAmountTextChanged('0');
       return;
     }
 
-    if (selectedCurrency == Currency.btc) {
-      onAmountChanged(_trimZeros(targetBtc.toStringAsFixed(8)));
+    if (widget.selectedCurrency == Currency.btc) {
+      _onAmountTextChanged(_trimZeros(targetBtc.toStringAsFixed(8)));
       return;
     }
 
     final fiat = MoneyDisplay.convertFromBtcAmount(
       btcAmount: targetBtc,
-      currency: selectedCurrency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
+      currency: widget.selectedCurrency,
+      btcUsd: widget.btcUsd,
+      btcEur: widget.btcEur,
+      btcBrl: widget.btcBrl,
     );
-    onAmountChanged(_trimZeros(fiat.toStringAsFixed(2)));
+    _onAmountTextChanged(_trimZeros(fiat.toStringAsFixed(2)));
   }
 
   String _trimZeros(String value) {
@@ -238,7 +324,7 @@ class SendFeeTierBar extends StatelessWidget {
             Expanded(
               child: Material(
                 color:
-                    selected == tier ? tokens.textPrimary : tokens.surfaceHigh,
+                    selected == tier ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
                 borderRadius: tokens.inputBorderRadius,
                 child: InkWell(
                   onTap: () {
@@ -255,7 +341,7 @@ class SendFeeTierBar extends StatelessWidget {
                         style: AppTypography.inter(
                           color: selected == tier
                               ? tokens.background
-                              : tokens.textPrimary,
+                              : Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -287,7 +373,7 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!feeQuote.hasAmount) return const SizedBox.shrink();
+    if (!feeQuote.hasAmount) return SizedBox.shrink();
     final tokens = SendFlowTheme.of(context);
     final showPlatformFee = destination.isExternal &&
         (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
@@ -309,7 +395,7 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
               Text(
                 'Velocidade do envio',
                 style: AppTypography.inter(
-                  color: tokens.textMuted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -321,7 +407,7 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                 child: Icon(
                   Icons.help_outline,
                   size: 16,
-                  color: tokens.textMuted.withValues(alpha: 0.8),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -340,14 +426,14 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                 _AnimatedBreakdownRow(
                   label: 'Quem recebe',
                   amountBtc: feeQuote.receiverAmountBtc,
-                  textColor: tokens.textPrimary,
+                  textColor: Theme.of(context).colorScheme.onSurface,
                 ),
                 if (showPlatformFee) ...[
                   SizedBox(height: tokens.spaceMd - 4),
                   _AnimatedBreakdownRow(
                     label: 'Taxa Kerosene',
                     amountBtc: feeQuote.platformFeeBtc,
-                    textColor: tokens.textMuted,
+                    textColor: Theme.of(context).colorScheme.onSurfaceVariant,
                     isLoading: feeQuote.isLoading,
                   ),
                 ],
@@ -358,7 +444,7 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                         ? 'Taxa da rede (na hora do pagamento)'
                         : 'Taxa da rede',
                     amountBtc: feeQuote.networkFeeBtc,
-                    textColor: tokens.textMuted,
+                    textColor: Theme.of(context).colorScheme.onSurfaceVariant,
                     isLoading: feeQuote.isLoading ||
                         (destination.isOnChain &&
                             feeQuote.networkFeeCertainty ==
@@ -372,12 +458,12 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                 ],
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: tokens.spaceMd - 4),
-                  child: Divider(color: tokens.border, height: 1),
+                  child: Divider(color: Theme.of(context).dividerColor, height: 1),
                 ),
                 _AnimatedBreakdownRow(
                   label: 'Sai da sua conta',
                   amountBtc: feeQuote.totalDebitedBtc,
-                  textColor: tokens.textPrimary,
+                  textColor: Theme.of(context).colorScheme.onSurface,
                   isTotal: true,
                 ),
               ],
@@ -432,7 +518,7 @@ class _AnimatedBreakdownRow extends StatelessWidget {
             height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: tokens.textMuted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           )
         else if (pendingLabel != null)

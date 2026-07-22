@@ -127,7 +127,7 @@ class _HomeBitcoinMarketChartCardState
                     Text(
                       'Bitcoin',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.62),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
                         fontFamily: AppTypography.fontFamily,
                         fontSize: homeFontSize(12),
                         fontWeight: FontWeight.w600,
@@ -146,7 +146,7 @@ class _HomeBitcoinMarketChartCardState
                           decimalPlaces: 2,
                         ),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontFamily: AppTypography.financialFontFamily,
                           fontSize: homeFontSize(28),
                           fontWeight: FontWeight.w500,
@@ -168,7 +168,7 @@ class _HomeBitcoinMarketChartCardState
                   Text(
                     snapshot.request.pairLabel,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.42),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42),
                       fontFamily: AppTypography.financialFontFamily,
                       fontSize: homeFontSize(10),
                       fontWeight: FontWeight.w500,
@@ -237,6 +237,7 @@ class _HomeBitcoinMarketChartCardState
                                 builder: (context, progress) {
                                   return CustomPaint(
                                     painter: _BitcoinMarketChartPainter(
+                                      context: context,
                                       snapshot: snapshot,
                                       selectedIndex:
                                           _safeSelectedIndex(snapshot),
@@ -278,7 +279,7 @@ class _HomeBitcoinMarketChartCardState
                               height: homeSize(12),
                               child: CircularProgressIndicator(
                                 strokeWidth: 1.5,
-                                color: Colors.white.withValues(alpha: 0.35),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                               ),
                             ),
                           ),
@@ -388,7 +389,7 @@ class _HomeBitcoinMarketChartCardState
             Text(
               'Bitcoin',
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontFamily: AppTypography.fontFamily,
                 fontSize: homeFontSize(15),
                 fontWeight: FontWeight.w700,
@@ -399,7 +400,7 @@ class _HomeBitcoinMarketChartCardState
               height: homeBitcoinChartHeight(context),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Colors.black,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(homeSize(12)),
               ),
               child: Column(
@@ -408,7 +409,7 @@ class _HomeBitcoinMarketChartCardState
                   Text(
                     context.tr.homeChartUnavailable,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.84),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.84),
                       fontFamily: AppTypography.fontFamily,
                       fontSize: homeFontSize(14),
                       fontWeight: FontWeight.w700,
@@ -418,7 +419,7 @@ class _HomeBitcoinMarketChartCardState
                   Text(
                     context.tr.homeChartRetry,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.46),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.46),
                       fontFamily: AppTypography.fontFamily,
                       fontSize: homeFontSize(12),
                       fontWeight: FontWeight.w500,
@@ -431,7 +432,7 @@ class _HomeBitcoinMarketChartCardState
             _RangeSelector(
               selectedRange: selectedRange,
               customDays: customDays,
-              accent: Colors.white54,
+              accent: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
               onCustomTap: () => _openCustomDaysSheet(context),
             ),
           ],
@@ -549,7 +550,7 @@ class _ChartCardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(homeSize(18)),
       ),
       child: Padding(
@@ -646,8 +647,8 @@ class _RangeChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: selected
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.45),
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
               fontFamily: AppTypography.fontFamily,
               fontSize: homeFontSize(11),
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
@@ -695,7 +696,7 @@ class _CustomDaysSheetState extends State<_CustomDaysSheet> {
             Text(
               context.tr.homeChartCustomPeriod,
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontFamily: AppTypography.fontFamily,
                 fontSize: homeFontSize(16),
                 fontWeight: FontWeight.w700,
@@ -705,7 +706,7 @@ class _CustomDaysSheetState extends State<_CustomDaysSheet> {
             Text(
               'Últimos $days dias',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontFamily: AppTypography.financialFontFamily,
                 fontSize: homeFontSize(14),
               ),
@@ -767,7 +768,7 @@ class _ChartTooltip extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               fontFamily: AppTypography.financialFontFamily,
               fontSize: homeFontSize(11),
               fontWeight: FontWeight.w700,
@@ -780,7 +781,7 @@ class _ChartTooltip extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.52),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.52),
               fontFamily: AppTypography.financialFontFamily,
               fontSize: homeFontSize(9),
               fontWeight: FontWeight.w500,
@@ -806,6 +807,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
   final Color backgroundColor;
   final String Function(double value) priceLabelFormatter;
   final String Function(DateTime time) timeLabelFormatter;
+  final BuildContext context;
 
   const _BitcoinMarketChartPainter({
     required this.snapshot,
@@ -818,6 +820,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     required this.lineGlowAlpha,
     required this.labelColor,
     required this.backgroundColor,
+    required this.context,
     required this.priceLabelFormatter,
     required this.timeLabelFormatter,
   });
@@ -996,7 +999,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     Color accent,
   ) {
     final selectionPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.22)
+      ..color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.22)
       ..strokeWidth = 1;
     canvas.drawLine(
       Offset(offset.dx, plotRect.top),
@@ -1004,7 +1007,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
       selectionPaint,
     );
     canvas.drawCircle(offset, 5.5, Paint()..color = backgroundColor);
-    canvas.drawCircle(offset, 4.0, Paint()..color = Colors.white);
+    canvas.drawCircle(offset, 4.0, Paint()..color = Theme.of(context).colorScheme.onSurface);
     canvas.drawCircle(offset, 2.6, Paint()..color = accent);
   }
 

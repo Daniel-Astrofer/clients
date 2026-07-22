@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/home/presentation/screens/qr_scanner_screen.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
 import 'package:kerosene/shared/widgets/nfc_scan_dialog.dart';
 
-/// Bottom sheet: scan QR, read NFC, or paste clipboard into the send destination field.
+/// Bottom sheet: scan QR, read NFC (when available), or paste clipboard.
 class DestinationCaptureSheet extends StatelessWidget {
   final bool nfcSupported;
 
@@ -33,16 +33,26 @@ class DestinationCaptureSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    final tokens = SendFlowTheme.of(context);
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: EdgeInsets.fromLTRB(
+          tokens.spaceMd,
+          0,
+          tokens.spaceMd,
+          tokens.spaceMd,
+        ),
         child: Material(
-          color: KeroseneBrandTokens.surface,
-          borderRadius: BorderRadius.circular(24),
+          color: tokens.surface,
+          borderRadius: BorderRadius.circular(tokens.radiusCard),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            padding: EdgeInsets.fromLTRB(
+              tokens.spaceLg - 4,
+              tokens.spaceMd - 4,
+              tokens.spaceLg - 4,
+              tokens.spaceLg - 4,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -52,61 +62,62 @@ class DestinationCaptureSheet extends StatelessWidget {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: onPrimary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(999),
+                      color: tokens.textPrimary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(tokens.radiusPill),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: tokens.spaceMd),
                 Text(
                   _title(context),
-                  style: AppTypography.inter(
-                    color: KeroseneBrandTokens.textPrimary,
-                    fontSize: 18,
+                  style: AppTypography.newsreader(
+                    color: tokens.textPrimary,
+                    fontSize: 28,
                     fontWeight: FontWeight.w600,
+                    height: 1.15,
+                    letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: tokens.spaceSm - 2),
                 Text(
-                  _subtitle(context),
+                  _subtitle(context, includeNfc: nfcSupported),
                   style: AppTypography.inter(
-                    color: KeroseneBrandTokens.textMuted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: tokens.spaceMd),
                 _CaptureOption(
                   icon: KeroseneIcons.scanner,
                   title: _qrTitle(context),
                   subtitle: _qrSubtitle(context),
                   onTap: () => _pickQr(context),
                 ),
-                const SizedBox(height: 8),
-                _CaptureOption(
-                  icon: KeroseneIcons.nfc,
-                  title: _nfcTitle(context),
-                  subtitle: nfcSupported
-                      ? _nfcSubtitle(context)
-                      : _nfcUnavailable(context),
-                  enabled: nfcSupported,
-                  onTap: nfcSupported ? () => _pickNfc(context) : null,
-                ),
-                const SizedBox(height: 8),
+                if (nfcSupported) ...[
+                  SizedBox(height: tokens.spaceSm),
+                  _CaptureOption(
+                    icon: KeroseneIcons.nfc,
+                    title: _nfcTitle(context),
+                    subtitle: _nfcSubtitle(context),
+                    onTap: () => _pickNfc(context),
+                  ),
+                ],
+                SizedBox(height: tokens.spaceSm),
                 _CaptureOption(
                   icon: Icons.content_paste_rounded,
                   title: _pasteTitle(context),
                   subtitle: _pasteSubtitle(context),
                   onTap: () => _pickPaste(context),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: tokens.spaceSm),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
                     context.tr.cancel,
                     style: AppTypography.inter(
-                      color: KeroseneBrandTokens.textMuted,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
@@ -142,7 +153,6 @@ class DestinationCaptureSheet extends StatelessWidget {
     final value = payload?.trim();
     if (!context.mounted) return;
     if (value == null || value.isEmpty) {
-      // User cancelled or empty tag — keep sheet open? Pop with null.
       Navigator.of(context).pop();
       return;
     }
@@ -169,12 +179,17 @@ class DestinationCaptureSheet extends StatelessWidget {
         _ => 'Adicionar destino',
       };
 
-  String _subtitle(BuildContext context) => switch (_lang(context)) {
-        'en' => 'Scan a QR code, tap an NFC tag, or paste from the clipboard.',
-        'es' =>
-          'Escanea un código QR, acerca una etiqueta NFC o pega del portapapeles.',
-        _ =>
-          'Escaneie um QR code, aproxime uma etiqueta NFC ou cole da área de transferência.',
+  String _subtitle(BuildContext context, {required bool includeNfc}) =>
+      switch (_lang(context)) {
+        'en' => includeNfc
+            ? 'Scan a QR code, tap an NFC tag, or paste from the clipboard.'
+            : 'Scan a QR code or paste from the clipboard.',
+        'es' => includeNfc
+            ? 'Escanea un código QR, acerca una etiqueta NFC o pega del portapapeles.'
+            : 'Escanea un código QR o pega del portapapeles.',
+        _ => includeNfc
+            ? 'Escaneie um QR code, aproxime uma etiqueta NFC ou cole da área de transferência.'
+            : 'Escaneie um QR code ou cole da área de transferência.',
       };
 
   String _qrTitle(BuildContext context) =>
@@ -196,12 +211,6 @@ class DestinationCaptureSheet extends StatelessWidget {
         'en' => 'Hold near a Kerosene payment tag',
         'es' => 'Acerca a una etiqueta de pago Kerosene',
         _ => 'Aproxime de uma etiqueta de pagamento Kerosene',
-      };
-
-  String _nfcUnavailable(BuildContext context) => switch (_lang(context)) {
-        'en' => 'NFC is not available on this device',
-        'es' => 'NFC no está disponible en este dispositivo',
-        _ => 'NFC não está disponível neste aparelho',
       };
 
   String _pasteTitle(BuildContext context) => switch (_lang(context)) {
@@ -231,46 +240,41 @@ class _CaptureOption extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
-  final bool enabled;
 
   const _CaptureOption({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final muted = !enabled;
-    final color = muted
-        ? KeroseneBrandTokens.textMuted.withValues(alpha: 0.45)
-        : KeroseneBrandTokens.textPrimary;
-    final subColor = muted
-        ? KeroseneBrandTokens.textMuted.withValues(alpha: 0.4)
-        : KeroseneBrandTokens.textMuted;
+    final tokens = SendFlowTheme.of(context);
 
     return Material(
-      color: KeroseneBrandTokens.surfaceHigh,
-      borderRadius: BorderRadius.circular(16),
+      color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+      borderRadius: BorderRadius.circular(tokens.radiusInput + 2),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(tokens.radiusInput + 2),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: tokens.spaceMd - 2,
+            vertical: tokens.spaceMd - 2,
+          ),
           child: Row(
             children: [
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: KeroseneBrandTokens.background.withValues(alpha: 0.6),
+                  color: tokens.background.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: tokens.textPrimary, size: 22),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: tokens.spaceMd - 4),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,7 +282,7 @@ class _CaptureOption extends StatelessWidget {
                     Text(
                       title,
                       style: AppTypography.inter(
-                        color: color,
+                        color: tokens.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -287,7 +291,7 @@ class _CaptureOption extends StatelessWidget {
                     Text(
                       subtitle,
                       style: AppTypography.inter(
-                        color: subColor,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         height: 1.35,
@@ -298,7 +302,7 @@ class _CaptureOption extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: subColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),

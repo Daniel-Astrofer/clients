@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
@@ -19,7 +18,7 @@ Future<void> pushReceiveHub({
   return Navigator.of(context).push<void>(
     keroseneHorizontalRoute<void>(
       builder: (context) => Scaffold(
-        backgroundColor: KeroseneBrandTokens.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: MovementHubScreen(
           wallet: wallet,
           amountBtc: amountBtc,
@@ -171,21 +170,21 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
               width: double.infinity,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: KeroseneBrandTokens.background,
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(ReceiveFlowLayout.sheetBorderRadius),
                   ),
                   border: Border(
                     top: BorderSide(
-                      color: ReceiveFlowLayout.sheetBorderColor,
+                      color: ReceiveFlowLayout.sheetBorderColorOf(context),
                       width: ReceiveFlowLayout.sheetBorderWidth,
                     ),
                     left: BorderSide(
-                      color: ReceiveFlowLayout.sheetBorderColor,
+                      color: ReceiveFlowLayout.sheetBorderColorOf(context),
                       width: ReceiveFlowLayout.sheetBorderWidth,
                     ),
                     right: BorderSide(
-                      color: ReceiveFlowLayout.sheetBorderColor,
+                      color: ReceiveFlowLayout.sheetBorderColorOf(context),
                       width: ReceiveFlowLayout.sheetBorderWidth,
                     ),
                   ),
@@ -195,7 +194,7 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
                     top: Radius.circular(ReceiveFlowLayout.sheetBorderRadius),
                   ),
                   child: ColoredBox(
-                    color: KeroseneBrandTokens.background,
+                    color: Theme.of(context).scaffoldBackgroundColor,
                     child: Stack(
                       clipBehavior: Clip.hardEdge,
                       children: [
@@ -209,6 +208,7 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
                                   wallet: _selectedWallet,
                                   amountBtc: widget.amountBtc,
                                   onBack: _onHubBack,
+                                  embeddedInSheet: true,
                                 ),
                               ),
                             ),

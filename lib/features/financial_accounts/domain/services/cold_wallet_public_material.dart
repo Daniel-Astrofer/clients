@@ -147,7 +147,7 @@ class ColdWalletPublicMaterialDeriver {
     required ColdWalletSeedKind seedKind,
     String? electrumVersion,
   }) {
-    // Bitcoin Core on testnet4 rejects mainnet xpub version bytes in descriptors.
+    // Bitcoin Core on testnet rejects mainnet xpub version bytes in descriptors.
     // Always serialize with the app network key version (xpub vs tpub).
     final keyNet = _bip32KeyNetVersionsForApp();
     final root = Bip32Slip10Secp256k1.fromSeed(seed, keyNet);

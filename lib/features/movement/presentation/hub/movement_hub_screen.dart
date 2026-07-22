@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
-import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/kernel/routing/movement_flow_coordinator.dart';
@@ -24,6 +24,7 @@ import 'package:kerosene/features/movement/presentation/receive/receive_method.d
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_request_flow_screen.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_flow_screen.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
@@ -138,12 +139,13 @@ class _CircularRevealClipper extends CustomClipper<Path> {
   }
 }
 
-// Receive hub — design system colors.
-const _receiveBackground = KeroseneBrandTokens.background;
-const _receiveSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
-const _receiveTextColor = KeroseneBrandTokens.textPrimary;
-const _receiveMutedTextColor = KeroseneBrandTokens.textMuted;
-const _receiveSubtleTextColor = KeroseneBrandTokens.textMuted;
+Color get _receiveBackground => KeroseneBrandTokens.background;
+Color get _receiveSurfaceHigh => ThemeTokenBridge.isLight
+    ? const Color(0xFFF2F4F7)
+    : const Color(0xFF141517);
+Color get _receiveTextColor => KeroseneBrandTokens.textPrimary;
+Color get _receiveMutedTextColor => KeroseneBrandTokens.textMuted;
+Color get _receiveSubtleTextColor => KeroseneBrandTokens.textMuted;
 
 // Gateway providers screen palette aliases.
 
@@ -153,12 +155,16 @@ class MovementHubScreen extends ConsumerStatefulWidget {
   final double? amountBtc;
   final VoidCallback? onBack;
 
+  /// True only when hosted inside the wallet→hub expand sheet.
+  final bool embeddedInSheet;
+
   const MovementHubScreen({
     super.key,
     this.initialWallet,
     this.wallet,
     this.amountBtc,
     this.onBack,
+    this.embeddedInSheet = false,
   });
 
   @override
@@ -312,38 +318,14 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
       isLoading: isWalletLoading,
     );
 
-    if (_amountFirstFlow) {
-      return ColoredBox(
-        color: _receiveBackground,
-        child: AnimatedSwitcher(
-          duration: KeroseneMotion.medium,
-          switchInCurve: KeroseneMotion.standard,
-          switchOutCurve: KeroseneMotion.exit,
-          child: methodSelection,
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: _receiveBackground,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: context.responsive.appColumnConstraints,
-            child: Column(
-              children: [
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: KeroseneMotion.medium,
-                    switchInCurve: KeroseneMotion.standard,
-                    switchOutCurve: KeroseneMotion.exit,
-                    child: methodSelection,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    // One shell for amount-first and legacy — status pad + lead + centered body.
+    return ColoredBox(
+      color: _receiveBackground,
+      child: AnimatedSwitcher(
+        duration: KeroseneMotion.medium,
+        switchInCurve: KeroseneMotion.standard,
+        switchOutCurve: KeroseneMotion.exit,
+        child: methodSelection,
       ),
     );
   }
@@ -371,72 +353,46 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
       showNfc: showNfcOption,
     );
     final onBack = widget.onBack ?? () => Navigator.maybePop(context);
-    // Title/subtitle on top; method tiles vertically centered. Never put
-    // Spacer inside a scroll view — that unbounded flex paints a black crash.
     return KeyedSubtree(
       key: ValueKey('receive-method-${wallet?.id ?? kind.name}'),
       child: ReceiveFlowScreenShell(
         onBack: onBack,
         title: receiveMethodLabel,
         subtitle: subtitle,
-        embeddedInSheet: _amountFirstFlow,
-        child: _amountFirstFlow
-            ? Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: _ReceiveActionList(
-                            children: [
-                              for (var index = 0;
-                                  index < actions.length;
-                                  index++)
-                                _actionTileFor(
-                                  context,
-                                  actions[index],
-                                  showDivider: index < actions.length - 1,
-                                  isLoading: isLoading,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+        embeddedInSheet: widget.embeddedInSheet,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ReceiveFlowLayout.pageHorizontal,
+            0,
+            ReceiveFlowLayout.pageHorizontal,
+            ReceiveFlowLayout.pageBottom,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-              )
-            : SizedBox.expand(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      child: _ReceiveActionList(
-                        children: [
-                          for (var index = 0; index < actions.length; index++)
-                            _actionTileFor(
-                              context,
-                              actions[index],
-                              showDivider: index < actions.length - 1,
-                              isLoading: isLoading,
-                            ),
-                        ],
-                      ),
+                    child: _ReceiveActionList(
+                      children: [
+                        for (var index = 0; index < actions.length; index++)
+                          _actionTileFor(
+                            context,
+                            actions[index],
+                            showDivider: index < actions.length - 1,
+                            isLoading: isLoading,
+                          ),
+                      ],
                     ),
                   ),
                 ),
-              ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -517,19 +473,20 @@ class _ReceiveActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ink = Theme.of(context).colorScheme.onSurface;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        splashColor: Colors.white.withValues(alpha: 0.05),
-        highlightColor: Colors.white.withValues(alpha: 0.03),
+        splashColor: ink.withValues(alpha: 0.06),
+        highlightColor: ink.withValues(alpha: 0.04),
         child: Container(
           padding: EdgeInsets.symmetric(vertical: verticalPadding),
           decoration: BoxDecoration(
             border: showDivider
                 ? Border(
                     bottom: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: ink.withValues(alpha: 0.08),
                     ),
                   )
                 : null,
@@ -543,7 +500,7 @@ class _ReceiveActionTile extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     if (isLoading)
-                      const SizedBox(
+                      SizedBox(
                         width: 54,
                         height: 54,
                         child: CircularProgressIndicator(
@@ -554,7 +511,7 @@ class _ReceiveActionTile extends StatelessWidget {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _receiveSurfaceHigh,
                       ),
@@ -722,95 +679,52 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
     final providers = _providerSections(context);
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: context.responsive.appColumnConstraints,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(KeroseneIcons.back, size: 24),
-                        color: _receiveTextColor,
-                        tooltip:
-                            MaterialLocalizations.of(context).backButtonTooltip,
-                        style: IconButton.styleFrom(
-                          minimumSize: const Size.square(40),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        context.tr.receiveGatewayProvidersTitle,
-                        style: AppTypography.newsreader(
-                          color: _receiveTextColor,
-                          fontSize: 40,
-                          fontWeight: FontWeight.w700,
-                          height: 1.05,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        // Beta disclaimer: Kerosene never processes fiat.
-                        // Links open third-party providers outside the app.
-                        'Third-party links only. Kerosene does not process fiat '
-                        'or custody onramp funds. Testnet beta — use with care.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _receiveMutedTextColor,
-                              fontSize: 13,
-                              height: 1.35,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: urlsAsync.when(
-                    loading: () => _GatewayProviderList(
-                      sections: providers,
-                      urls: const {},
-                      onSelect: (_) {},
-                      isLoading: true,
-                    ),
-                    error: (_, __) => _GatewayEmptyState(
-                      message:
-                          'Could not load buy options. Try again later, or receive on-chain / Lightning instead.',
-                      providers: providers,
-                      onSelectUnavailable: (provider) =>
-                          _showProviderUnavailable(context, provider),
-                    ),
-                    data: (urls) {
-                      final hasAny =
-                          urls.values.any((v) => v.trim().isNotEmpty);
-                      if (!hasAny) {
-                        return _GatewayEmptyState(
-                          message:
-                              'No buy providers are configured for this environment. '
-                              'Receive BTC on-chain or via payment request instead.',
-                          providers: providers,
-                          onSelectUnavailable: (provider) =>
-                              _showProviderUnavailable(context, provider),
-                        );
-                      }
-                      return _GatewayProviderList(
-                        sections: providers,
-                        urls: urls,
-                        onSelect: (provider) =>
-                            _selectProvider(context, provider, urls),
-                      );
-                    },
-                  ),
-                ),
-              ],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: ReceiveFlowScreenShell(
+        onBack: () => Navigator.of(context).maybePop(),
+        title: context.tr.receiveGatewayProvidersTitle,
+        subtitle:
+            'Third-party links only. Kerosene does not process fiat '
+            'or custody onramp funds. Testnet beta — use with care.',
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ReceiveFlowLayout.pageHorizontal,
+            0,
+            ReceiveFlowLayout.pageHorizontal,
+            ReceiveFlowLayout.pageBottom,
+          ),
+          child: urlsAsync.when(
+            loading: () => _GatewayProviderList(
+              sections: providers,
+              urls: const {},
+              onSelect: (_) {},
+              isLoading: true,
             ),
+            error: (_, __) => _GatewayEmptyState(
+              message:
+                  'Could not load buy options. Try again later, or receive on-chain / Lightning instead.',
+              providers: providers,
+              onSelectUnavailable: (provider) =>
+                  _showProviderUnavailable(context, provider),
+            ),
+            data: (urls) {
+              final hasAny = urls.values.any((v) => v.trim().isNotEmpty);
+              if (!hasAny) {
+                return _GatewayEmptyState(
+                  message:
+                      'No buy providers are configured for this environment. '
+                      'Receive BTC on-chain or via payment request instead.',
+                  providers: providers,
+                  onSelectUnavailable: (provider) =>
+                      _showProviderUnavailable(context, provider),
+                );
+              }
+              return _GatewayProviderList(
+                sections: providers,
+                urls: urls,
+                onSelect: (provider) => _selectProvider(context, provider, urls),
+              );
+            },
           ),
         ),
       ),
@@ -872,11 +786,11 @@ class _GatewayEmptyState extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: KeroseneBrandTokens.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: KeroseneBrandTokens.border),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Text(
               message,
@@ -983,7 +897,7 @@ class _GatewayProviderTile extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   if (isLoading)
-                    const SizedBox(
+                    SizedBox(
                       width: 46,
                       height: 46,
                       child: CircularProgressIndicator(
@@ -994,9 +908,9 @@ class _GatewayProviderTile extends StatelessWidget {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: KeroseneBrandTokens.surfaceHigh,
+                      color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
                     ),
                     child: Icon(
                       provider.icon,
@@ -1061,7 +975,7 @@ class _GatewayProviderTile extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Text(
                     provider.methods,
                     maxLines: 1,
@@ -1091,9 +1005,9 @@ class _GatewayProviderTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            const Icon(
+            Icon(
               KeroseneIcons.chevronRight,
-              color: KeroseneBrandTokens.textMuted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               size: 18,
             ),
           ],

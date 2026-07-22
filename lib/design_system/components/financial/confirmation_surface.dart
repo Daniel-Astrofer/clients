@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Row model for financial confirmation / review surfaces.
 class MovementConfirmationRow {
@@ -45,6 +45,8 @@ class MovementConfirmationSurface extends StatelessWidget {
         final width = constraints.maxWidth;
         final titleFontSize = width < 360 ? 28.0 : 34.0;
         final amountFontSize = width < 360 ? 40.0 : 48.0;
+        final ink = KeroseneBrandTokens.textPrimary;
+        final muted = KeroseneBrandTokens.textMuted;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -57,7 +59,7 @@ class MovementConfirmationSurface extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: AppTypography.newsreader(
-                color: AppColors.hexFFFFFFFF,
+                color: ink,
                 fontSize: titleFontSize,
                 fontWeight: FontWeight.w400,
                 height: 1.12,
@@ -72,7 +74,7 @@ class MovementConfirmationSurface extends StatelessWidget {
                 maxLines: 1,
                 textAlign: TextAlign.center,
                 style: AppTypography.amountLarge.copyWith(
-                  color: AppColors.hexFFFFFFFF,
+                  color: ink,
                   fontSize: amountFontSize,
                   height: 1.05,
                   letterSpacing: -0.6,
@@ -85,7 +87,7 @@ class MovementConfirmationSurface extends StatelessWidget {
                 supportingLabel,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: AppColors.hexFFA3A3A3,
+                  color: muted,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   height: 1.2,
@@ -140,18 +142,20 @@ class _MovementConfirmationDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor =
-        row.emphasize ? AppColors.hexFFFFFFFF : AppColors.hexFFA3A3A3;
+    final ink = KeroseneBrandTokens.textPrimary;
+    final muted = KeroseneBrandTokens.textMuted;
+    final border = KeroseneBrandTokens.border;
+    final labelColor = row.emphasize ? ink : muted;
     final valueStyle = row.numeric || row.technical
         ? AppTypography.financial(
-            color: AppColors.hexFFFFFFFF,
+            color: ink,
             fontSize:
                 row.emphasize ? (compact ? 15.0 : 16.0) : (compact ? 13.5 : 14),
             fontWeight: row.emphasize ? FontWeight.w700 : FontWeight.w600,
             height: 1.3,
           )
         : AppTypography.inter(
-            color: AppColors.hexFFFFFFFF,
+            color: ink,
             fontSize:
                 row.emphasize ? (compact ? 15.0 : 16.0) : (compact ? 13.5 : 14),
             fontWeight: row.emphasize ? FontWeight.w700 : FontWeight.w400,
@@ -163,9 +167,7 @@ class _MovementConfirmationDetailRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: row.emphasize
-                ? AppColors.hexFF2A2A2A.withValues(alpha: 0)
-                : AppColors.hexFF2A2A2A,
+            color: row.emphasize ? border.withValues(alpha: 0) : border,
           ),
         ),
       ),

@@ -252,12 +252,12 @@ class AppTypography {
 
   static TextStyle amountInput({
     required bool isBtc,
-    Color color = AppColors.textPrimary,
+    Color? color,
   }) {
     return inter(
       fontSize: isBtc ? 48 : 56,
       fontWeight: FontWeight.w600,
-      color: color,
+      color: color ?? AppColors.textPrimary,
       height: 1.02,
       letterSpacing: 3,
       fontFeatures: const [FontFeature.tabularFigures()],
@@ -265,12 +265,12 @@ class AppTypography {
   }
 
   static TextStyle homeBalance({
-    Color color = AppColors.textPrimary,
+    Color? color,
   }) {
     return inter(
       fontSize: 46,
       fontWeight: FontWeight.w600,
-      color: color,
+      color: color ?? AppColors.textPrimary,
       height: 1.02,
       letterSpacing: 3,
       fontFeatures: const [FontFeature.tabularFigures()],

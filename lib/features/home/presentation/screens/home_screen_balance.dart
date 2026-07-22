@@ -9,6 +9,8 @@ import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_p
 import 'package:kerosene/features/home/presentation/providers/home_stage_playback_provider.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_communication_stage.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
+import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -342,12 +344,12 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
         HomeTheaterHeaderWash(
           child: Padding(
             padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, homeSize(10)),
-            child: TickerMode(
-              enabled: !ref.watch(homeScrollBusyProvider),
-              child: HomeCommunicationStage(
-                userName: widget.userName,
-                notificationButtonKey: _notificationButtonKey,
-              ),
+            // Theater open/close must keep tickers alive. Pausing them while
+            // homeScrollBusy (PageView / list scroll) left _openCtrl at 0 so
+            // aurora still bloomed but title/subtitle never painted.
+            child: HomeCommunicationStage(
+              userName: widget.userName,
+              notificationButtonKey: _notificationButtonKey,
             ),
           ),
         ),
@@ -372,12 +374,19 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
                       physics: const BouncingScrollPhysics(),
                       itemCount: tabs.length,
                       onPageChanged: onPageChanged,
-                      itemBuilder: (context, index) {
+              itemBuilder: (context, index) {
                         final tab = tabs[index];
+                        final scoped = _walletsForView(wallets, tab.view);
                         return HomeBalanceHero(
                           key: ValueKey('home-balance-hero-${tab.view.name}'),
                           data: cardDataFor(tab.view),
+                          scopedWallets: scoped,
                           onOpenWallets: widget.onOpenWallets,
+                          onWalletSelected: (wallet) {
+                            ref
+                                .read(walletProvider.notifier)
+                                .selectWallet(wallet);
+                          },
                           suppressDigitRoll: suppressRoll,
                           // Ceremony only on the first visible page once per session.
                           animateInitialValue:
@@ -545,7 +554,7 @@ class _HomeBalancePageDots extends StatelessWidget {
                 borderRadius: BorderRadius.circular(homeSize(999)),
                 color: active
                     ? accent.withValues(alpha: 0.95)
-                    : Colors.white.withValues(alpha: 0.18),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
               ),
             ),
           ),
@@ -608,14 +617,18 @@ class HomeTopAmbientGlow extends ConsumerWidget {
 /// PageView page) so swiping never re-triggers digit odometer.
 class HomeBalanceHero extends ConsumerWidget {
   final HomeBalanceCardData data;
+  final List<Wallet> scopedWallets;
   final VoidCallback onOpenWallets;
+  final ValueChanged<Wallet> onWalletSelected;
   final bool suppressDigitRoll;
   final bool animateInitialValue;
 
   const HomeBalanceHero({
     super.key,
     required this.data,
+    required this.scopedWallets,
     required this.onOpenWallets,
+    required this.onWalletSelected,
     this.suppressDigitRoll = false,
     this.animateInitialValue = false,
   });
@@ -632,23 +645,32 @@ class HomeBalanceHero extends ConsumerWidget {
     };
     final walletName =
         _nonEmpty(data.wallet?.name, homeGlobalWalletTitle(context));
+    final showWalletChip = !isTotal && scopedWallets.isNotEmpty;
+    final selectedChipWallet = data.wallet != null &&
+            scopedWallets.any((w) => w.id == data.wallet!.id)
+        ? data.wallet
+        : scopedWallets.isNotEmpty
+            ? scopedWallets.first
+            : null;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onOpenWallets();
-      },
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: homeSize(4)),
-        child: Semantics(
-          container: true,
-          label:
-              '$title. $walletName. Saldo: ${data.balanceHidden ? "Oculto" : "${data.balanceBtc} BTC, ou ${data.convertedBalanceLabel}"}. ${data.dailyChangeLabel}',
-          excludeSemantics: true,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: homeSize(4)),
+      child: Semantics(
+        container: true,
+        label:
+            '$title. $walletName. Saldo: ${data.balanceHidden ? "Oculto" : "${data.balanceBtc} BTC, ou ${data.convertedBalanceLabel}"}. ${data.dailyChangeLabel}',
+        excludeSemantics: true,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (showWalletChip)
+              WalletExpandChip(
+                wallets: scopedWallets,
+                selectedWallet: selectedChipWallet,
+                onWalletSelected: onWalletSelected,
+                appearance: WalletExpandChipAppearance.glass,
+              )
+            else
               AnimatedSwitcher(
                 duration: KeroseneMotion.short,
                 switchInCurve: KeroseneMotion.standard,
@@ -667,32 +689,16 @@ class HomeBalanceHero extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (!isTotal && data.wallet != null) ...[
-                SizedBox(height: homeSize(6)),
-                AnimatedSwitcher(
-                  duration: KeroseneMotion.short,
-                  child: Text(
-                    walletName,
-                    key: ValueKey('wallet-$walletName'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.h3.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.75),
-                      fontSize: homeFontSize(13),
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ],
-              SizedBox(height: homeSize(14)),
-              // Odometer for large deltas / session ceremony. Tab swipe uses
-              // suppressDigitRoll so it snaps instead of rolling.
-              FittedBox(
+            SizedBox(height: homeSize(14)),
+            // Odometer for large deltas / session ceremony. Tab swipe uses
+            // suppressDigitRoll so it snaps instead of rolling.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onOpenWallets();
+              },
+              child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -719,7 +725,7 @@ class HomeBalanceHero extends ConsumerWidget {
                         suppressRoll: suppressDigitRoll,
                         largeDeltaThreshold: kHomeBalanceLargeDeltaBtc,
                         style: AppTypography.homeBalance(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ).copyWith(
                           fontSize: responsive.compactFontSize(
                             tiny: homeFontSize(40),
@@ -739,7 +745,7 @@ class HomeBalanceHero extends ConsumerWidget {
                       child: Text(
                         'BTC',
                         style: AppTypography.bodyLarge.copyWith(
-                          color: homeMutedTextColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: homeFontSize(16),
                           fontWeight: FontWeight.w300,
                           letterSpacing: 0.4,
@@ -749,8 +755,15 @@ class HomeBalanceHero extends ConsumerWidget {
                   ],
                 ),
               ),
-              SizedBox(height: homeSize(10)),
-              AnimatedSwitcher(
+            ),
+            SizedBox(height: homeSize(10)),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onOpenWallets();
+              },
+              child: AnimatedSwitcher(
                 duration: KeroseneMotion.short,
                 child: Text(
                   data.convertedBalanceLabel,
@@ -759,43 +772,43 @@ class HomeBalanceHero extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: homeMutedTextColor,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: homeFontSize(15),
                     fontWeight: FontWeight.w300,
                     letterSpacing: 0,
                   ),
                 ),
               ),
-              SizedBox(height: homeSize(8)),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    data.dailyChangeColor == homePositiveColor
-                        ? KeroseneIcons.up
-                        : KeroseneIcons.down,
-                    color: data.dailyChangeColor,
-                    size: homeSize(12),
-                  ),
-                  SizedBox(width: homeSize(5)),
-                  Flexible(
-                    child: Text(
-                      data.dailyChangeLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: data.dailyChangeColor,
-                        fontSize: homeFontSize(13),
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 0,
-                      ),
+            ),
+            SizedBox(height: homeSize(8)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  data.dailyChangeColor == homePositiveColor
+                      ? KeroseneIcons.up
+                      : KeroseneIcons.down,
+                  color: data.dailyChangeColor,
+                  size: homeSize(12),
+                ),
+                SizedBox(width: homeSize(5)),
+                Flexible(
+                  child: Text(
+                    data.dailyChangeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: data.dailyChangeColor,
+                      fontSize: homeFontSize(13),
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 0,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -859,9 +872,11 @@ class HomeBalanceCardData {
 
 /// Accent colors for each balance carousel page (glow + labels + dots).
 Color homeBalanceAccentFor(HomeLedgerBalanceView view) {
+  final isLight = ThemeTokenBridge.isLight;
+  final ink = HomeSurfaceTheme.current.textPrimary;
   return switch (view) {
-    HomeLedgerBalanceView.total => const Color(0xFFFFFFFF),
-    HomeLedgerBalanceView.platform => const Color(0xFFFFFFFF),
+    HomeLedgerBalanceView.total => isLight ? ink : const Color(0xFFFFFFFF),
+    HomeLedgerBalanceView.platform => isLight ? ink : const Color(0xFFFFFFFF),
     HomeLedgerBalanceView.onChain => const Color(0xFFFF9500),
     HomeLedgerBalanceView.cold => const Color(0xFF7DD3FC),
   };

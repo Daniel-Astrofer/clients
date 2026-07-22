@@ -192,7 +192,7 @@ class InternalWalletCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Text(
                       cardCode(account),
                       style: AppTypography.technicalMono(
@@ -382,7 +382,7 @@ class ReceiveRequestRow extends StatelessWidget {
                     letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: 5),
                 Text(
                   subtitle,
                   maxLines: 1,

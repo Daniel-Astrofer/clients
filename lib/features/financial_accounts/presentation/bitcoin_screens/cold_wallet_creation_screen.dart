@@ -533,7 +533,7 @@ class ColdWalletCreationScreenState
                       color: colors.mutedText,
                       size: 24,
                     ),
-                    const SizedBox(width: AppSpacing.md),
+                    SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,7 +546,7 @@ class ColdWalletCreationScreenState
                                       fontWeight: FontWeight.w700,
                                     ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             level.title(context),
                             style:
@@ -560,7 +560,7 @@ class ColdWalletCreationScreenState
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 Text(
                   context.tr.coldWalletBackupSubtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -723,7 +723,7 @@ class ColdWalletLevelTile extends StatelessWidget {
                   color: selected ? colors.text : colors.mutedText,
                   size: 18,
                 ),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,7 +735,7 @@ class ColdWalletLevelTile extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         level.body(context),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -788,7 +788,7 @@ class ChecklistTile extends StatelessWidget {
               checkColor: colors.filledButtonForeground,
               side: BorderSide(color: colors.borderStrong),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 text,
@@ -834,7 +834,7 @@ class SeedWordBadge extends StatelessWidget {
                 ).textTheme.labelSmall?.copyWith(color: colors.faintText),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text(
               word,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(

@@ -61,11 +61,11 @@ class CircularActionButton extends StatelessWidget {
               size: size * 0.42,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             label,
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: FinancialHubTokens.buttonLabel(
               color: Theme.of(context).colorScheme.onSurface,

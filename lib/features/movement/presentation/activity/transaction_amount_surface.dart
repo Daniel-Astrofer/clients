@@ -397,7 +397,7 @@ class TransactionSurfaceHeader extends StatelessWidget {
                   ),
                 ),
               if (trimmedRail.isNotEmpty) ...[
-                if (trimmedTitle.isNotEmpty) const SizedBox(height: 3),
+                if (trimmedTitle.isNotEmpty) SizedBox(height: 3),
                 Text(
                   trimmedRail,
                   maxLines: 1,
@@ -481,7 +481,7 @@ class TransactionPartyRow extends StatelessWidget {
                       letterSpacing: 0,
                     ),
               ),
-              const SizedBox(height: 3),
+              SizedBox(height: 3),
               Text(
                 data.subtitle.trim().isEmpty ? '--' : data.subtitle,
                 maxLines: 1,

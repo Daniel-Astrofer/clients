@@ -4,6 +4,7 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 
 enum ReceiveNetworkChoice { onchain, lightning }
@@ -39,33 +40,52 @@ class ReceiveNetworkPicker extends StatelessWidget {
     required this.onBack,
   });
 
-  static const Color _optionBg = Color(0xFF1A1A1A);
+  static Color _optionBg = Color(0xFF1A1A1A);
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: KeroseneBrandTokens.background,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ReceiveFlowScreenShell(
         onBack: onBack,
         title: ReceiveMoneyCopy.networkPickTitle(context),
         subtitle: ReceiveMoneyCopy.networkPickSubtitle(context),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            children: [
-              const Spacer(flex: 3),
-              for (var i = 0; i < options.length; i++) ...[
-                if (i > 0) const SizedBox(height: 12),
-                _NetworkOptionCard(
-                  option: options[i],
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    onSelected(options[i].choice);
-                  },
+          padding: const EdgeInsets.fromLTRB(
+            ReceiveFlowLayout.pageHorizontal - 4,
+            0,
+            ReceiveFlowLayout.pageHorizontal - 4,
+            ReceiveFlowLayout.pageBottom,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-              ],
-              const Spacer(flex: 2),
-            ],
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < options.length; i++) ...[
+                          if (i > 0)
+                            const SizedBox(height: ReceiveFlowLayout.optionGap),
+                          _NetworkOptionCard(
+                            option: options[i],
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              onSelected(options[i].choice);
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -98,7 +118,7 @@ class _NetworkOptionCard extends StatelessWidget {
             border: Border.all(
               color: option.bestValue
                   ? KeroseneBrandTokens.textPrimary
-                  : KeroseneBrandTokens.border,
+                  : Theme.of(context).dividerColor,
               width: option.bestValue ? 1.2 : 0.8,
             ),
           ),
@@ -126,7 +146,7 @@ class _NetworkOptionCard extends StatelessWidget {
               Text(
                 option.subtitle,
                 style: AppTypography.captionLarge.copyWith(
-                  color: KeroseneBrandTokens.textMuted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.35,
                   fontWeight: FontWeight.w400,
                 ),
@@ -137,14 +157,14 @@ class _NetworkOptionCard extends StatelessWidget {
                   Icon(
                     KeroseneIcons.pending,
                     size: 14,
-                    color: KeroseneBrandTokens.textMuted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 5),
                   Expanded(
                     child: Text(
                       option.timeLabel,
                       style: AppTypography.captionLarge.copyWith(
-                        color: KeroseneBrandTokens.textMuted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 11,
                       ),
                       maxLines: 1,
@@ -159,14 +179,14 @@ class _NetworkOptionCard extends StatelessWidget {
                   Icon(
                     KeroseneIcons.success,
                     size: 14,
-                    color: KeroseneBrandTokens.textMuted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 5),
                   Expanded(
                     child: Text(
                       option.confirmationLabel,
                       style: AppTypography.captionLarge.copyWith(
-                        color: KeroseneBrandTokens.textMuted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 11,
                       ),
                       maxLines: 1,

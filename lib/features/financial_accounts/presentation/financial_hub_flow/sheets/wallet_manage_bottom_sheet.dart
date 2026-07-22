@@ -144,11 +144,11 @@ class _WalletManageBottomSheetState
               'Configurações e dados reativos à custódia.',
               style: FinancialHubTokens.body(fontSize: 13),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Rename Wallet Tile
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
@@ -177,7 +177,7 @@ class _WalletManageBottomSheetState
                         ? null
                         : () => _renameWallet(context),
                     icon: _busyAction == 'rename'
-                        ? const CupertinoActivityIndicator()
+                        ? CupertinoActivityIndicator()
                         : Icon(KeroseneIcons.edit, color: Theme.of(context).colorScheme.onSurface,
                             size: 20,
                           ),
@@ -185,11 +185,11 @@ class _WalletManageBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // Advanced IDs Section
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
@@ -210,11 +210,11 @@ class _WalletManageBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // Account Status Row
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
@@ -248,11 +248,11 @@ class _WalletManageBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // Lock / Archive Switch Row
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
@@ -295,9 +295,9 @@ class _WalletManageBottomSheetState
             ),
 
             if (hasPublicMaterial) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
@@ -330,7 +330,7 @@ class _WalletManageBottomSheetState
             ],
 
             if (widget.account.isWatchOnly) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Theme(

@@ -5,21 +5,23 @@ class KeroseneLogo extends StatelessWidget {
 
   final double size;
   final bool showText;
-  final Color color;
+  /// When null, uses [ColorScheme.onSurface] so light/dark scaffolds stay visible.
+  final Color? color;
   final FilterQuality filterQuality;
 
   const KeroseneLogo({
     super.key,
     this.size = 120,
     this.showText = true,
-    this.color = Colors.white,
+    this.color,
     this.filterQuality = FilterQuality.high,
   });
 
   @override
   Widget build(BuildContext context) {
+    final resolved = color ?? Theme.of(context).colorScheme.onSurface;
     return ColorFiltered(
-      colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(color)),
+      colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(resolved)),
       child: Image.asset(
         assetPath,
         width: size,

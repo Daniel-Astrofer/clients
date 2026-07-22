@@ -25,6 +25,9 @@ final homeSurfaceProvider =
 class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   int _loadGeneration = 0;
 
+  /// Last bridged scene id — avoids reading [homeSceneProvider] (circular).
+  String _lastBridgedSceneId = '';
+
   /// Batches high-frequency theater/scene WS tokens (~60Hz max).
   late final FrameCoalescer<HomeUiEvent> _theaterCoalescer;
 
@@ -171,10 +174,9 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   }
 
   bool _isSameSceneStream(HomeUiEvent event) {
-    final current = ref.read(homeSceneProvider);
-    if (!current.isActive || current.id.isEmpty) return false;
     final nextId = (event.payload['id'] ?? '').toString();
-    return nextId.isNotEmpty && nextId == current.id;
+    if (nextId.isEmpty || _lastBridgedSceneId.isEmpty) return false;
+    return nextId == _lastBridgedSceneId;
   }
 
   bool _patchIsTheaterOnly(Map<String, dynamic> payload) {
@@ -217,33 +219,46 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   }
 
   void _bridgeSceneEvent(HomeUiEvent event) {
-    // Scene-Driven path: pure scene payloads + clear, without SDUI widgets.
-    try {
-      switch (event.type) {
-        case HomeUiEventType.scene:
-          if (event.payload.isNotEmpty) {
-            ref.read(homeSceneProvider.notifier).presentFromJson(event.payload);
-          }
-        case HomeUiEventType.sceneClear:
-          ref.read(homeSceneProvider.notifier).clearOverride();
-        case HomeUiEventType.stageClear:
-          // Surface stage cleared — drop any pure-scene override too.
-          ref.read(homeSceneProvider.notifier).clearOverride();
-        case HomeUiEventType.snapshot:
-        case HomeUiEventType.patch:
-          // If snapshot/patch embeds a top-level `scene`, present it.
-          final embedded = event.payload['scene'];
-          if (embedded is Map) {
-            ref
-                .read(homeSceneProvider.notifier)
-                .presentFromJson(Map<String, dynamic>.from(embedded));
-          }
-        default:
-          break;
+    // Defer scene provider writes — [homeSceneProvider] listens to this
+    // notifier, so a synchronous ref.read(homeScene…) is a circular dependency
+    // under Riverpod 3 (debug assert / broken present in some builds).
+    final type = event.type;
+    final payload = event.payload;
+    Future.microtask(() {
+      if (!ref.mounted) return;
+      try {
+        final scenes = ref.read(homeSceneProvider.notifier);
+        switch (type) {
+          case HomeUiEventType.scene:
+            if (payload.isNotEmpty) {
+              final id = (payload['id'] ?? '').toString();
+              if (id.isNotEmpty) _lastBridgedSceneId = id;
+              scenes.presentFromJson(payload);
+            }
+          case HomeUiEventType.sceneClear:
+            _lastBridgedSceneId = '';
+            scenes.clearOverride();
+          case HomeUiEventType.stageClear:
+            // Surface stage cleared — drop any pure-scene override too.
+            _lastBridgedSceneId = '';
+            scenes.clearOverride();
+          case HomeUiEventType.snapshot:
+          case HomeUiEventType.patch:
+            // If snapshot/patch embeds a top-level `scene`, present it.
+            final embedded = payload['scene'];
+            if (embedded is Map) {
+              final map = Map<String, dynamic>.from(embedded);
+              final id = (map['id'] ?? '').toString();
+              if (id.isNotEmpty) _lastBridgedSceneId = id;
+              scenes.presentFromJson(map);
+            }
+          default:
+            break;
+        }
+      } catch (e, st) {
+        debugPrint('[homeSurface] scene event bridge failed: $e\n$st');
       }
-    } catch (e, st) {
-      debugPrint('[homeSurface] scene event bridge failed: $e\n$st');
-    }
+    });
   }
 
   /// Hide stage immediately after the user finished reading (ONCE).
@@ -252,7 +267,11 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
     _theaterCoalescer.cancelPending();
     if (!state.stage.isActive) return;
     state = state.clearStage();
-    ref.read(homeSceneProvider.notifier).clearOverride();
+    // Listen syncs resting scene; microtask drops any pure-scene override.
+    Future.microtask(() {
+      if (!ref.mounted) return;
+      ref.read(homeSceneProvider.notifier).clearOverride();
+    });
   }
 
   /// Inject a client-built theater piece (education / receive). Does not hit BE.
@@ -261,8 +280,8 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
     // Local pieces are user-facing now — never lag behind a pending WS token.
     _theaterCoalescer.flushPending();
     state = state.withStage(stage);
-    // Ensure aurora follows this stage's atmosphere (drop stale scene overrides).
-    ref.read(homeSceneProvider.notifier).clearOverride();
+    // [homeSceneProvider] listen clears overrides for local-* and maps stage →
+    // scene. Do not ref.read(homeScene…) here (circular dependency).
     debugPrint(
       '[homeSurface] local stage=${stage.id} kind=${stage.kind.name}',
     );

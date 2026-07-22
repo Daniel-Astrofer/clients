@@ -12,7 +12,7 @@ class HomePageBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(color: homeBackgroundColor);
+    return ColoredBox(color: Theme.of(context).scaffoldBackgroundColor);
   }
 }
 
@@ -94,8 +94,8 @@ class HomeGlassPanel extends StatelessWidget {
     final content = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        color: backgroundColor ?? HomeColors.surfaceDim,
-        border: Border.all(color: HomeColors.surfaceBorder),
+        color: backgroundColor ?? Theme.of(context).dividerColor,
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -117,7 +117,7 @@ class HomeLoadingContent extends StatelessWidget {
     final height = MediaQuery.sizeOf(context).height;
     return SizedBox(
       height: height * 0.72,
-      child: const Center(
+      child: Center(
         child: TorLoadingDots(travel: 5),
       ),
     );
@@ -144,7 +144,7 @@ class HomeSkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
         borderRadius: borderRadius,
       ),
     );
@@ -189,7 +189,7 @@ class HomeHeaderIconButton extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: homeSize(24),
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
                   ),
                 ),
               ),
@@ -234,7 +234,7 @@ class HomeBalanceActionButton extends StatelessWidget {
     final theme = Theme.of(context);
     final borderRadius = BorderRadius.circular(homeSize(16));
     final labelStyle = theme.textTheme.labelLarge?.copyWith(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.onSurface,
       fontSize: homeFontSize(15),
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
@@ -270,17 +270,17 @@ class HomeBalanceActionButton extends StatelessWidget {
         constraints: BoxConstraints(minHeight: homeSize(52)),
         padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
           borderRadius: borderRadius,
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
             width: 0.5,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: homeSize(20), color: Colors.white),
+            Icon(icon, size: homeSize(20), color: Theme.of(context).colorScheme.onSurface),
             SizedBox(width: homeSize(8)),
             Flexible(
               child: Text(
@@ -300,8 +300,8 @@ class HomeBalanceActionButton extends StatelessWidget {
         child: Stack(
           fit: StackFit.passthrough,
           children: [
-            const Positioned.fill(
-              child: CustomPaint(painter: _ActionGlassGlowPainter()),
+            Positioned.fill(
+              child: CustomPaint(painter: _ActionGlassGlowPainter(context)),
             ),
             content,
           ],
@@ -416,7 +416,8 @@ class _ReceiveLiveGlassCutoutPainter extends CustomPainter {
 }
 
 class _ActionGlassGlowPainter extends CustomPainter {
-  const _ActionGlassGlowPainter();
+  final BuildContext context;
+  const _ActionGlassGlowPainter(this.context);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -429,9 +430,9 @@ class _ActionGlassGlowPainter extends CustomPainter {
             center,
             radius,
             [
-              Colors.white.withValues(alpha: peak),
-              Colors.white.withValues(alpha: peak * 0.35),
-              Colors.white.withValues(alpha: 0),
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: peak),
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: peak * 0.35),
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0),
             ],
             const [0.0, 0.45, 1.0],
           ),
@@ -470,8 +471,8 @@ class HomePaginationDots extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: index == activeIndex
-                    ? Colors.white
-                    : homeMutedTextColor.withValues(alpha: 0.5),
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -503,14 +504,14 @@ class HomeSetupNotice extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(vertical: homeSize(16)),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
           top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
             width: 0.5,
           ),
           bottom: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
             width: 0.5,
           ),
         ),
@@ -523,7 +524,7 @@ class HomeSetupNotice extends StatelessWidget {
             child: Icon(
               icon,
               size: homeSize(24),
-              color: Colors.white.withValues(alpha: 0.9),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
             ),
           ),
           SizedBox(width: homeSize(14)),
@@ -536,7 +537,7 @@ class HomeSetupNotice extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: homeFontSize(15),
                     fontFamily: AppTypography.serifFontFamily,
                     fontWeight: FontWeight.w400,
@@ -549,7 +550,7 @@ class HomeSetupNotice extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.62),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
                     fontSize: homeFontSize(12),
                     height: 1.35,
                     letterSpacing: 0,
@@ -561,7 +562,7 @@ class HomeSetupNotice extends StatelessWidget {
                   icon: Icon(KeroseneIcons.next, size: homeSize(15)),
                   label: Text(actionLabel),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     padding: EdgeInsets.zero,
                     minimumSize: Size(0, homeSize(34)),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -581,7 +582,7 @@ class HomeSetupNotice extends StatelessWidget {
             child: Icon(
               KeroseneIcons.chevronRight,
               size: homeSize(18),
-              color: Colors.white.withValues(alpha: 0.4),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],

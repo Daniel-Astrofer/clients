@@ -322,14 +322,14 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
         .toList(growable: false);
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: KeroseneBrandTokens.background,
-        foregroundColor: KeroseneBrandTokens.textPrimary,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: Text(
           context.tr.coldSendTitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -337,12 +337,12 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             Text(
               label,
               style: AppTypography.inter(
-                color: KeroseneBrandTokens.textMuted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -354,47 +354,47 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                   : 'Sem backup neste aparelho — restaure a seed BIP39 para assinar envios.',
               style: AppTypography.inter(
                 color: _hasLocalSeed
-                    ? KeroseneBrandTokens.textSecondary
-                    : KeroseneBrandTokens.error,
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : Theme.of(context).colorScheme.error,
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Text(
               context.tr.coldSendOnchainDestination,
               style: AppTypography.inter(
-                color: KeroseneBrandTokens.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             TextField(
               controller: _destinationController,
               style: AppTypography.inter(
-                color: KeroseneBrandTokens.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 14,
               ),
               decoration: InputDecoration(
                 hintText: context.tr.coldSendAddressHint,
                 hintStyle: AppTypography.inter(
-                  color: KeroseneBrandTokens.textMuted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
                 ),
                 filled: true,
-                fillColor: KeroseneBrandTokens.surface,
+                fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: KeroseneBrandTokens.border),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
               ),
             ),
             if (keroseneTargets.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Text(
                 context.tr.coldSendPayKeroseneWallet,
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textMuted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -409,14 +409,14 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                       avatar: Icon(
                         KeroseneIcons.wallet,
                         size: 16,
-                        color: KeroseneBrandTokens.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       label: Text(
                         wallet.name.trim().isEmpty
                             ? shortId(wallet.id)
                             : wallet.name,
                         style: AppTypography.inter(
-                          color: KeroseneBrandTokens.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -430,7 +430,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                                     wallet.address.trim();
                               });
                             },
-                      backgroundColor: KeroseneBrandTokens.surfaceHigh,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
                     ),
                 ],
               ),
@@ -468,7 +468,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                       ? 'Ocultar taxa avançada'
                       : 'Taxa avançada (opcional)',
                   style: AppTypography.inter(
-                    color: KeroseneBrandTokens.textMuted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -481,18 +481,18 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
                   labelText: 'Taxa recomendada (sats/vB)',
                   helperText: 'Deixe em branco ou use o valor sugerido.',
                   labelStyle: AppTypography.inter(
-                    color: KeroseneBrandTokens.textMuted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                   filled: true,
-                  fillColor: KeroseneBrandTokens.surface,
+                  fillColor: Theme.of(context).colorScheme.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -500,11 +500,11 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
               ),
             ],
             if (_statusLabel != null) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 _statusLabel!,
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
                 ),
               ),
@@ -518,14 +518,14 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                     ? null
                     : _submit,
                 style: FilledButton.styleFrom(
-                  backgroundColor: KeroseneBrandTokens.textPrimary,
-                  foregroundColor: KeroseneBrandTokens.background,
+                  backgroundColor: Theme.of(context).colorScheme.onSurface,
+                  foregroundColor: Theme.of(context).scaffoldBackgroundColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -533,7 +533,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                     : Text(
                         context.tr.coldSendSignBroadcast,
                         style: AppTypography.inter(
-                          color: KeroseneBrandTokens.background,
+                          color: Theme.of(context).scaffoldBackgroundColor,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),

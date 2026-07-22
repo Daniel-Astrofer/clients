@@ -226,19 +226,19 @@ class _DeferredPageLoadingView extends StatelessWidget {
   /// a mid-transition swap does not flash a soft grey + indicator.
   final bool matchRouteChrome;
 
-  const _DeferredPageLoadingView({this.matchRouteChrome = false});
+  _DeferredPageLoadingView({this.matchRouteChrome = false});
 
   @override
   Widget build(BuildContext context) {
     if (matchRouteChrome) {
-      return const ColoredBox(
-        color: KeroseneBrandTokens.background,
+      return ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: SizedBox.expand(),
       );
     }
 
-    return const Scaffold(
-      backgroundColor: KeroseneBrandTokens.backgroundSoft,
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: SizedBox(
           width: 24,
@@ -254,35 +254,35 @@ class _DeferredPageErrorView extends StatelessWidget {
   final Object? error;
   final VoidCallback? onRetry;
 
-  const _DeferredPageErrorView({this.error, this.onRetry});
+  _DeferredPageErrorView({this.error, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.backgroundSoft,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 KeroseneIcons.serverUnavailable,
-                color: KeroseneBrandTokens.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 32,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 context.tr.deferredLoadFailure,
-                style: const TextStyle(color: KeroseneBrandTokens.textPrimary),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               if (error != null) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   context.tr.deferredLoadDetails,
-                  style: const TextStyle(
-                    color: KeroseneBrandTokens.textMuted,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                   textAlign: TextAlign.center,

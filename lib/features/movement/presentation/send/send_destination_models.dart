@@ -60,8 +60,11 @@ class SendFeeQuote {
   final double platformFeeRate;
   final double platformFeeBtc;
   final double networkFeeBtc;
+  /// Authoritative reserved network fee from backend quote (prefer over BTC).
+  final int? networkFeeSats;
   final double totalDebitedBtc;
   final double? feeRateSatPerByte;
+  final int? feeRateSatPerVbyte;
   final int? estimatedSettlementSeconds;
   final int? feeTargetBlocks;
   final String? feeSource;
@@ -77,8 +80,10 @@ class SendFeeQuote {
     required this.platformFeeRate,
     required this.platformFeeBtc,
     required this.networkFeeBtc,
+    this.networkFeeSats,
     required this.totalDebitedBtc,
     this.feeRateSatPerByte,
+    this.feeRateSatPerVbyte,
     this.estimatedSettlementSeconds,
     this.feeTargetBlocks,
     this.feeSource,
@@ -90,6 +95,22 @@ class SendFeeQuote {
   });
 
   bool get hasAmount => requestedAmountBtc > 0;
+
+  /// Integer sats to submit as `networkFeeSats` (backend fee cap).
+  int get submitNetworkFeeSats =>
+      networkFeeSats != null && networkFeeSats! > 0
+          ? networkFeeSats!
+          : (networkFeeBtc * 100000000).round();
+
+  /// Integer sat/vB to submit with the reserved fee.
+  int? get submitFeeRateSatPerVbyte {
+    if (feeRateSatPerVbyte != null && feeRateSatPerVbyte! > 0) {
+      return feeRateSatPerVbyte;
+    }
+    final rate = feeRateSatPerByte;
+    if (rate == null || rate <= 0) return null;
+    return rate.round();
+  }
 
   bool get isQuoteExpired {
     final expires = quoteExpiresAt;

@@ -123,9 +123,9 @@ class SendMoneyCopy {
 
   static String destinationHint(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Username, Bitcoin address, or link',
-        'es' => 'Usuario, dirección Bitcoin o link',
-        _ => 'Usuário, endereço Bitcoin ou link',
+        'en' => 'Username, address, or link',
+        'es' => 'Nombre de usuario, dirección o link',
+        _ => 'Nome de usuario, endereço, ou link',
       };
 
   static String unrecognizedDestination(BuildContext context) =>

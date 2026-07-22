@@ -127,7 +127,7 @@ class _StateContainer extends StatelessWidget {
                 ),
                 child: Icon(icon, color: colorScheme.primary, size: 26),
               ),
-              const SizedBox(height: AppSpacing.base),
+              SizedBox(height: AppSpacing.base),
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -136,7 +136,7 @@ class _StateContainer extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
               Text(
                 message,
                 textAlign: TextAlign.center,

@@ -380,7 +380,7 @@ class _AdminAuthGate extends ConsumerWidget {
     final authState = ref.watch(authControllerProvider);
 
     if (authState is AuthInitial || authState is AuthLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: KeroseneBrandTokens.backgroundSoft,
         body: Center(
           child: SizedBox(

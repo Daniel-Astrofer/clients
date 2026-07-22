@@ -166,7 +166,7 @@ class AccountOptionNote extends StatelessWidget {
     return Text(
       text,
       style: AppTypography.inter(
-        color: KeroseneBrandTokens.textMuted,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         fontSize: 12,
         height: 1.35,
         letterSpacing: 0,
@@ -439,7 +439,7 @@ class AccountDetailRow extends StatelessWidget {
         border: showDivider
             ? Border(
                 bottom: BorderSide(
-                  color: KeroseneBrandTokens.borderSubtle,
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.55),
                 ),
               )
             : null,
@@ -450,7 +450,7 @@ class AccountDetailRow extends StatelessWidget {
             child: Text(
               row.label,
               style: AppTypography.inter(
-                color: KeroseneBrandTokens.textMuted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0,
@@ -532,6 +532,7 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final txDate = DateTime(date.year, date.month, date.day);
+    final colors = BitcoinAccountsColors.of(context);
 
     String label;
     if (txDate == today) {
@@ -561,7 +562,7 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
       child: Text(
         label,
         style: AppTypography.display.copyWith(
-          color: Colors.white,
+          color: colors.text,
           fontSize: 26,
         ),
       ),
@@ -713,7 +714,7 @@ class BareHistoryMessage extends StatelessWidget {
       child: Text(
         text,
         style: AppTypography.inter(
-          color: KeroseneBrandTokens.textMuted,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 13,
           height: 1.35,
           letterSpacing: 0,
@@ -784,7 +785,7 @@ class FocusedHistoryRow extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       detail,
                       maxLines: 1,
@@ -814,7 +815,7 @@ class FocusedHistoryRow extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 18),
           Text(
             signedSats(transaction),
             style: AppTypography.technicalMono(

@@ -10,7 +10,9 @@ import 'package:kerosene/core/services/notification_service.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 import '../../../../core/services/balance_websocket_service.dart';
 import '../../../../core/providers/tor_providers.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
+import 'package:kerosene/core/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -18,6 +20,8 @@ import 'package:kerosene/features/financial_accounts/presentation/state/wallet_s
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/incoming_transfer_theater.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import '../../../../core/utils/device_helper.dart';
 import 'financial_dirty_provider.dart';
 import 'financial_refresh.dart';
@@ -31,10 +35,13 @@ export 'financial_surface_provider.dart';
 const double _balanceChangeEpsilon = 0.000000001;
 
 /// Backup poll when realtime WS is healthy and a financial screen is visible.
-const financialRealtimeFallbackInterval = Duration(seconds: 90);
+/// Assumes kfe→server fan-out can also be Tor-slow — keep a safety net even
+/// while "connected".
+const financialRealtimeFallbackInterval = Duration(seconds: 30);
 
 /// Poll while WS is down / reconnecting (only on financial surfaces).
-const financialRealtimeDisconnectedInterval = Duration(seconds: 20);
+/// Aggressive under Tor flap so settle still lands via REST.
+const financialRealtimeDisconnectedInterval = Duration(seconds: 6);
 
 /// When user is off financial screens or app is backgrounded, only re-check
 /// the gate this often (no network I/O when still idle).
@@ -251,6 +258,67 @@ final balanceWebSocketServiceProvider =
       }
       ref.read(sessionInvalidationProvider.notifier).emit();
     },
+    onReconnectExhausted: () {
+      if (!ref.mounted) return;
+      if (kDebugMode) {
+        debugPrint(
+          'BalanceWebSocket: reconnect exhausted — forcing Tor REST catch-up.',
+        );
+      }
+      ref.read(financialDirtyProvider.notifier).markDirty();
+      _scheduleFinancialRefreshForEvent(
+        ref,
+        scope: FinancialRefreshScope.full,
+        forceFullHistory: true,
+      );
+    },
+    onTransaction: (json) {
+      if (!ref.mounted) return;
+      try {
+        final tx = Transaction.fromJson(json);
+        ref.read(lastTransactionHistoryProvider.notifier).upsertFront(tx);
+        final scope = ref.read(sessionStorageScopeProvider);
+        if (scope != null) {
+          unawaited(
+            ref
+                .read(localTransactionHistoryStoreProvider)
+                .mergeAndPersist(sessionScope: scope, incoming: [tx])
+                .catchError((_) => <Transaction>[]),
+          );
+        }
+        // Primary theater path — same id as extrato row.
+        final theater = payloadFromTransaction(tx, read: ref.read);
+        if (theater != null) {
+          presentIncomingTheater(
+            ref.read(homeEducationQueueProvider.notifier),
+            ref.read(homeBalanceReceivePulseProvider.notifier),
+            theater,
+          );
+        }
+        // Eventual consistency only — row already on screen.
+        // Full pull: fan-out may still be in flight over Tor-like latency.
+        _scheduleFinancialRefreshForEvent(
+          ref,
+          scope: FinancialRefreshScope.full,
+          forceFullHistory: true,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('BalanceWebSocket: transaction upsert rejected: $e');
+        }
+      }
+    },
+    onBtcPrice: (json) {
+      if (!ref.mounted) return;
+      try {
+        final rates = BackendBtcRates.fromJson(json);
+        ref.read(liveBackendBtcRatesProvider.notifier).apply(rates);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('BalanceWebSocket: btc-price rejected: $e');
+        }
+      }
+    },
     onBalanceUpdate: (update) {
       if (kDebugMode) {
         debugPrint('BalanceWebSocket: balance update received.');
@@ -303,23 +371,25 @@ final balanceWebSocketServiceProvider =
             );
       }
 
-      // Fallback theater path: credits can land on /queue/balance without a
-      // parallel /queue/notifications push (KFE→Auth notify is best-effort).
-      final creditPayload = payloadFromBalanceCredit(
-        walletId: update.walletId,
-        walletName: update.walletName,
-        amountBtc: update.amount,
-        context: update.context,
-        kind: update.kind,
-        bucket: update.bucket,
-        read: ref.read,
-      );
-      if (creditPayload != null && ref.mounted) {
-        presentIncomingTheater(
-          ref.read(homeEducationQueueProvider.notifier),
-          ref.read(homeBalanceReceivePulseProvider.notifier),
-          creditPayload,
+      // Fallback theater only when notif/tx WS did not already announce.
+      final queue = ref.read(homeEducationQueueProvider.notifier);
+      if (!queue.hasRecentIncomingEnqueue) {
+        final creditPayload = payloadFromBalanceCredit(
+          walletId: update.walletId,
+          walletName: update.walletName,
+          amountBtc: update.amount,
+          context: update.context,
+          kind: update.kind,
+          bucket: update.bucket,
+          read: ref.read,
         );
+        if (creditPayload != null && ref.mounted) {
+          presentIncomingTheater(
+            queue,
+            ref.read(homeBalanceReceivePulseProvider.notifier),
+            creditPayload,
+          );
+        }
       }
     },
     onNotification: (event) {
@@ -342,18 +412,40 @@ final balanceWebSocketServiceProvider =
       final isIncoming = isIncomingTransactionNotification(notification);
       final appInForeground = ref.read(appForegroundProvider);
 
-      // In-app feed + financial refresh + theater must not depend on OS alert
-      // preferences. Prefs only gate system notifications.
-      if (keepForAlerts) {
+      // In-app feed must always receive financial events. OS alert prefs only
+      // gate native shade below — otherwise center stays empty when alerts off.
+      final isFinancial =
+          NativeNotificationPresenter.isFinancialKind(notification.kind);
+      if (keepForAlerts || isFinancial || isIncoming) {
         ref.read(sessionNotificationFeedProvider.notifier).add(notification);
       }
 
       // Single coordinator: balance + extrato (full on financial surfaces).
-      _scheduleFinancialRefreshForEvent(ref, scope: FinancialRefreshScope.full);
+      // Money notifs assume Tor-latent fan-out — always full history catch-up.
+      _scheduleFinancialRefreshForEvent(
+        ref,
+        scope: FinancialRefreshScope.full,
+        forceFullHistory: isIncoming,
+      );
 
       // Theater for receives (independent of OS alert prefs).
       // When the user is in the app, theater is the primary surface — not shade.
       if (isIncoming) {
+        final optimistic = optimisticTransactionFromNotification(notification);
+        if (optimistic != null) {
+          ref
+              .read(lastTransactionHistoryProvider.notifier)
+              .upsertFront(optimistic);
+          final scope = ref.read(sessionStorageScopeProvider);
+          if (scope != null) {
+            unawaited(
+              ref
+                  .read(localTransactionHistoryStoreProvider)
+                  .mergeAndPersist(sessionScope: scope, incoming: [optimistic])
+                  .catchError((_) => <Transaction>[]),
+            );
+          }
+        }
         final theater = payloadFromNotification(
           notification,
           read: ref.read,
@@ -421,7 +513,23 @@ final balanceWebSocketServiceProvider =
     scheduler: ref.read(financialRefreshSchedulerProvider),
   )..start();
 
-  void onWsConnectivity(bool _) => refreshLoop.onConnectivityChanged();
+  void onWsConnectivity(bool connected) {
+    refreshLoop.onConnectivityChanged();
+    if (!ref.mounted) return;
+    if (!connected) {
+      // Frames during Tor flap / broker restart are not replayed.
+      ref.read(financialDirtyProvider.notifier).markDirty();
+      return;
+    }
+    // Just reconnected: force one full REST catch-up for anything missed
+    // while the socket was down (treat kfe→server as Tor-latent too).
+    _scheduleFinancialRefreshForEvent(
+      ref,
+      scope: FinancialRefreshScope.full,
+      forceFullHistory: true,
+    );
+  }
+
   service.addConnectionListener(onWsConnectivity);
 
   // Re-arm when user opens home/extrato or app resumes.
@@ -447,20 +555,32 @@ final balanceWebSocketServiceProvider =
   return service;
 });
 
-/// WS / notification event: refresh immediately only if a financial surface is
-/// active; otherwise mark dirty for the next home/resume pull.
+/// WS / notification event: refresh immediately while the app is foregrounded
+/// (not only on financial surfaces). Background still marks dirty for resume.
+///
+/// Clears dirty **only** when wallets+history both succeed — Tor timeouts must
+/// not pretend the ledger is clean.
 void _scheduleFinancialRefreshForEvent(
   Ref ref, {
   FinancialRefreshScope scope = FinancialRefreshScope.light,
+  bool forceFullHistory = false,
 }) {
   ref.read(financialDirtyProvider.notifier).markDirty();
-  final allowImmediate = ref.read(financialPollAllowedProvider);
-  if (!allowImmediate) {
+  final foreground = ref.read(appForegroundProvider);
+  if (!foreground) {
     return;
   }
-  unawaited(refreshFinancialProjection(ref, scope: scope).then((_) {
-    ref.read(financialDirtyProvider.notifier).clear();
-  }));
+  unawaited(
+    refreshFinancialProjection(
+      ref,
+      scope: scope,
+      forceFullHistory: forceFullHistory,
+    ).then((ok) {
+      if (ok && ref.mounted) {
+        ref.read(financialDirtyProvider.notifier).clear();
+      }
+    }),
+  );
 }
 
 String? _normalizeSessionToken(String? token) {
@@ -502,4 +622,61 @@ bool _shouldKeepNotification(
 
   // System / account — allow unless all alerts disabled (default on).
   return true;
+}
+
+Transaction? optimisticTransactionFromNotification(
+    SessionNotificationItem notification) {
+  if (!isIncomingTransactionNotification(notification)) return null;
+
+  final meta = notification.metadata;
+  final id = (notification.entityId ?? '').trim().isNotEmpty
+      ? notification.entityId!.trim()
+      : (meta['transactionId'] ?? meta['transaction_id'] ?? '').trim();
+  if (id.isEmpty) return null;
+
+  final satsRaw = meta['creditedSats'] ??
+      meta['credited_sats'] ??
+      meta['amountSats'] ??
+      meta['amount_sats'] ??
+      '';
+  final sats = int.tryParse(satsRaw) ?? 0;
+  if (sats <= 0) return null;
+
+  final confs = int.tryParse(meta['confirmations'] ?? '') ?? 0;
+  final rail = (meta['rail'] ?? meta['network'] ?? 'ONCHAIN').toUpperCase();
+  final walletId = (meta['walletId'] ?? meta['wallet_id'] ?? '').trim();
+  final settled = notification.kind ==
+          SessionNotificationItem.kindDepositConfirmed ||
+      notification.kind == SessionNotificationItem.kindTransferReceived ||
+      notification.kind == SessionNotificationItem.kindPaymentRequestPaid ||
+      confs >= 3;
+
+  return Transaction(
+    id: id,
+    fromAddress: '',
+    toAddress: meta['address'] ?? meta['externalReference'] ?? '',
+    walletId: walletId.isEmpty ? null : walletId,
+    destinationWalletId: walletId.isEmpty ? null : walletId,
+    amountSatoshis: sats,
+    feeSatoshis: 0,
+    status: settled
+        ? TransactionStatus.confirmed
+        : (confs > 0
+            ? TransactionStatus.confirming
+            : TransactionStatus.pending),
+    type: TransactionType.receive,
+    confirmations: confs,
+    timestamp: notification.timestamp,
+    updatedAt: notification.timestamp,
+    blockchainTxid: meta['txid'] ?? meta['blockchainTxid'],
+    description: notification.body,
+    isInternal: rail.contains('INTERNAL') || rail.contains('LEDGER'),
+    isLightning: rail.contains('LIGHT'),
+    rail: rail.contains('LIGHT')
+        ? 'LIGHTNING'
+        : rail.contains('INTERNAL')
+            ? 'INTERNAL'
+            : 'ONCHAIN',
+    provider: meta['provider'],
+  );
 }

@@ -142,7 +142,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
           }
         },
         child: Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
             child: Stack(
               children: [
@@ -179,7 +179,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                     top: 8,
                     left: 8,
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.arrow_back,
                         color: monoTextColor,
                         size: 28,
@@ -419,8 +419,8 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
         return CustomPaint(
           painter: SpinningBorderPainter(
             animationValue: _rotationController.value,
-            color1: Colors.white,
-            color2: Colors.white.withValues(alpha: 0.15),
+            color1: Theme.of(context).colorScheme.onSurface,
+            color2: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
             borderRadius: 999,
             strokeWidth: 2,
           ),

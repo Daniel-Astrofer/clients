@@ -252,13 +252,13 @@ class PaymentLinkEntryScreenState
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           ReceiveFlowSecondaryButton(
             label: context.tr.homePasteAction.toUpperCase(),
             icon: KeroseneIcons.paste,
             onTap: _pasteFromClipboard,
           ),
-          const SizedBox(height: AppSpacing.xl),
+          SizedBox(height: AppSpacing.xl),
           PaymentPayloadPreview(
             draft: draft,
             linkAsync: linkAsync,
@@ -267,7 +267,7 @@ class PaymentLinkEntryScreenState
             btcEur: btcEur,
             btcBrl: btcBrl,
           ),
-          const SizedBox(height: AppSpacing.xl),
+          SizedBox(height: AppSpacing.xl),
           ReceiveFlowPrimaryButton(
             label: draft.actionLabel,
             icon: KeroseneIcons.next,
@@ -343,7 +343,7 @@ class PaymentPayloadPreview extends StatelessWidget {
                 ),
                 child: Icon(draft.icon, color: receiveFlowTextColor, size: 18),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,7 +357,7 @@ class PaymentPayloadPreview extends StatelessWidget {
                           ),
                     ),
                     if (support != null && support.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         support,
                         maxLines: 2,
@@ -373,7 +373,7 @@ class PaymentPayloadPreview extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           PaymentPreviewRow(
             label: context.tr.homeNetworkLabel,
             value: _networkLabel(context, draft.kind),

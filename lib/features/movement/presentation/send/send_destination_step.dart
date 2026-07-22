@@ -53,11 +53,11 @@ class SendDestinationStep extends StatelessWidget {
     this.onRailSelected,
   });
 
-  static const internalBlack = KeroseneBrandTokens.background;
-  static const internalSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
-  static const internalBorder = KeroseneBrandTokens.border;
-  static const internalText = KeroseneBrandTokens.textPrimary;
-  static const internalMutedText = KeroseneBrandTokens.textMuted;
+  Color internalBlack(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
+  Color internalSurfaceHigh(BuildContext context) => (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
+  Color internalBorder(BuildContext context) => Theme.of(context).dividerColor;
+  Color internalText(BuildContext context) => Theme.of(context).colorScheme.onSurface;
+  Color internalMutedText(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +174,7 @@ class SendDestinationStep extends StatelessWidget {
                             Text(
                               SendMoneyCopy.allDestinations(context),
                               style: AppTypography.inter(
-                                color: tokens.textMuted,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 height: 1.2,
@@ -319,10 +319,10 @@ class _ReceiverProfileCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SendDestinationStep.internalSurfaceHigh,
+        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: SendDestinationStep.internalBorder.withValues(alpha: 0.5),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
         ),
       ),
       child: Row(
@@ -343,7 +343,7 @@ class _ReceiverProfileCard extends StatelessWidget {
                 Text(
                   displayName,
                   style: AppTypography.inter(
-                    color: SendDestinationStep.internalText,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -352,7 +352,7 @@ class _ReceiverProfileCard extends StatelessWidget {
                 Text(
                   subtext,
                   style: AppTypography.inter(
-                    color: SendDestinationStep.internalMutedText,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
                 ),
@@ -430,11 +430,11 @@ class _RailChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = selected
-        ? SendDestinationStep.internalText
-        : SendDestinationStep.internalSurfaceHigh;
+        ? Theme.of(context).colorScheme.onSurface
+        : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
     final fg = selected
         ? KeroseneBrandTokens.background
-        : SendDestinationStep.internalText;
+        : Theme.of(context).colorScheme.onSurface;
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(999),
@@ -485,7 +485,7 @@ class _DestinationHeader extends StatelessWidget {
               canWizardBack ? KeroseneIcons.back : KeroseneIcons.close,
               size: 24,
             ),
-            color: SendDestinationStep.internalText,
+            color: Theme.of(context).colorScheme.onSurface,
             padding: EdgeInsets.zero,
             style: IconButton.styleFrom(
               minimumSize: const Size.square(48),
@@ -498,7 +498,7 @@ class _DestinationHeader extends StatelessWidget {
           'Para quem você quer enviar dinheiro?',
           textAlign: TextAlign.left,
           style: AppTypography.newsreader(
-            color: SendDestinationStep.internalText,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: hasContacts ? 30 : 28,
             fontWeight: hasContacts ? FontWeight.w700 : FontWeight.w500,
             height: hasContacts ? 1.12 : 1.2,
@@ -523,7 +523,7 @@ class _DestinationFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = SendFlowTheme.of(context);
     final invalid = analysis.isInvalid;
-    final color = invalid ? tokens.feedbackError : tokens.textMuted;
+    final color = invalid ? tokens.feedbackError : Theme.of(context).colorScheme.onSurfaceVariant;
     final icon = invalid ? KeroseneIcons.warning : KeroseneIcons.info;
 
     return AnimatedContainer(
@@ -576,14 +576,14 @@ class _EmptyContactsState extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: SendDestinationStep.internalSurfaceHigh,
+              color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
                 KeroseneIcons.userAdd,
-                color: SendDestinationStep.internalMutedText,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 32,
               ),
             ),
@@ -593,7 +593,7 @@ class _EmptyContactsState extends StatelessWidget {
             SendMoneyCopy.noRecentDestinations(context),
             textAlign: TextAlign.center,
             style: AppTypography.newsreader(
-              color: SendDestinationStep.internalText,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.w500,
               height: 1.2,
@@ -605,7 +605,7 @@ class _EmptyContactsState extends StatelessWidget {
             SendMoneyCopy.noRecentDestinationsBody(context),
             textAlign: TextAlign.center,
             style: AppTypography.inter(
-              color: SendDestinationStep.internalMutedText,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
               fontWeight: FontWeight.w400,
               height: 1.5,
@@ -666,13 +666,13 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
   @override
   Widget build(BuildContext context) {
     final activeElementColor = _hasFocus
-        ? SendDestinationStep.internalText
-        : SendDestinationStep.internalMutedText;
+        ? Theme.of(context).colorScheme.onSurface
+        : Theme.of(context).colorScheme.onSurfaceVariant;
     final borderColor = widget.analysis.isInvalid
         ? KeroseneBrandTokens.error
         : widget.isLoading || _hasFocus
             ? activeElementColor
-            : SendDestinationStep.internalBorder;
+            : Theme.of(context).dividerColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -687,10 +687,10 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
                 onChanged: (_) => widget.onChanged(),
                 keyboardType: TextInputType.text,
                 textInputAction: TextInputAction.done,
-                cursorColor: SendDestinationStep.internalText,
+                cursorColor: Theme.of(context).colorScheme.onSurface,
                 textAlign: TextAlign.left,
                 style: AppTypography.inter(
-                  color: SendDestinationStep.internalText,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
                   height: 1.45,
@@ -786,7 +786,7 @@ class _FrequentContactsSection extends StatelessWidget {
         Text(
           SendMoneyCopy.frequentDestinations(context),
           style: AppTypography.inter(
-            color: SendDestinationStep.internalMutedText,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 14,
             fontWeight: FontWeight.w600,
             height: 1.2,
@@ -846,7 +846,7 @@ class _FrequentContact extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SendDestinationStep.internalText,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           height: 1.15,
@@ -860,7 +860,7 @@ class _FrequentContact extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SendDestinationStep.internalMutedText,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 11,
                           height: 1.2,
                           letterSpacing: 0,
@@ -893,7 +893,7 @@ class _RecentDestinationRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: tokens.textPrimary.withValues(alpha: 0.10),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
             ),
           ),
         ),
@@ -915,7 +915,7 @@ class _RecentDestinationRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.newsreader(
-                          color: tokens.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           height: 1.2,

@@ -109,18 +109,18 @@ class _TransactionDetailScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: KeroseneBrandTokens.surfaceHigh,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           tr.txDetailCancelTitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w700,
           ),
         ),
         content: Text(
           tr.txDetailCancelBody,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 14,
           ),
         ),
@@ -360,7 +360,7 @@ class _TransactionDetailScreenState
 
     return FinancialSecureScope(
       child: Scaffold(
-        backgroundColor: KeroseneBrandTokens.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Semantics(
             label: '$actionTitle. $amountLabel. $network. $statusLabel',
@@ -368,14 +368,14 @@ class _TransactionDetailScreenState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
+                  padding: EdgeInsets.fromLTRB(8, 4, 16, 0),
                   child: Row(
                     children: [
                       IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(
+                        icon: Icon(
                           KeroseneIcons.back,
-                          color: KeroseneBrandTokens.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const Spacer(),
@@ -390,18 +390,18 @@ class _TransactionDetailScreenState
                           child: Text(
                             SendMoneyCopy.detailExplorer(context),
                             style: AppTypography.caption.copyWith(
-                              color: KeroseneBrandTokens.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: KeroseneBrandTokens.surfaceHigh,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -433,12 +433,12 @@ class _TransactionDetailScreenState
                               presentation.axes,
                               size: 56,
                             ),
-                            const SizedBox(width: 16),
+                            SizedBox(width: 16),
                             Expanded(
                               child: Text(
                                 actionTitle,
                                 style: AppTypography.newsreader(
-                                  color: KeroseneBrandTokens.textPrimary,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 28,
                                   fontWeight: FontWeight.w400,
                                   height: 1.15,
@@ -461,7 +461,7 @@ class _TransactionDetailScreenState
                         child: Text(
                           amountLabel,
                           style: AppTypography.financial(
-                            color: KeroseneBrandTokens.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 40,
                             fontWeight: FontWeight.w700,
                           ),
@@ -480,7 +480,7 @@ class _TransactionDetailScreenState
                         child: Text(
                           btcLabel,
                           style: AppTypography.inter(
-                            color: KeroseneBrandTokens.textMuted,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -499,21 +499,21 @@ class _TransactionDetailScreenState
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: KeroseneBrandTokens.surfaceHigh,
+                              color: Theme.of(context).colorScheme.surface,
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: KeroseneBrandTokens.border,
+                                color: Theme.of(context).dividerColor,
                               ),
                             ),
                             child: Text(
                               network,
                               style: AppTypography.inter(
-                                color: KeroseneBrandTokens.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -540,14 +540,14 @@ class _TransactionDetailScreenState
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Text(
                                     SendMoneyCopy.detailTechnical(context),
                                     style: AppTypography.inter(
-                                      color: KeroseneBrandTokens.textMuted,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -557,7 +557,7 @@ class _TransactionDetailScreenState
                                   _technicalExpanded
                                       ? Icons.keyboard_arrow_up_rounded
                                       : Icons.keyboard_arrow_down_rounded,
-                                  color: KeroseneBrandTokens.textMuted,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   size: 22,
                                 ),
                               ],
@@ -574,7 +574,7 @@ class _TransactionDetailScreenState
                             ),
                       ],
                       if (tx.cancellable) ...[
-                        const SizedBox(height: 28),
+                        SizedBox(height: 28),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
@@ -658,11 +658,11 @@ class _StaggeredDetailRow extends StatelessWidget {
           end: Offset.zero,
         ).animate(curved),
         child: Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.base),
+          padding: EdgeInsets.only(bottom: AppSpacing.base),
           child: DecoratedBox(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: KeroseneBrandTokens.border),
+                bottom: BorderSide(color: Theme.of(context).dividerColor),
               ),
             ),
             child: Padding(
@@ -675,7 +675,7 @@ class _StaggeredDetailRow extends StatelessWidget {
                     child: Text(
                       row.label,
                       style: AppTypography.bodySmall.copyWith(
-                        color: KeroseneBrandTokens.textMuted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -692,12 +692,12 @@ class _StaggeredDetailRow extends StatelessWidget {
                             textAlign: TextAlign.right,
                             style: row.mono
                                 ? AppTypography.technicalMono(
-                                    color: KeroseneBrandTokens.textPrimary,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 14,
                                     height: 1.35,
                                   )
                                 : AppTypography.bodyMedium.copyWith(
-                                    color: KeroseneBrandTokens.textPrimary,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     height: 1.35,
                                   ),
                           ),
@@ -721,10 +721,10 @@ class _StaggeredDetailRow extends StatelessWidget {
                                   ),
                                 );
                             },
-                            child: const Icon(
+                            child: Icon(
                               KeroseneIcons.copy,
                               size: 16,
-                              color: KeroseneBrandTokens.textMuted,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],

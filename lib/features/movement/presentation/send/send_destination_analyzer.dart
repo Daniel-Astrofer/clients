@@ -22,6 +22,12 @@ SendDestinationAnalysis currentSendDestinationAnalysis({
     );
   }
 
+  final trimmedInput = input.trim();
+  // Cleared field must never stay "valid" via a leftover lock.
+  if (trimmedInput.isEmpty) {
+    return analyzeSendDestination('');
+  }
+
   final locked = lockedRecipientAddress.trim();
   if (locked.isNotEmpty) {
     final lockedAnalysis = analyzeSendDestination(locked);

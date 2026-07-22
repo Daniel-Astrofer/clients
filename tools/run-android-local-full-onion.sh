@@ -188,10 +188,18 @@ DEFINE_ARGS=(
 # shellcheck disable=SC2206
 EXTRA=( ${EXTRA_FLUTTER_ARGS:-} )
 
+# Default DDS away from primary Linux (9101) when both runs are active.
+VM_SERVICE_PORT="${KERO_VM_SERVICE_PORT:-9999}"
+DDS_PORT="${KERO_DDS_PORT:-9102}"
+
 echo "[*] running: flutter run -d $DEVICE_ID -t lib/mobile_main.dart ..."
+echo "[*] DevTools/DDS: vm=${VM_SERVICE_PORT} dds=${DDS_PORT}"
 exec "$FLUTTER_BIN" run \
   -d "$DEVICE_ID" \
   -t lib/mobile_main.dart \
+  --host-vmservice-port="$VM_SERVICE_PORT" \
+  --dds-port="$DDS_PORT" \
+  --disable-service-auth-codes \
   "${MODE_ARGS[@]}" \
   "${DEFINE_ARGS[@]}" \
   "${EXTRA[@]}"

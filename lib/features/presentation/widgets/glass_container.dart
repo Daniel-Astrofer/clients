@@ -59,7 +59,7 @@ class GlassContainer extends ConsumerWidget {
             Border.all(
               color: Theme.of(context)
                   .colorScheme
-                  .onPrimary
+                  .onSurface
                   .withValues(alpha: 0.2),
               width: 1.5,
             ),

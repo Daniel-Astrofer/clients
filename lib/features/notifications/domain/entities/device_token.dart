@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 
 class DeviceToken extends Equatable {
   final String id;
@@ -37,10 +38,7 @@ class DeviceToken extends Equatable {
     );
   }
 
-  static DateTime? _date(Object? value) {
-    if (value == null) return null;
-    return DateTime.tryParse(value.toString())?.toLocal();
-  }
+  static DateTime? _date(Object? value) => AppDateTime.parse(value);
 
   @override
   List<Object?> get props => [

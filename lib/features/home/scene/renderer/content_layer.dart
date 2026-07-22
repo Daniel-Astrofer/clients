@@ -4,6 +4,37 @@ import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show homeFontSize, homeSize;
 import 'package:kerosene/features/home/scene/models/home_scene.dart';
 
+/// Soft dark halo so light copy stays legible on bright receive/aurora blooms.
+const List<Shadow> kTheaterTextShadowsDark = <Shadow>[
+  Shadow(
+    color: Color(0xE6000000),
+    blurRadius: 10,
+    offset: Offset(0, 1),
+  ),
+  Shadow(
+    color: Color(0x99000000),
+    blurRadius: 22,
+    offset: Offset(0, 2),
+  ),
+];
+
+/// Soft light halo for dark ink on bright aurora blooms in light mode.
+const List<Shadow> kTheaterTextShadowsLight = <Shadow>[
+  Shadow(
+    color: Color(0x66FFFFFF),
+    blurRadius: 10,
+    offset: Offset(0, 1),
+  ),
+  Shadow(
+    color: Color(0x33FFFFFF),
+    blurRadius: 18,
+    offset: Offset(0, 2),
+  ),
+];
+
+/// Backward-compatible alias (dark theater default).
+const List<Shadow> kTheaterTextShadows = kTheaterTextShadowsDark;
+
 /// Title / subtitle / body — supports static, typewriter, marquee presets.
 class SceneContentLayer extends StatelessWidget {
   final SceneContent content;
@@ -34,10 +65,23 @@ class SceneContentLayer extends StatelessWidget {
             : '$title\n\n$body')
         : (subtitle.isNotEmpty ? '$title\n\n$subtitle' : title);
 
+    final semanticsLabel = [
+      if (title.isNotEmpty) title,
+      if (subtitle.isNotEmpty) subtitle,
+      if (body.isNotEmpty && body != subtitle) body,
+    ].join('. ');
+
+    final scheme = Theme.of(context).colorScheme;
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final ink = scheme.onSurface;
+    final shadows = isLight ? kTheaterTextShadowsLight : kTheaterTextShadowsDark;
+
+    // Dark theater: near-white on OLED. Light: scaffold ink + soft halo on blooms.
     final titleStyle = AppTypography.h1.copyWith(
-      color: Colors.white,
+      color: isLight ? ink : const Color(0xFFFFFFF2),
       height: 1.12,
-      fontSize: compact ? homeFontSize(28) : homeFontSize(36),
+      fontSize: compact ? homeFontSize(26) : homeFontSize(32),
+      shadows: shadows,
       fontFamilyFallback: const [
         'Noto Color Emoji',
         'Segoe UI Emoji',
@@ -46,19 +90,25 @@ class SceneContentLayer extends StatelessWidget {
     );
 
     final subtitleStyle = AppTypography.h2.copyWith(
-      color: Colors.white.withValues(alpha: 0.88),
-      height: 1.22,
-      fontSize: compact ? homeFontSize(18) : homeFontSize(22),
+      color: isLight
+          ? ink.withValues(alpha: 0.88)
+          : Colors.white.withValues(alpha: 0.92),
+      height: 1.28,
+      fontSize: compact ? homeFontSize(16) : homeFontSize(18),
       fontWeight: FontWeight.w600,
+      shadows: shadows,
     );
 
     final bodyStyle = AppTypography.bodyMedium.copyWith(
-      color: Colors.white.withValues(alpha: 0.72),
+      color: isLight
+          ? scheme.onSurfaceVariant
+          : Colors.white.withValues(alpha: 0.82),
       height: 1.4,
       fontSize: homeFontSize(15),
+      shadows: shadows,
     );
 
-    return switch (content.textMode) {
+    final child = switch (content.textMode) {
       SceneTextMode.typewriter => _TypewriterReveal(
           fullText: full,
           titleStyle: titleStyle,
@@ -67,6 +117,9 @@ class SceneContentLayer extends StatelessWidget {
               : bodyStyle,
           durationMs: showDurationMs,
           align: align,
+          caretColor: isLight
+              ? ink.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.55),
         ),
       SceneTextMode.marquee => _MarqueeLine(
           text: title,
@@ -83,6 +136,12 @@ class SceneContentLayer extends StatelessWidget {
           align: align,
         ),
     };
+
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      child: child,
+    );
   }
 }
 
@@ -113,22 +172,31 @@ class _StaticBlock extends StatelessWidget {
           : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (title.isNotEmpty) Text(title, style: titleStyle, textAlign: align),
+        if (title.isNotEmpty)
+          Text(
+            title,
+            style: titleStyle,
+            textAlign: align,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         if (subtitle.isNotEmpty) ...[
-          SizedBox(height: homeSize(8)),
+          SizedBox(height: homeSize(6)),
           Text(
             subtitle,
             style: subtitleStyle,
             textAlign: align,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
         if (body.isNotEmpty && body != subtitle) ...[
-          SizedBox(height: homeSize(8)),
+          SizedBox(height: homeSize(6)),
           Text(
             body,
             style: bodyStyle,
             textAlign: align,
-            maxLines: 8,
+            maxLines: 6,
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -145,6 +213,7 @@ class _TypewriterReveal extends StatefulWidget {
   final TextStyle bodyStyle;
   final int durationMs;
   final TextAlign align;
+  final Color caretColor;
 
   const _TypewriterReveal({
     required this.fullText,
@@ -152,6 +221,7 @@ class _TypewriterReveal extends StatefulWidget {
     required this.bodyStyle,
     required this.durationMs,
     this.align = TextAlign.start,
+    this.caretColor = const Color(0x8CFFFFFF),
   });
 
   @override
@@ -258,7 +328,7 @@ class _TypewriterRevealState extends State<_TypewriterReveal>
     final title = parts.isNotEmpty ? parts.first : text;
     final body = parts.length > 1 ? parts.sublist(1).join('\n\n') : '';
     final caretStyle = widget.bodyStyle.copyWith(
-      color: Colors.white.withValues(alpha: 0.55),
+      color: widget.caretColor,
     );
     final cross = widget.align == TextAlign.center
         ? CrossAxisAlignment.center

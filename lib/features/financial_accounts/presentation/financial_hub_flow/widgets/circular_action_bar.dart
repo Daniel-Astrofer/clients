@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'circular_action_button.dart';
 
-/// Row of 4 circular action buttons replacing horizontal expansion tiles:
-/// 1. Receber (Receive Address, QR, Rotation)
-/// 2. Enviar (Send/Transfer Flow)
-/// 3. Gerenciar (Rename, Status, Lock/Archive)
-/// 4. Detalhes (Public Material, Fingerprint, Derivation, IDs)
+/// Row of circular action buttons for the financial accounts hub:
+/// 1. Adicionar carteira (creation flow)
+/// 2. Gerenciar
+/// 3. Detalhes
 class CircularActionBar extends StatelessWidget {
-  final VoidCallback onReceiveTap;
-  final VoidCallback onSendTap;
+  final VoidCallback onAddWalletTap;
   final VoidCallback onManageTap;
   final VoidCallback onDetailsTap;
 
   const CircularActionBar({
     super.key,
-    required this.onReceiveTap,
-    required this.onSendTap,
+    required this.onAddWalletTap,
     required this.onManageTap,
     required this.onDetailsTap,
   });
@@ -30,13 +27,8 @@ class CircularActionBar extends StatelessWidget {
         children: [
           CircularActionButton(
             icon: KeroseneIcons.plus,
-            label: 'Receber',
-            onTap: onReceiveTap,
-          ),
-          CircularActionButton(
-            icon: KeroseneIcons.send,
-            label: 'Enviar',
-            onTap: onSendTap,
+            label: 'Adicionar\ncarteira',
+            onTap: onAddWalletTap,
           ),
           CircularActionButton(
             icon: KeroseneIcons.settings,

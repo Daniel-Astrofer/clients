@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 
 typedef BalanceStompClientFactory = StompClient Function(StompConfig config);
 
@@ -53,7 +54,12 @@ class BalanceWebSocketService {
   final Function(BalanceUpdate) onBalanceUpdate;
   final Function(RealtimeNotificationEvent)? onNotification;
   final Function(Map<String, dynamic> event)? onHomeUiEvent;
+  final Function(Map<String, dynamic> json)? onTransaction;
+  final Function(Map<String, dynamic> json)? onBtcPrice;
   final VoidCallback? onSessionInvalidated;
+
+  /// Fired once when reconnect backoff gives up (Tor flap / broker down).
+  final VoidCallback? onReconnectExhausted;
   final BalanceAuthTokenResolver? resolveAuthToken;
   final BalanceWebSocketReconnectPolicy _reconnectPolicy;
   final BalanceStompClientFactory _stompClientFactory;
@@ -81,7 +87,10 @@ class BalanceWebSocketService {
     required this.onBalanceUpdate,
     this.onNotification,
     this.onHomeUiEvent,
+    this.onTransaction,
+    this.onBtcPrice,
     this.onSessionInvalidated,
+    this.onReconnectExhausted,
     this.resolveAuthToken,
     BalanceWebSocketReconnectPolicy? reconnectPolicy,
     BalanceStompClientFactory? stompClientFactory,
@@ -92,6 +101,9 @@ class BalanceWebSocketService {
 
   bool get isConnected => _isConnected;
   bool get stoppedReconnecting => _sessionInvalidated || _reconnectExhausted;
+
+  /// True after max reconnect attempts — REST catch-up required until rearm.
+  bool get reconnectExhausted => _reconnectExhausted;
 
   /// Last known access token (may be refreshed via [resolveAuthToken]).
   String? get authToken => _authToken;
@@ -380,6 +392,48 @@ class BalanceWebSocketService {
       },
     );
 
+    _stompClient?.subscribe(
+      destination: '/user/queue/transactions',
+      callback: (StompFrame frame) {
+        if (frame.body == null || onTransaction == null) {
+          return;
+        }
+        try {
+          final json = jsonDecode(frame.body!);
+          if (json is Map<String, dynamic>) {
+            onTransaction!(json);
+          } else if (json is Map) {
+            onTransaction!(Map<String, dynamic>.from(json));
+          }
+        } catch (_) {
+          if (kDebugMode) {
+            debugPrint('BalanceWebSocketService: transaction event rejected.');
+          }
+        }
+      },
+    );
+
+    _stompClient?.subscribe(
+      destination: '/topic/btc-price',
+      callback: (StompFrame frame) {
+        if (frame.body == null || onBtcPrice == null) {
+          return;
+        }
+        try {
+          final json = jsonDecode(frame.body!);
+          if (json is Map<String, dynamic>) {
+            onBtcPrice!(json);
+          } else if (json is Map) {
+            onBtcPrice!(Map<String, dynamic>.from(json));
+          }
+        } catch (_) {
+          if (kDebugMode) {
+            debugPrint('BalanceWebSocketService: btc-price event rejected.');
+          }
+        }
+      },
+    );
+
     if (kDebugMode) {
       debugPrint('BalanceWebSocketService: subscriptions ready.');
     }
@@ -499,11 +553,24 @@ class BalanceWebSocketService {
     if (delay == null) {
       _reconnectExhausted = true;
       _closeCurrentClient();
+      if (_isConnected) {
+        _isConnected = false;
+        _notifyConnectionListeners();
+      }
       if (kDebugMode) {
         debugPrint(
           'BalanceWebSocketService: max reconnect attempts reached after '
           '$reason. Stopping until ensureConnected/rearm.',
         );
+      }
+      try {
+        onReconnectExhausted?.call();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+            'BalanceWebSocketService: onReconnectExhausted failed: $e',
+          );
+        }
       }
       return;
     }
@@ -651,13 +718,8 @@ class RealtimeNotificationEvent {
   });
 
   factory RealtimeNotificationEvent.fromJson(Map<String, dynamic> json) {
-    final rawTimestamp =
-        json['createdAt']?.toString() ?? json['timestamp']?.toString();
-    final parsedTimestamp = DateTime.tryParse(rawTimestamp ?? '') ??
-        DateTime.fromMillisecondsSinceEpoch(
-          int.tryParse(rawTimestamp ?? '') ??
-              DateTime.now().millisecondsSinceEpoch,
-        );
+    final rawTimestamp = json['createdAt'] ?? json['timestamp'];
+    final parsedTimestamp = AppDateTime.parse(rawTimestamp) ?? DateTime.now();
     final normalizedTitle = _normalizeText(
       json['title']?.toString(),
       fallback: 'Atualização',
@@ -684,7 +746,7 @@ class RealtimeNotificationEvent {
       severity: inferredSeverity,
       title: normalizedTitle,
       body: normalizedBody,
-      timestamp: parsedTimestamp.toLocal(),
+      timestamp: parsedTimestamp,
       deeplink: _normalizeNullableText(json['deeplink']?.toString()),
       entityType: _normalizeNullableText(json['entityType']?.toString()),
       entityId: _normalizeNullableText(json['entityId']?.toString()),

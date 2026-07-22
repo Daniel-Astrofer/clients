@@ -55,11 +55,11 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
     final viewPadding = MediaQuery.viewPaddingOf(context);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
-          color: Colors.white,
-          backgroundColor: KeroseneBrandTokens.surfaceMuted,
+          color: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           onRefresh: () async {
             ref.invalidate(accountSecurityProfileProvider);
             await ref.read(accountSecurityProfileProvider.future);
@@ -89,37 +89,37 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                               Navigator.of(context).maybePop();
                             },
                           ),
-                          const SizedBox(height: AppSpacing.xxl),
+                          SizedBox(height: AppSpacing.xxl),
                           Text(
                             context.tr.settingsDevicesTitle,
                             style: AppTypography.newsreader(
-                              color: KeroseneBrandTokens.textPrimary,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 32,
                               fontWeight: FontWeight.w500,
                               height: 1.2,
                               letterSpacing: 0,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
+                          SizedBox(height: AppSpacing.md),
                           Text(
                             'Chaves do dispositivo vinculadas à sua conta. Use este aparelho para assinar transferências. Bloqueie ou revogue acessos que não reconhece.',
                             style: AppTypography.inter(
-                              color: KeroseneBrandTokens.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
                               height: 1.55,
                               letterSpacing: 0,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.xxl),
+                          SizedBox(height: AppSpacing.xxl),
                           if (_needsLegacyMigration == true) ...[
                             Container(
-                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              padding: EdgeInsets.all(AppSpacing.lg),
                               decoration: BoxDecoration(
-                                color: KeroseneBrandTokens.surfaceMuted,
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: KeroseneBrandTokens.textSecondary
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant
                                       .withValues(alpha: 0.35),
                                 ),
                               ),
@@ -129,18 +129,18 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                   Text(
                                     'Atualize a chave deste aparelho',
                                     style: AppTypography.inter(
-                                      color: KeroseneBrandTokens.textPrimary,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(height: AppSpacing.sm),
+                                  SizedBox(height: AppSpacing.sm),
                                   Text(
                                     'Detectamos uma chave legada neste install. '
                                     'Transferências e login biométrico agora usam a '
                                     'Chave do dispositivo. Toque abaixo para configurar.',
                                     style: AppTypography.inter(
-                                      color: KeroseneBrandTokens.textSecondary,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontSize: 14,
                                       height: 1.45,
                                     ),
@@ -201,42 +201,45 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     context.tr.settingsDevicesRegisterPasskey,
                                   ),
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.surface,
                                     minimumSize: const Size.fromHeight(48),
                                   ),
                                 ),
                               ],
                             ),
-                            loading: () => const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 48),
+                            loading: () => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 48),
                               child: Center(
                                 child: CircularProgressIndicator(
-                                  color: Colors.white54,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                 ),
                               ),
                             ),
                             error: (error, _) => SettingsGlassPanel(
-                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              padding: EdgeInsets.all(AppSpacing.lg),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
                                     context.tr.settingsDevicesLoadError,
                                     style: AppTypography.inter(
-                                      color: KeroseneBrandTokens.textPrimary,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(height: AppSpacing.sm),
+                                  SizedBox(height: AppSpacing.sm),
                                   Text(
                                     ErrorTranslator.translate(
                                       context.tr,
                                       error.toString(),
                                     ),
                                     style: AppTypography.inter(
-                                      color: KeroseneBrandTokens.textMuted,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontSize: 14,
                                       height: 1.4,
                                     ),

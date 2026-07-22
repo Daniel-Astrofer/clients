@@ -84,7 +84,7 @@ class DesignSystemTemplateScreen extends StatelessWidget {
               context,
               context.tr.designSystemTemplateIdentitySection,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm),
             Text(
               context.tr.designSystemTemplateHeroTitle,
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
@@ -92,7 +92,7 @@ class DesignSystemTemplateScreen extends StatelessWidget {
                     letterSpacing: 0,
                   ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            SizedBox(height: AppSpacing.xs),
             Text(
               context.tr.welcomeSlogan,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -104,10 +104,10 @@ class DesignSystemTemplateScreen extends StatelessWidget {
               context,
               context.tr.designSystemTemplatePanelsSection,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.base),
+              padding: EdgeInsets.all(AppSpacing.base),
               decoration: monochromePanelDecoration(
                 color: isAmoled
                     ? monoSurfaceColor
@@ -135,7 +135,7 @@ class DesignSystemTemplateScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: AppSpacing.sm),
                   Text(
                     sampleBalance,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -143,9 +143,9 @@ class DesignSystemTemplateScreen extends StatelessWidget {
                           fontWeight: FontWeight.w300,
                         ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: AppSpacing.sm),
                   Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    padding: EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
                       color: isAmoled
                           ? monoSurfaceAltColor

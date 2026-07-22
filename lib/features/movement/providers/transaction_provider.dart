@@ -51,6 +51,7 @@ const _paymentLinkSelfPayException = ValidationException(
 /// take many seconds after the money-move API already succeeded.
 Future<void> _refreshAfterMoneyMoved(Ref ref) async {
   ref.read(transactionHistoryCursorProvider.notifier).reset();
+  ref.read(transactionHistoryForceFullProvider.notifier).arm();
   ref.invalidate(transactionHistoryProvider);
   ref.invalidate(pagedTransactionHistoryProvider);
   ref.invalidate(depositsProvider);
@@ -160,13 +161,19 @@ List<Transaction> _mergeExternalHistory({
           remoteRows: extras,
         );
   final deduped = TransactionLedgerAdapter.dedupePaymentLinkOverlays(merged);
-  // Newest first (stable for home date headers).
-  deduped.sort((a, b) {
-    final byTime = b.effectiveUpdatedAt.compareTo(a.effectiveUpdatedAt);
-    if (byTime != 0) return byTime;
-    return b.timestamp.compareTo(a.timestamp);
-  });
+  // Sort by event time (createdAt), never updatedAt — cold conf bumps must
+  // not jump older receives to the top of the home timeline.
+  sortTransactionsNewestFirst(deduped);
   return deduped;
+}
+
+/// Newest event-time first (`timestamp` / createdAt), then id. Not `updatedAt`.
+void sortTransactionsNewestFirst(List<Transaction> txs) {
+  txs.sort((a, b) {
+    final byTime = b.timestamp.compareTo(a.timestamp);
+    if (byTime != 0) return byTime;
+    return b.id.compareTo(a.id);
+  });
 }
 
 /// Last successfully merged history (survives FutureProvider reloads).
@@ -180,6 +187,66 @@ class LastTransactionHistoryNotifier extends Notifier<List<Transaction>> {
   List<Transaction> build() => const [];
 
   void set(List<Transaction> value) => state = List.unmodifiable(value);
+
+  /// Instant UI projection for a receive before Tor REST catches up.
+  /// Remote merge later replaces / upgrades the same id.
+  ///
+  /// Keeps chronological order by [Transaction.timestamp] (createdAt). Conf
+  /// bumps / progress notifs update the row in place — they do not prepend.
+  void upsertFront(Transaction tx) {
+    final id = tx.id.trim();
+    if (id.isEmpty) return;
+    Transaction? existing;
+    for (final row in state) {
+      if (row.id == id) {
+        existing = row;
+        break;
+      }
+    }
+    final merged = existing == null
+        ? tx
+        : TransactionLedgerAdapter.mergeTransactions(existing, tx);
+    final next = <Transaction>[
+      merged,
+      ...state.where((t) => t.id != id),
+    ];
+    sortTransactionsNewestFirst(next);
+    state = List.unmodifiable(next);
+  }
+}
+
+/// Prefer in-memory last rows (WS / optimistic) over a stale disk snapshot.
+List<Transaction> _mergeLastOverLocalSnapshot({
+  required List<Transaction> localCached,
+  required List<Transaction> last,
+}) {
+  return mergeTransactionHistoryProjection(
+    remote: localCached,
+    last: last,
+  );
+}
+
+/// Prefer optimistic [last] rows that remote has not confirmed yet.
+List<Transaction> mergeTransactionHistoryProjection({
+  required List<Transaction>? remote,
+  required List<Transaction> last,
+}) {
+  if (remote == null || remote.isEmpty) {
+    final only = List<Transaction>.from(last);
+    sortTransactionsNewestFirst(only);
+    return only;
+  }
+  if (last.isEmpty) {
+    return remote;
+  }
+  final remoteIds = remote.map((t) => t.id).toSet();
+  final pending = last.where((t) => !remoteIds.contains(t.id)).toList();
+  if (pending.isEmpty) {
+    return remote;
+  }
+  final combined = <Transaction>[...pending, ...remote];
+  sortTransactionsNewestFirst(combined);
+  return combined;
 }
 
 /// Wall-clock of the last successful history merge (local or remote).
@@ -219,6 +286,24 @@ class TransactionHistoryCursorNotifier extends Notifier<DateTime?> {
   }
 
   void reset() => state = null;
+}
+
+/// When armed, the next history pull ignores local `?since=` and fetches page 0 full.
+///
+/// [transactionHistoryCursorProvider.reset] alone is not enough: with a non-empty
+/// local cache the provider still derived `since` from max(local.updatedAt).
+final transactionHistoryForceFullProvider =
+    NotifierProvider<TransactionHistoryForceFullNotifier, bool>(
+  TransactionHistoryForceFullNotifier.new,
+);
+
+class TransactionHistoryForceFullNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void arm() => state = true;
+
+  void clear() => state = false;
 }
 
 /// Kept for tests / call-sites that still score address completeness.
@@ -292,19 +377,31 @@ final _scopedTransactionHistoryProvider =
 
   if (localCached.isNotEmpty) {
     Future.microtask(() {
-      if (ref.mounted) {
-        ref.read(lastTransactionHistoryProvider.notifier).set(localCached);
-      }
+      if (!ref.mounted) return;
+      // Never clobber WS/optimistic rows that are only in memory yet.
+      final last = ref.read(lastTransactionHistoryProvider);
+      ref.read(lastTransactionHistoryProvider.notifier).set(
+            _mergeLastOverLocalSnapshot(
+              localCached: localCached,
+              last: last,
+            ),
+          );
     });
   }
 
   // Incremental: only rows updated after last cursor when we already have local.
+  // Manual pull-to-refresh arms [transactionHistoryForceFullProvider] so we do
+  // not keep deriving `since` from the local max (which skipped brand-new rows).
+  final forceFull = ref.read(transactionHistoryForceFullProvider);
+  if (forceFull) {
+    ref.read(transactionHistoryForceFullProvider.notifier).clear();
+  }
   final cursor = ref.read(transactionHistoryCursorProvider);
   DateTime? since;
-  if (localCached.isNotEmpty && cursor != null) {
+  if (!forceFull && localCached.isNotEmpty && cursor != null) {
     // 90s skew buffer so clock/partition edges do not skip confs.
     since = cursor.toUtc().subtract(const Duration(seconds: 90));
-  } else if (localCached.isNotEmpty) {
+  } else if (!forceFull && localCached.isNotEmpty) {
     DateTime? maxLocal;
     for (final tx in localCached) {
       final at = tx.effectiveUpdatedAt.toUtc();
@@ -369,10 +466,16 @@ final _scopedTransactionHistoryProvider =
         sessionScope: sessionScope,
         remote: online,
       );
-      ref.read(lastTransactionHistoryProvider.notifier).set(merged);
+      // Keep any WS/optimistic rows the incremental remote batch has not
+      // echoed yet (common right after onchain settle while Tor catches up).
+      final projected = mergeTransactionHistoryProjection(
+        remote: merged,
+        last: ref.read(lastTransactionHistoryProvider),
+      );
+      ref.read(lastTransactionHistoryProvider.notifier).set(projected);
       ref.read(transactionHistoryLastSyncProvider.notifier).touch();
       ref.read(transactionHistoryCursorProvider.notifier).advance(transactions);
-      return merged;
+      return projected;
     },
   );
 });
@@ -1014,6 +1117,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     String? totpCode,
     bool isLightning = false,
     double networkFeeBtc = 0,
+    int? networkFeeSats,
     double maxRoutingFeeBtc = 0.000001,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,
@@ -1036,6 +1140,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
         totpCode: totpCode,
         isLightning: isLightning,
         networkFeeBtc: networkFeeBtc,
+        networkFeeSats: networkFeeSats,
         maxRoutingFeeBtc: maxRoutingFeeBtc,
         feeRateSatPerVbyte: feeRateSatPerVbyte,
         feeTargetBlocks: feeTargetBlocks,
@@ -1064,6 +1169,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
             totpCode: totpCode,
             isLightning: isLightning,
             networkFeeBtc: networkFeeBtc,
+            networkFeeSats: networkFeeSats,
             maxRoutingFeeBtc: maxRoutingFeeBtc,
             feeRateSatPerVbyte: feeRateSatPerVbyte,
             feeTargetBlocks: feeTargetBlocks,
@@ -1094,6 +1200,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     String? totpCode,
     bool isLightning = false,
     double networkFeeBtc = 0,
+    int? networkFeeSats,
     double maxRoutingFeeBtc = 0.000001,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,
@@ -1119,6 +1226,7 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
           totpCode: totpCode,
           isLightning: isLightning,
           networkFeeBtc: networkFeeBtc,
+          networkFeeSats: networkFeeSats,
           maxRoutingFeeBtc: maxRoutingFeeBtc,
           feeRateSatPerVbyte: feeRateSatPerVbyte,
           feeTargetBlocks: feeTargetBlocks,

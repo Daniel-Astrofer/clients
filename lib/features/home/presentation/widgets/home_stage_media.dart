@@ -103,7 +103,7 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     return switch (media.type) {
       HomeStageMediaType.icon => Icon(
           media.resolveIcon(),
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
           size: homeSize(28),
         ),
       HomeStageMediaType.image || HomeStageMediaType.lottie => _networkOrAsset(
@@ -144,14 +144,14 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
           _networkOrAsset(poster, h),
           if (!_failed)
             Icon(Icons.play_circle_fill,
-                color: Colors.white70, size: homeSize(36)),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70), size: homeSize(36)),
         ],
       );
     }
     return SizedBox(
       height: h * 0.5,
-      child: const Center(
-        child: Icon(Icons.videocam_off_outlined, color: Colors.white38),
+      child: Center(
+        child: Icon(Icons.videocam_off_outlined, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
       ),
     );
   }

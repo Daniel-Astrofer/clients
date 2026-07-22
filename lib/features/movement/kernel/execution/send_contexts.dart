@@ -142,8 +142,10 @@ class SendFeeQuoting {
       platformFeeRate: platformFeeRate,
       platformFeeBtc: fee.keroseneFeeBtc,
       networkFeeBtc: tierNet,
+      networkFeeSats: tierPick.networkFeeSats,
       totalDebitedBtc: totalDebited,
       feeRateSatPerByte: tierPick.feeRateSatPerByte,
+      feeRateSatPerVbyte: tierPick.feeRateSatPerVbyte,
       estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
       feeTargetBlocks: tierPick.feeTargetBlocks,
       feeSource: fee.feeSource,
@@ -158,7 +160,9 @@ class SendFeeQuoting {
     required double platformFeeRate,
     required double networkFeeBtc,
     required NetworkFeeTier feeTier,
+    int? networkFeeSats,
     double? feeRateSatPerByte,
+    int? feeRateSatPerVbyte,
     int? estimatedSettlementSeconds,
     int? feeTargetBlocks,
     String? feeSource,
@@ -170,14 +174,22 @@ class SendFeeQuoting {
       platformFeeRate: platformFeeRate,
       networkFeeBtc: networkFeeBtc,
     );
+    final sats = networkFeeSats != null && networkFeeSats > 0
+        ? networkFeeSats
+        : (calculation.networkFeeBtc * 100000000).round();
     return SendFeeQuote(
       requestedAmountBtc: amountBtc,
       receiverAmountBtc: calculation.receiverAmountBtc,
       platformFeeRate: calculation.platformFeeRate,
       platformFeeBtc: calculation.platformFeeBtc,
-      networkFeeBtc: calculation.networkFeeBtc,
+      networkFeeBtc: sats / 100000000.0,
+      networkFeeSats: sats,
       totalDebitedBtc: calculation.totalDebitedBtc,
       feeRateSatPerByte: feeRateSatPerByte,
+      feeRateSatPerVbyte: feeRateSatPerVbyte ??
+          (feeRateSatPerByte != null && feeRateSatPerByte > 0
+              ? feeRateSatPerByte.round()
+              : null),
       estimatedSettlementSeconds: estimatedSettlementSeconds,
       feeTargetBlocks: feeTargetBlocks,
       feeSource: feeSource,
@@ -236,7 +248,9 @@ class SendFeeQuoting {
       amountBtc: request.amountBtc,
       platformFeeRate: platformFeeRate,
       networkFeeBtc: tierPick.networkFeeBtc,
+      networkFeeSats: tierPick.networkFeeSats,
       feeRateSatPerByte: tierPick.feeRateSatPerByte,
+      feeRateSatPerVbyte: tierPick.feeRateSatPerVbyte,
       estimatedSettlementSeconds: tierPick.estimatedSettlementSeconds,
       feeTargetBlocks: tierPick.feeTargetBlocks,
       feeSource: fee.feeSource,

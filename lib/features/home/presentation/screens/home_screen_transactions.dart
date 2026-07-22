@@ -44,13 +44,18 @@ final filteredHomeTransactionsProvider = Provider<List<Transaction>>((ref) {
       const <BitcoinAccount>[];
   final archivedIds = ref.watch(activityArchiveProvider);
 
-  return TransactionFilterEngine.apply(
+  final filtered = TransactionFilterEngine.apply(
     source: txs,
     activity: _mapHomeActivityFilter(filter),
     wallets: wallets,
     accounts: accounts,
     archivedIds: archivedIds,
   );
+  // Safety net: date headers use timestamp; never trust upstream order after
+  // WS conf bumps (cold wallets used to float older rows via updatedAt).
+  final ordered = List<Transaction>.from(filtered);
+  sortTransactionsNewestFirst(ordered);
+  return ordered;
 });
 
 /// Cancelled txs still in the global feed (not opened → not archived yet).
@@ -272,12 +277,12 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       _armEntranceReveal = true;
       _entranceTileCache = null;
       _entranceIdOrder = null;
-      const skeleton = ColoredBox(
-        color: homeBackgroundColor,
+      var skeleton = ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: _TransactionsSkeletonLoading(),
       );
       return widget.asSliver
-          ? const SliverToBoxAdapter(child: skeleton)
+          ? SliverToBoxAdapter(child: skeleton)
           : skeleton;
     }
 
@@ -446,7 +451,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
           }
 
           return ColoredBox(
-            color: homeBackgroundColor,
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: content,
           );
         }
@@ -594,7 +599,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       child: Text(
         label,
         style: AppTypography.label.copyWith(
-          color: HomeColors.textMuted,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: homeFontSize(12),
           letterSpacing: 1.0,
           fontWeight: FontWeight.w500,
@@ -751,10 +756,10 @@ class _TransactionsSkeletonLoadingState
       child: Container(
         padding: EdgeInsets.all(homeSize(16)),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(homeSize(22)),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
           ),
         ),
         child: Row(
@@ -825,7 +830,7 @@ class _SkeletonBone extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -866,7 +871,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return HomeGlassPanel(
-      backgroundColor: blackSurface ? homeBackgroundColor : null,
+      backgroundColor: blackSurface ? Theme.of(context).scaffoldBackgroundColor : null,
       borderRadius: BorderRadius.circular(homeSize(18)),
       padding: EdgeInsets.all(homeSize(AppSpacing.lg)),
       child: Column(
@@ -879,7 +884,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             height: homeSize(48),
             child: Center(
               child: Icon(icon,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: homeSize(plainCenteredIcon ? 28 : 18)),
             ),
           ),
@@ -888,7 +893,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             title,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,
             style: AppTypography.h3.copyWith(
-              color: HomeColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: homeFontSize(16),
               fontWeight: FontWeight.w400,
               letterSpacing: 0,
@@ -899,7 +904,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             description,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.66),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.66),
               fontSize: homeFontSize(12),
               height: 1.4,
               letterSpacing: 0,
@@ -913,7 +918,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
                 child: TextButton(
                   onPressed: onAction,
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.white.withValues(alpha: 0.48),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
                     padding: EdgeInsets.symmetric(
                       horizontal: homeSize(12),
                       vertical: homeSize(6),
@@ -936,8 +941,8 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
                   onPressed: onAction,
                   style: FilledButton.styleFrom(
                     minimumSize: Size.fromHeight(homeSize(50)),
-                    backgroundColor: Colors.white,
-                    foregroundColor: homeBackgroundColor,
+                    backgroundColor: Theme.of(context).colorScheme.onSurface,
+                    foregroundColor: Theme.of(context).scaffoldBackgroundColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(homeSize(14)),
                     ),

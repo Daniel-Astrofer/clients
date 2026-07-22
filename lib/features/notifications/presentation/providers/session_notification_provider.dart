@@ -14,7 +14,7 @@ export 'package:kerosene/features/notifications/application/providers/notificati
 class SessionNotificationFeedNotifier
     extends Notifier<List<SessionNotificationItem>> {
   static const int _maxItems = 50;
-  static const String _storageKeyBase = 'session_notification_feed_v2';
+  static const String _storageKeyBase = 'session_notification_feed_v3';
   String? _activeStorageKey;
   String? _hydratingStorageKey;
 

@@ -1,27 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
-/// Shared chrome metrics for the receive flow — keeps H1 aligned step to step.
+/// Shared chrome metrics for the receive flow — keeps H1 + body rhythm
+/// aligned from hub → network → NFC → gateway.
 abstract final class ReceiveFlowLayout {
-  /// H1 overlay row sits at this fraction of the viewport height (from top).
-  static const double titleViewportFraction = 0.25;
+  /// Space above the H1 as a fraction of the available viewport height.
+  static const double titleLeadFraction = 0.10;
 
   static const double titleTextTopPadding = 10;
 
+  /// Gap between the title block and the centered body.
+  static const double titleToContentGap = 28;
+
+  static const double pageHorizontal = 24;
+  static const double pageBottom = 24;
+
+  /// Vertical gap between selectable option cards / tiles.
+  static const double optionGap = 12;
+
   static const double sheetTopBorderHeight = 1;
   static const double sheetBorderRadius = 28;
-  static const double sheetBorderWidth = 1;
+  static double sheetBorderWidth = 1;
 
-  static Color get sheetTopBorderColor =>
-      KeroseneBrandTokens.textPrimary.withValues(alpha: 0.42);
+  static Color sheetTopBorderColorOf(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42);
 
-  static Color get sheetBorderColor =>
-      KeroseneBrandTokens.textPrimary.withValues(alpha: 0.55);
+  static Color sheetBorderColorOf(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
 
+  /// Optical lead above the title. Clamped so short phones stay compact and
+  /// tall phones don't pin the H1 to the status bar.
+  static double titleTopLead(double viewportHeight) {
+    return (viewportHeight * titleLeadFraction).clamp(20.0, 72.0);
+  }
+
+  /// Prefer [MediaQuery.padding] (SafeArea-aware) over viewPadding so nested
+  /// SafeAreas never double-count the status bar.
+  static double statusTopPad(BuildContext context) =>
+      MediaQuery.paddingOf(context).top;
+
+  /// Legacy overlay helper — kept for any remaining Positioned callers.
   static double titleOverlayTop(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final padding = MediaQuery.paddingOf(context);
-    return padding.top + size.height * titleViewportFraction;
+    return statusTopPad(context) + titleTopLead(size.height);
   }
 
   /// Wallet sheet header (compact, left-aligned) + handle block.

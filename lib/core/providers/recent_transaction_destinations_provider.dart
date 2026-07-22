@@ -112,22 +112,31 @@ class RecentTransactionDestinationsNotifier
       return;
     }
 
+    // Frequent destinations are usernames only — never address/hash/invoice/link.
+    if (kind != RecentTransactionDestinationKind.internal) {
+      return;
+    }
+
     final normalizedAddress = address.trim();
-    if (normalizedAddress.isEmpty) {
+    final normalizedLabel = _normalizeLabel(label);
+    final username = _resolveUsername(
+      address: normalizedAddress,
+      label: normalizedLabel,
+    );
+    if (username == null) {
       return;
     }
 
     _mutationRevision++;
-    final normalizedLabel = _normalizeLabel(label);
     final existing = _findExisting(
-      address: normalizedAddress,
-      kind: kind,
+      address: username,
+      kind: RecentTransactionDestinationKind.internal,
     );
 
     final nextEntry = RecentTransactionDestination(
-      address: normalizedAddress,
+      address: username,
       label: normalizedLabel ?? existing?.label,
-      kind: kind,
+      kind: RecentTransactionDestinationKind.internal,
       lastUsedAt: DateTime.now(),
     );
 
@@ -135,7 +144,7 @@ class RecentTransactionDestinationsNotifier
       nextEntry,
       for (final item in state)
         if (_entryKey(item.address, item.kind) !=
-            _entryKey(normalizedAddress, kind))
+            _entryKey(username, RecentTransactionDestinationKind.internal))
           item,
     ];
 
@@ -145,6 +154,35 @@ class RecentTransactionDestinationsNotifier
 
     state = next;
     await _persist(storageKey: storageKey, entries: next);
+  }
+
+  /// Prefer a Kerosene username from address or label; reject hashes/UUIDs.
+  static String? _resolveUsername({
+    required String address,
+    required String? label,
+  }) {
+    String normalize(String raw) {
+      var trimmed = raw.trim();
+      while (trimmed.startsWith('@')) {
+        trimmed = trimmed.substring(1).trim();
+      }
+      return trimmed.toLowerCase();
+    }
+
+    bool isUsername(String raw) {
+      final n = normalize(raw);
+      if (n.isEmpty || n.length < 3 || n.length > 30) return false;
+      if (RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      ).hasMatch(n)) {
+        return false;
+      }
+      return RegExp(r'^[a-z0-9_]+$').hasMatch(n);
+    }
+
+    if (isUsername(address)) return normalize(address);
+    if (label != null && isUsername(label)) return normalize(label);
+    return null;
   }
 
   Future<void> removeDestination({
@@ -289,7 +327,24 @@ class RecentTransactionDestinationsNotifier
     entries.sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
     final normalized = <String, RecentTransactionDestination>{};
     for (final entry in entries) {
-      normalized.putIfAbsent(_entryKey(entry.address, entry.kind), () => entry);
+      // Drop legacy address / invoice / link entries from older app versions.
+      if (entry.kind != RecentTransactionDestinationKind.internal) {
+        continue;
+      }
+      final username = _resolveUsername(
+        address: entry.address,
+        label: entry.label,
+      );
+      if (username == null) continue;
+      normalized.putIfAbsent(
+        _entryKey(username, RecentTransactionDestinationKind.internal),
+        () => RecentTransactionDestination(
+          address: username,
+          label: entry.label,
+          kind: RecentTransactionDestinationKind.internal,
+          lastUsedAt: entry.lastUsedAt,
+        ),
+      );
     }
     return normalized.values.take(_maxItems).toList(growable: false);
   }

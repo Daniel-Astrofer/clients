@@ -68,17 +68,18 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        minimumSize: const Size.fromHeight(56),
-                        textStyle: AppTypography.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0,
+                      style: colors.filledButtonStyle(minHeight: 56).copyWith(
+                        textStyle: WidgetStatePropertyAll(
+                          AppTypography.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0,
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        shape: WidgetStatePropertyAll(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                       onPressed: onCreateInternalAccount,

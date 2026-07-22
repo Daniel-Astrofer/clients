@@ -13,7 +13,7 @@ import 'package:kerosene/features/home/presentation/providers/home_overscroll_pr
 import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_shell_flags_provider.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    show homeSize, homeBackgroundColor;
+    show homeSize;
 import 'package:kerosene/features/home/presentation/screens/home_screen_balance.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_education.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_surface.dart';
@@ -52,7 +52,7 @@ class HomeAuroraLayer extends StatelessWidget {
           left: 0,
           right: 0,
           height: bandHeight,
-          child: const IgnorePointer(
+          child: IgnorePointer(
             child: RepaintBoundary(
               child: HomeAuroraBackground(),
             ),
@@ -262,7 +262,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
   }) {
     Widget pad(Widget child) {
       return ColoredBox(
-        color: homeBackgroundColor,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: KeroseneAppColumn(
           maxWidth: contentMaxWidth,
           child: Padding(
@@ -282,7 +282,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
       return [
         SliverToBoxAdapter(
           child: ColoredBox(
-            color: homeBackgroundColor,
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: SizedBox(
               height: gapAfterHeader > 0 ? gapAfterHeader : homeSize(8),
             ),
@@ -309,7 +309,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
         ),
         SliverToBoxAdapter(
           child: ColoredBox(
-            color: homeBackgroundColor,
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: SizedBox(height: navigationClearance),
           ),
         ),
@@ -349,7 +349,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
     return [
       SliverToBoxAdapter(
         child: ColoredBox(
-          color: homeBackgroundColor,
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: SizedBox(
             height: gapAfterHeader > 0 ? gapAfterHeader : homeSize(8),
           ),
@@ -361,7 +361,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const RepaintBoundary(child: HomeOnboardingProgressCard()),
+              RepaintBoundary(child: HomeOnboardingProgressCard()),
               SizedBox(height: gapAfterHeader),
               const HomeMarketLayer(),
               if (setupNotice != null) ...[
@@ -383,7 +383,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
               ),
               SizedBox(height: homeSize(AppSpacing.md)),
               if (hasTransactions) ...[
-                const RepaintBoundary(child: HomeActivityFilterChips()),
+                RepaintBoundary(child: HomeActivityFilterChips()),
                 SizedBox(height: homeSize(AppSpacing.md)),
               ],
             ],
@@ -399,7 +399,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
         hasScrollBody: false,
         fillOverscroll: true,
         child: ColoredBox(
-          color: homeBackgroundColor,
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: SizedBox(height: navigationClearance),
         ),
       ),
@@ -471,7 +471,7 @@ class HomeMarketLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const RepaintBoundary(child: HomeBitcoinMarketChartCard());
+    return RepaintBoundary(child: HomeBitcoinMarketChartCard());
   }
 }
 
@@ -481,7 +481,7 @@ class HomeEducationLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const RepaintBoundary(child: HomeEducationCarousel());
+    return RepaintBoundary(child: HomeEducationCarousel());
   }
 }
 
@@ -525,26 +525,27 @@ class HomeTransactionsLayer extends StatelessWidget {
   }
 }
 
-/// Soft veil under balance / over feed — fades theater glow into OLED black.
+/// Soft veil under balance / over feed — fades theater glow into the scaffold.
 class HomeFeedTopVeil extends StatelessWidget {
   const HomeFeedTopVeil({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final base = Theme.of(context).scaffoldBackgroundColor;
     return SizedBox(
       height: (MediaQuery.sizeOf(context).height * 0.12).clamp(72.0, 140.0),
-      child: const DecoratedBox(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0x00000000),
-              Color(0x66000000),
-              Color(0xCC000000),
-              Color(0xFF000000),
+              base.withValues(alpha: 0.0),
+              base.withValues(alpha: 0.40),
+              base.withValues(alpha: 0.80),
+              base,
             ],
-            stops: [0.0, 0.35, 0.72, 1.0],
+            stops: const [0.0, 0.35, 0.72, 1.0],
           ),
         ),
       ),
@@ -616,7 +617,7 @@ class HomeWideFeedBody extends ConsumerWidget {
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const RepaintBoundary(child: HomeOnboardingProgressCard()),
+        RepaintBoundary(child: HomeOnboardingProgressCard()),
         SizedBox(height: gapAfterHeader),
         const HomeMarketLayer(),
         if (setup != null) ...[
@@ -642,7 +643,7 @@ class HomeWideFeedBody extends ConsumerWidget {
         ),
         SizedBox(height: homeSize(AppSpacing.md)),
         if (hasTransactions) ...[
-          const RepaintBoundary(child: HomeActivityFilterChips()),
+          RepaintBoundary(child: HomeActivityFilterChips()),
           SizedBox(height: homeSize(AppSpacing.md)),
         ],
         HomeTransactionsList(

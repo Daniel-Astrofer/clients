@@ -35,7 +35,7 @@ class KeroseneHeader extends ConsumerWidget implements PreferredSizeWidget {
         child: SizedBox(
           height: preferredSize.height,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: [
                 if (showBackButton)
@@ -43,20 +43,20 @@ class KeroseneHeader extends ConsumerWidget implements PreferredSizeWidget {
                     onPressed: onBackPressed ?? () => Navigator.pop(context),
                     icon: Icon(
                       KeroseneIcons.back,
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 24,
                     ),
                     style: IconButton.styleFrom(
                       backgroundColor: Theme.of(context)
                           .colorScheme
-                          .onPrimary
+                          .onSurface
                           .withValues(alpha: 0.05),
                       padding: const EdgeInsets.all(AppSpacing.sm),
                     ),
                   )
                 else
-                  const SizedBox(width: 48),
-                const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: 48),
+                SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: title != null
                       ? Text(

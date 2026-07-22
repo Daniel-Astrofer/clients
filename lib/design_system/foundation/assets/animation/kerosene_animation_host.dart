@@ -47,7 +47,7 @@ class _KeroseneAnimationFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(icon, color: KeroseneBrandTokens.textSecondary, size: 32);
+    return Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 32);
   }
 }
 

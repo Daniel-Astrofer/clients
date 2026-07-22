@@ -54,12 +54,12 @@ class SelfCustodyBlockedCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 KeroseneIcons.review,
                 color: receiveFlowTextColor,
                 size: 16,
               ),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               Text(
                 context.tr.withdrawUiColdWalletTitle,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -69,7 +69,7 @@ class SelfCustodyBlockedCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: AppSpacing.sm),
           Text(
             context.tr.withdrawUiColdWalletBody,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(

@@ -121,7 +121,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
             Container(
               height: 1,
               width: 52,
-              margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+              margin: EdgeInsets.only(bottom: AppSpacing.lg),
               color: monoBorderStrongColor,
             ),
             Text(
@@ -131,7 +131,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
                     fontWeight: FontWeight.w700,
                   ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm),
             Text(
               body,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -146,7 +146,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 maxLength: widget.initialStatus.maxPinLength,
-                style: const TextStyle(color: monoTextColor),
+                style: TextStyle(color: monoTextColor),
                 decoration: monochromeInputDecoration(
                   label: context.tr.securityCurrentPinLabel,
                   counterText: '',
@@ -158,7 +158,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
                   keyboardType: TextInputType.number,
                   obscureText: true,
                   maxLength: 6,
-                  style: const TextStyle(color: monoTextColor),
+                  style: TextStyle(color: monoTextColor),
                   decoration: monochromeInputDecoration(
                     label: context.tr.securityTotpCodeLabel,
                     counterText: '',
@@ -171,7 +171,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 maxLength: widget.initialStatus.maxPinLength,
-                style: const TextStyle(color: monoTextColor),
+                style: TextStyle(color: monoTextColor),
                 decoration: monochromeInputDecoration(
                   label: context.tr.securityNewPinLabel(
                     widget.initialStatus.minPinLength,
@@ -185,7 +185,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 maxLength: widget.initialStatus.maxPinLength,
-                style: const TextStyle(color: monoTextColor),
+                style: TextStyle(color: monoTextColor),
                 decoration: monochromeInputDecoration(
                   label: context.tr.securityConfirmNewPinLabel,
                   counterText: '',
@@ -193,7 +193,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
               ),
             ],
             if (_error != null) ...[
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
               Text(
                 _error!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(

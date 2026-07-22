@@ -63,6 +63,16 @@ void main() {
       expect(rates.btcBrl, 341000.0);
       expect(rates.usdBrl, 5.5);
     });
+    test('parses 24h change percent from backend payload', () {
+      final rates = BackendBtcRates.fromJson({
+        'btcUsd': 65000.0,
+        'btcBrl': 357500.0,
+        'btcEur': 60000.0,
+        'btcUsdChange24hPercent': -1.25,
+      });
+
+      expect(rates.btcUsdChange24hPercent, -1.25);
+    });
   });
 
   group('btcBrlPriceProvider strict behavior', () {

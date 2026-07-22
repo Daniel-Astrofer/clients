@@ -28,17 +28,17 @@ class TorNavigationLoadingScreen extends StatelessWidget {
     return MediaQuery(
       data: stableMedia,
       child: Scaffold(
-        backgroundColor: KeroseneBrandTokens.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         resizeToAvoidBottomInset: false,
         body: SizedBox.expand(
           child: ColoredBox(
-            color: KeroseneBrandTokens.background,
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: Center(
               child: TorLoadingDots(
                 key: usePrimaryKey ? TorLoadingDotsKeys.primary : null,
                 // Small travel + scale/alpha pulse (see TorLoadingDots).
                 travel: 5,
-                color: KeroseneBrandTokens.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

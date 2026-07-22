@@ -332,6 +332,7 @@ class _ReceiveAmountRepository implements TransactionRepository {
     String? totpCode,
     bool isLightning = false,
     double networkFeeBtc = 0,
+    int? networkFeeSats,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,
     double maxRoutingFeeBtc = 0.000001,

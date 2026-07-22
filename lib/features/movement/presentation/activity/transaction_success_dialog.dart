@@ -193,14 +193,14 @@ class _TransactionSuccessDialogState
                             fontFamily: AppTypography.financialFontFamily,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         if (secondaryAmount != null) ...[
                           Text(
                             secondaryAmount,
                             style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme
-                                  .onPrimary
+                                  .onSurface
                                   .withValues(alpha: 0.68),
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -218,7 +218,7 @@ class _TransactionSuccessDialogState
                         style: TextStyle(
                           color: Theme.of(context)
                               .colorScheme
-                              .onPrimary
+                              .onSurface
                               .withValues(alpha: 0.72),
                           fontSize: 12,
                           letterSpacing: 0,

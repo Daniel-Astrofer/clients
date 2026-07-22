@@ -1,12 +1,21 @@
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Theme;
 import 'package:kerosene/core/motion/app_motion.dart';
 
 class BitcoinRefreshIndicator extends StatefulWidget {
   final Future<void> Function() onRefresh;
 
-  const BitcoinRefreshIndicator({super.key, required this.onRefresh});
+  /// Live pull gap in px (Cupertino [pulledExtent]). Home uses this to bloom
+  /// a single aurora into the gap — do not paint a second background here.
+  final ValueChanged<double>? onPullExtent;
+
+  const BitcoinRefreshIndicator({
+    super.key,
+    required this.onRefresh,
+    this.onPullExtent,
+  });
 
   @override
   State<BitcoinRefreshIndicator> createState() =>
@@ -20,6 +29,7 @@ class _BitcoinRefreshIndicatorState extends State<BitcoinRefreshIndicator>
   late Animation<double> _checkAnim;
 
   RefreshIndicatorMode _lastState = RefreshIndicatorMode.inactive;
+  double _lastReportedExtent = 0;
 
   @override
   void initState() {
@@ -47,11 +57,24 @@ class _BitcoinRefreshIndicatorState extends State<BitcoinRefreshIndicator>
     super.dispose();
   }
 
+  void _reportPullExtent(double extent) {
+    final next = extent < 1 ? 0.0 : extent;
+    if ((next - _lastReportedExtent).abs() < 0.5 &&
+        !(next == 0 && _lastReportedExtent != 0)) {
+      return;
+    }
+    _lastReportedExtent = next;
+    final cb = widget.onPullExtent;
+    if (cb == null) return;
+    // Builder runs during layout — defer so listeners can rebuild safely.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      cb(next);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoSliverRefreshControl(
-      // Longer throw + shorter indicator so the aurora can fill the gap
-      // without a black band under the status bar.
       refreshTriggerPullDistance: 180.0,
       refreshIndicatorExtent: 56.0,
       onRefresh: () async {
@@ -71,6 +94,8 @@ class _BitcoinRefreshIndicatorState extends State<BitcoinRefreshIndicator>
         }
         _lastState = refreshState;
 
+        _reportPullExtent(pulledExtent);
+
         final pullProgress =
             (pulledExtent / refreshTriggerPullDistance).clamp(0.0, 1.0);
         final opacity = (pulledExtent / 48.0).clamp(0.0, 1.0);
@@ -87,37 +112,36 @@ class _BitcoinRefreshIndicatorState extends State<BitcoinRefreshIndicator>
           if (_spinnerController.isAnimating) _spinnerController.stop();
         }
 
-        return ColoredBox(
-          color: const Color(0x00000000),
-          child: SizedBox(
-            height: refreshIndicatorExtent,
-            child: Center(
-              child: Opacity(
-                opacity: opacity,
-                child: Transform.scale(
-                  scale: scale,
-                  child: AnimatedBuilder(
-                    animation: Listenable.merge([
-                      _spinnerController,
-                      _checkController,
-                    ]),
-                    builder: (context, child) {
-                      final rotation =
-                          refreshState == RefreshIndicatorMode.refresh
-                              ? _spinnerController.value * 2 * pi
-                              : pullRotation;
+        // Transparent — a single aurora in the header blooms into this gap.
+        return SizedBox(
+          height: refreshIndicatorExtent,
+          child: Center(
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.scale(
+                scale: scale,
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([
+                    _spinnerController,
+                    _checkController,
+                  ]),
+                  builder: (context, child) {
+                    final rotation =
+                        refreshState == RefreshIndicatorMode.refresh
+                            ? _spinnerController.value * 2 * pi
+                            : pullRotation;
 
-                      return CustomPaint(
-                        size: const Size(30, 30),
-                        painter: PullLoadingPainter(
-                          rotation: rotation,
-                          pullProgress: pullProgress,
-                          checkProgress: _checkAnim.value,
-                          isDone: refreshState == RefreshIndicatorMode.done,
-                        ),
-                      );
-                    },
-                  ),
+                    return CustomPaint(
+                      size: const Size(30, 30),
+                      painter: PullLoadingPainter(
+                        rotation: rotation,
+                        pullProgress: pullProgress,
+                        checkProgress: _checkAnim.value,
+                        isDone: refreshState == RefreshIndicatorMode.done,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -133,12 +157,14 @@ class PullLoadingPainter extends CustomPainter {
   final double pullProgress;
   final double checkProgress;
   final bool isDone;
+  final Color color;
 
   const PullLoadingPainter({
     required this.rotation,
     required this.pullProgress,
     required this.checkProgress,
     required this.isDone,
+    this.color = CupertinoColors.white,
   });
 
   @override
@@ -170,16 +196,16 @@ class PullLoadingPainter extends CustomPainter {
     final ringRadius = radius - stroke;
     final rect = Rect.fromCircle(center: center, radius: ringRadius);
     final trackPaint = Paint()
-      ..color = CupertinoColors.white.withValues(alpha: 0.18)
+      ..color = color.withValues(alpha: 0.18)
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
     final activePaint = Paint()
-      ..color = CupertinoColors.white
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
-    final dotPaint = Paint()..color = CupertinoColors.white;
+    final dotPaint = Paint()..color = color;
     final sweep = pi * (0.42 + (1.28 * progress.clamp(0.0, 1.0)));
 
     canvas.drawArc(rect, 0, 2 * pi, false, trackPaint);
@@ -211,7 +237,7 @@ class PullLoadingPainter extends CustomPainter {
       ..lineTo(p3.dx, p3.dy);
 
     final checkPaint = Paint()
-      ..color = CupertinoColors.white
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.0
       ..strokeCap = StrokeCap.round
@@ -230,6 +256,7 @@ class PullLoadingPainter extends CustomPainter {
     return oldDelegate.rotation != rotation ||
         oldDelegate.pullProgress != pullProgress ||
         oldDelegate.checkProgress != checkProgress ||
-        oldDelegate.isDone != isDone;
+        oldDelegate.isDone != isDone ||
+        oldDelegate.color != color;
   }
 }

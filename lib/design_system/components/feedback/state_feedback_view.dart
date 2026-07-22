@@ -106,7 +106,7 @@ class StateFeedbackView extends StatelessWidget {
                 size: illustrationSize,
               ),
 
-              const SizedBox(height: AppSpacing.xl),
+              SizedBox(height: AppSpacing.xl),
 
               // ── Title ────────────────────────────────────────────────────────
               Text(
@@ -127,7 +127,7 @@ class StateFeedbackView extends StatelessWidget {
                   .fade(duration: KeroseneMotion.medium)
                   .slideY(begin: 0.1, end: 0),
 
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
 
               // ── Description ──────────────────────────────────────────────────
               Text(

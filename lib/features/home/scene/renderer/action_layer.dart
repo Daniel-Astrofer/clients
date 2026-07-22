@@ -23,6 +23,16 @@ class SceneActionLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!cta.isActive) return const SizedBox.shrink();
 
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final ink = Theme.of(context).colorScheme.onSurface;
+    final chipFill = isLight
+        ? ink.withValues(alpha: 0.08)
+        : Colors.white.withValues(alpha: 0.10);
+    final chipBorder = isLight
+        ? ink.withValues(alpha: 0.14)
+        : Colors.white.withValues(alpha: 0.14);
+    final labelColor = isLight ? ink : Colors.white;
+
     return BouncingButtonWrapper(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -34,17 +44,17 @@ class SceneActionLayer extends StatelessWidget {
           vertical: homeSize(10),
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.10),
+          color: chipFill,
           borderRadius: BorderRadius.circular(homeSize(20)),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.14),
+            color: chipBorder,
             width: 0.5,
           ),
         ),
         child: Text(
           cta.label,
           style: AppTypography.label.copyWith(
-            color: Colors.white,
+            color: labelColor,
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),

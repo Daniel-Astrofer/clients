@@ -143,7 +143,7 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             ErrorTranslator.translate(context.tr, message),
             textAlign: TextAlign.center,
@@ -166,7 +166,7 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
   Widget _buildEmpty(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Text(
           context.tr.walletSelectorNoWallets,
           textAlign: TextAlign.center,

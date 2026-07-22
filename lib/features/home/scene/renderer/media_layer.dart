@@ -94,7 +94,11 @@ class _IconMedia extends StatelessWidget {
       'info' => KeroseneIcons.info,
       _ => KeroseneIcons.info,
     };
-    return Icon(icon, color: Colors.white, size: size);
+    return Icon(
+      icon,
+      color: Theme.of(context).colorScheme.onSurface,
+      size: size,
+    );
   }
 }
 

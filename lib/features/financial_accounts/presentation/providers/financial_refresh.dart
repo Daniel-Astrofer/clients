@@ -16,52 +16,51 @@ enum FinancialRefreshScope {
 
 /// Single entrypoint: balance + extrato refresh together (reactive parity).
 ///
-/// Call after send/pay/withdraw, WS notifications, pull-to-refresh, and the
-/// periodic financial loop. History is never wiped here — only re-pulled and
-/// merged into the durable local projection.
+/// Returns `true` only when **both** wallet and history pulls succeed. Under Tor
+/// latency (and assuming kfe→server fan-out is similarly slow), callers must
+/// keep [financialDirtyProvider] set until this returns true.
 ///
-/// [forceFullHistory] resets the `?since=` cursor so the next pull is a full
-/// page 0 (use on manual pull-to-refresh).
-///
-/// [scope] defaults to [FinancialRefreshScope.full] for money-move / manual
-/// paths; the background poll uses [FinancialRefreshScope.light].
-Future<void> refreshFinancialProjection(
+/// [forceFullHistory] resets the `?since=` cursor **and** arms a one-shot full
+/// page-0 pull (use on manual pull-to-refresh / reconnect catch-up).
+Future<bool> refreshFinancialProjection(
   Ref ref, {
   bool forceFullHistory = false,
   FinancialRefreshScope scope = FinancialRefreshScope.full,
 }) async {
   final authState = ref.read(authControllerProvider);
   if (authState is! AuthAuthenticated) {
-    return;
+    return false;
   }
   if (forceFullHistory) {
     ref.read(transactionHistoryCursorProvider.notifier).reset();
+    ref.read(transactionHistoryForceFullProvider.notifier).arm();
   }
-  await _kickRefresh(ref, scope: scope);
+  return _kickRefresh(ref, scope: scope);
 }
 
 /// WidgetRef entrypoint — same contract as [refreshFinancialProjection].
-Future<void> refreshFinancialProjectionUi(
+Future<bool> refreshFinancialProjectionUi(
   WidgetRef ref, {
   bool forceFullHistory = false,
   FinancialRefreshScope scope = FinancialRefreshScope.full,
 }) async {
   final authState = ref.read(authControllerProvider);
   if (authState is! AuthAuthenticated) {
-    return;
+    return false;
   }
   if (forceFullHistory) {
     ref.read(transactionHistoryCursorProvider.notifier).reset();
+    ref.read(transactionHistoryForceFullProvider.notifier).arm();
   }
-  await _kickRefreshUi(ref, scope: scope);
+  return _kickRefreshUi(ref, scope: scope);
 }
 
-Future<void> _kickRefresh(
+Future<bool> _kickRefresh(
   Ref ref, {
   required FinancialRefreshScope scope,
 }) async {
   final authState = ref.read(authControllerProvider);
-  if (authState is! AuthAuthenticated) return;
+  if (authState is! AuthAuthenticated) return false;
 
   final walletNotifier = ref.read(walletProvider.notifier);
 
@@ -81,19 +80,28 @@ Future<void> _kickRefresh(
     ref.invalidate(bitcoinAccountsProvider);
   }
 
-  final historyFuture = ref.read(transactionHistoryProvider.future);
-  await Future.wait<void>([
-    walletNotifier.refresh(),
-    historyFuture.then((_) {}, onError: (_) {}),
-  ]);
+  var walletsOk = false;
+  var historyOk = false;
+
+  try {
+    await walletNotifier.refresh();
+    walletsOk = true;
+  } catch (_) {}
+
+  try {
+    await ref.read(transactionHistoryProvider.future);
+    historyOk = true;
+  } catch (_) {}
+
+  return walletsOk && historyOk;
 }
 
-Future<void> _kickRefreshUi(
+Future<bool> _kickRefreshUi(
   WidgetRef ref, {
   required FinancialRefreshScope scope,
 }) async {
   final authState = ref.read(authControllerProvider);
-  if (authState is! AuthAuthenticated) return;
+  if (authState is! AuthAuthenticated) return false;
 
   final walletNotifier = ref.read(walletProvider.notifier);
 
@@ -113,9 +121,18 @@ Future<void> _kickRefreshUi(
     ref.invalidate(bitcoinAccountsProvider);
   }
 
-  final historyFuture = ref.read(transactionHistoryProvider.future);
-  await Future.wait<void>([
-    walletNotifier.refresh(),
-    historyFuture.then((_) {}, onError: (_) {}),
-  ]);
+  var walletsOk = false;
+  var historyOk = false;
+
+  try {
+    await walletNotifier.refresh();
+    walletsOk = true;
+  } catch (_) {}
+
+  try {
+    await ref.read(transactionHistoryProvider.future);
+    historyOk = true;
+  } catch (_) {}
+
+  return walletsOk && historyOk;
 }

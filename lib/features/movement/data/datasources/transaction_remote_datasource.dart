@@ -527,6 +527,9 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       final selectedEta = (data['estimatedSettlementSeconds'] as num).toInt();
       final selectedBlocks =
           (data['estimatedConfirmationBlocks'] as num?)?.toInt() ?? 3;
+      final fastSats = tierInt(fast, 'networkFeeSats', networkFeeSats);
+      final standardSats = tierInt(standard, 'networkFeeSats', networkFeeSats);
+      final slowSats = tierInt(slow, 'networkFeeSats', networkFeeSats);
       return FeeEstimate(
         fastSatPerByte:
             tierInt(fast, 'feeRateSatPerVbyte', selectedRate).toDouble(),
@@ -534,12 +537,12 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
             tierInt(standard, 'feeRateSatPerVbyte', selectedRate).toDouble(),
         slowSatPerByte:
             tierInt(slow, 'feeRateSatPerVbyte', selectedRate).toDouble(),
-        estimatedFastBtc:
-            tierInt(fast, 'networkFeeSats', networkFeeSats) / 100000000.0,
-        estimatedStandardBtc:
-            tierInt(standard, 'networkFeeSats', networkFeeSats) / 100000000.0,
-        estimatedSlowBtc:
-            tierInt(slow, 'networkFeeSats', networkFeeSats) / 100000000.0,
+        estimatedFastBtc: fastSats / 100000000.0,
+        estimatedStandardBtc: standardSats / 100000000.0,
+        estimatedSlowBtc: slowSats / 100000000.0,
+        fastNetworkFeeSats: fastSats,
+        standardNetworkFeeSats: standardSats,
+        slowNetworkFeeSats: slowSats,
         amountReceived:
             (data['receiverAmountSats'] as num).toDouble() / 100000000.0,
         totalToSend: (data['totalDebitSats'] as num).toDouble() / 100000000.0,
@@ -552,9 +555,9 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         standardEstimatedSeconds:
             tierInt(standard, 'estimatedSeconds', selectedEta),
         slowEstimatedSeconds: tierInt(slow, 'estimatedSeconds', selectedEta),
-        fastTargetBlocks: tierInt(fast, 'targetBlocks', 2),
-        standardTargetBlocks: tierInt(standard, 'targetBlocks', 3),
-        slowTargetBlocks: tierInt(slow, 'targetBlocks', 6),
+        fastTargetBlocks: tierInt(fast, 'targetBlocks', selectedBlocks),
+        standardTargetBlocks: tierInt(standard, 'targetBlocks', selectedBlocks),
+        slowTargetBlocks: tierInt(slow, 'targetBlocks', selectedBlocks),
         feeSource: data['feeSource']?.toString(),
         quoteExpiresAt: DateTime.tryParse(
           data['quoteExpiresAt']?.toString() ?? '',
@@ -1066,6 +1069,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     String? totpCode,
     bool isLightning = false,
     double networkFeeBtc = 0,
+    int? networkFeeSats,
     double maxRoutingFeeBtc = 0.000001,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,
@@ -1090,6 +1094,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
           totpCode: totpCode,
           isLightning: isLightning,
           networkFeeBtc: networkFeeBtc,
+          networkFeeSats: networkFeeSats,
           maxRoutingFeeBtc: maxRoutingFeeBtc,
           feeRateSatPerVbyte: feeRateSatPerVbyte,
           feeTargetBlocks: feeTargetBlocks,
@@ -1123,6 +1128,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     String? totpCode,
     bool isLightning = false,
     double networkFeeBtc = 0,
+    int? networkFeeSats,
     double maxRoutingFeeBtc = 0.000001,
     int? feeRateSatPerVbyte,
     int? feeTargetBlocks,
@@ -1187,6 +1193,12 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         : effectiveLightning && networkFeeBtc <= 0
             ? maxRoutingFeeBtc
             : networkFeeBtc;
+    // Prefer exact backend-quoted sats (fee cap) — avoid BTC round-trip drift.
+    final resolvedNetworkFeeSats = isInternal
+        ? 0
+        : (networkFeeSats != null && networkFeeSats > 0
+            ? networkFeeSats
+            : (feeBtc * 100000000).round());
 
     return {
       'idempotencyKey': normalizedIdempotencyKey,
@@ -1197,7 +1209,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       if (paymentRequestPublicId != null)
         'paymentRequestPublicId': paymentRequestPublicId,
       'amountSats': (amount * 100000000).round(),
-      'networkFeeSats': (feeBtc * 100000000).round(),
+      'networkFeeSats': resolvedNetworkFeeSats,
       if (!isInternal) 'externalReference': destination,
       // On-chain fee tier: Core funds PSBT with fee_rate / conf_target.
       if (!isInternal &&

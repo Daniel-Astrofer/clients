@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/core/providers/appearance_provider.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
@@ -136,10 +141,11 @@ class AppTheme {
   }
 
   static ThemeData themeFor(AppThemeVariant variant) {
+    ThemeTokenBridge.bind(variant);
     final palette = paletteFor(variant);
     final isLight = variant == AppThemeVariant.light;
     final brightness = isLight ? Brightness.light : Brightness.dark;
-    final onSurface = isLight ? const Color(0xFF181A17) : AppColors.white;
+    final onSurface = isLight ? const Color(0xFF141517) : AppColors.white;
     final onSurfaceVariant =
         isLight ? const Color(0xFF62675F) : AppColors.white70;
     final hintColor = isLight
@@ -186,12 +192,31 @@ class AppTheme {
     final disabledForeground =
         onSurface.withValues(alpha: isLight ? 0.38 : 0.54);
 
+    // Match status bar icons to scaffold brightness without touching dark look.
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            isLight ? Brightness.dark : Brightness.light,
+        statusBarBrightness: isLight ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: palette.background,
+        systemNavigationBarIconBrightness:
+            isLight ? Brightness.dark : Brightness.light,
+      ),
+    );
+
     return ThemeData(
       brightness: brightness,
       scaffoldBackgroundColor: palette.background,
       canvasColor: palette.background,
       dividerColor: palette.border,
-      extensions: [palette, SendFlowTheme.dark()],
+      extensions: [
+        palette,
+        isLight ? MonochromeColors.light : MonochromeColors.dark,
+        isLight ? KeroseneBrandTheme.light : KeroseneBrandTheme.dark,
+        isLight ? HomeSurfaceTheme.light : HomeSurfaceTheme.dark,
+        isLight ? SendFlowTheme.light() : SendFlowTheme.dark(),
+      ],
       fontFamily: AppTypography.fontFamily,
       useMaterial3: true,
       colorScheme: colorScheme,

@@ -61,7 +61,7 @@ class _ScreenFeedbackPanel extends StatelessWidget {
           decoration: BoxDecoration(
             color: KeroseneBrandTokens.background,
             border: Border(
-              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+              bottom: BorderSide(color: KeroseneBrandTokens.borderSubtle),
             ),
           ),
           child: SingleChildScrollView(
@@ -119,7 +119,7 @@ class _ScreenFeedbackPanel extends StatelessWidget {
                         sequence: message.sequence,
                       ),
                       icon: const Icon(KeroseneIcons.close),
-                      color: Colors.white.withValues(alpha: 0.58),
+                      color: KeroseneBrandTokens.textMuted,
                       iconSize: 16,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints.tightFor(

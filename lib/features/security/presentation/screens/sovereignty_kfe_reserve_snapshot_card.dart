@@ -69,7 +69,7 @@ Widget buildKfeReserveSnapshotCard({
   return Container(
     padding: const EdgeInsets.all(22),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.03),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
       borderRadius: BorderRadius.circular(22),
       border: Border.all(
         color: statusColor.withValues(alpha: statusOk ? 0.16 : 0.22),
@@ -106,7 +106,7 @@ Widget buildKfeReserveSnapshotCard({
                       es: 'Tesorería y Reservas',
                     ),
                     style: AppTypography.bodyMedium.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -118,7 +118,7 @@ Widget buildKfeReserveSnapshotCard({
                       es: 'Lectura financiera auditada de pasivo, fondos on-chain, liquidez Lightning y ganancia segregada.',
                     ),
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.white70,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
                     ),
                   ),
                 ],
@@ -149,7 +149,7 @@ Widget buildKfeReserveSnapshotCard({
         Text(
           summary,
           style: AppTypography.bodySmall.copyWith(
-            color: AppColors.white70,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
             height: 1.5,
           ),
         ),
@@ -264,7 +264,7 @@ Widget buildKfeReserveSnapshotCard({
             );
           },
         ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
           const SizedBox(height: 16),
         KfeReserveDetailRow(

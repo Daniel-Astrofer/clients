@@ -766,7 +766,7 @@ class _CvvBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
+        color: Color(0xFFF2F2F7),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -774,7 +774,7 @@ class _CvvBadge extends StatelessWidget {
           Text(
             'CVV',
             style: FinancialHubTokens.caption(
-              color: KeroseneBrandTokens.textMuted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           Text(

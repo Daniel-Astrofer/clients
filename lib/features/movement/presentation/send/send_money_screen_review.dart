@@ -1350,16 +1350,16 @@ String _formatReceiptDate(BuildContext context, DateTime value) {
 class _C {
   const _C._();
 
-  static const background = KeroseneBrandTokens.background;
-  static const surface = KeroseneBrandTokens.surface;
-  static const surfaceHigh = KeroseneBrandTokens.surfaceHigh;
-  static const border = KeroseneBrandTokens.border;
-  static const text = KeroseneBrandTokens.textPrimary;
-  static const secondary = KeroseneBrandTokens.textSecondary;
-  static const muted = KeroseneBrandTokens.textMuted;
-  static const success = KeroseneBrandTokens.success;
+  static const background = Color(0xFF000000);
+  static const surface = Color(0xFF000000);
+  static const surfaceHigh = Color(0xFF141517);
+  static const border = Color(0xFF2A2A2A);
+  static const text = Color(0xFFFFFFFF);
+  static const secondary = Color(0xFFA3A3A3);
+  static const muted = Color(0xFF737373);
+  static const success = Color(0xFF4ADE80);
 
   /// Dark authorize chrome (pre-wipe), matching original send review button.
-  static const button = KeroseneBrandTokens.surfaceElevated;
-  static const buttonText = KeroseneBrandTokens.textSecondary;
+  static const button = Color(0xFF141517);
+  static const buttonText = Color(0xFFA3A3A3);
 }

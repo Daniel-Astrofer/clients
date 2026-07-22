@@ -23,12 +23,13 @@ class ExpenseCategoriesList extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: categories.asMap().entries.map((entry) {
-        return _buildCategoryCard(entry.value, entry.key, ref);
+        return _buildCategoryCard(context, entry.value, entry.key, ref);
       }).toList(),
     );
   }
 
   Widget _buildCategoryCard(
+    BuildContext context,
     ExpenseCategory category,
     int index,
     WidgetRef ref,
@@ -40,6 +41,7 @@ class ExpenseCategoriesList extends ConsumerWidget {
       btcEur: ref.watch(btcEurPriceProvider),
       btcBrl: ref.watch(btcBrlPriceProvider),
     );
+    final ink = Theme.of(context).colorScheme.onSurface;
     return Expanded(
       child: GlassContainer(
         enableBlur: false,
@@ -60,7 +62,7 @@ class ExpenseCategoriesList extends ConsumerWidget {
             Text(
               category.name.toUpperCase(),
               style: AppTypography.caption.copyWith(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: ink.withValues(alpha: 0.55),
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1,
                 fontSize: 8,

@@ -178,7 +178,7 @@ class _ReceiveFlowBrandBar extends StatelessWidget {
     const brandLabel = 'KEROSENE';
     return Row(
       children: [
-        const KeroseneLogo(size: 28, showText: false),
+        const KeroseneLogo(size: 28, showText: false, color: Colors.white),
         const SizedBox(width: 9),
         Text(
           brandLabel,
@@ -272,7 +272,7 @@ class _ReceiveFlowHeader extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: 2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -290,7 +290,7 @@ class _ReceiveFlowHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 7),
+                  SizedBox(height: 7),
                   Text(
                     subtitle!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -379,7 +379,7 @@ class ReceiveFlowPanel extends StatelessWidget {
 class ReceiveFlowSectionLabel extends StatelessWidget {
   final String text;
 
-  const ReceiveFlowSectionLabel(this.text, {super.key});
+  ReceiveFlowSectionLabel(this.text, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +414,7 @@ class ReceiveFlowTag extends StatelessWidget {
         children: [
           if (icon != null) ...[
             Icon(icon, size: 13, color: receiveFlowMutedTextColor),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
           ],
           Text(
             label,
@@ -508,7 +508,7 @@ class ReceiveFlowActionTile extends StatelessWidget {
                               height: 1.1,
                             ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         subtitle,
                         maxLines: 3,
@@ -524,7 +524,7 @@ class ReceiveFlowActionTile extends StatelessWidget {
                 const SizedBox(width: 12),
                 if (tag != null) ...[
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 96),
+                    constraints: BoxConstraints(maxWidth: 96),
                     child: Text(
                       tag!,
                       maxLines: 1,
@@ -834,7 +834,7 @@ class ReceiveFlowStatePanel extends StatelessWidget {
             ),
             child: Icon(icon, color: receiveFlowTextColor, size: 17),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Text(
             title,
             textAlign: TextAlign.center,
@@ -843,7 +843,7 @@ class ReceiveFlowStatePanel extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,

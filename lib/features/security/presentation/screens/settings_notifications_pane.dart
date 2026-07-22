@@ -56,18 +56,18 @@ class _SettingsNotificationsPaneState
         Text(
           tr.settingsNotifTitle,
           style: AppTypography.newsreader(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 32,
             fontWeight: FontWeight.w500,
             height: 1.2,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Text(
           tr.settingsNotifSubtitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w400,
             height: 1.55,
@@ -170,7 +170,7 @@ class _SettingsNotificationsPaneState
           trailing: TextButton(
             onPressed: () => _revokeDevice(context, token),
             style: TextButton.styleFrom(
-              foregroundColor: KeroseneBrandTokens.textSecondary,
+              foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
               textStyle: AppTypography.caption.copyWith(
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0,
@@ -259,15 +259,15 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
     final tr = context.tr;
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: 22, vertical: 24),
       child: ConstrainedBox(
         constraints: context.responsive.formConstraints,
         child: Container(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+          padding: EdgeInsets.all(AppSpacing.xl),
           decoration: BoxDecoration(
-            color: KeroseneBrandTokens.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.42),
@@ -287,23 +287,23 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.06),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.10),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       KeroseneIcons.notifications,
-                      color: KeroseneBrandTokens.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 23,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
                       tr.settingsNotifBackgroundDialogTitle,
                       style: AppTypography.newsreader(
-                        color: KeroseneBrandTokens.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 28,
                         fontWeight: FontWeight.w500,
                         height: 1.05,
@@ -313,11 +313,11 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.lg),
+              SizedBox(height: AppSpacing.lg),
               Text(
                 tr.settingsNotifBackgroundDialogBody,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: KeroseneBrandTokens.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.45,
                 ),
               ),
@@ -327,8 +327,8 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                 child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                    backgroundColor: Theme.of(context).colorScheme.onSurface,
+                    foregroundColor: Theme.of(context).colorScheme.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -340,11 +340,11 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                   child: Text(tr.settingsNotifBackgroundDialogConfirm),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 style: TextButton.styleFrom(
-                  foregroundColor: KeroseneBrandTokens.textSecondary,
+                  foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                   textStyle: AppTypography.bodySmall.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

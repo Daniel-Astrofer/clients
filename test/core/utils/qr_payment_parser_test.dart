@@ -36,7 +36,7 @@ void main() {
       expect(data.paymentLinkId, 'jpqf3ax5ujnprjpfjajgjwbr');
     });
 
-    test('decodes testnet4 bech32 address and bitcoin URI', () {
+    test('decodes testnet bech32 address and bitcoin URI', () {
       const address = 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x';
       final plain = QrPaymentParser.decode(address);
       expect(plain, isNotNull);

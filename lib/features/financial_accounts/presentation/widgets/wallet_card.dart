@@ -97,7 +97,7 @@ class _WalletCardState extends State<WalletCard>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        margin: const EdgeInsets.all(AppSpacing.md),
+        margin: EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color:
               Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
@@ -105,28 +105,28 @@ class _WalletCardState extends State<WalletCard>
           border: Border.all(
               color: Theme.of(context)
                   .colorScheme
-                  .onPrimary
+                  .onSurface
                   .withValues(alpha: 0.1)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm),
             Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
                 color: Theme.of(context)
                     .colorScheme
-                    .onPrimary
+                    .onSurface
                     .withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
             ListTile(
               leading: Icon(KeroseneIcons.edit,
-                  color: Theme.of(context).colorScheme.onPrimary),
+                  color: Theme.of(context).colorScheme.onSurface),
               title: Text(context.tr.walletEditNameAction.toUpperCase(),
                   style: Theme.of(context)
                       .textTheme
@@ -250,15 +250,15 @@ class _WalletCardState extends State<WalletCard>
                               colors: [
                                 Theme.of(context)
                                     .colorScheme
-                                    .onPrimary
+                                    .onSurface
                                     .withValues(alpha: 0.0),
                                 Theme.of(context)
                                     .colorScheme
-                                    .onPrimary
+                                    .onSurface
                                     .withValues(alpha: 0.1),
                                 Theme.of(context)
                                     .colorScheme
-                                    .onPrimary
+                                    .onSurface
                                     .withValues(alpha: 0.0),
                               ],
                               stops: const [0.35, 0.5, 0.65],
@@ -281,7 +281,7 @@ class _WalletCardState extends State<WalletCard>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding: EdgeInsets.symmetric(
                                     horizontal: AppSpacing.sm, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context)
@@ -292,7 +292,7 @@ class _WalletCardState extends State<WalletCard>
                                   border: Border.all(
                                       color: Theme.of(context)
                                           .colorScheme
-                                          .onPrimary
+                                          .onSurface
                                           .withValues(alpha: 0.1)),
                                 ),
                                 child: Row(
@@ -314,7 +314,7 @@ class _WalletCardState extends State<WalletCard>
                                                 fontWeight: FontWeight.w900,
                                                 color: Theme.of(context)
                                                     .colorScheme
-                                                    .onPrimary
+                                                    .onSurface
                                                     .withValues(alpha: 0.5))),
                                   ],
                                 ),
@@ -333,7 +333,7 @@ class _WalletCardState extends State<WalletCard>
                                         letterSpacing: 1,
                                         fontWeight: FontWeight.w900),
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4),
                               Row(
                                 children: [
                                   Expanded(
@@ -346,7 +346,7 @@ class _WalletCardState extends State<WalletCard>
                                           .copyWith(
                                             color: Theme.of(context)
                                                 .colorScheme
-                                                .onPrimary
+                                                .onSurface
                                                 .withValues(alpha: 0.5),
                                             fontFamily: AppTypography
                                                 .financialFontFamily,
@@ -365,11 +365,11 @@ class _WalletCardState extends State<WalletCard>
                                         size: 14,
                                         color: Theme.of(context)
                                             .colorScheme
-                                            .onPrimary),
+                                            .onSurface),
                                     style: IconButton.styleFrom(
                                       backgroundColor: Theme.of(context)
                                           .colorScheme
-                                          .onPrimary
+                                          .onSurface
                                           .withValues(alpha: 0.1),
                                       padding: const EdgeInsets.all(8),
                                     ),

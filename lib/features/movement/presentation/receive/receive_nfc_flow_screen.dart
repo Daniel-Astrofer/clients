@@ -10,11 +10,14 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager_ndef/nfc_manager_ndef.dart';
 
@@ -54,12 +57,14 @@ class ReceiveNfcFlowScreen extends StatefulWidget {
 
 class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     with SingleTickerProviderStateMixin {
-  static const Color _surface = KeroseneBrandTokens.surface;
-  static const Color _surfaceHigh = KeroseneBrandTokens.surfaceHigh;
-  static const Color _border = KeroseneBrandTokens.border;
-  static const Color _text = KeroseneBrandTokens.textPrimary;
-  static const Color _mutedText = KeroseneBrandTokens.textMuted;
-  static const Color _success = KeroseneBrandTokens.success;
+  static Color get _surface => KeroseneBrandTokens.surface;
+  static Color get _surfaceHigh => ThemeTokenBridge.isLight
+      ? const Color(0xFFF2F4F7)
+      : const Color(0xFF141517);
+  static Color get _border => KeroseneBrandTokens.border;
+  static Color get _text => KeroseneBrandTokens.textPrimary;
+  static Color get _mutedText => KeroseneBrandTokens.textMuted;
+  static Color get _success => KeroseneBrandTokens.success;
 
   late final AnimationController _pulseController;
   final List<Timer> _timers = [];
@@ -358,103 +363,98 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     const lightningMethodLabel = 'Lightning';
     const onChainMethodLabel = 'On-chain';
     const autoDetectLabel = 'Detectar\nautomaticamente';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      child: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(
-            child: SingleChildScrollView(
+    return ReceiveFlowScreenShell(
+      onBack: () => Navigator.of(context).maybePop(),
+      title: selectMethodTitle,
+      subtitle: selectMethodSubtitle,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          ReceiveFlowLayout.pageHorizontal,
+          0,
+          ReceiveFlowLayout.pageHorizontal,
+          ReceiveFlowLayout.pageBottom,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    selectMethodTitle,
-                    style: AppTypography.h1.copyWith(
-                      color: _text,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w500,
-                      height: 1.15,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    selectMethodSubtitle,
-                    style: AppTypography.description.copyWith(
-                      color: _mutedText,
-                    ),
-                  ),
-                  const SizedBox(height: 36),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 32,
-                    crossAxisSpacing: 24,
-                    childAspectRatio: 0.95,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMethodOption(
-                        icon: KeroseneIcons.internalTransfer,
-                        label: directMethodLabel,
-                        method: ReceiveNfcMethod.direct,
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 32,
+                        crossAxisSpacing: 24,
+                        childAspectRatio: 0.95,
+                        children: [
+                          _buildMethodOption(
+                            icon: KeroseneIcons.internalTransfer,
+                            label: directMethodLabel,
+                            method: ReceiveNfcMethod.direct,
+                          ),
+                          _buildMethodOption(
+                            icon: KeroseneIcons.lightning,
+                            label: lightningMethodLabel,
+                            method: ReceiveNfcMethod.lightning,
+                          ),
+                          _buildMethodOption(
+                            icon: KeroseneIcons.onchain,
+                            label: onChainMethodLabel,
+                            method: ReceiveNfcMethod.onchain,
+                          ),
+                          _buildMethodOption(
+                            icon: KeroseneIcons.nfc,
+                            label: autoDetectLabel,
+                            method: ReceiveNfcMethod.automatic,
+                          ),
+                        ],
                       ),
-                      _buildMethodOption(
-                        icon: KeroseneIcons.lightning,
-                        label: lightningMethodLabel,
-                        method: ReceiveNfcMethod.lightning,
+                      const SizedBox(height: 40),
+                      Text(
+                        understandMethodsTitle,
+                        style: AppTypography.h3.copyWith(
+                          color: _text,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      _buildMethodOption(
-                        icon: KeroseneIcons.onchain,
-                        label: onChainMethodLabel,
-                        method: ReceiveNfcMethod.onchain,
-                      ),
-                      _buildMethodOption(
-                        icon: KeroseneIcons.nfc,
-                        label: autoDetectLabel,
-                        method: ReceiveNfcMethod.automatic,
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 156,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          children: const [
+                            _NfcMethodInfoCard(
+                              title: 'Direct',
+                              body:
+                                  'Transferência direta entre usuários da plataforma.',
+                            ),
+                            _NfcMethodInfoCard(
+                              title: 'Lightning',
+                              body:
+                                  'Recebimento instantâneo com taxa de roteamento.',
+                            ),
+                            _NfcMethodInfoCard(
+                              title: 'On-chain',
+                              body:
+                                  'Transação registrada na rede Bitcoin para valores maiores.',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 40),
-                  Text(
-                    understandMethodsTitle,
-                    style: AppTypography.h3.copyWith(
-                      color: _text,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 156,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: const [
-                        _NfcMethodInfoCard(
-                          title: 'Direct',
-                          body:
-                              'Transferência direta entre usuários da plataforma.',
-                        ),
-                        _NfcMethodInfoCard(
-                          title: 'Lightning',
-                          body:
-                              'Recebimento instantâneo com taxa de roteamento.',
-                        ),
-                        _NfcMethodInfoCard(
-                          title: 'On-chain',
-                          body:
-                              'Transação registrada na rede Bitcoin para valores maiores.',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -537,7 +537,12 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   Widget _buildSuccess(BuildContext context) {
     const successTitle = 'Pedido NFC preparado';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+      padding: EdgeInsets.fromLTRB(
+        ReceiveFlowLayout.pageHorizontal,
+        ReceiveFlowLayout.titleTopLead(MediaQuery.sizeOf(context).height),
+        ReceiveFlowLayout.pageHorizontal,
+        ReceiveFlowLayout.pageBottom + 8,
+      ),
       child: Column(
         children: [
           Expanded(
@@ -591,8 +596,16 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     required Widget center,
     Widget? footer,
   }) {
+    final lead = ReceiveFlowLayout.titleTopLead(
+      MediaQuery.sizeOf(context).height,
+    );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      padding: EdgeInsets.fromLTRB(
+        ReceiveFlowLayout.pageHorizontal,
+        lead,
+        ReceiveFlowLayout.pageHorizontal,
+        ReceiveFlowLayout.pageBottom + 8,
+      ),
       child: Column(
         children: [
           _buildHeader(context),
@@ -713,7 +726,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                 height: size * 0.78,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [_surfaceHigh, _surface],
@@ -805,7 +818,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   KeroseneIcons.success,
                   color: _success,
                   size: 48,
@@ -827,7 +840,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _border),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [_surfaceHigh, _surface],
@@ -953,7 +966,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
               backgroundColor: _surfaceHigh,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: _border),
+                side: BorderSide(color: _border),
               ),
               textStyle: AppTypography.inter(
                 fontSize: 16,

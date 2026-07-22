@@ -60,6 +60,12 @@ class HomeEducationQueue extends Notifier<List<HomeEducationEvent>> {
   /// Session-level dedupe so notif + extrato + balance credit don't re-play
   /// the same receive after the piece was already shown (or queued).
   final Set<String> _sessionSeenIds = <String>{};
+  DateTime? _lastIncomingEnqueueTime;
+
+  bool get hasRecentIncomingEnqueue {
+    if (_lastIncomingEnqueueTime == null) return false;
+    return DateTime.now().difference(_lastIncomingEnqueueTime!).inSeconds < 10;
+  }
 
   @override
   List<HomeEducationEvent> build() => const [];
@@ -68,6 +74,9 @@ class HomeEducationQueue extends Notifier<List<HomeEducationEvent>> {
     if (_sessionSeenIds.contains(event.id) ||
         state.any((e) => e.id == event.id)) {
       return;
+    }
+    if (event.kind == HomeEducationKind.incomingTransfer) {
+      _lastIncomingEnqueueTime = DateTime.now();
     }
     _sessionSeenIds.add(event.id);
     state = [...state, event];
@@ -356,14 +365,15 @@ HomeStage _incomingStage(HomeEducationEvent event, String lang) {
           colorToken: accent,
           x: 0.5,
           y: 0.0,
-          width: 1.7,
-          height: 0.55,
-          intensity: 0.48,
-          radius: 0.72,
+          width: 1.55,
+          height: 0.48,
+          // Match resting aurora band — high intensity reads as strobing green.
+          intensity: 0.34,
+          radius: 0.68,
         ),
       ],
       animated: true,
-      transitionMs: 420,
+      transitionMs: 520,
     ),
   );
 }

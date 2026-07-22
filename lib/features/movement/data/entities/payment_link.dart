@@ -406,14 +406,21 @@ class PaymentLink extends Equatable {
   }) {
     final normalized = status.trim().toUpperCase();
     final hasTxid = txid != null && txid.trim().isNotEmpty;
-    if (settlementStatus == 'VALIDATING' ||
-        settlementStatus == 'QUORUM_SYNC' ||
-        settlementStatus == 'EXECUTING' ||
-        (hasTxid &&
-            (normalized == 'OPEN' ||
-                normalized == 'ACTIVE' ||
-                normalized == 'PENDING' ||
-                normalized == 'CREATED'))) {
+    // Never downgrade an already-paid / settled request to pending — that blocked
+    // the receive confirmation screen when settlement was still VALIDATING.
+    final alreadyPaid = normalized == 'PAID' ||
+        normalized == 'SETTLED' ||
+        normalized == 'COMPLETED' ||
+        normalized == 'CONFIRMED';
+    if (!alreadyPaid &&
+        (settlementStatus == 'VALIDATING' ||
+            settlementStatus == 'QUORUM_SYNC' ||
+            settlementStatus == 'EXECUTING' ||
+            (hasTxid &&
+                (normalized == 'OPEN' ||
+                    normalized == 'ACTIVE' ||
+                    normalized == 'PENDING' ||
+                    normalized == 'CREATED')))) {
       return 'pending';
     }
     switch (normalized) {

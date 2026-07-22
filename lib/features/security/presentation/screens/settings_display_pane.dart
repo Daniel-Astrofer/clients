@@ -27,18 +27,18 @@ class SettingsDisplayPane extends ConsumerWidget {
         Text(
           tr.settingsDisplayTitle,
           style: AppTypography.newsreader(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 32,
             fontWeight: FontWeight.w500,
             height: 1.2,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Text(
           tr.settingsDisplaySubtitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w400,
             height: 1.55,
@@ -133,7 +133,7 @@ class SettingsDisplayPane extends ConsumerWidget {
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: KeroseneBrandTokens.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -145,11 +145,11 @@ class SettingsDisplayPane extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Text(
                     tr.settingsDisplayPickTimezone,
                     style: AppTypography.inter(
-                      color: KeroseneBrandTokens.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -166,7 +166,7 @@ class SettingsDisplayPane extends ConsumerWidget {
                         title: Text(
                           AppTimezone.shortLabel(zone),
                           style: AppTypography.inter(
-                            color: KeroseneBrandTokens.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
@@ -174,14 +174,14 @@ class SettingsDisplayPane extends ConsumerWidget {
                         subtitle: Text(
                           zone,
                           style: AppTypography.inter(
-                            color: KeroseneBrandTokens.textMuted,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
                         trailing: isSelected
                             ? Icon(
                                 KeroseneIcons.check,
-                                color: KeroseneBrandTokens.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 size: 18,
                               )
                             : null,

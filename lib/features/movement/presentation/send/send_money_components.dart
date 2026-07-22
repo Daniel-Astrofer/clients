@@ -237,7 +237,7 @@ class InternalQuickAction extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(

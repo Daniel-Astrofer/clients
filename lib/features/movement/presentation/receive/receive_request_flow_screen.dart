@@ -13,6 +13,7 @@ import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/utils/money_display.dart';
@@ -23,19 +24,21 @@ import 'package:kerosene/features/movement/data/entities/external_transfer.dart'
 import 'package:kerosene/features/movement/data/entities/onchain_address_allocation.dart';
 import 'package:kerosene/features/movement/data/activity_archive_store.dart';
 import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/design_system/components/financial/confirmation_surface.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/financial_surface_provider.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_method.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_network_picker.dart';
 import 'receive_request_flow_components.dart';
 
 enum ReceiveRequestStage { qr, confirmations, identified }
 
-const _receiveBackground = KeroseneBrandTokens.background;
-const _receiveText = KeroseneBrandTokens.textPrimary;
-const _receiveMuted = KeroseneBrandTokens.textMuted;
+Color get _receiveBackground => KeroseneBrandTokens.background;
+Color get _receiveText => KeroseneBrandTokens.textPrimary;
+Color get _receiveMuted => KeroseneBrandTokens.textMuted;
 
 class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final Wallet wallet;
@@ -270,7 +273,14 @@ class _ReceiveRequestFlowScreenState
         return widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL';
       case ReceiveAmountMethod.qrCode:
       case ReceiveAmountMethod.paymentLink:
-        return 'ONCHAIN';
+        // Custodial / ledger wallets: QR is a Kerosene payment request (internal).
+        // Cold / on-chain wallets: BIP-21 address request.
+        if (widget.onChainWallet ||
+            widget.wallet.isColdWallet ||
+            widget.wallet.isSelfCustody) {
+          return 'ONCHAIN';
+        }
+        return 'INTERNAL';
     }
   }
 
@@ -546,17 +556,18 @@ class _ReceiveRequestFlowScreenState
       }
     }
     // Lightning / internal: paid is done. On-chain: paid/detected opens conf rings;
-    // "Confirmado" only when confs meet the target (or SETTLED settlement).
+    // "Confirmado" when confs meet the target or settlement is SETTLED — do not
+    // require isPaid alone (normalize used to mask PAID while VALIDATING).
     final settlement = link.settlementStatus.trim().toUpperCase();
     final settledSettlement =
         settlement == 'SETTLED' || settlement == 'COMPLETED';
     final complete = link.isCompleted ||
+        settledSettlement ||
         (isLightning && link.isPaid) ||
         (!onChain && !isLightning && link.isPaid) ||
         (onChain &&
-            link.isPaid &&
             (link.confirmations >= _requiredConfirmations ||
-                settledSettlement));
+                (link.isPaid && settledSettlement)));
     if (complete) {
       _stage = ReceiveRequestStage.identified;
       _identifiedAt = link.completedAt ?? link.paidAt ?? DateTime.now();
@@ -573,6 +584,60 @@ class _ReceiveRequestFlowScreenState
       return;
     }
     _stage = ReceiveRequestStage.qr;
+  }
+
+  void _maybeAdvanceFromInboundHistory(List<Transaction> history) {
+    if (_stage == ReceiveRequestStage.identified) return;
+    final linkId = _link?.id.trim() ?? '';
+    final address = _addressValue.trim().toLowerCase();
+    final walletId = widget.wallet.id.trim().toLowerCase();
+    final createdAt = _link?.createdAt ??
+        DateTime.now().subtract(const Duration(hours: 2));
+
+    for (final tx in history) {
+      if (!tx.isCredit) continue;
+      final txCreated = tx.timestamp;
+      if (txCreated.isBefore(createdAt.subtract(const Duration(minutes: 1)))) {
+        continue;
+      }
+      final prId = tx.paymentRequestId?.trim() ?? '';
+      final matchesLink = linkId.isNotEmpty &&
+          (prId == linkId ||
+              tx.id.contains(linkId) ||
+              (tx.externalReference?.contains(linkId) ?? false));
+      final toAddr = tx.toAddress.trim().toLowerCase();
+      final matchesAddress = address.isNotEmpty &&
+          looksLikeBitcoinAddress(address) &&
+          (toAddr == address || toAddr.contains(address));
+      final matchesWallet = walletId.isNotEmpty &&
+          (tx.walletId?.trim().toLowerCase() == walletId ||
+              tx.destinationWalletId?.trim().toLowerCase() == walletId);
+      if (!matchesLink &&
+          !matchesAddress &&
+          !(matchesWallet && !_isOnChainReceive)) {
+        continue;
+      }
+
+      final confs = tx.confirmations;
+      setState(() {
+        if (tx.blockchainTxid != null && tx.blockchainTxid!.trim().isNotEmpty) {
+          _txid = tx.blockchainTxid!.trim();
+        }
+        if (_isOnChainReceive &&
+            confs < _requiredConfirmations &&
+            tx.status != TransactionStatus.confirmed) {
+          _stage = ReceiveRequestStage.confirmations;
+        } else {
+          _stage = ReceiveRequestStage.identified;
+          _identifiedAt = txCreated;
+          _statusTimer?.cancel();
+        }
+      });
+      if (_stage == ReceiveRequestStage.identified) {
+        HapticFeedback.mediumImpact();
+      }
+      return;
+    }
   }
 
   /// True when this receive surface should behave as on-chain (BIP-21 / confs).
@@ -769,8 +834,12 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _amountLabel {
+    final received = _link?.amountBtc ??
+        _observedTransfer?.amountBtc ??
+        _allocation?.expectedAmountBtc;
+    final btc = (received != null && received > 0) ? received : widget.amountBtc;
     final amount = MoneyDisplay.formatCompact(
-      amount: widget.amountBtc,
+      amount: btc,
       currency: Currency.btc,
       withSymbol: false,
       maxDecimalPlaces: 8,
@@ -779,8 +848,10 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _requestedAmountLabel {
+    final received = _link?.amountBtc;
+    final btc = (received != null && received > 0) ? received : widget.amountBtc;
     final amount = MoneyDisplay.format(
-      amount: widget.amountBtc,
+      amount: btc,
       currency: Currency.btc,
       withSymbol: false,
       decimalPlaces: 6,
@@ -823,8 +894,12 @@ class _ReceiveRequestFlowScreenState
   String get _fiatLabel {
     final money = ref.watch(moneyFormatConfigProvider);
     final fiat = money.currency == Currency.btc ? Currency.usd : money.currency;
+    final received = _link?.amountBtc ??
+        _observedTransfer?.amountBtc ??
+        _allocation?.expectedAmountBtc;
+    final btc = (received != null && received > 0) ? received : widget.amountBtc;
     return '≈ ${money.formatAmountFromBtc(
-      btcAmount: widget.amountBtc,
+      btcAmount: btc,
       currency: fiat,
       btcUsd: ref.watch(latestBtcPriceProvider),
       btcEur: ref.watch(btcEurPriceProvider),
@@ -868,7 +943,7 @@ class _ReceiveRequestFlowScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: KeroseneBrandTokens.surfaceHigh,
+        backgroundColor: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
         title: Text(
           tr.receivePaymentLinkCancelTitle,
           style: AppTypography.inter(
@@ -930,6 +1005,13 @@ class _ReceiveRequestFlowScreenState
 
   @override
   Widget build(BuildContext context) {
+    // When an inbound lands for this payment request / address, leave the QR
+    // even if the payment-link poll lags one cycle.
+    ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider,
+        (previous, next) {
+      next.whenData(_maybeAdvanceFromInboundHistory);
+    });
+
     final Widget child;
     if (_awaitingNetworkChoice) {
       child = Column(
@@ -986,7 +1068,12 @@ class _ReceiveRequestFlowScreenState
         _buildQrTopBar(context),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+            padding: const EdgeInsets.fromLTRB(
+              ReceiveFlowLayout.pageHorizontal,
+              ReceiveFlowLayout.titleToContentGap,
+              ReceiveFlowLayout.pageHorizontal,
+              12,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1008,13 +1095,18 @@ class _ReceiveRequestFlowScreenState
                   const SizedBox(height: 12),
                   InlineNotice(message: _errorMessage!),
                 ],
-                const Spacer(flex: 3),
+                const Spacer(flex: 2),
               ],
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+          padding: const EdgeInsets.fromLTRB(
+            ReceiveFlowLayout.pageHorizontal,
+            8,
+            ReceiveFlowLayout.pageHorizontal,
+            ReceiveFlowLayout.pageBottom + 4,
+          ),
           child: SizedBox(
             width: double.infinity,
             child: ReceiveActionButton(
@@ -1086,7 +1178,7 @@ class _ReceiveRequestFlowScreenState
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: KeroseneBrandTokens.surface,
-        border: Border.all(color: KeroseneBrandTokens.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1154,8 +1246,7 @@ class _ReceiveRequestFlowScreenState
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Icon(KeroseneIcons.copy,
-                      size: 12, color: _receiveMuted),
+                  Icon(KeroseneIcons.copy, size: 12, color: _receiveMuted),
                 ],
               ),
             ),
@@ -1188,7 +1279,12 @@ class _ReceiveRequestFlowScreenState
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+            padding: const EdgeInsets.fromLTRB(
+              ReceiveFlowLayout.pageHorizontal,
+              ReceiveFlowLayout.optionGap,
+              ReceiveFlowLayout.pageHorizontal,
+              18,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1254,7 +1350,12 @@ class _ReceiveRequestFlowScreenState
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            padding: const EdgeInsets.fromLTRB(
+              ReceiveFlowLayout.pageHorizontal,
+              ReceiveFlowLayout.titleToContentGap + 4,
+              ReceiveFlowLayout.pageHorizontal,
+              ReceiveFlowLayout.pageBottom,
+            ),
             child: MovementConfirmationSurface(
               leading: ReceiveSuccessGraphic(
                   animation: const AlwaysStoppedAnimation(1)),
@@ -1284,7 +1385,12 @@ class _ReceiveRequestFlowScreenState
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+          padding: const EdgeInsets.fromLTRB(
+            ReceiveFlowLayout.pageHorizontal,
+            8,
+            ReceiveFlowLayout.pageHorizontal,
+            ReceiveFlowLayout.pageBottom + 4,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1314,7 +1420,7 @@ class _ReceiveRequestFlowScreenState
                   onPressed: _sharePaymentValue,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: KeroseneBrandTokens.textPrimary,
-                    side: const BorderSide(color: KeroseneBrandTokens.border),
+                    side: BorderSide(color: Theme.of(context).dividerColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),

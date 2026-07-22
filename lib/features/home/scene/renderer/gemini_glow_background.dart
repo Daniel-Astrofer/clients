@@ -108,18 +108,24 @@ class _SceneGeminiGlowBackgroundState
     final dt = ((elapsed - last).inMicroseconds / 1e6).clamp(0.0, 1 / 30);
     if (dt <= 0) return;
 
-    // During pull, advance the aurora clock slower so waves don't thrash.
-    final timeScale = (1.0 - 0.40 * _pullVisual).clamp(0.55, 1.0);
+    // During pull (and theater), advance the aurora clock slower so waves
+    // don't thrash — receive green used to look frenetic on bounce.
+    final timeScale = (1.0 -
+            0.40 * _pullVisual -
+            0.28 * _theater.clamp(0.0, 1.0))
+        .clamp(0.42, 1.0);
     _seconds += dt * timeScale;
 
     // Critically soft follow (dt-based) — kills frenetic vibration on bounce.
     final risingPull = _pullTarget > _pullVisual;
-    final pullK = risingPull ? 2.2 : 1.5; // 1/s — calmer than before
+    // Theater: even softer pull follow so scroll bounce doesn't strobe green.
+    final pullKBase = risingPull ? 2.2 : 1.5;
+    final pullK = pullKBase * (1.0 - 0.35 * _theater.clamp(0.0, 1.0));
     final pullAlpha = (1.0 - _expNeg(pullK * dt)).clamp(0.0, 1.0);
     _pullVisual += (_pullTarget - _pullVisual) * pullAlpha;
 
     final risingTheater = _theaterTarget > _theater;
-    final theaterK = risingTheater ? 2.4 : 1.6;
+    final theaterK = risingTheater ? 1.6 : 1.4;
     final theaterAlpha = (1.0 - _expNeg(theaterK * dt)).clamp(0.0, 1.0);
     _theater += (_theaterTarget - _theater) * theaterAlpha;
 
@@ -130,7 +136,7 @@ class _SceneGeminiGlowBackgroundState
 
     // Soft exponential surge decay (enter bloom).
     if (_surge > 0.001) {
-      _surge *= mathExpDecay(dt, halfLife: 0.7);
+      _surge *= mathExpDecay(dt, halfLife: 0.45);
       if (_surge < 0.004) _surge = 0;
     }
 
@@ -164,9 +170,13 @@ class _SceneGeminiGlowBackgroundState
     final raw = ((overscrollPx - _deadZonePx) / _fullBloomPx).clamp(0.0, 1.0);
     // Ease the target itself so bounce chatter never spikes the shader.
     final eased = raw <= 0 ? 0.0 : Curves.easeOutCubic.transform(raw);
-    _pullTarget = _pullTarget + (eased - _pullTarget) * 0.35;
+    // During theater, pull barely moves — green receive + bounce was strobing.
+    final follow = _lerpDouble(0.35, 0.12, _theater.clamp(0.0, 1.0));
+    _pullTarget = _pullTarget + (eased - _pullTarget) * follow;
     if (eased == 0 && _pullTarget < 0.02) _pullTarget = 0;
   }
+
+  double _lerpDouble(double a, double b, double t) => a + (b - a) * t;
 
   void _applySceneTargets(HomeScene scene) {
     final bg = scene.background;
@@ -174,11 +184,12 @@ class _SceneGeminiGlowBackgroundState
 
     if (theaterPiece) {
       _primaryTarget = bg.primary ?? _primaryTarget;
-      _secondaryTarget = bg.secondary ?? const Color(0xFF9B7BFF);
-      // Brighter resting + theater ceiling (still soft).
+      _secondaryTarget = bg.secondary ?? const Color(0xFF6B8CFF);
+      // Same ceiling as resting wash — tint via uTheater, not raw intensity.
       _intensityTarget =
-          (bg.intensity.clamp(0.32, 0.85) * 0.95).clamp(0.34, 0.78);
-      _theaterTarget = 1.0;
+          (bg.intensity.clamp(0.30, 0.48) * 0.95).clamp(0.30, 0.52);
+      // Partial theater channel: color shift without neon takeover.
+      _theaterTarget = 0.42;
     } else {
       // Resting / wallet wash — keep field alive, dim theater channel.
       try {
@@ -211,12 +222,12 @@ class _SceneGeminiGlowBackgroundState
     final wasTheater = _lastActive;
     if (theaterPiece &&
         (!wasTheater || (id.isNotEmpty && id != _lastSceneId))) {
-      // Beautiful enter: soft surge, no hard cut.
-      _surge = (_surge * 0.35 + 0.85).clamp(0.0, 1.0);
-      ref.read(homeAuroraInteractionProvider).pulseFromScene(strength: 0.9);
+      // Soft enter bloom — avoid stacked surge + pull strobe on receive green.
+      _surge = (_surge * 0.25 + 0.32).clamp(0.0, 0.45);
+      ref.read(homeAuroraInteractionProvider).pulseFromScene(strength: 0.4);
     } else if (wasTheater && !theaterPiece) {
       // Exit handled by theaterTarget→0 lerp; tiny residual glow.
-      _surge = (_surge * 0.4).clamp(0.0, 0.35);
+      _surge = (_surge * 0.35).clamp(0.0, 0.2);
     }
     _lastSceneId = id;
     _lastActive = theaterPiece;

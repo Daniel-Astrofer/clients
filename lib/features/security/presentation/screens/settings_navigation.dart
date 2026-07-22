@@ -49,18 +49,18 @@ class SettingsHero extends StatelessWidget {
         Text(
           tr.settingsNavTitle,
           style: AppTypography.newsreader(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 40,
             fontWeight: FontWeight.w500,
             height: 1.1,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Text(
           tr.settingsNavDescription,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textMuted,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w400,
             height: 1.55,
@@ -136,7 +136,7 @@ class SettingsNavigationRail extends StatelessWidget {
         Text(
           tr.settingsNavPreferencesSection.toUpperCase(),
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textMuted,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
             fontWeight: FontWeight.w800,
             height: 1.2,
@@ -202,7 +202,7 @@ class SettingsNavigationTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: selected
-                    ? Colors.white.withValues(alpha: 0.10)
+                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10)
                     : Colors.transparent,
               ),
             ),
@@ -215,17 +215,17 @@ class SettingsNavigationTile extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: selected
                         ? AppColors.hexFF1C1C1E
-                        : KeroseneBrandTokens.surface,
+                        : Theme.of(context).colorScheme.surface,
                   ),
                   child: Icon(
                     spec.icon,
                     color: selected
-                        ? KeroseneBrandTokens.textPrimary
-                        : KeroseneBrandTokens.textSecondary,
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 21,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.base),
+                SizedBox(width: AppSpacing.base),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,19 +233,19 @@ class SettingsNavigationTile extends StatelessWidget {
                       Text(
                         spec.title,
                         style: AppTypography.inter(
-                          color: KeroseneBrandTokens.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
+                      SizedBox(height: AppSpacing.xs),
                       Text(
                         spec.subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.inter(
-                          color: KeroseneBrandTokens.textMuted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
                           height: 1.25,
@@ -257,7 +257,7 @@ class SettingsNavigationTile extends StatelessWidget {
                 ),
                 Icon(
                   KeroseneIcons.chevronRight,
-                  color: KeroseneBrandTokens.textSecondary.withValues(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
                     alpha: selected ? 1.0 : 0.45,
                   ),
                   size: 18,

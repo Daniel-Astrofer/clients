@@ -43,14 +43,20 @@ SceneBackground _backgroundFor(HomeStage stage) {
   if (atmo.hasGlows) {
     final main = atmo.glows.first;
     primary = resolveStageColorToken(main.colorToken);
-    // Feed aurora intensity only — no separate static glow layer.
-    // Theater receive/announcement needs headroom so BE/local intensity is visible.
-    intensity = main.intensity.clamp(0.32, 0.78);
+    // Keep theater in the same energy band as resting wash — receive green
+    // used to clamp up to 0.78 and strobe on scroll bounce.
+    intensity = main.intensity.clamp(0.30, 0.48);
+    // Neon ledger greens (#4ADE80) blow out on GPU bloom — soften toward teal.
+    final token = main.colorToken.trim().toLowerCase();
+    if (token == 'positive' || token == 'green' || token == 'up') {
+      primary = Color.lerp(primary, const Color(0xFF3D9B7A), 0.35) ?? primary;
+    }
     if (atmo.glows.length > 1) {
       secondary = resolveStageColorToken(atmo.glows[1].colorToken);
     } else {
+      // Soft companion (cool, not purple) so green/amber don't oscillate neon.
       secondary =
-          Color.lerp(primary, const Color(0xFF9B7BFF), 0.35) ?? secondary;
+          Color.lerp(primary, const Color(0xFF6B8CFF), 0.45) ?? secondary;
     }
   } else {
     // Theater without explicit glows still brightens the living field a bit.

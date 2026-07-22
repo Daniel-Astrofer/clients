@@ -59,12 +59,12 @@ import 'package:kerosene/features/movement/presentation/send/send_money_screen_r
 import 'package:kerosene/features/movement/presentation/send/send_payment_request_flow.dart';
 import 'package:kerosene/features/movement/presentation/send/send_security_profile_resolver.dart';
 import 'package:kerosene/features/movement/presentation/send/send_wallet_resolver.dart';
-import 'package:kerosene/features/movement/presentation/send/send_wallet_selection_step.dart';
 
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_analyzer.dart';
 import 'package:kerosene/features/movement/presentation/send/send_amount_step.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_step.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/shared/internal_recent_avatar.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_flow_notifier.dart';
@@ -85,13 +85,13 @@ class SendMoneyScreen extends ConsumerStatefulWidget {
 
 class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     with FinancialSurfaceMixin, TickerProviderStateMixin {
-  static const Color internalBlack = KeroseneBrandTokens.background;
-  static const Color internalSurface = KeroseneBrandTokens.surface;
-  static const Color internalSurfaceHigh = KeroseneBrandTokens.surfaceHigh;
-  static const Color internalBorder = KeroseneBrandTokens.border;
-  static const Color internalText = KeroseneBrandTokens.textPrimary;
-  static const Color internalMutedText = KeroseneBrandTokens.textMuted;
-  static const Color internalOutline = KeroseneBrandTokens.borderStrong;
+  Color get internalBlack => Theme.of(context).scaffoldBackgroundColor;
+  Color get internalSurface => Theme.of(context).colorScheme.surface;
+  Color get internalSurfaceHigh => (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
+  Color get internalBorder => Theme.of(context).dividerColor;
+  Color get internalText => Theme.of(context).colorScheme.onSurface;
+  Color get internalMutedText => Theme.of(context).colorScheme.onSurfaceVariant;
+  Color get internalOutline => Theme.of(context).dividerColor;
 
   /// Shared push/pop motion for every send-flow screen (incl. review).
   static const Duration _navDuration = kKeroseneFlowNavDuration;
@@ -146,7 +146,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   late final AnimationController _detailsSlideController;
   late final Animation<Offset> _detailsSlide;
 
-  /// Wizard steps (destination → wallet → amount) use the same slide chrome.
+  /// Wizard steps (destination → amount with inline wallet chip).
   late final AnimationController _stepSlideController;
   late final Animation<Offset> _stepSlide;
   int _baseStep = 0;
@@ -317,7 +317,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         ref.watch(sendMoneyFlowProvider).value?.currentStep ?? 0;
     ref.watch(balanceWebSocketServiceProvider);
     var isLoading = false;
-    if (currentStepWatch == 2) {
+    if (currentStepWatch == 1) {
       final isSending = ref.watch(
         sendTransactionProvider.select((state) => state.isLoading),
       );
@@ -339,7 +339,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     if (currentStepWatch != 0 &&
         (walletState is WalletInitial || walletState is WalletLoading)) {
-      return const Center(child: TorLoadingDots());
+      return Center(child: TorLoadingDots());
     }
 
     final currentWallet = _resolveWallet(walletState);
@@ -575,23 +575,18 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     switch (step) {
       case 1:
         return RepaintBoundary(
-          child: _buildWalletSelectionStep(context, walletState),
-        );
-      case 2:
-        return RepaintBoundary(
-          child: SafeArea(
-            child: _buildAmountStep(
-              context,
-              btcUsd: btcUsd,
-              btcEur: btcEur,
-              btcBrl: btcBrl,
-              amountBtc: amountBtc,
-              wallet: currentWallet,
-              destination: destinationAnalysis,
-              feeQuote: feeQuote,
-              isLoading: isLoading,
-              isOnline: isOnline,
-            ),
+          child: _buildAmountStep(
+            context,
+            btcUsd: btcUsd,
+            btcEur: btcEur,
+            btcBrl: btcBrl,
+            amountBtc: amountBtc,
+            wallet: currentWallet,
+            walletState: walletState,
+            destination: destinationAnalysis,
+            feeQuote: feeQuote,
+            isLoading: isLoading,
+            isOnline: isOnline,
           ),
         );
       case 0:
@@ -975,62 +970,69 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     );
   }
 
-  Widget _buildWalletSelectionStep(
-    BuildContext context,
-    WalletState walletState,
-  ) {
-    final selectedWallet = _resolveWallet(walletState);
+  List<Wallet> _eligibleSendWallets(WalletState walletState) {
+    if (walletState is! WalletLoaded) return const [];
+    final ids = _liveCapabilities?.eligibleSourceWalletIds;
+    final rail = _userSelectedRail ?? _liveResolvedIntent?.selectedRail;
+    return walletState.wallets.where((wallet) {
+      if (!wallet.isActive) return false;
+      if (ids != null) {
+        if (ids.isEmpty) return false;
+        if (!ids.contains(wallet.id) && !ids.contains(wallet.name)) {
+          return false;
+        }
+      }
+      return walletMatchesSendRail(wallet, rail);
+    }).toList(growable: false);
+  }
 
-    return SendWalletSelectionStep(
-      walletState: walletState,
-      selectedWallet: selectedWallet,
-      selectedRail: _userSelectedRail ?? _liveResolvedIntent?.selectedRail,
-      eligibleWalletIds: _liveCapabilities?.eligibleSourceWalletIds,
-      onRefresh: () => ref.read(walletProvider.notifier).refresh(),
-      onBack: _handleBack,
-      onWalletSelected: (wallet) {
-        HapticFeedback.selectionClick();
-        setState(() => _selectedWallet = wallet);
-      },
-      onWalletConfirmed: (wallet) async {
-        HapticFeedback.selectionClick();
-        final destination = _currentDestinationAnalysis();
-        if (destination.isValid) {
-          final decision = await decideSendMovement(
-            router: ref.read(movementRouterProvider),
-            destination: destination,
-            sourceWallet: wallet,
-            receiverCapabilities: _liveCapabilities,
-            eligibleSourceWalletIds:
-                _liveCapabilities?.eligibleSourceWalletIds ?? const {},
-            expectedNetwork: expectedBitcoinNetwork,
-            userSelectedRail: _userSelectedRail,
-          );
-          if (!mounted) return;
-          if (!decision.canContinue) {
-            final message = decision.errorMessage ??
-                (decision.blockers.isNotEmpty
-                    ? decision.blockers.first
-                    : SendMoneyCopy.unrecognizedDestination(context));
-            SnackbarHelper.showError(message);
-            return;
-          }
-        }
-        setState(() {
-          _selectedWallet = wallet;
-        });
-        // Payment link / QR with fixed amount → skip amount entry, open review.
-        if (_hasLockedPaymentAmount) {
-          unawaited(_handleContinue());
-        } else {
-          unawaited(_navigateToStep(2));
-        }
-      },
-    );
+  void _ensureSendWalletSelected(WalletState walletState) {
+    final wallets = _eligibleSendWallets(walletState);
+    if (wallets.isEmpty) return;
+    final current = _resolveWallet(walletState);
+    final stillValid =
+        current != null && wallets.any((w) => w.id == current.id);
+    if (stillValid) return;
+
+    // In-flow default for the amount chip — never home selection. Prefer
+    // spendable custodial so cold/self-custody passphrase is opt-in via chip.
+    Wallet? preferred;
+    for (final wallet in wallets) {
+      if (wallet.spendable &&
+          !wallet.isColdWallet &&
+          !wallet.isSelfCustody) {
+        preferred = wallet;
+        break;
+      }
+    }
+    setState(() => _selectedWallet = preferred ?? wallets.first);
   }
 
   /// True when paste/QR/payment-link fixed the send amount.
+  /// Username / bare address without declared amount must never skip amount entry.
   bool get _hasLockedPaymentAmount => _lockedAmountBtc > 0;
+
+  /// Skip the editable amount step only for payment requests that declare an amount
+  /// (payment link, BOLT11, BIP-21). Never for username / bare address.
+  bool _shouldSkipAmountEntry(SendDestinationAnalysis destination) {
+    if (_lockedAmountBtc <= 0 && !destination.hasLockedAmount) {
+      return false;
+    }
+    if (destination.isInternal) {
+      return false;
+    }
+    if (destination.isPaymentLink || _pendingPaymentLinkId != null) {
+      return destination.hasLockedAmount || _lockedAmountBtc > 0;
+    }
+    if (destination.isLightning) {
+      return destination.hasLockedAmount || _lockedAmountBtc > 0;
+    }
+    if (destination.isOnChain) {
+      // BIP-21 / URI with amount only — bare address stays on amount step.
+      return destination.hasLockedAmount;
+    }
+    return false;
+  }
 
   bool _isColdSource(Wallet? wallet) =>
       wallet != null && (wallet.isColdWallet || wallet.isSelfCustody);
@@ -1038,6 +1040,11 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   Widget _buildDestinationStep(BuildContext context) {
     final recentDestinations = ref
         .watch(recentTransactionDestinationsProvider)
+        .where(
+          (d) =>
+              d.kind == RecentTransactionDestinationKind.internal &&
+              isKeroseneUsername(d.address),
+        )
         .toList(growable: false);
     final analysis = _currentDestinationAnalysis();
 
@@ -1062,8 +1069,11 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
           _liveResolveError = null;
           _liveResolving = false;
           _selectedWallet = null;
+          // Always clear amount lock when the destination field changes —
+          // username / bare address must not inherit a prior QR/link amount.
+          _lockedAmountBtc = 0;
           if (widget.initialAmountBtc == null) {
-            _lockedAmountBtc = 0;
+            _amount.value = '0';
           }
         });
         _scheduleLiveResolve();
@@ -1104,9 +1114,11 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       onContinue: () {
         final currentDestination = _receiverController.text.trim();
         final currentAnalysis = _currentDestinationAnalysis();
-        if (!currentAnalysis.isValid) {
+        if (currentDestination.isEmpty ||
+            !currentAnalysis.isValid ||
+            currentAnalysis.isEmpty) {
           SnackbarHelper.showError(
-            currentDestination.isEmpty
+            currentDestination.isEmpty || currentAnalysis.isEmpty
                 ? context.tr.sendMoneyMissingDestination
                 : SendMoneyCopy.unrecognizedDestination(context),
           );
@@ -1129,8 +1141,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     final intent = const PaymentIntentParser().parse(_receiverController.text);
     if (!shouldLiveResolveInternal(intent)) {
       // Local-only resolve for external destinations (network/self-pay hints).
-      final wallet =
-          _selectedWallet ?? (_resolveWallet(ref.read(walletProvider)));
+      final wallet = _resolveWallet(ref.read(walletProvider));
       final local = PaymentIntentResolver.instance.resolveLocal(
         intent: intent,
         source: sourceCustodyOf(wallet),
@@ -1164,7 +1175,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     required PaymentIntent intent,
   }) async {
     final walletState = ref.read(walletProvider);
-    final wallet = _selectedWallet ?? _resolveWallet(walletState);
+    final wallet = _resolveWallet(walletState);
     final source = sourceCustodyOf(wallet);
     final availableSources = walletState is WalletLoaded
         ? walletState.wallets
@@ -1224,9 +1235,11 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     setState(() => _destinationResolutionBusy = true);
     try {
-      if (!destination.isValid) {
+      if (_receiverController.text.trim().isEmpty ||
+          !destination.isValid ||
+          destination.isEmpty) {
         SnackbarHelper.showError(
-          destination.isEmpty
+          destination.isEmpty || _receiverController.text.trim().isEmpty
               ? context.tr.sendMoneyMissingDestination
               : SendMoneyCopy.unrecognizedDestination(context),
         );
@@ -1273,13 +1286,20 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         destination = resolvedDestination;
       }
 
-      if (destination.hasLockedAmount) {
+      if (destination.hasLockedAmount &&
+          !destination.isInternal &&
+          (destination.isPaymentLink ||
+              destination.isLightning ||
+              destination.isOnChain)) {
         final locked = destination.amountBtc!;
         _amount.value = locked
             .toStringAsFixed(8)
             .replaceAll(RegExp(r'0+$'), '')
             .replaceAll(RegExp(r'\.$'), '');
         _lockedAmountBtc = locked;
+      } else if (destination.isInternal) {
+        // Username / internal never locks amount from resolve.
+        _lockedAmountBtc = 0;
       }
 
       if (!mounted) return;
@@ -1295,20 +1315,38 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         }
       });
 
-      if (_liveResolvedIntent != null &&
-          _liveResolvedIntent!.alternatives.isNotEmpty) {
-        final selectedRail = await _showCapabilitiesBottomSheet(
-            _liveResolvedIntent!, destination);
-        if (selectedRail == null) {
-          // User dismissed the bottom sheet
-          return;
+      final liveIntent = _liveResolvedIntent;
+      if (liveIntent != null) {
+        final railOptions = _feasibleSendRailOptions(liveIntent);
+        if (railOptions.length > 1) {
+          final selectedRail = await _showCapabilitiesBottomSheet(
+            liveIntent,
+            destination,
+            railOptions,
+          );
+          if (selectedRail == null) {
+            // User dismissed the bottom sheet
+            return;
+          }
+          setState(() {
+            _userSelectedRail = selectedRail;
+          });
+        } else if (railOptions.length == 1) {
+          setState(() {
+            _userSelectedRail = railOptions.first.rail;
+          });
         }
-        setState(() {
-          _userSelectedRail = selectedRail;
-        });
       }
 
       const nextStep = 1;
+      _ensureSendWalletSelected(ref.read(walletProvider));
+
+      // Locked payment amount → skip editable amount, open review.
+      // Only QR / payment-link / BOLT11 / BIP-21 with declared amount.
+      if (_shouldSkipAmountEntry(destination)) {
+        unawaited(_handleContinue());
+        return;
+      }
 
       await _navigateToStep(nextStep);
     } finally {
@@ -1318,144 +1356,216 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     }
   }
 
+  /// Rails the receiver can actually accept for this destination (no false LN).
+  List<RailOption> _feasibleSendRailOptions(ResolvedPaymentIntent intent) {
+    return intent.alternatives
+        .where((option) {
+          return switch (option.rail) {
+            PaymentRail.lightning =>
+              looksLikeLightningRequest(intent.intent.normalizedValue) ||
+                  looksLikeLightningAddress(intent.intent.normalizedValue),
+            PaymentRail.internal ||
+            PaymentRail.onchain ||
+            PaymentRail.coldOnchain ||
+            PaymentRail.paymentLink =>
+              true,
+          };
+        })
+        .toList(growable: false);
+  }
+
   Future<PaymentRail?> _showCapabilitiesBottomSheet(
-      ResolvedPaymentIntent resolvedIntent,
-      SendDestinationAnalysis destination) async {
+    ResolvedPaymentIntent resolvedIntent,
+    SendDestinationAnalysis destination,
+    List<RailOption> options,
+  ) async {
+    final borderColor = ReceiveFlowLayout.sheetBorderColorOf(context);
+    final radius = ReceiveFlowLayout.sheetBorderRadius;
+
     return showModalBottomSheet<PaymentRail>(
       context: context,
-      backgroundColor: SendMoneyScreenState.internalBlack,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Hero(
-                  tag: 'receiver_avatar_${destination.normalizedValue}',
-                  child: InternalRecentAvatar(
-                    title: destination.label ?? destination.normalizedValue,
-                    size: 80,
-                    fontSize: 32,
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
+            border: Border(
+              top: BorderSide(
+                color: borderColor,
+                width: ReceiveFlowLayout.sheetBorderWidth,
+              ),
+              left: BorderSide(
+                color: borderColor,
+                width: ReceiveFlowLayout.sheetBorderWidth,
+              ),
+              right: BorderSide(
+                color: borderColor,
+                width: ReceiveFlowLayout.sheetBorderWidth,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Hero(
+                    tag: 'receiver_avatar_${destination.normalizedValue}',
+                    child: InternalRecentAvatar(
+                      title: destination.label ?? destination.normalizedValue,
+                      size: 80,
+                      fontSize: 32,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Como deseja enviar?',
-                  style: AppTypography.newsreader(
-                    color: SendMoneyScreenState.internalText,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
+                  SizedBox(height: 24),
+                  Text(
+                    'Como deseja enviar?',
+                    style: AppTypography.newsreader(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Escolha o método de transferência compatível com este recebedor.',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.inter(
-                    color: SendMoneyScreenState.internalMutedText,
-                    fontSize: 14,
+                  SizedBox(height: 8),
+                  Text(
+                    'Escolha o método de transferência compatível com este recebedor.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.inter(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                ...resolvedIntent.alternatives.map((option) {
-                  String title = 'Transferência Padrão';
-                  String subtitle = 'Pode levar alguns minutos';
-                  if (option.rail == PaymentRail.internal ||
-                      option.rail == PaymentRail.lightning) {
-                    title = 'Transferência Instantânea (Zero taxas)';
-                    subtitle = 'Chega na hora';
-                  }
-                  final isRecommended =
-                      option.rail == resolvedIntent.selectedRail;
+                  SizedBox(height: 24),
+                  ...options.map((option) {
+                    final (title, subtitle, icon) =
+                        _sendRailPresentation(option);
+                    final isRecommended =
+                        option.rail == resolvedIntent.selectedRail ||
+                            option.recommended;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: Material(
-                      color: SendMoneyScreenState.internalSurfaceHigh,
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        onTap: () => Navigator.of(context).pop(option.rail),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Material(
+                        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
                         borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: isRecommended
-                                ? Border.all(
-                                    color: KeroseneBrandTokens.textPrimary,
-                                    width: 2)
-                                : Border.all(
-                                    color: Colors.transparent, width: 2),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                option.rail == PaymentRail.onchain
-                                    ? KeroseneIcons.wallet
-                                    : KeroseneIcons.lightning,
-                                color: SendMoneyScreenState.internalText,
-                                size: 24,
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).pop(option.rail),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: isRecommended
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Colors.transparent,
+                                width: 2,
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: AppTypography.inter(
-                                        color:
-                                            SendMoneyScreenState.internalText,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      subtitle,
-                                      style: AppTypography.inter(
-                                        color: SendMoneyScreenState
-                                            .internalMutedText,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  icon,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  size: 24,
                                 ),
-                              ),
-                              if (isRecommended)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: KeroseneBrandTokens.textPrimary,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'Recomendado',
-                                    style: AppTypography.inter(
-                                      color: KeroseneBrandTokens.background,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: AppTypography.inter(
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        subtitle,
+                                        style: AppTypography.inter(
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                            ],
+                                if (isRecommended)
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Recomendado',
+                                      style: AppTypography.inter(
+                                        color: Theme.of(context)
+                                            .scaffoldBackgroundColor,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                }),
-              ],
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         );
       },
     );
+  }
+
+  (String, String, IconData) _sendRailPresentation(RailOption option) {
+    // Prefer resolver copy; fall back to explicit labels so internal ≠ Lightning.
+    return switch (option.rail) {
+      PaymentRail.internal => (
+          option.title.isNotEmpty ? option.title : 'Instantâneo',
+          option.subtitle.isNotEmpty
+              ? option.subtitle
+              : 'Saldo Kerosene · sem taxa de rede',
+          KeroseneIcons.railInternal,
+        ),
+      PaymentRail.onchain || PaymentRail.coldOnchain => (
+          option.title.isNotEmpty ? option.title : 'Bitcoin on-chain',
+          option.subtitle.isNotEmpty
+              ? option.subtitle
+              : 'Rede Bitcoin · confirmações na chain',
+          KeroseneIcons.railOnchain,
+        ),
+      PaymentRail.lightning => (
+          option.title.isNotEmpty ? option.title : 'Lightning',
+          option.subtitle.isNotEmpty
+              ? option.subtitle
+              : 'Rápido · taxa de roteamento variável',
+          KeroseneIcons.railLightning,
+        ),
+      PaymentRail.paymentLink => (
+          option.title.isNotEmpty ? option.title : 'Link de pagamento',
+          option.subtitle.isNotEmpty
+              ? option.subtitle
+              : 'Pagamento via link Kerosene',
+          KeroseneIcons.productPaymentLink,
+        ),
+    };
   }
 
   SendDestinationAnalysis _currentDestinationAnalysis() {
@@ -1567,7 +1677,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     }();
 
     final walletState = ref.read(walletProvider);
-    final wallet = _selectedWallet ?? _resolveWallet(walletState);
+    final wallet = _resolveWallet(walletState);
     final source = sourceCustodyOf(wallet);
     final availableSources = walletState is WalletLoaded
         ? walletState.wallets
@@ -1725,6 +1835,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     required double? btcBrl,
     required double amountBtc,
     required Wallet? wallet,
+    required WalletState walletState,
     required SendDestinationAnalysis destination,
     required SendFeeQuote feeQuote,
     required bool isLoading,
@@ -1741,6 +1852,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       });
     }
 
+    final wallets = _eligibleSendWallets(walletState);
+    if (wallets.isNotEmpty) {
+      final valid = wallet != null && wallets.any((w) => w.id == wallet.id);
+      if (!valid) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _ensureSendWalletSelected(walletState);
+        });
+      }
+    }
+
     return SendAmountStep(
       onBack: _handleBack,
       amount: _amount,
@@ -1751,6 +1873,12 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       btcEur: btcEur,
       btcBrl: btcBrl,
       wallet: wallet,
+      wallets: wallets,
+      onWalletSelected: (selected) {
+        HapticFeedback.selectionClick();
+        setState(() => _selectedWallet = selected);
+        ref.read(sendMoneyFlowProvider.notifier).selectWallet(selected);
+      },
       destination: destination,
       destinationLabel: _currentRecipientLabel(),
       feeQuote: feeQuote,
@@ -2090,7 +2218,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   void _applyRecentInternalDestination(
     RecentTransactionDestination destination,
   ) {
-    final value = destination.address.trim();
+    // Prefer stored username (address); never paste a rotating wallet hash.
+    final value = isKeroseneUsername(destination.address)
+        ? normalizeInternalDestination(destination.address)
+        : destination.address.trim();
     if (value.isEmpty) {
       return;
     }
@@ -2102,6 +2233,20 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       _receiverController.selection = TextSelection.fromPosition(
         TextPosition(offset: value.length),
       );
+      _lockedRecipientLabel = destination.label?.trim().isNotEmpty == true
+          ? destination.label!.trim()
+          : value;
+      _recentDestinationAddressForSave = value;
+      _pendingPaymentLinkId = null;
+      _lockedRecipientAddress = '';
+      _lockedAmountBtc = 0;
+      _amount.value = '0';
+    });
+    _scheduleLiveResolve();
+    // Skip Continue — resolve destination and go to amount when possible.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_continueFromDestinationStep(_currentDestinationAnalysis()));
     });
   }
 
@@ -2171,12 +2316,12 @@ class _LockedPaymentReviewSession {
 class _OfflineSendBanner extends StatelessWidget {
   final VoidCallback onRetry;
 
-  const _OfflineSendBanner({required this.onRetry});
+  _OfflineSendBanner({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: KeroseneBrandTokens.error.withValues(alpha: 0.12),
+      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.12),
       child: SafeArea(
         bottom: false,
         child: Semantics(
@@ -2185,20 +2330,20 @@ class _OfflineSendBanner extends StatelessWidget {
           child: InkWell(
             onTap: onRetry,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
                   Icon(
                     Icons.wifi_off_rounded,
                     size: 18,
-                    color: KeroseneBrandTokens.error,
+                    color: Theme.of(context).colorScheme.error,
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       SendMoneyCopy.offlineBanner(context),
                       style: AppTypography.inter(
-                        color: KeroseneBrandTokens.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -2207,7 +2352,7 @@ class _OfflineSendBanner extends StatelessWidget {
                   Text(
                     context.tr.offlineRetryHint,
                     style: AppTypography.inter(
-                      color: KeroseneBrandTokens.textMuted,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),

@@ -18,7 +18,7 @@ Widget buildSovereigntyFooter({
       ),
       textAlign: TextAlign.center,
       style: AppTypography.caption.copyWith(
-        color: AppColors.white50,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50),
         height: 1.5,
       ),
     ),

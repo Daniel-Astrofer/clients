@@ -216,7 +216,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     final title = ReceiveMoneyCopy.amountTitle(context, widget.method);
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: TransactionValueEntrySurface(
         onBack: () => Navigator.of(context).maybePop(),
         title: title,
@@ -341,7 +341,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
           context.tr.receiveExpirationLabel,
           textAlign: TextAlign.center,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textMuted,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 13,
             fontWeight: FontWeight.w500,
             height: 1.3,
@@ -371,17 +371,17 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
           .selectPaymentLinkExpiration(option.minutes),
       style: TextButton.styleFrom(
         foregroundColor: selected
-            ? KeroseneBrandTokens.background
-            : KeroseneBrandTokens.textPrimary,
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Theme.of(context).colorScheme.onSurface,
         backgroundColor: selected
-            ? KeroseneBrandTokens.textPrimary
-            : KeroseneBrandTokens.surfaceHigh,
+            ? Theme.of(context).colorScheme.onSurface
+            : Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
           side: BorderSide(
             color: selected
-                ? KeroseneBrandTokens.textPrimary
-                : KeroseneBrandTokens.border,
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).dividerColor,
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

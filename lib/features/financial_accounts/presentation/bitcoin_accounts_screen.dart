@@ -365,6 +365,9 @@ class FocusedAccountCard extends StatelessWidget {
     final chainObservedLabel = bitcoinAccountChainObservedLabel(account);
     final colors = BitcoinAccountsColors.of(context);
     final cardPalette = _accountCardPalette(account);
+    // Metal card is always a dark island — keep light ink regardless of theme.
+    const cardInk = Colors.white;
+    final cardMuted = Colors.white.withValues(alpha: 0.70);
 
     return Align(
       alignment: Alignment.center,
@@ -489,7 +492,7 @@ class FocusedAccountCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppTypography.inter(
-                                  color: colors.text,
+                                  color: cardInk,
                                   fontSize: 14,
                                   letterSpacing: -0.1,
                                   fontWeight: FontWeight.w700,
@@ -499,10 +502,10 @@ class FocusedAccountCard extends StatelessWidget {
                             const SizedBox(width: 12),
                             DecoratedBox(
                               decoration: BoxDecoration(
-                                color: colors.text.withValues(alpha: 0.08),
+                                color: cardInk.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: colors.text.withValues(alpha: 0.10),
+                                  color: cardInk.withValues(alpha: 0.10),
                                 ),
                               ),
                               child: Padding(
@@ -515,7 +518,7 @@ class FocusedAccountCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.inter(
-                                    color: colors.text.withValues(alpha: 0.82),
+                                    color: cardInk.withValues(alpha: 0.82),
                                     fontSize: 10.5,
                                     letterSpacing: 0.2,
                                     fontWeight: FontWeight.w700,
@@ -537,7 +540,7 @@ class FocusedAccountCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.newsreader(
-                                    color: colors.text,
+                                    color: cardInk,
                                     fontSize: 29,
                                     fontWeight: FontWeight.w600,
                                     height: 1,
@@ -550,7 +553,7 @@ class FocusedAccountCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.inter(
-                                    color: colors.mutedText,
+                                    color: cardMuted,
                                     fontSize: 11,
                                     letterSpacing: 1.2,
                                     fontWeight: FontWeight.w600,
@@ -562,7 +565,7 @@ class FocusedAccountCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.inter(
-                                    color: colors.text,
+                                    color: cardInk,
                                     fontSize: 18,
                                     letterSpacing: 0,
                                     fontWeight: FontWeight.w700,
@@ -575,7 +578,7 @@ class FocusedAccountCard extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTypography.inter(
-                                      color: colors.mutedText,
+                                      color: cardMuted,
                                       fontSize: 11,
                                       letterSpacing: 0,
                                       fontWeight: FontWeight.w500,
@@ -588,10 +591,10 @@ class FocusedAccountCard extends StatelessWidget {
                         ),
                         DecoratedBox(
                           decoration: BoxDecoration(
-                            color: colors.text.withValues(alpha: 0.055),
+                            color: cardInk.withValues(alpha: 0.055),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: colors.text.withValues(alpha: 0.08),
+                              color: cardInk.withValues(alpha: 0.08),
                             ),
                           ),
                           child: Padding(
@@ -609,7 +612,7 @@ class FocusedAccountCard extends StatelessWidget {
                                           .textTheme
                                           .labelSmall
                                           ?.copyWith(
-                                            color: colors.text
+                                            color: cardInk
                                                 .withValues(alpha: 0.68),
                                             fontSize: 10.5,
                                             height: 1.2,
@@ -624,6 +627,7 @@ class FocusedAccountCard extends StatelessWidget {
                                   value: displayIdentifier,
                                   semanticLabel:
                                       context.tr.btcAccountsCopyAddress,
+                                  inkColor: cardInk,
                                 ),
                               ],
                             ),
@@ -645,21 +649,24 @@ class FocusedAccountCard extends StatelessWidget {
 class InlineCopyButton extends StatelessWidget {
   final String value;
   final String semanticLabel;
+  final Color? inkColor;
 
   const InlineCopyButton({
     required this.value,
     required this.semanticLabel,
+    this.inkColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = BitcoinAccountsColors.of(context);
+    final ink = inkColor ?? colors.text;
 
     return Semantics(
       label: semanticLabel,
       button: true,
       child: Material(
-        color: colors.text.withValues(alpha: 0.10),
+        color: ink.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -676,7 +683,7 @@ class InlineCopyButton extends StatelessWidget {
             height: 38,
             child: Icon(
               KeroseneIcons.copy,
-              color: colors.text,
+              color: ink,
               size: 18,
             ),
           ),
@@ -1147,18 +1154,18 @@ class ColdWalletBackendOptions extends ConsumerWidget {
                 // Unified send wizard — destination first; source wallet after.
                 context.go('/send-money');
               },
-              icon: const Icon(KeroseneIcons.send, size: 18),
+              icon: Icon(KeroseneIcons.send, size: 18),
               label: Text(
                 context.tr.bitcoinAdvancedNewPsbtAction,
                 style: AppTypography.inter(
-                  color: KeroseneBrandTokens.background,
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               style: FilledButton.styleFrom(
-                backgroundColor: KeroseneBrandTokens.textPrimary,
-                foregroundColor: KeroseneBrandTokens.background,
+                backgroundColor: Theme.of(context).colorScheme.onSurface,
+                foregroundColor: Theme.of(context).scaffoldBackgroundColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1253,11 +1260,11 @@ class ReadOnlyPsbtWorkflowRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         border: showDivider
             ? Border(
-                bottom: BorderSide(color: KeroseneBrandTokens.borderSubtle),
+                bottom: BorderSide(color: Theme.of(context).dividerColor),
               )
             : null,
       ),
@@ -1272,7 +1279,7 @@ class ReadOnlyPsbtWorkflowRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.inter(
-                    color: KeroseneBrandTokens.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0,

@@ -27,18 +27,18 @@ class SettingsWalletsPane extends ConsumerWidget {
         Text(
           tr.settingsWalletsTitle,
           style: AppTypography.newsreader(
-            color: KeroseneBrandTokens.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 32,
             fontWeight: FontWeight.w500,
             height: 1.2,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         Text(
           tr.settingsWalletsSubtitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontWeight: FontWeight.w400,
             height: 1.55,
@@ -92,10 +92,10 @@ class SettingsWalletsPane extends ConsumerWidget {
               ],
             );
           },
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
+          loading: () => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
             child: Center(
-              child: CircularProgressIndicator(color: Colors.white54),
+              child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)),
             ),
           ),
           error: (_, __) => SettingsSection(
@@ -216,7 +216,7 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
               HapticFeedback.selectionClick();
               final action = await showModalBottomSheet<String>(
                 context: context,
-                backgroundColor: KeroseneBrandTokens.surfaceMuted,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 builder: (sheetContext) {
                   final sheetTr = sheetContext.tr;
                   return SafeArea(

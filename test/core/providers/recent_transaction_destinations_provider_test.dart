@@ -32,7 +32,7 @@ void main() {
     container.dispose();
   });
 
-  test('stores newest destinations first and deduplicates by address and kind',
+  test('stores only usernames and ignores address / invoice destinations',
       () async {
     final notifier = container.read(
       recentTransactionDestinationsProvider.notifier,
@@ -44,40 +44,45 @@ void main() {
       label: 'Cold wallet',
     );
     await notifier.saveDestination(
-      address: 'wallet-interna-01',
+      address: 'alice_user',
       kind: RecentTransactionDestinationKind.internal,
+      label: 'Alice',
     );
     await notifier.saveDestination(
-      address: 'bc1qvaultdestino',
-      kind: RecentTransactionDestinationKind.onChain,
-      label: 'Hardware wallet',
+      address: 'lnbc1invoice',
+      kind: RecentTransactionDestinationKind.lightning,
+    );
+    await notifier.saveDestination(
+      address: 'alice_user',
+      kind: RecentTransactionDestinationKind.internal,
+      label: 'Alice Updated',
     );
 
     final destinations = container.read(recentTransactionDestinationsProvider);
 
-    expect(destinations, hasLength(2));
-    expect(destinations.first.address, 'bc1qvaultdestino');
-    expect(destinations.first.kind, RecentTransactionDestinationKind.onChain);
-    expect(destinations.first.label, 'Hardware wallet');
-    expect(destinations.last.address, 'wallet-interna-01');
+    expect(destinations, hasLength(1));
+    expect(destinations.single.address, 'alice_user');
+    expect(destinations.single.kind, RecentTransactionDestinationKind.internal);
+    expect(destinations.single.label, 'Alice Updated');
   });
 
-  test('persists destinations and enforces the storage limit', () async {
+  test('persists username destinations and enforces the storage limit',
+      () async {
     final notifier = container.read(
       recentTransactionDestinationsProvider.notifier,
     );
 
     for (var index = 0; index < 14; index++) {
       await notifier.saveDestination(
-        address: 'wallet-$index',
+        address: 'wallet_$index',
         kind: RecentTransactionDestinationKind.internal,
       );
     }
 
     final current = container.read(recentTransactionDestinationsProvider);
     expect(current, hasLength(12));
-    expect(current.first.address, 'wallet-13');
-    expect(current.last.address, 'wallet-2');
+    expect(current.first.address, 'wallet_13');
+    expect(current.last.address, 'wallet_2');
 
     final reloaded = ProviderContainer(
       overrides: [
@@ -92,70 +97,51 @@ void main() {
 
     final persisted = reloaded.read(recentTransactionDestinationsProvider);
     expect(persisted, hasLength(12));
-    expect(persisted.first.address, 'wallet-13');
-    expect(persisted.last.address, 'wallet-2');
+    expect(persisted.first.address, 'wallet_13');
+    expect(persisted.last.address, 'wallet_2');
   });
 
-  test('removes a saved destination by normalized address and kind', () async {
+  test('removes a saved username destination', () async {
     final notifier = container.read(
       recentTransactionDestinationsProvider.notifier,
     );
 
     await notifier.saveDestination(
-      address: 'BC1QVAULTDESTINO',
-      kind: RecentTransactionDestinationKind.onChain,
-      label: 'Cold wallet',
+      address: 'alice_user',
+      kind: RecentTransactionDestinationKind.internal,
+      label: 'Alice',
     );
     await notifier.saveDestination(
-      address: 'BC1QVAULTDESTINO',
+      address: 'bob_user',
       kind: RecentTransactionDestinationKind.internal,
-      label: 'Internal alias',
+      label: 'Bob',
     );
 
     await notifier.removeDestination(
-      address: 'bc1qvaultdestino',
-      kind: RecentTransactionDestinationKind.onChain,
+      address: 'alice_user',
+      kind: RecentTransactionDestinationKind.internal,
     );
 
     final destinations = container.read(recentTransactionDestinationsProvider);
 
     expect(destinations, hasLength(1));
-    expect(destinations.single.kind, RecentTransactionDestinationKind.internal);
-    expect(destinations.single.label, 'Internal alias');
+    expect(destinations.single.address, 'bob_user');
   });
 
-  test('clears only destinations for the requested kind', () async {
+  test('rejects uuid and hash-looking internal addresses', () async {
     final notifier = container.read(
       recentTransactionDestinationsProvider.notifier,
     );
 
     await notifier.saveDestination(
-      address: 'bc1qvaultdestino',
-      kind: RecentTransactionDestinationKind.onChain,
+      address: '550e8400-e29b-41d4-a716-446655440000',
+      kind: RecentTransactionDestinationKind.internal,
     );
     await notifier.saveDestination(
-      address: 'lnbc1invoice',
-      kind: RecentTransactionDestinationKind.lightning,
-    );
-    await notifier.saveDestination(
-      address: 'wallet-interna-01',
+      address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
       kind: RecentTransactionDestinationKind.internal,
     );
 
-    await notifier.clearDestinations(
-      kind: RecentTransactionDestinationKind.onChain,
-    );
-
-    final destinations = container.read(recentTransactionDestinationsProvider);
-
-    expect(destinations, hasLength(2));
-    expect(
-      destinations.map((destination) => destination.kind),
-      isNot(contains(RecentTransactionDestinationKind.onChain)),
-    );
-    expect(
-      destinations.map((destination) => destination.address),
-      containsAll(['lnbc1invoice', 'wallet-interna-01']),
-    );
+    expect(container.read(recentTransactionDestinationsProvider), isEmpty);
   });
 }

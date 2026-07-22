@@ -13,7 +13,8 @@ import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    deferred as home;
+    deferred as home
+    hide HomeSurfaceThemeContext;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
 import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'

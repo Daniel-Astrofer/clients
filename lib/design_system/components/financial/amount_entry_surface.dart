@@ -9,9 +9,9 @@ import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Professional amount-entry surface (send / receive).
 ///
@@ -242,6 +242,8 @@ class TransactionValueEntrySurface extends StatelessWidget {
                                     currency: currency,
                                     hasWarning: hasWarning,
                                     showCurrencyPrefix: showCurrencyPrefix,
+                                    expressionLabel: expressionLabel,
+                                    resolveAmount: resolveAmount,
                                     onChanged: onAmountTextChanged!,
                                   )
                                 else
@@ -259,6 +261,14 @@ class TransactionValueEntrySurface extends StatelessWidget {
                                       ? onCurrencyTap
                                       : null,
                                 ),
+                                if (quickActions.isNotEmpty &&
+                                    (keypadVisible || editable)) ...[
+                                  SizedBox(height: compact ? 10 : 14),
+                                  _QuickActions(
+                                    actions: quickActions,
+                                    onTap: onQuickAction,
+                                  ),
+                                ],
                                 if (availableLabel != null ||
                                     feeLabel != null ||
                                     hasWarning) ...[
@@ -272,14 +282,6 @@ class TransactionValueEntrySurface extends StatelessWidget {
                                 if (configuration != null) ...[
                                   SizedBox(height: compact ? 8 : 20),
                                   configuration!,
-                                ],
-                                if (quickActions.isNotEmpty &&
-                                    (keypadVisible || editable)) ...[
-                                  SizedBox(height: compact ? 8 : 18),
-                                  _QuickActions(
-                                    actions: quickActions,
-                                    onTap: onQuickAction,
-                                  ),
                                 ],
                               ],
                             ),
@@ -454,6 +456,13 @@ class _InlineHeroLayout extends StatelessWidget {
             onTap: currencyTapEnabled ? onCurrencyTap : null,
           ),
         ),
+        if (quickActions.isNotEmpty && (keypadVisible || editable)) ...[
+          SizedBox(height: compact ? 10 : 14),
+          _QuickActions(
+            actions: quickActions,
+            onTap: onQuickAction,
+          ),
+        ],
         if (availableLabel != null || feeLabel != null || hasWarning) ...[
           const SizedBox(height: 16),
           _ContextPanel(
@@ -465,13 +474,6 @@ class _InlineHeroLayout extends StatelessWidget {
         if (configuration != null) ...[
           SizedBox(height: keyboardOpen || tight ? 10 : 16),
           configuration!,
-        ],
-        if (quickActions.isNotEmpty && (keypadVisible || editable)) ...[
-          SizedBox(height: compact ? 8 : 16),
-          _QuickActions(
-            actions: quickActions,
-            onTap: onQuickAction,
-          ),
         ],
       ],
     );
@@ -2189,8 +2191,8 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
         child: InkWell(
           onTap: _handleTap,
           borderRadius: BorderRadius.circular(16),
-          splashColor: Colors.white.withValues(alpha: 0.08),
-          highlightColor: Colors.white.withValues(alpha: 0.04),
+          splashColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          highlightColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
           child: ScaleTransition(
             scale: _scale,
             child: SizedBox(
@@ -2369,7 +2371,7 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
                                       ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: const CircularProgressIndicator(
+                                    child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: _C.bg,
                                     ),
@@ -2398,9 +2400,9 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
 class _C {
   const _C._();
 
-  static const bg = AppColors.hexFF000000;
-  static const text = AppColors.hexFFFFFFFF;
-  static const muted = Color(0xFF8E8E93);
-  static const chip = Color(0xFF1C1C1E);
+  static Color get bg => KeroseneBrandTokens.background;
+  static Color get text => KeroseneBrandTokens.textPrimary;
+  static Color get muted => KeroseneBrandTokens.textMuted;
+  static Color get chip => KeroseneBrandTokens.surfaceElevated;
   static const warning = Color(0xFFFFB020);
 }

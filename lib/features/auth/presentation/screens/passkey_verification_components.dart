@@ -9,17 +9,30 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
-const Color _authBlack = AppColors.hexFF000000;
-const Color _authWhite = AppColors.hexFFFFFFFF;
-const Color _authMuted = AppColors.hexFFA3A3A3;
-const Color _authSurface = AppColors.hexFF141313;
-const Color _authSurfaceRaised = AppColors.hexFF1C1C1E;
-const Color _authBorder = AppColors.hexFF2A2A2A;
+Color get _authBlack => ThemeTokenBridge.isLight
+    ? const Color(0xFFF7F7F5)
+    : AppColors.hexFF000000;
+Color get _authWhite => ThemeTokenBridge.isLight
+    ? const Color(0xFF181A17)
+    : AppColors.hexFFFFFFFF;
+Color get _authMuted => ThemeTokenBridge.isLight
+    ? const Color(0xFF62675F)
+    : AppColors.hexFFA3A3A3;
+Color get _authSurface => ThemeTokenBridge.isLight
+    ? const Color(0xFFFFFFFF)
+    : AppColors.hexFF141313;
+Color get _authSurfaceRaised => ThemeTokenBridge.isLight
+    ? const Color(0xFFF0F1EE)
+    : AppColors.hexFF1C1C1E;
+Color get _authBorder => ThemeTokenBridge.isLight
+    ? const Color(0xFFDDE0D8)
+    : AppColors.hexFF2A2A2A;
 const Color _authErrorText = AppColors.hexFFF4C7C7;
 const Color _authSuccess = AppColors.hexFF4ADE80;
 

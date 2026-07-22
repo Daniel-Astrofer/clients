@@ -4,12 +4,13 @@ import 'package:kerosene/features/auth/presentation/screens/welcome_screen.dart'
 import 'package:kerosene/features/auth/presentation/screens/login_screen.dart';
 import 'package:kerosene/features/auth/presentation/screens/emergency_recovery_screen.dart';
 import 'package:kerosene/features/auth/presentation/screens/signup/signup_flow_screen.dart';
-import 'package:kerosene/features/home/presentation/screens/server_unavailable_screen.dart';
+import 'package:kerosene/features/auth/presentation/screens/server_unavailable_screen.dart' as server_unavailable;
 import 'package:kerosene/features/home/presentation/screens/home_loading_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/onboarding_steps_screen.dart';
 
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    deferred as home;
+    deferred as home
+    hide HomeSurfaceThemeContext;
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart'
     deferred as settings;
 import 'package:kerosene/features/movement/presentation/activity/statement_screen.dart'
@@ -51,7 +52,7 @@ GoRouter buildAppRouter({
       ),
       GoRoute(
         path: '/server-unavailable',
-        builder: (context, state) => const ServerUnavailableScreen(),
+        builder: (context, state) => server_unavailable.ServerUnavailableScreen(),
       ),
       GoRoute(
         path: '/home_loading',
@@ -144,7 +145,7 @@ GoRouter buildAppRouter({
               DeferredPage(
                 loadLibrary: send_money.loadLibrary,
                 animateReveal: false,
-                builder: (_) => const send_money.SendMoneyScreen(),
+                builder: (_) => send_money.SendMoneyScreen(),
               ),
             ),
           );

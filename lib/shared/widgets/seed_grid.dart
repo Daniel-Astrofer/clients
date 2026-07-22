@@ -31,10 +31,7 @@ class _SeedGridState extends State<SeedGrid> {
             color: KeroseneBrandTokens.backgroundSoft,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimary
-                  .withValues(alpha: 0.05),
+              color: KeroseneBrandTokens.borderSubtle,
             ),
           ),
           child: Row(
@@ -77,21 +74,18 @@ class _SeedGridState extends State<SeedGrid> {
                     number,
                     style: TextStyle(
                       fontFamily: AppTypography.bodyFontFamily,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onPrimary
-                          .withValues(alpha: 0.3),
+                      color: KeroseneBrandTokens.textMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: widget.controllers[index],
                       style: TextStyle(
                         fontFamily: AppTypography.bodyFontFamily,
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: KeroseneBrandTokens.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -127,11 +121,8 @@ class _SeedGridState extends State<SeedGrid> {
             style: TextStyle(
               fontFamily: AppTypography.bodyFontFamily,
               color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context)
-                      .colorScheme
-                      .onPrimary
-                      .withValues(alpha: 0.3),
+                  ? Colors.white
+                  : KeroseneBrandTokens.textMuted,
               fontSize: 13,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
