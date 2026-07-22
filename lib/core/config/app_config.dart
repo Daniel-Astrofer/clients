@@ -2,13 +2,11 @@
 class AppConfig {
   // ==================== Node Routing ====================
 
-  // Local-full Kubernetes onion hostname is persisted under
-  // ~/.local/state/kerosene/tor/keys/local-full/hostname
-  // (see `infra/status.sh` → "tor onion:").
-  // When keys rotate / cluster recreates the HS, update this default or pass
-  // KERO_NODE_*_URL at build time. Production must always use --dart-define.
-  static const String _localFullDefaultOnionUrl =
-      'http://u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion';
+  // Dev/default is a non-routable placeholder. Resolve the live local-full
+  // onion via `infra/status.sh`, ONION_URL, or --dart-define KERO_NODE_*_URL.
+  // Release builds must always pass explicit --dart-define values.
+  static const String _devPlaceholderOnionUrl =
+      'http://local-full-placeholder.onion';
   static const bool isReleaseBuild = bool.fromEnvironment('dart.vm.product');
   static const bool _hasNodeISDefine = bool.hasEnvironment('KERO_NODE_IS_URL');
   static const bool _hasNodeCHDefine = bool.hasEnvironment('KERO_NODE_CH_URL');
@@ -19,15 +17,15 @@ class AppConfig {
   /// Endereços .onion dos nós remotos
   static const String nodeIS = String.fromEnvironment(
     'KERO_NODE_IS_URL',
-    defaultValue: _localFullDefaultOnionUrl,
+    defaultValue: _devPlaceholderOnionUrl,
   );
   static const String nodeCH = String.fromEnvironment(
     'KERO_NODE_CH_URL',
-    defaultValue: _localFullDefaultOnionUrl,
+    defaultValue: _devPlaceholderOnionUrl,
   );
   static const String nodeSG = String.fromEnvironment(
     'KERO_NODE_SG_URL',
-    defaultValue: _localFullDefaultOnionUrl,
+    defaultValue: _devPlaceholderOnionUrl,
   );
 
   /// Mapeamento de nós com nomes amigáveis

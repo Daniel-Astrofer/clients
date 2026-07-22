@@ -4,11 +4,11 @@ import 'package:kerosene/core/config/app_config.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('mobile defaults use the current local-full onion service', () {
+  test('mobile defaults use a non-routable placeholder onion', () {
     final nodeUri = Uri.parse(AppConfig.nodeIS);
 
     expect(nodeUri.scheme, 'http');
-    expect(nodeUri.host, endsWith('.onion'));
+    expect(nodeUri.host, 'local-full-placeholder.onion');
     expect(AppConfig.nodeCH, AppConfig.nodeIS);
     expect(AppConfig.nodeSG, AppConfig.nodeIS);
   });

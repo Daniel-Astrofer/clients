@@ -78,8 +78,7 @@ resolve_onion() {
       return
     fi
   fi
-  # Fallback: last known local-full onion
-  printf '%s\n' "http://u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion"
+  die "Could not resolve onion URL. Pass --onion=http://….onion, ONION_URL, or KERO_NODE_IS_URL (no hardcoded onion in-repo)."
 }
 
 normalize_onion() {

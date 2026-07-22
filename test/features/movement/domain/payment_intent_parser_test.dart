@@ -58,7 +58,7 @@ void main() {
         'kerosene://pay/$id',
         'kerosene://payment/pay/$id',
         'https://app.kerosene.example/pay/$id',
-        'http://exze5uokdpao4lwdodnlsd4pvfm25ntpkwh7xas5fefuzdmiisr4u7yd.onion/pay/$id',
+        'http://examplehiddenservice.onion/pay/$id',
         'https://host/api/public/kfe/payment-requests/$id',
       ];
       for (final raw in cases) {

@@ -27,7 +27,7 @@ void main() {
 
     test('decodes public KFE payment-request API path as payment link', () {
       final data = QrPaymentParser.decode(
-        'http://u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion'
+        'http://examplehiddenservice.onion'
         '/api/public/kfe/payment-requests/jpqf3ax5ujnprjpfjajgjwbr',
       );
 
