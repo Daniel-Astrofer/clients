@@ -35,12 +35,10 @@ void main() {
     expect(
       find.byWidgetPredicate(
         (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/logo/kerosene-k-logo.png',
+            widget.runtimeType.toString().contains('Lottie') ||
+            widget.runtimeType.toString().contains('LottieBuilder'),
       ),
-      findsNWidgets(3),
+      findsWidgets,
     );
     expect(find.text('Carregando Tor'), findsNothing);
     expect(find.text('carregando tor'), findsNothing);

@@ -4,8 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:lottie/lottie.dart';
 
-const String _loadingLogoAssetPath = 'assets/logo/kerosene-k-logo.png';
+const String keroseneKLogoLottieAssetPath = 'assets/logo/kerosene-k-logo.json';
 
 class KeroseneLogoLoadingView extends StatefulWidget {
   final String status;
@@ -41,12 +42,6 @@ class _KeroseneLogoLoadingViewState extends State<KeroseneLogoLoadingView>
       vsync: this,
       duration: KeroseneMotion.ceremonial,
     )..repeat();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    precacheImage(const AssetImage(_loadingLogoAssetPath), context);
   }
 
   @override
@@ -189,12 +184,18 @@ class _KeroseneLoadingGlyph extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColorFiltered(
       colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(color)),
-      child: Image.asset(
-        _loadingLogoAssetPath,
+      child: Lottie.asset(
+        keroseneKLogoLottieAssetPath,
         width: size,
         height: size,
         fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
+        repeat: true,
+        frameBuilder: (context, child, composition) {
+          if (composition == null) {
+            return SizedBox(width: size, height: size);
+          }
+          return child;
+        },
       ),
     );
   }

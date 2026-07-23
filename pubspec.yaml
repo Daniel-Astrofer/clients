@@ -127,5 +127,6 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/logo/kerosene-logo.png"
+  # Raster still derived from kerosene-logo-white.json for OS launcher icons.
+  image_path: "assets/logo/kerosene-logo-white.png"
   min_sdk_android: 21

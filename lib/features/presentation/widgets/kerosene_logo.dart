@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 class KeroseneLogo extends StatelessWidget {
-  static const assetPath = 'assets/logo/kerosene-logo.png';
+  static const assetPath = 'assets/logo/kerosene-logo-white.json';
 
   final double size;
   final bool showText;
@@ -22,12 +23,18 @@ class KeroseneLogo extends StatelessWidget {
     final resolved = color ?? Theme.of(context).colorScheme.onSurface;
     return ColorFiltered(
       colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(resolved)),
-      child: Image.asset(
+      child: Lottie.asset(
         assetPath,
         width: size,
         height: size,
         fit: BoxFit.contain,
-        filterQuality: filterQuality,
+        repeat: true,
+        frameBuilder: (context, child, composition) {
+          if (composition == null) {
+            return SizedBox(width: size, height: size);
+          }
+          return child;
+        },
       ),
     );
   }

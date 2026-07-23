@@ -56,7 +56,7 @@ void main() {
       expect(find.text('SINCRONIZANDO'), findsNothing);
       expect(find.text('CONEXÃO LENTA'), findsNothing);
       expect(find.text('FALHA DE AUTENTICAÇÃO'), findsNothing);
-      expect(find.byType(Image), findsWidgets);
+      expect(find.byType(KeroseneLogoLoadingMark), findsOneWidget);
       expect(
         takeAllExceptions(tester),
         isEmpty,

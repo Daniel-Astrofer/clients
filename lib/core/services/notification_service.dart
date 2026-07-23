@@ -243,7 +243,8 @@ class NotificationService {
           iOS: darwinNotificationDetails,
           macOS: darwinNotificationDetails,
           linux: LinuxNotificationDetails(
-            icon: AssetsLinuxIcon('assets/logo/kerosene-k-logo.png'),
+            // Linux notification icons need raster; OS tray cannot load Lottie.
+            icon: AssetsLinuxIcon('assets/logo/kerosene-logo-white.png'),
           ),
         ),
         payload: presentation.payload,

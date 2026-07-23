@@ -1482,10 +1482,8 @@ class _ReceiveRequestFlowScreenState
             dataModuleShape: QrDataModuleShape.square,
             color: Colors.black,
           ),
-          embeddedImage: const AssetImage('assets/logo/kerosene-k-logo.png'),
-          embeddedImageStyle: QrEmbeddedImageStyle(
-            size: Size(size * 0.16, size * 0.16),
-          ),
+          // QR center mark requires a raster ImageProvider; K brand mark is
+          // Lottie-only (`kerosene-k-logo.json`), so no embedded logo here.
         ),
       ),
     );
