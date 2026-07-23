@@ -165,14 +165,14 @@ class _OperationsCard extends StatelessWidget {
           final health = _map(data['health']);
           final blockchain = _map(data['blockchain']);
           final lightning = _map(data['lightning']);
-          final vault = _map(data['vaultRaft']);
+          final vault = _map(data['vaultMesh']);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _InfoRow('Services', '${health['status'] ?? 'UNKNOWN'}'),
               _InfoRow('Bitcoin Core', '${blockchain['status'] ?? 'UNKNOWN'}'),
               _InfoRow('Lightning LND', '${lightning['status'] ?? 'UNKNOWN'}'),
-              _InfoRow('Vault/Raft', '${vault['status'] ?? 'UNKNOWN'}'),
+              _InfoRow('Vault Mesh', '${vault['status'] ?? 'UNKNOWN'}'),
               _InfoRow('Checked', '${data['checkedAt'] ?? 'unknown'}'),
             ],
           );

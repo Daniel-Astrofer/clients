@@ -19,7 +19,7 @@ class CompaniesScreen extends ConsumerWidget {
     final health = ref.watch(adminOperationalHealthProvider);
     final blockchain = ref.watch(adminBlockchainMonitorProvider);
     final lightning = ref.watch(adminLightningMonitorProvider);
-    final vault = ref.watch(adminVaultRaftHealthProvider);
+    final vault = ref.watch(adminVaultMeshHealthProvider);
     final release = ref.watch(adminReleaseSnapshotProvider);
 
     return RefreshIndicator(
@@ -71,13 +71,17 @@ class CompaniesScreen extends ConsumerWidget {
                   },
                 ),
                 _AsyncEntityMetric(
-                  title: context.tr.adminCompaniesMetricVaultRaft,
+                  title: context.tr.adminCompaniesMetricVaultMesh,
                   asyncValue: vault,
                   icon: KeroseneIcons.network,
-                  subtitleBuilder: (data) => context.tr.adminVotersValue(
-                    '${data['votingServers'] ?? 0}',
-                    '${data['expectedServers'] ?? 3}',
-                  ),
+                  subtitleBuilder: (data) {
+                    final day = data['dayEpoch']?.toString();
+                    final peers = data['peerCount'] ?? data['votingServers'] ?? 0;
+                    if (day != null && day.isNotEmpty) {
+                      return 'day $day · peers $peers';
+                    }
+                    return 'peers $peers';
+                  },
                 ),
               ],
             ),
@@ -124,7 +128,7 @@ class CompaniesScreen extends ConsumerWidget {
     ref.invalidate(adminOperationalHealthProvider);
     ref.invalidate(adminBlockchainMonitorProvider);
     ref.invalidate(adminLightningMonitorProvider);
-    ref.invalidate(adminVaultRaftHealthProvider);
+    ref.invalidate(adminVaultMeshHealthProvider);
     ref.invalidate(adminReleaseSnapshotProvider);
   }
 }
@@ -226,14 +230,20 @@ class _OperationalEntitiesPanel extends StatelessWidget {
       ),
       _row(
         context: context,
-        name: 'Vault/Raft',
+        name: 'Vault Mesh',
         role: context.tr.adminCompaniesRoleReleaseQuorum,
-        environment: 'vault',
+        environment: 'mesh',
         asyncValue: vault,
-        detail: (data) => context.tr.adminVotersValue(
-          '${data['votingServers'] ?? 0}',
-          '${data['expectedServers'] ?? 3}',
-        ),
+        detail: (data) {
+          final day = data['dayEpoch']?.toString();
+          final peers = data['peerCount'] ?? data['votingServers'] ?? 0;
+          final attestation = data['attestationMode']?.toString() ?? '';
+          if (day != null && day.isNotEmpty) {
+            return 'day $day · peers $peers'
+                '${attestation.isNotEmpty ? ' · $attestation' : ''}';
+          }
+          return 'peers $peers';
+        },
       ),
       _row(
         context: context,

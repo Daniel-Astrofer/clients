@@ -314,8 +314,8 @@ class AppConfig {
       );
   static const String adminOperationsLightning =
       '/api/admin/operations/lightning';
-  static const String adminOperationsVaultRaft =
-      '/api/admin/operations/vault-raft';
+  static const String adminOperationsVaultMesh =
+      '/api/admin/operations/vault-mesh';
   static const String adminOperationsRelease = '/api/admin/operations/release';
   static const String adminOperationsLogs = '/api/admin/operations/logs';
   static const String adminOperationsMobile = '/api/admin/operations/mobile';

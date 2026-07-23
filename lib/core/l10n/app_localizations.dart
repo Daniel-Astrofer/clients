@@ -4825,7 +4825,7 @@ abstract class AppLocalizations {
   /// No description provided for @adminMonitoringSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Real service health, Bitcoin Core on-chain state, LND Lightning state, Vault Raft quorum, release attestation, and sanitized operations logs.'**
+  /// **'Real service health, Bitcoin Core on-chain state, LND Lightning state, vault mesh status, release attestation, and sanitized operations logs.'**
   String get adminMonitoringSubtitle;
 
   /// No description provided for @adminMonitoringMetricServices.
@@ -4837,7 +4837,10 @@ abstract class AppLocalizations {
   /// No description provided for @adminMonitoringMetricVaultRaft.
   ///
   /// In en, this message translates to:
-  /// **'Vault Raft'**
+  /// **'Vault Mesh'**
+  String get adminMonitoringMetricVaultMesh;
+
+  /// No description provided for @adminMonitoringMetricVaultRaft.
   String get adminMonitoringMetricVaultRaft;
 
   /// No description provided for @adminMonitoringBitcoinPanel.
@@ -4939,7 +4942,10 @@ abstract class AppLocalizations {
   /// No description provided for @adminCompaniesMetricVaultRaft.
   ///
   /// In en, this message translates to:
-  /// **'Vault/Raft'**
+  /// **'Vault Mesh'**
+  String get adminCompaniesMetricVaultMesh;
+
+  /// No description provided for @adminCompaniesMetricVaultRaft.
   String get adminCompaniesMetricVaultRaft;
 
   /// No description provided for @adminCompaniesOperationalEntities.
@@ -12918,11 +12924,29 @@ abstract class AppLocalizations {
   /// **'Your Bitcoin bank.'**
   String get landingHeroTitle;
 
+  /// No description provided for @landingHeroAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Private. Anonymous. Global.'**
+  String get landingHeroAccent;
+
   /// No description provided for @landingHeroSubtitle.
   ///
   /// In en, this message translates to:
   /// **'Kerosene makes Bitcoin safer, more accessible, and more useful for people and businesses, with privacy, operational transparency, and real control over your assets.'**
   String get landingHeroSubtitle;
+
+  /// No description provided for @landingTorAccessLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Access via Tor: '**
+  String get landingTorAccessLead;
+
+  /// No description provided for @landingTorOnionSample.
+  ///
+  /// In en, this message translates to:
+  /// **'kerosene66...onion'**
+  String get landingTorOnionSample;
 
   /// No description provided for @landingHeroFeatureOnchainTitle.
   ///

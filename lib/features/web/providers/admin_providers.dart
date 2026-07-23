@@ -48,9 +48,9 @@ final adminLightningMonitorProvider =
   return ref.watch(adminDataServiceProvider).fetchLightningMonitor();
 });
 
-final adminVaultRaftHealthProvider =
+final adminVaultMeshHealthProvider =
     FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(adminDataServiceProvider).fetchVaultRaftHealth();
+  return ref.watch(adminDataServiceProvider).fetchVaultMeshHealth();
 });
 
 final adminReleaseSnapshotProvider =

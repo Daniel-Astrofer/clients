@@ -557,7 +557,7 @@ final mockAdminOperationsOverview = {
   'health': {'status': 'HEALTHY'},
   'blockchain': {'status': 'SYNCED'},
   'lightning': {'status': 'ONLINE'},
-  'vaultRaft': {'status': 'QUORUM'},
+  'vaultMesh': {'status': 'DEGRADED'},
 };
 
 final mockAdminOperationalHealth = {
@@ -616,10 +616,13 @@ final mockAdminLightningMonitor = {
   },
 };
 
-final mockAdminVaultRaftHealth = {
-  'status': 'QUORUM',
-  'expectedServers': 3,
-  'votingServers': 3,
+final mockAdminVaultMeshHealth = {
+  'status': 'DEGRADED',
+  'dayEpoch': '2026-07-22',
+  'peerCount': 3,
+  'attestationMode': 'sim',
+  'meshOnly': true,
+  'message': 'Lab attestation (sim) — not production TEE',
 };
 
 final mockAdminReleaseSnapshot = {

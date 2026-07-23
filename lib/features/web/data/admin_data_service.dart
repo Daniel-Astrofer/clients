@@ -85,9 +85,9 @@ class AdminDataService {
     );
   }
 
-  Future<Map<String, dynamic>> fetchVaultRaftHealth() async {
+  Future<Map<String, dynamic>> fetchVaultMeshHealth() async {
     return _fetchMap(
-        AppConfig.adminOperationsVaultRaft, 'fetchVaultRaftHealth');
+        AppConfig.adminOperationsVaultMesh, 'fetchVaultMeshHealth');
   }
 
   Future<Map<String, dynamic>> fetchReleaseSnapshot() async {

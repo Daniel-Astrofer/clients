@@ -23,7 +23,12 @@ import 'package:kerosene/features/web/screens/notifications/notifications_screen
 
 import 'stories/admin_stories.dart';
 import 'stories/app_flow_story.dart';
+import 'stories/auth_chrome_stories.dart';
 import 'stories/bitcoin_advanced_stories.dart';
+import 'stories/feedback_chrome_stories.dart';
+import 'stories/financial_chrome_stories.dart';
+import 'stories/home_display_stories.dart';
+import 'stories/marketing_admin_stories.dart';
 import 'stories/receive_stories.dart';
 
 /// The root Storybook widget for Kerosene.
@@ -145,8 +150,8 @@ class KeroseneStorybook extends StatelessWidget {
                 .overrideWith((ref) async => mockAdminBlockchainMonitor),
             adminLightningMonitorProvider
                 .overrideWith((ref) async => mockAdminLightningMonitor),
-            adminVaultRaftHealthProvider
-                .overrideWith((ref) async => mockAdminVaultRaftHealth),
+            adminVaultMeshHealthProvider
+                .overrideWith((ref) async => mockAdminVaultMeshHealth),
             adminReleaseSnapshotProvider
                 .overrideWith((ref) async => mockAdminReleaseSnapshot),
             adminMobileReleaseProvider
@@ -176,6 +181,11 @@ class KeroseneStorybook extends StatelessWidget {
       },
       stories: [
         appFlowStory(),
+        ...financialChromeStories(),
+        ...authChromeStories(),
+        ...homeDisplayStories(),
+        ...feedbackChromeStories(),
+        ...marketingAdminStories(),
         ...bitcoinAdvancedStories(),
         ...receiveStories(),
         ...adminStories(),

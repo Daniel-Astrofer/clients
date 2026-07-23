@@ -73,7 +73,7 @@ ProviderContainer _containerFor(AdminRoute route) {
           .overrideWith((ref) async => _blockchainMonitor),
       adminLightningMonitorProvider
           .overrideWith((ref) async => _lightningMonitor),
-      adminVaultRaftHealthProvider.overrideWith((ref) async => _vaultHealth),
+      adminVaultMeshHealthProvider.overrideWith((ref) async => _vaultHealth),
       adminReleaseSnapshotProvider
           .overrideWith((ref) async => _releaseSnapshot),
       adminMobileReleaseProvider.overrideWith((ref) async => _mobileRelease),
@@ -149,7 +149,7 @@ const _operationsOverview = {
   'health': {'status': 'HEALTHY'},
   'blockchain': {'status': 'SYNCED'},
   'lightning': {'status': 'ONLINE'},
-  'vaultRaft': {'status': 'QUORUM'},
+  'vaultMesh': {'status': 'DEGRADED'},
 };
 
 const _operationalHealth = {

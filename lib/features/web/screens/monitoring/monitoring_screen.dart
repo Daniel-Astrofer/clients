@@ -19,7 +19,7 @@ class MonitoringScreen extends ConsumerWidget {
     final health = ref.watch(adminOperationalHealthProvider);
     final blockchain = ref.watch(adminBlockchainMonitorProvider);
     final lightning = ref.watch(adminLightningMonitorProvider);
-    final vault = ref.watch(adminVaultRaftHealthProvider);
+    final vault = ref.watch(adminVaultMeshHealthProvider);
     final release = ref.watch(adminReleaseSnapshotProvider);
     final logs = ref.watch(adminOperationalLogsProvider);
 
@@ -28,7 +28,7 @@ class MonitoringScreen extends ConsumerWidget {
         ref.invalidate(adminOperationalHealthProvider);
         ref.invalidate(adminBlockchainMonitorProvider);
         ref.invalidate(adminLightningMonitorProvider);
-        ref.invalidate(adminVaultRaftHealthProvider);
+        ref.invalidate(adminVaultMeshHealthProvider);
         ref.invalidate(adminReleaseSnapshotProvider);
         ref.invalidate(adminOperationalLogsProvider);
       },
@@ -75,13 +75,17 @@ class MonitoringScreen extends ConsumerWidget {
                   icon: KeroseneIcons.lightning,
                 ),
                 _AsyncMetric(
-                  title: context.tr.adminMonitoringMetricVaultRaft,
+                  title: context.tr.adminMonitoringMetricVaultMesh,
                   asyncValue: vault,
                   valueBuilder: (data) => '${data['status'] ?? 'UNKNOWN'}',
-                  subtitleBuilder: (data) => context.tr.adminVotersValue(
-                    '${data['votingServers'] ?? 0}',
-                    '${data['expectedServers'] ?? 3}',
-                  ),
+                  subtitleBuilder: (data) {
+                    final day = data['dayEpoch']?.toString();
+                    final peers = data['peerCount'] ?? data['votingServers'] ?? 0;
+                    if (day != null && day.isNotEmpty) {
+                      return 'day $day · peers $peers';
+                    }
+                    return 'peers $peers';
+                  },
                   icon: KeroseneIcons.network,
                 ),
                 _AsyncMetric(

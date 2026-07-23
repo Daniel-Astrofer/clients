@@ -2560,13 +2560,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adminMonitoringSubtitle =>
-      'Salud real de servicios, estado on-chain de Bitcoin Core, estado Lightning de LND, quórum Vault Raft, atestación de release y logs operacionales saneados.';
+      'Salud real de servicios, estado on-chain de Bitcoin Core, estado Lightning de LND, status da vault mesh, atestación de release y logs operacionales saneados.';
 
   @override
   String get adminMonitoringMetricServices => 'Servicios';
 
   @override
-  String get adminMonitoringMetricVaultRaft => 'Vault Raft';
+  String get adminMonitoringMetricVaultMesh => 'Vault Mesh';
+
+  @override
+  String get adminMonitoringMetricVaultRaft => 'Vault Mesh';
 
   @override
   String get adminMonitoringBitcoinPanel => 'Monitor Bitcoin';
@@ -2630,7 +2633,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminCompaniesMetricControlPlane => 'Plano de control';
 
   @override
-  String get adminCompaniesMetricVaultRaft => 'Vault/Raft';
+  String get adminCompaniesMetricVaultMesh => 'Vault Mesh';
+
+  @override
+  String get adminCompaniesMetricVaultRaft => 'Vault Mesh';
 
   @override
   String get adminCompaniesOperationalEntities => 'Entidades operacionales';
@@ -7158,8 +7164,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get landingHeroTitle => 'Tu banco Bitcoin.';
 
   @override
+  String get landingHeroAccent => 'Privado. Anónimo. Global.';
+
+  @override
   String get landingHeroSubtitle =>
       'Kerosene hace que Bitcoin sea más seguro, accesible y útil para personas y empresas, con privacidad, transparencia operativa y control real de tus activos.';
+
+  @override
+  String get landingTorAccessLead => 'Accede vía Tor: ';
+
+  @override
+  String get landingTorOnionSample => 'kerosene66...onion';
 
   @override
   String get landingHeroFeatureOnchainTitle => 'On-chain + Lightning';
