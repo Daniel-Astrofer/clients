@@ -1,8 +1,9 @@
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  # Native OS launcher icons require raster. Source is a still frame exported
-  # from assets/logo/kerosene-logo-white.json (in-app tray/brand uses Lottie).
+  # OS launcher/tray icons cannot use Lottie JSON — they need raster.
+  # This PNG is the brand still for mipmaps/AppIcon (same art as former
+  # kerosene-logo.png). In-app brand uses kerosene-logo-white.json Lottie.
   image_path: "assets/logo/kerosene-logo-white.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   adaptive_icon_background: "#000000"
