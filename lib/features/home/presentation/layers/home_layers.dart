@@ -44,10 +44,10 @@ String _resolveUserNameFromFlags(BuildContext context, HomeShellFlags flags) {
   return userName;
 }
 
-/// Single viewport-pinned aurora behind the home scroll body.
+/// Aurora behind the balance header.
 ///
-/// Keeping one instance in the root [Stack] prevents visible seams during
-/// pull-to-refresh and keeps the upper area painted while the balance scrolls.
+/// It is mounted once inside [HomeHeaderLayer], so it follows the balance
+/// during normal scrolling.
 class HomeAuroraLayer extends StatelessWidget {
   const HomeAuroraLayer({super.key});
 
@@ -456,11 +456,22 @@ class HomeHeaderLayer extends ConsumerWidget {
         ? (walletState.selectedWallet ??
             (walletState.wallets.isNotEmpty ? walletState.wallets.first : null))
         : null;
+    final overscroll = ref.watch(homeOverscrollProvider);
 
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
         children: [
+          // One shader only. During pull-to-refresh the header moves down;
+          // counter-translate this same instance so it continues painting
+          // the exposed top area without creating a second shader.
+          Positioned.fill(
+            child: Transform.translate(
+              offset: Offset(0, -overscroll),
+              child: const HomeAuroraLayer(),
+            ),
+          ),
           HomeBalanceSection(
             userName: userName,
             walletState: walletState,
