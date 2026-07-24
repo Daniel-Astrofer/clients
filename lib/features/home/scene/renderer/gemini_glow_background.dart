@@ -5,7 +5,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/shader_provider.dart';
-import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show HomeLedgerBalanceView, homeLedgerBalanceViewProvider;
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
@@ -15,10 +14,17 @@ import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
 /// GPU Gemini edge-glow — ambient aurora behind the home header.
 ///
-/// Mounted inside the scrolling balance header. Colors / intensity / theater
-/// energy are continuously lerped so enter/exit never flick.
+/// Mounted once in the balance sliver. A static upper extension keeps deep
+/// pull-to-refresh areas continuous without per-frame position adjustments.
 class SceneGeminiGlowBackground extends ConsumerStatefulWidget {
-  const SceneGeminiGlowBackground({super.key});
+  final double verticalOriginPx;
+  final double logicalHeightPx;
+
+  const SceneGeminiGlowBackground({
+    super.key,
+    required this.verticalOriginPx,
+    required this.logicalHeightPx,
+  });
 
   @override
   ConsumerState<SceneGeminiGlowBackground> createState() =>
@@ -34,14 +40,12 @@ class _SceneGeminiGlowBackgroundState
   double _intensity = 0.42;
   double _theater = 0;
   double _surge = 0;
-  double _pullVisual = 0;
 
   // Targets — updated by providers, never snapped into the shader.
   Color _primaryTarget = const Color(0xFF4D7EFF);
   Color _secondaryTarget = const Color(0xFF9B7BFF);
   double _intensityTarget = 0.42;
   double _theaterTarget = 0;
-  double _pullTarget = 0;
 
   String _lastSceneId = '';
   bool _lastActive = false;
@@ -53,9 +57,6 @@ class _SceneGeminiGlowBackgroundState
   bool _ticking = false;
 
   ui.FragmentShader? _shader;
-
-  static const _deadZonePx = 6.0;
-  static const _fullBloomPx = 130.0;
 
   @override
   void initState() {
@@ -106,21 +107,9 @@ class _SceneGeminiGlowBackgroundState
     final dt = ((elapsed - last).inMicroseconds / 1e6).clamp(0.0, 1 / 30);
     if (dt <= 0) return;
 
-    // During pull (and theater), advance the aurora clock slower so waves
-    // don't thrash — receive green used to look frenetic on bounce.
-    final timeScale = (1.0 -
-            0.40 * _pullVisual -
-            0.28 * _theater.clamp(0.0, 1.0))
-        .clamp(0.42, 1.0);
+    final timeScale =
+        (1.0 - 0.28 * _theater.clamp(0.0, 1.0)).clamp(0.42, 1.0);
     _seconds += dt * timeScale;
-
-    // Critically soft follow (dt-based) — kills frenetic vibration on bounce.
-    final risingPull = _pullTarget > _pullVisual;
-    // Theater: even softer pull follow so scroll bounce doesn't strobe green.
-    final pullKBase = risingPull ? 2.2 : 1.5;
-    final pullK = pullKBase * (1.0 - 0.35 * _theater.clamp(0.0, 1.0));
-    final pullAlpha = (1.0 - _expNeg(pullK * dt)).clamp(0.0, 1.0);
-    _pullVisual += (_pullTarget - _pullVisual) * pullAlpha;
 
     final risingTheater = _theaterTarget > _theater;
     final theaterK = risingTheater ? 1.6 : 1.4;
@@ -138,9 +127,6 @@ class _SceneGeminiGlowBackgroundState
       if (_surge < 0.004) _surge = 0;
     }
 
-    if ((_pullTarget - _pullVisual).abs() < 0.004) {
-      _pullVisual = _pullTarget;
-    }
     if ((_theaterTarget - _theater).abs() < 0.004) {
       _theater = _theaterTarget;
     }
@@ -163,18 +149,6 @@ class _SceneGeminiGlowBackgroundState
     final k = 0.693147 / halfLife.clamp(0.05, 8.0);
     return (1.0 - (k * dt).clamp(0.0, 0.95));
   }
-
-  void _syncPull(double overscrollPx) {
-    final raw = ((overscrollPx - _deadZonePx) / _fullBloomPx).clamp(0.0, 1.0);
-    // Ease the target itself so bounce chatter never spikes the shader.
-    final eased = raw <= 0 ? 0.0 : Curves.easeOutCubic.transform(raw);
-    // During theater, pull barely moves — green receive + bounce was strobing.
-    final follow = _lerpDouble(0.35, 0.12, _theater.clamp(0.0, 1.0));
-    _pullTarget = _pullTarget + (eased - _pullTarget) * follow;
-    if (eased == 0 && _pullTarget < 0.02) _pullTarget = 0;
-  }
-
-  double _lerpDouble(double a, double b, double t) => a + (b - a) * t;
 
   void _applySceneTargets(HomeScene scene) {
     final bg = scene.background;
@@ -238,10 +212,6 @@ class _SceneGeminiGlowBackgroundState
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<double>(homeOverscrollProvider, (_, next) {
-      _syncPull(next);
-    });
-
     ref.listen<HomeScene>(homeSceneProvider, (_, next) {
       _applySceneTargets(next);
     });
@@ -270,7 +240,7 @@ class _SceneGeminiGlowBackgroundState
     final shader = _shader;
     if (shader == null) return const SizedBox.shrink();
 
-    // Fills the header stack — scrolls with the balance (same parent offset).
+    // One extended canvas anchored to the balance sliver.
     return IgnorePointer(
       child: RepaintBoundary(
         child: CustomPaint(
@@ -279,12 +249,15 @@ class _SceneGeminiGlowBackgroundState
           painter: _GeminiGlowShaderPainter(
             shader: shader,
             timeSec: _seconds,
-            pull: _pullVisual.clamp(0.0, 1.0),
+            // Pull-to-refresh must not move or retint the shader.
+            pull: 0.0,
             intensity: _intensity.clamp(0.0, 1.0),
             theater: _theater.clamp(0.0, 1.0),
             surge: _surge.clamp(0.0, 1.0),
             primary: _primary,
             secondary: _secondary,
+            verticalOriginPx: widget.verticalOriginPx,
+            logicalHeightPx: widget.logicalHeightPx,
           ),
           child: const SizedBox.expand(),
         ),
@@ -302,6 +275,8 @@ class _GeminiGlowShaderPainter extends CustomPainter {
   final double surge;
   final Color primary;
   final Color secondary;
+  final double verticalOriginPx;
+  final double logicalHeightPx;
 
   const _GeminiGlowShaderPainter({
     required this.shader,
@@ -312,6 +287,8 @@ class _GeminiGlowShaderPainter extends CustomPainter {
     required this.surge,
     required this.primary,
     required this.secondary,
+    required this.verticalOriginPx,
+    required this.logicalHeightPx,
   });
 
   @override
@@ -320,7 +297,8 @@ class _GeminiGlowShaderPainter extends CustomPainter {
 
     // Uniform order must match gemini_glow.frag:
     // 0-1 uSize, 2 uTime, 3 uPull, 4 uIntensity, 5 uTheater, 6 uSurge,
-    // 7-10 uPrimary, 11-14 uSecondary
+    // 7-10 uPrimary, 11-14 uSecondary,
+    // 15 uVerticalOriginPx, 16 uLogicalHeightPx
     shader.setFloat(0, size.width);
     shader.setFloat(1, size.height);
     shader.setFloat(2, timeSec);
@@ -336,6 +314,8 @@ class _GeminiGlowShaderPainter extends CustomPainter {
     shader.setFloat(12, secondary.g);
     shader.setFloat(13, secondary.b);
     shader.setFloat(14, secondary.a);
+    shader.setFloat(15, verticalOriginPx);
+    shader.setFloat(16, logicalHeightPx);
 
     canvas.drawRect(
       Offset.zero & size,
@@ -354,6 +334,8 @@ class _GeminiGlowShaderPainter extends CustomPainter {
         oldDelegate.surge != surge ||
         oldDelegate.primary != primary ||
         oldDelegate.secondary != secondary ||
+        oldDelegate.verticalOriginPx != verticalOriginPx ||
+        oldDelegate.logicalHeightPx != logicalHeightPx ||
         oldDelegate.shader != shader;
   }
 }

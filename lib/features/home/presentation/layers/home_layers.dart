@@ -12,8 +12,6 @@ import 'package:kerosene/features/financial_accounts/presentation/state/wallet_s
 import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_shell_flags_provider.dart';
-import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    show homeSize;
 import 'package:kerosene/features/home/presentation/screens/home_screen_balance.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_education.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_surface.dart';
@@ -44,12 +42,14 @@ String _resolveUserNameFromFlags(BuildContext context, HomeShellFlags flags) {
   return userName;
 }
 
-/// Aurora behind the balance header.
-///
-/// It is mounted once inside [HomeHeaderLayer], so it follows the balance
-/// during normal scrolling.
+/// Aurora painted once in the same scroll coordinate as the balance.
 class HomeAuroraLayer extends StatelessWidget {
-  const HomeAuroraLayer({super.key});
+  final double topExtension;
+
+  const HomeAuroraLayer({
+    super.key,
+    this.topExtension = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,29 +60,31 @@ class HomeAuroraLayer extends StatelessWidget {
     final veilHeight =
         (screenH * HomeMotion.veilHeightFraction).clamp(72.0, 180.0);
 
+    final shaderHeight = topExtension + bandHeight;
+    final veilTop = shaderHeight - veilHeight * 0.65;
+
     return Stack(
       fit: StackFit.expand,
+      clipBehavior: Clip.none,
       children: [
-        // Aurora glow band — viewport-pinned, never scrolls.
         Positioned(
           top: 0,
           left: 0,
           right: 0,
-          height: bandHeight,
+          height: shaderHeight,
           child: IgnorePointer(
             child: ClipRect(
               child: RepaintBoundary(
-                child: HomeAuroraBackground(),
+                child: HomeAuroraBackground(
+                  verticalOriginPx: topExtension,
+                  logicalHeightPx: bandHeight,
+                ),
               ),
             ),
           ),
         ),
-        // Fixed-position veil — fades aurora into OLED black at a
-        // constant position regardless of scroll offset.  When the
-        // user scrolls down, content enters this fade zone instead
-        // of the veil scrolling with the content.
         Positioned(
-          top: bandHeight,
+          top: veilTop,
           left: 0,
           right: 0,
           height: veilHeight,
@@ -456,21 +458,19 @@ class HomeHeaderLayer extends ConsumerWidget {
         ? (walletState.selectedWallet ??
             (walletState.wallets.isNotEmpty ? walletState.wallets.first : null))
         : null;
-    final overscroll = ref.watch(homeOverscrollProvider);
+    final topExtension = MediaQuery.sizeOf(context).height;
 
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.passthrough,
         clipBehavior: Clip.none,
         children: [
-          // One shader only. During pull-to-refresh the header moves down;
-          // counter-translate this same instance so it continues painting
-          // the exposed top area without creating a second shader.
-          Positioned.fill(
-            child: Transform.translate(
-              offset: Offset(0, -overscroll),
-              child: const HomeAuroraLayer(),
-            ),
+          Positioned(
+            top: -topExtension,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: HomeAuroraLayer(topExtension: topExtension),
           ),
           HomeBalanceSection(
             userName: userName,

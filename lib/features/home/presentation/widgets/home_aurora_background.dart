@@ -10,13 +10,23 @@ import 'package:kerosene/features/home/scene/renderer/gemini_glow_background.dar
 /// Defaults to the Gemini fragment shader. The CustomPainter path remains
 /// available via [homeAuroraRendererProvider] for A/B comparison.
 class HomeAuroraBackground extends ConsumerWidget {
-  const HomeAuroraBackground({super.key});
+  final double verticalOriginPx;
+  final double logicalHeightPx;
+
+  const HomeAuroraBackground({
+    super.key,
+    required this.verticalOriginPx,
+    required this.logicalHeightPx,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final renderer = ref.watch(homeAuroraRendererProvider);
     return switch (renderer) {
-      HomeAuroraRenderer.shader => const SceneGeminiGlowBackground(),
+      HomeAuroraRenderer.shader => SceneGeminiGlowBackground(
+          verticalOriginPx: verticalOriginPx,
+          logicalHeightPx: logicalHeightPx,
+        ),
       HomeAuroraRenderer.painter => const SceneAuroraBackground(),
     };
   }

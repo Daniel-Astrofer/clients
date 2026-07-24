@@ -10,6 +10,7 @@ class HomeOverscrollNotifier extends Notifier<double> {
   @override
   double build() => 0.0;
 
+  @override
   set state(double value) {
     if (super.state == value) return;
     super.state = value;

@@ -459,7 +459,6 @@ class HomeScreenState extends ConsumerState<HomeScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
-            const HomeAuroraLayer(),
             const HomeRealtimeBootstrap(),
             const HomeEducationHost(),
             HomeScrollLayer(
