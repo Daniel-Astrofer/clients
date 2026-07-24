@@ -599,7 +599,7 @@ class HomeSetupNotice extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: homeFontSize(15),
                     fontFamily: AppTypography.serifFontFamily,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w200,
                     letterSpacing: 0,
                   ),
                 ),

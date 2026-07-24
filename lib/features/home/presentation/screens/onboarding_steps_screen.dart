@@ -75,7 +75,7 @@ class OnboardingStepsScreen extends ConsumerWidget {
                           style: AppTypography.newsreader(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 32,
-                            fontWeight: FontWeight.w400,
+                            fontWeight: FontWeight.w200,
                             height: 1.15,
                           ),
                         ),

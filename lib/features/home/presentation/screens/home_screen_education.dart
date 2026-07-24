@@ -117,7 +117,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                       textStyle: theme.textTheme.titleMedium,
                                       color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: HomeTypography.cardTitleSize,
-                                      fontWeight: FontWeight.w300,
+                                      fontWeight: FontWeight.w200,
                                       height: 1.1,
                                       letterSpacing: 0,
                                     ),
@@ -452,7 +452,7 @@ class _HomeFundsDistributionSectionState
                   style: AppTypography.newsreader(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: HomeTypography.sectionTitleSize,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w200,
                     height: 1.15,
                     letterSpacing: 0,
                   ),
@@ -1064,7 +1064,7 @@ class HomeSectionHeader extends StatelessWidget {
             style: AppTypography.newsreader(
               color: Theme.of(context).colorScheme.onSurface,
               fontSize: HomeTypography.sectionTitleSize,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w200,
               letterSpacing: 0,
               height: 1.15,
             ),

@@ -786,7 +786,7 @@ class _RestingGreetingText extends StatelessWidget {
         textStyle: theme.textTheme.titleLarge,
         color: theme.colorScheme.onSurface,
         fontSize: fontSize,
-        fontWeight: FontWeight.w300,
+        fontWeight: FontWeight.w200,
         height: 1.1,
       ),
     );

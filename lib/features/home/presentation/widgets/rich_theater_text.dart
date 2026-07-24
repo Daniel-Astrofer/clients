@@ -75,7 +75,7 @@ class RichTheaterText extends StatelessWidget {
       textStyle: theme.textTheme.titleLarge,
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: h1Size,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w200,
       height: 1.25,
     ));
     final h2Style = _theaterStyle(
