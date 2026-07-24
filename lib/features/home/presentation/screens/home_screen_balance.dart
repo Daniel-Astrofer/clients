@@ -86,12 +86,14 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
     final initialPage = ref.read(homeLedgerBalancePageProvider);
     _lastSyncedIndex = initialPage;
     _pageController = PageController(initialPage: initialPage);
-    _playSessionCeremony =
-        ref.read(homeBalanceCeremonyPlayedProvider.notifier).claim();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _pricesArmed) return;
-      _pricesArmed = true;
-      _armPriceSnapshots();
+      if (!mounted) return;
+      _playSessionCeremony =
+          ref.read(homeBalanceCeremonyPlayedProvider.notifier).claim();
+      if (!_pricesArmed) {
+        _pricesArmed = true;
+        _armPriceSnapshots();
+      }
     });
   }
 
