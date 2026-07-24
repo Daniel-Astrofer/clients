@@ -44,10 +44,10 @@ String _resolveUserNameFromFlags(BuildContext context, HomeShellFlags flags) {
   return userName;
 }
 
-/// Aurora behind the balance header + debug A/B chip.
+/// Single viewport-pinned aurora behind the home scroll body.
 ///
-/// This layer is mounted inside [HomeHeaderLayer], so its shader and veil
-/// share the same scroll coordinate as the balance.
+/// Keeping one instance in the root [Stack] prevents visible seams during
+/// pull-to-refresh and keeps the upper area painted while the balance scrolls.
 class HomeAuroraLayer extends StatelessWidget {
   const HomeAuroraLayer({super.key});
 
@@ -91,33 +91,6 @@ class HomeAuroraLayer extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Keeps the exposed pull-to-refresh area painted with the aurora while the
-/// scrolling header temporarily moves down. It is mounted only while there
-/// is actual overscroll, so the normal header has a single shader instance.
-class HomeAuroraPullUnderlay extends ConsumerWidget {
-  const HomeAuroraPullUnderlay({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final overscroll = ref.watch(homeOverscrollProvider);
-    if (overscroll <= 0) return const SizedBox.shrink();
-
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 220,
-      child: IgnorePointer(
-        child: ClipRect(
-          child: RepaintBoundary(
-            child: HomeAuroraBackground(),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -488,11 +461,6 @@ class HomeHeaderLayer extends ConsumerWidget {
       child: Stack(
         fit: StackFit.passthrough,
         children: [
-          // The shader intentionally shares the header's scroll coordinate
-          // with the balance, so their visual relationship never drifts.
-          const Positioned.fill(
-            child: HomeAuroraLayer(),
-          ),
           HomeBalanceSection(
             userName: userName,
             walletState: walletState,

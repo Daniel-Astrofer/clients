@@ -339,8 +339,7 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
     final hPad = widget.pageHorizontalPadding;
     final topPad = widget.pageTopPad;
 
-    // Transparent header — ambient aurora is rendered in the same scroll
-    // coordinate by HomeHeaderLayer.
+    // Transparent header — ambient aurora is rendered behind the scroll body.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
