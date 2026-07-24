@@ -1426,7 +1426,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                     style: AppTypography.newsreader(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 24,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w200,
                     ),
                   ),
                   SizedBox(height: 8),

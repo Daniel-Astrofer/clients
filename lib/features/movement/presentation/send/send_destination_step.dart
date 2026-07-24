@@ -500,7 +500,7 @@ class _DestinationHeader extends StatelessWidget {
           style: AppTypography.newsreader(
             color: Theme.of(context).colorScheme.onSurface,
             fontSize: hasContacts ? 30 : 28,
-            fontWeight: hasContacts ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: FontWeight.w200,
             height: hasContacts ? 1.12 : 1.2,
             letterSpacing: 0,
           ),

@@ -520,7 +520,7 @@ class _ReviewBody extends StatelessWidget {
                 style: AppTypography.newsreader(
                   color: _cText,
                   fontSize: 30.94,
-                  fontWeight: FontWeight.w400,
+                  fontWeight: FontWeight.w200,
                   height: 1.61,
                   letterSpacing: -0.2,
                 ),

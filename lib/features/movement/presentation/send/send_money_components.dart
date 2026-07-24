@@ -47,7 +47,7 @@ class InternalTopBar extends StatelessWidget {
                 style: AppTypography.newsreader(
                   color: textColor,
                   fontSize: 24,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w200,
                   height: 1.2,
                   letterSpacing: 0,
                 ),
@@ -107,7 +107,7 @@ class InternalKeypad extends StatelessWidget {
             ),
             textStyle: AppTypography.newsreader(
               fontSize: 24,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w200,
               letterSpacing: 0,
             ),
           ),

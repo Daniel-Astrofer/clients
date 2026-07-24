@@ -832,7 +832,7 @@ class _MonthlyMovementPanel extends StatelessWidget {
             style: AppTypography.newsreader(
               color: _primary,
               fontSize: 28,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w200,
               height: 1.2,
             ),
           ),

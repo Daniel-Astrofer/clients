@@ -73,7 +73,7 @@ class DestinationCaptureSheet extends StatelessWidget {
                   style: AppTypography.newsreader(
                     color: tokens.textPrimary,
                     fontSize: 28,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w200,
                     height: 1.15,
                     letterSpacing: 0,
                   ),

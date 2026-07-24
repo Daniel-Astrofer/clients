@@ -57,7 +57,7 @@ class LightningTopBar extends StatelessWidget {
             style: AppTypography.newsreader(
               color: textColor,
               fontSize: 24,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w200,
               height: 1.2,
               letterSpacing: 0,
             ),

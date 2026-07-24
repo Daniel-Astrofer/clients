@@ -61,7 +61,7 @@ class MovementConfirmationSurface extends StatelessWidget {
               style: AppTypography.newsreader(
                 color: ink,
                 fontSize: titleFontSize,
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w200,
                 height: 1.12,
                 letterSpacing: -0.2,
               ),

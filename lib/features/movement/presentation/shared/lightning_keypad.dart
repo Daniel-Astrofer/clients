@@ -95,7 +95,7 @@ class _LightningKeypadButton extends StatelessWidget {
           ),
           textStyle: AppTypography.newsreader(
             fontSize: 24,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w200,
             letterSpacing: 0,
           ),
         ),

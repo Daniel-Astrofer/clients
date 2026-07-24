@@ -315,7 +315,7 @@ class _ReceiveFlowHeader extends StatelessWidget {
                         color: receiveFlowTextColor,
                         fontSize: titleSize,
                         fontFamily: AppTypography.serifFontFamily,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w200,
                         letterSpacing: 0,
                         height: 1.02,
                       ),

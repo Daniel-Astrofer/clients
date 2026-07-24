@@ -1016,7 +1016,7 @@ class _NfcMethodInfoCard extends StatelessWidget {
             style: AppTypography.newsreader(
               color: _ReceiveNfcFlowScreenState._text,
               fontSize: 20,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w200,
               height: 1.2,
               letterSpacing: 0,
             ),

@@ -353,7 +353,7 @@ class _TransactionStatementScreenState
                   style: AppTypography.newsreader(
                     color: _StatementColors.textPrimary(context),
                     fontSize: 22,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w200,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -530,7 +530,7 @@ class _StatementHeader extends StatelessWidget {
           style: AppTypography.newsreader(
             color: _StatementColors.textPrimary(context),
             fontSize: MediaQuery.sizeOf(context).width >= 720 ? 36 : 32,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w200,
             height: 1.12,
             letterSpacing: -0.2,
           ),

@@ -97,7 +97,7 @@ class ReceiveShellHeader extends StatelessWidget {
             style: AppTypography.newsreader(
               color: _receiveText,
               fontSize: 24,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w200,
               height: 1,
               letterSpacing: 0,
             ),
