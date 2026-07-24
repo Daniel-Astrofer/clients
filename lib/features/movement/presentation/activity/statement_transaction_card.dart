@@ -390,12 +390,10 @@ class StatementTransactionCard extends ConsumerWidget {
                     amountLabel,
                     maxLines: 1,
                     softWrap: false,
-                    style: AppTypography.homeBalance(
+                    style: HomeTypography.transactionAmount(
                       color: amountColor,
                     ).copyWith(
                       fontSize: isHome ? 15 : 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -693,12 +691,8 @@ class _BankStatementTransactionRow extends StatelessWidget {
                           textAlign: TextAlign.right,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.homeBalance(
+                          style: HomeTypography.transactionAmount(
                             color: amountColor,
-                          ).copyWith(
-                            fontSize: HomeTypography.bodySize,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
                           ),
                         ),
                         const SizedBox(height: 5),

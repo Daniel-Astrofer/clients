@@ -52,6 +52,7 @@ import 'package:kerosene/features/movement/presentation/send/send_money_componen
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_confirmation_flow.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_review_helpers.dart';
@@ -1423,10 +1424,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                   SizedBox(height: 24),
                   Text(
                     'Como deseja enviar?',
-                    style: AppTypography.newsreader(
+                    style: HomeTypography.heroTitle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 24,
-                      fontWeight: FontWeight.w200,
                     ),
                   ),
                   SizedBox(height: 8),

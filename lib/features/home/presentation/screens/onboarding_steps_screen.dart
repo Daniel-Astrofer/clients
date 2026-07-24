@@ -8,8 +8,10 @@ import 'package:kerosene/design_system/components/generic/app_primary_navigation
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/features/home/presentation/design/home_design_tokens.dart';
 import '../providers/onboarding_progress_provider.dart';
 
 class OnboardingStepsScreen extends ConsumerWidget {
@@ -72,11 +74,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
                           isDone
                               ? 'Excelente! Sua conta está 100% ativa.'
                               : 'Complete as etapas essenciais abaixo para habilitar todas as funções da plataforma.',
-                          style: AppTypography.newsreader(
+                          style: HomeTypography.heroTitle(
                             color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w200,
-                            height: 1.15,
                           ),
                         ),
                         SizedBox(height: 16),

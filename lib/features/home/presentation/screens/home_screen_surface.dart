@@ -595,12 +595,8 @@ class HomeSetupNotice extends StatelessWidget {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  style: HomeTypography.cardHeader(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: homeFontSize(15),
-                    fontFamily: AppTypography.serifFontFamily,
-                    fontWeight: FontWeight.w200,
-                    letterSpacing: 0,
                   ),
                 ),
                 SizedBox(height: homeSize(5)),

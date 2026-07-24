@@ -9,6 +9,7 @@ import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart'
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
@@ -350,10 +351,8 @@ class _TransactionStatementScreenState
               children: [
                 Text(
                   tr.statementExportTitle,
-                  style: AppTypography.newsreader(
+                  style: HomeTypography.sectionHeader(
                     color: _StatementColors.textPrimary(context),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w200,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -527,13 +526,10 @@ class _StatementHeader extends StatelessWidget {
       children: [
         Text(
           context.tr.statementScreenTitle,
-          style: AppTypography.newsreader(
+          style: HomeTypography.heroTitle(
             color: _StatementColors.textPrimary(context),
             fontSize: MediaQuery.sizeOf(context).width >= 720 ? 36 : 32,
-            fontWeight: FontWeight.w200,
-            height: 1.12,
-            letterSpacing: -0.2,
-          ),
+          ).copyWith(letterSpacing: -0.2),
         ),
         const SizedBox(height: AppSpacing.base),
         _StatementTabSwitcher(

@@ -640,11 +640,8 @@ class HomeBalanceHero extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: AppTypography.label.copyWith(
+                  style: HomeTypography.dateHeader(
                     color: data.accent.withValues(alpha: 0.88),
-                    fontSize: homeFontSize(12),
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1.2,
                   ),
                 ),
               ),
@@ -683,7 +680,7 @@ class HomeBalanceHero extends ConsumerWidget {
                         animateInitialValue: animateInitialValue,
                         suppressRoll: suppressDigitRoll,
                         largeDeltaThreshold: kHomeBalanceLargeDeltaBtc,
-                        style: AppTypography.homeBalance(
+                        style: HomeTypography.balanceHero(
                           color: Theme.of(context).colorScheme.onSurface,
                         ).copyWith(
                           fontSize: responsive.compactFontSize(
@@ -729,11 +726,8 @@ class HomeBalanceHero extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium.copyWith(
+                  style: HomeTypography.convertedAmount(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: homeFontSize(15),
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 0,
                   ),
                 ),
               ),
@@ -756,11 +750,10 @@ class HomeBalanceHero extends ConsumerWidget {
                     data.dailyChangeLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.bodySmall.copyWith(
+                    style: HomeTypography.caption(
                       color: data.dailyChangeColor,
-                      fontSize: HomeTypography.captionSize,
+                    ).copyWith(
                       fontWeight: FontWeight.w300,
-                      letterSpacing: 0,
                     ),
                   ),
                 ),

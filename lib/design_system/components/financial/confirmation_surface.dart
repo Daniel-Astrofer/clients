@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
@@ -58,13 +59,10 @@ class MovementConfirmationSurface extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: AppTypography.newsreader(
+              style: HomeTypography.heroTitle(
                 color: ink,
                 fontSize: titleFontSize,
-                fontWeight: FontWeight.w200,
-                height: 1.12,
-                letterSpacing: -0.2,
-              ),
+              ).copyWith(letterSpacing: -0.2),
             ),
             const SizedBox(height: 28),
             FittedBox(

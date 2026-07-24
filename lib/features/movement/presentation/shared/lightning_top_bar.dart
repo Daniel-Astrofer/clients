@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 /// The top navigation bar for the Lightning transaction flow.
 ///
@@ -54,13 +54,10 @@ class LightningTopBar extends StatelessWidget {
           Text(
             context.tr.send,
             textAlign: TextAlign.center,
-            style: AppTypography.newsreader(
+            style: HomeTypography.heroTitle(
               color: textColor,
               fontSize: 24,
-              fontWeight: FontWeight.w200,
-              height: 1.2,
-              letterSpacing: 0,
-            ),
+            ).copyWith(height: 1.2),
           ),
           const Align(
             alignment: Alignment.centerRight,

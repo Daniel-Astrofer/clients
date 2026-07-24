@@ -14,6 +14,7 @@ import 'package:kerosene/design_system/components/financial/send_flow_theme.dart
 import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/shared/internal_recent_avatar.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 class SendDestinationStep extends StatelessWidget {
   final TextEditingController receiverController;
@@ -497,13 +498,10 @@ class _DestinationHeader extends StatelessWidget {
         Text(
           'Para quem você quer enviar dinheiro?',
           textAlign: TextAlign.left,
-          style: AppTypography.newsreader(
+          style: HomeTypography.heroTitle(
             color: Theme.of(context).colorScheme.onSurface,
             fontSize: hasContacts ? 30 : 28,
-            fontWeight: FontWeight.w200,
-            height: hasContacts ? 1.12 : 1.2,
-            letterSpacing: 0,
-          ),
+          ).copyWith(height: hasContacts ? 1.12 : 1.2),
         ),
       ],
     );

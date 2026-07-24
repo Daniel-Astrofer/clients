@@ -113,13 +113,9 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     card.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppTypography.newsreader(
-                                      textStyle: theme.textTheme.titleMedium,
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: HomeTypography.cardTitleSize,
-                                      fontWeight: FontWeight.w200,
-                                      height: 1.1,
-                                      letterSpacing: 0,
+                                    style: HomeTypography.cardHeader(
+                                      color: Theme.of(context)
+                                          .colorScheme.onSurface,
                                     ),
                                   ),
                                   SizedBox(height: homeSize(8)),
@@ -449,12 +445,8 @@ class _HomeFundsDistributionSectionState
               Expanded(
                 child: Text(
                   homeFundsDistributionTitle(context),
-                  style: AppTypography.newsreader(
+                  style: HomeTypography.sectionHeader(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: HomeTypography.sectionTitleSize,
-                    fontWeight: FontWeight.w200,
-                    height: 1.15,
-                    letterSpacing: 0,
                   ),
                 ),
               ),
@@ -954,11 +946,10 @@ class HomeActivityFilterChip extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTypography.label.copyWith(
-                  color: selected ? Theme.of(context).scaffoldBackgroundColor : Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: HomeTypography.captionSize,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 0,
+                style: HomeTypography.filterChip(
+                  color: selected
+                      ? Theme.of(context).scaffoldBackgroundColor
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -1061,12 +1052,8 @@ class HomeSectionHeader extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.newsreader(
+            style: HomeTypography.sectionHeader(
               color: Theme.of(context).colorScheme.onSurface,
-              fontSize: HomeTypography.sectionTitleSize,
-              fontWeight: FontWeight.w200,
-              letterSpacing: 0,
-              height: 1.15,
             ),
           ),
         ),

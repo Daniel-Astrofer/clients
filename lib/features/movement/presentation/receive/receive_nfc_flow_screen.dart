@@ -18,6 +18,7 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager_ndef/nfc_manager_ndef.dart';
 
@@ -1013,13 +1014,10 @@ class _NfcMethodInfoCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTypography.newsreader(
+            style: HomeTypography.heroTitle(
               color: _ReceiveNfcFlowScreenState._text,
               fontSize: 20,
-              fontWeight: FontWeight.w200,
-              height: 1.2,
-              letterSpacing: 0,
-            ),
+            ).copyWith(height: 1.2),
           ),
           const SizedBox(height: 10),
           Text(

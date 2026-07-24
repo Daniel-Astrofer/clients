@@ -7,6 +7,7 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:kerosene/features/home/presentation/screens/qr_scanner_screen.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
 import 'package:kerosene/shared/widgets/nfc_scan_dialog.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 /// Bottom sheet: scan QR, read NFC (when available), or paste clipboard.
 class DestinationCaptureSheet extends StatelessWidget {
@@ -70,12 +71,9 @@ class DestinationCaptureSheet extends StatelessWidget {
                 SizedBox(height: tokens.spaceMd),
                 Text(
                   _title(context),
-                  style: AppTypography.newsreader(
+                  style: HomeTypography.heroTitle(
                     color: tokens.textPrimary,
                     fontSize: 28,
-                    fontWeight: FontWeight.w200,
-                    height: 1.15,
-                    letterSpacing: 0,
                   ),
                 ),
                 SizedBox(height: tokens.spaceSm - 2),

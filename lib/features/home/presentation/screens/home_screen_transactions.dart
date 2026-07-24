@@ -493,10 +493,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
                       AppDateTime.formatRelative(context, lastSync),
                     )
                   : context.tr.homeOfflineExtract,
-              style: AppTypography.label.copyWith(
+              style: HomeTypography.dateHeader(
                 color: homeAmberColor,
-                fontSize: homeFontSize(11),
-                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -598,11 +596,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       padding: const EdgeInsets.only(left: 4.0, top: 12.0),
       child: Text(
         label,
-        style: AppTypography.label.copyWith(
+        style: HomeTypography.dateHeader(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: homeFontSize(12),
-          letterSpacing: 1.0,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );

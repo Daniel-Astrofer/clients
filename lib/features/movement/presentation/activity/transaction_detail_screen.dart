@@ -8,6 +8,7 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
@@ -437,11 +438,9 @@ class _TransactionDetailScreenState
                             Expanded(
                               child: Text(
                                 actionTitle,
-                                style: AppTypography.newsreader(
+                                style: HomeTypography.heroTitle(
                                   color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 28,
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.15,
                                 ),
                               ),
                             ),

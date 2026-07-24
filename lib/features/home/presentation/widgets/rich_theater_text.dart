@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/design/home_design_tokens.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
@@ -71,13 +70,10 @@ class RichTheaterText extends StatelessWidget {
       regular: homeFontSize(12),
     );
 
-    final h1Style = _theaterStyle(AppTypography.newsreader(
-      textStyle: theme.textTheme.titleLarge,
+    final h1Style = _theaterStyle(HomeTypography.heroTitle(
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: h1Size,
-      fontWeight: FontWeight.w200,
-      height: 1.25,
-    ));
+    ).copyWith(height: 1.25));
     final h2Style = _theaterStyle(
       theme.textTheme.titleMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),

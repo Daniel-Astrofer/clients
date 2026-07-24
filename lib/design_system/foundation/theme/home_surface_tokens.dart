@@ -271,15 +271,122 @@ abstract class HomeRadius {
 }
 
 abstract class HomeTypography {
-  static TextStyle get title => HomeSurfaceTokens.title;
-  static TextStyle get body => HomeSurfaceTokens.body;
-  static TextStyle get label => HomeSurfaceTokens.label;
-
+  // --- existing size tokens (numeric only, for compat) ---
   static double get sectionTitleSize => HomeSurfaceTokens.sectionTitleSize;
   static double get cardTitleSize => HomeSurfaceTokens.cardTitleSize;
   static double get bodySize => HomeSurfaceTokens.bodySize;
   static double get captionSize => HomeSurfaceTokens.captionSize;
   static double get smallLabelSize => HomeSurfaceTokens.smallLabelSize;
+
+  // --- existing opaque text styles (color-aware via HomeSurfaceTheme) ---
+  static TextStyle get title => HomeSurfaceTokens.title;
+  static TextStyle get body => HomeSurfaceTokens.body;
+  static TextStyle get label => HomeSurfaceTokens.label;
+
+  // ============================================================
+  // SEMANTIC TEXT STYLES
+  //
+  // Every screen references these instead of composing inline.
+  // To change Playfair weight globally, edit the w200 here.
+  // To resize all section titles, edit sectionTitleSize above.
+  // ============================================================
+
+  // -- Playfair Display (serif) --
+
+  /// Section header: "Atividades recentes", "Distribuição de fundos", etc.
+  static TextStyle sectionHeader({Color? color}) =>
+      AppTypography.newsreader(
+        color: color,
+        fontSize: sectionTitleSize,
+        fontWeight: FontWeight.w200,
+        height: 1.15,
+        letterSpacing: 0,
+      );
+
+  /// Card title: education cards, setup notices.
+  static TextStyle cardHeader({Color? color}) =>
+      AppTypography.newsreader(
+        color: color,
+        fontSize: cardTitleSize,
+        fontWeight: FontWeight.w200,
+        height: 1.1,
+        letterSpacing: 0,
+      );
+
+  /// Large hero title: onboarding, welcome, statement.
+  static TextStyle heroTitle({Color? color, double fontSize = 32}) =>
+      AppTypography.newsreader(
+        color: color,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w200,
+        height: 1.12,
+        letterSpacing: 0,
+      );
+
+  // -- Plus Jakarta Sans (body / labels) --
+
+  /// Date / group headers: "Hoje", "Ontem", section labels like "TOTAL".
+  static TextStyle dateHeader({Color? color}) =>
+      AppTypography.label.copyWith(
+        color: color,
+        fontSize: captionSize,
+        letterSpacing: 1.0,
+      );
+
+  /// Filter / status chip label.
+  static TextStyle filterChip({Color? color}) =>
+      AppTypography.label.copyWith(
+        color: color,
+        fontSize: captionSize,
+        fontWeight: FontWeight.w300,
+        letterSpacing: 0,
+      );
+
+  /// Body text: descriptions, empty states.
+  static TextStyle bodyText({Color? color}) =>
+      AppTypography.bodyMedium.copyWith(
+        color: color,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0,
+      );
+
+  /// Small caption / meta text.
+  static TextStyle caption({Color? color}) =>
+      AppTypography.bodySmall.copyWith(
+        color: color,
+        fontSize: captionSize,
+        letterSpacing: 0,
+        height: 1.4,
+      );
+
+  // -- Amounts (Plus Jakarta Sans + tabular) --
+
+  /// Balance hero (BTC total).
+  static TextStyle balanceHero({Color? color}) =>
+      AppTypography.homeBalance(color: color);
+
+  /// Transaction amount row.
+  static TextStyle transactionAmount({Color? color}) =>
+      AppTypography.homeBalance(color: color).copyWith(
+        fontSize: bodySize,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+      );
+
+  /// Converted fiat reference below balance hero.
+  static TextStyle convertedAmount({Color? color}) =>
+      AppTypography.bodyMedium.copyWith(
+        color: color,
+        fontSize: 15,
+        fontWeight: FontWeight.w300,
+        letterSpacing: 0,
+      );
+
+  // -- Buttons --
+
+  /// Primary / action button label (matches AppTypography.buttonText).
+  static TextStyle buttonLabel({Color? color}) =>
+      AppTypography.buttonText.copyWith(color: color);
 }
 
 extension HomeSurfaceThemeContext on BuildContext {

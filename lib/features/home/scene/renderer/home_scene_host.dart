@@ -8,14 +8,12 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_settings_provider.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
+import 'package:kerosene/features/home/presentation/design/home_design_tokens.dart';
 import 'package:kerosene/features/home/presentation/providers/home_stage_playback_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
-import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    show homeFontSize, homeSize;
 import 'package:kerosene/features/home/presentation/screens/home_screen_surface.dart';
 import 'package:kerosene/features/home/scene/models/home_scene.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
@@ -782,12 +780,9 @@ class _RestingGreetingText extends StatelessWidget {
       text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: AppTypography.newsreader(
-        textStyle: theme.textTheme.titleLarge,
+      style: HomeTypography.heroTitle(
         color: theme.colorScheme.onSurface,
         fontSize: fontSize,
-        fontWeight: FontWeight.w200,
-        height: 1.1,
       ),
     );
   }

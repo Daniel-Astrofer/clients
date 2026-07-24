@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
@@ -94,13 +95,10 @@ class ReceiveShellHeader extends StatelessWidget {
           const Spacer(),
           Text(
             brandLabel,
-            style: AppTypography.newsreader(
+            style: HomeTypography.heroTitle(
               color: _receiveText,
               fontSize: 24,
-              fontWeight: FontWeight.w200,
-              height: 1,
-              letterSpacing: 0,
-            ),
+            ).copyWith(height: 1),
           ),
           const Spacer(),
           Container(

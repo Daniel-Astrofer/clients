@@ -11,6 +11,7 @@ import 'package:kerosene/design_system/components/generic/kerosene_education_dia
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
 import 'send_money_screen_dependencies.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 class SendPaymentReviewRowData {
   final String label;
@@ -517,13 +518,10 @@ class _ReviewBody extends StatelessWidget {
               child: Text(
                 title,
                 textAlign: TextAlign.left,
-                style: AppTypography.newsreader(
+                style: HomeTypography.heroTitle(
                   color: _cText,
                   fontSize: 30.94,
-                  fontWeight: FontWeight.w200,
-                  height: 1.61,
-                  letterSpacing: -0.2,
-                ),
+                ).copyWith(height: 1.61, letterSpacing: -0.2),
               ),
             ),
           ],

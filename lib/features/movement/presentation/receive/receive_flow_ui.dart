@@ -8,6 +8,7 @@ import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 /// Resolve receive-flow colors from the canonical [SendFlowTheme] so send
 /// and receive share one palette. Callers that need a [BuildContext] use
@@ -311,14 +312,10 @@ class _ReceiveFlowHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: HomeTypography.heroTitle(
                         color: receiveFlowTextColor,
                         fontSize: titleSize,
-                        fontFamily: AppTypography.serifFontFamily,
-                        fontWeight: FontWeight.w200,
-                        letterSpacing: 0,
-                        height: 1.02,
-                      ),
+                      ).copyWith(height: 1.02),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),

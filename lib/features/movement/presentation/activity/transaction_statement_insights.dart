@@ -7,6 +7,7 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
@@ -829,12 +830,10 @@ class _MonthlyMovementPanel extends StatelessWidget {
           Text(
             context.tr.financialStatementMonthlyMovement,
             textAlign: TextAlign.center,
-            style: AppTypography.newsreader(
+            style: HomeTypography.heroTitle(
               color: _primary,
               fontSize: 28,
-              fontWeight: FontWeight.w200,
-              height: 1.2,
-            ),
+            ).copyWith(height: 1.2),
           ),
           const SizedBox(height: 13),
           _PeriodTabs(selected: selected, onChanged: onChanged),
