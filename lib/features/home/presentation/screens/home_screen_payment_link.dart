@@ -227,7 +227,7 @@ class PaymentLinkEntryScreenState
                     context.tr.homePayloadLabel.toUpperCase(),
                   ),
                 ),
-                const Divider(height: 1, color: receiveFlowDividerColor),
+                Divider(height: 1, color: receiveFlowDividerColor),
                 TextField(
                   controller: _controller,
                   autofocus: true,
