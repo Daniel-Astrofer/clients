@@ -6,7 +6,7 @@ import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/features/presentation/widgets/glass_container.dart';
+import 'package:kerosene/design_system/components/generic/glass_container.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';

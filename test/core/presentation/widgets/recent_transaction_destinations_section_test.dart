@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/features/presentation/widgets/recent_transaction_destinations_section.dart';
+import 'package:kerosene/design_system/components/generic/recent_transaction_destinations_section.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
 
 void main() {

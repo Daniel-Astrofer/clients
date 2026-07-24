@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 

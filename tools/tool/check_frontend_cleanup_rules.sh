@@ -33,8 +33,6 @@ ALLOWED_EXACT = {
     Path('lib/storybook/stories/wallet_flow_stories.dart'),
     Path('lib/core/widgets/animated_number_display.dart'),
     Path('lib/features/financial_accounts/presentation/widgets/revolut_account_card.dart'),
-    Path('lib/features/presentation/widgets/kerosene_logo.dart'),
-    Path('lib/features/presentation/widgets/kerosene_logo_loading_view.dart'),
     Path('lib/features/home/scene/renderer/media_layer.dart'),
 }
 

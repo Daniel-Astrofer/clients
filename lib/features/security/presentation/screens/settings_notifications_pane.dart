@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/services/background_service.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/config/app_config.dart';
-import 'package:kerosene/features/presentation/widgets/kerosene_logo_loading_view.dart';
+import 'package:kerosene/design_system/components/generic/kerosene_logo_loading_view.dart';
 import 'package:kerosene/features/home/presentation/screens/startup_connection_loading_screen.dart';
 
 void main() {

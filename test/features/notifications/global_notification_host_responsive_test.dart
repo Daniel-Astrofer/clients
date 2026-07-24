@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/notifications/presentation/widgets/global_notification_host.dart';

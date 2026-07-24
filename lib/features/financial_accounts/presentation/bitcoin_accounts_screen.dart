@@ -17,10 +17,10 @@ import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
-import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
-import 'package:kerosene/features/presentation/widgets/bitcoin_address_blocks.dart';
-import 'package:kerosene/features/presentation/widgets/tor_navigation_loading_screen.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
+import 'package:kerosene/design_system/components/generic/bitcoin_address_blocks.dart';
+import 'package:kerosene/design_system/components/generic/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';

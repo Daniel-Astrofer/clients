@@ -128,7 +128,7 @@ class _WalletExpandChipState extends ConsumerState<WalletExpandChip>
   Future<void> _animateClosed() => _animateOpen(false);
 
   Future<void> _toggle() async {
-    if (_busy || widget.wallets.length <= 1) return;
+    if (_busy || _others.isEmpty) return;
     _busy = true;
     HapticFeedback.selectionClick();
     try {

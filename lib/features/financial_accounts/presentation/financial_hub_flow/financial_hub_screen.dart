@@ -20,9 +20,9 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screen
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/wallet_setup_hub_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/widgets/revolut_account_card.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
-import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
-import 'package:kerosene/features/presentation/widgets/tor_navigation_loading_screen.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
+import 'package:kerosene/design_system/components/generic/tor_navigation_loading_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_widgets/bottom_sheets.dart';
 
 import 'sheets/account_details_bottom_sheet.dart';

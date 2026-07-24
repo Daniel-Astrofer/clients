@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:kerosene/features/presentation/widgets/glass_container.dart';
+import 'package:kerosene/design_system/components/generic/glass_container.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/expense_category.dart';

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 import 'package:kerosene/core/utils/error_translator.dart';

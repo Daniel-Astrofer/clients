@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/errors/failures.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/domain/entities/user.dart';

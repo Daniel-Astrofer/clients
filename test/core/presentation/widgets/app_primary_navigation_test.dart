@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart';
 
 void main() {

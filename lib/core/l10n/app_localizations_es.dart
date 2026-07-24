@@ -2560,7 +2560,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adminMonitoringSubtitle =>
-      'Salud real de servicios, estado on-chain de Bitcoin Core, estado Lightning de LND, status da vault mesh, atestación de release y logs operacionales saneados.';
+      'Salud real de servicios, estado on-chain de Bitcoin Core, estado Lightning de LND, estado de vault mesh, atestación de release y logs operacionales saneados.';
 
   @override
   String get adminMonitoringMetricServices => 'Servicios';

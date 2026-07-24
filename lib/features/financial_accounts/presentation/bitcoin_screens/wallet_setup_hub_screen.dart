@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';

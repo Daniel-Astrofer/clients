@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';

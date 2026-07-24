@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import '../theme/financial_hub_tokens.dart';
 
 /// Modal bottom sheet displaying public material, fingerprint, derivation, policy, and account IDs.

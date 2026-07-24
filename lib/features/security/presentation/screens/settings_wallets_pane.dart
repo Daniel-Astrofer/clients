@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_details.dart';

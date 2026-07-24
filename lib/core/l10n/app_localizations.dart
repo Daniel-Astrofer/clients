@@ -4834,13 +4834,16 @@ abstract class AppLocalizations {
   /// **'Services'**
   String get adminMonitoringMetricServices;
 
-  /// No description provided for @adminMonitoringMetricVaultRaft.
+  /// No description provided for @adminMonitoringMetricVaultMesh.
   ///
   /// In en, this message translates to:
   /// **'Vault Mesh'**
   String get adminMonitoringMetricVaultMesh;
 
   /// No description provided for @adminMonitoringMetricVaultRaft.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault Mesh'**
   String get adminMonitoringMetricVaultRaft;
 
   /// No description provided for @adminMonitoringBitcoinPanel.
@@ -4939,13 +4942,16 @@ abstract class AppLocalizations {
   /// **'Control Plane'**
   String get adminCompaniesMetricControlPlane;
 
-  /// No description provided for @adminCompaniesMetricVaultRaft.
+  /// No description provided for @adminCompaniesMetricVaultMesh.
   ///
   /// In en, this message translates to:
   /// **'Vault Mesh'**
   String get adminCompaniesMetricVaultMesh;
 
   /// No description provided for @adminCompaniesMetricVaultRaft.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault Mesh'**
   String get adminCompaniesMetricVaultRaft;
 
   /// No description provided for @adminCompaniesOperationalEntities.

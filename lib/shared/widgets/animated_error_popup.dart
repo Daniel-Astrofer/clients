@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/features/presentation/widgets/glass_container.dart';
+import 'package:kerosene/design_system/components/generic/glass_container.dart';
 import 'package:kerosene/design_system/components/buttons/app_button.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
+import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';

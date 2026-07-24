@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
-import 'package:kerosene/features/presentation/widgets/push_notification_card.dart';
+import 'package:kerosene/design_system/components/generic/push_notification_card.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';

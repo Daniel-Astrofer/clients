@@ -50,7 +50,7 @@ import '../core/performance/app_interaction_busy.dart';
 import '../core/performance/graphics_runtime_degrade.dart';
 import '../core/performance/kerosene_graphics_policy.dart';
 import '../core/performance/kerosene_performance_boundary.dart';
-import '../features/presentation/widgets/kerosene_logo_loading_view.dart';
+import '../design_system/components/generic/kerosene_logo_loading_view.dart';
 import '../core/providers/shader_provider.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';

@@ -5,7 +5,7 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/features/presentation/widgets/kerosene_logo.dart';
+import 'package:kerosene/design_system/components/generic/kerosene_logo.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/components/buttons/app_button.dart';
 import 'package:kerosene/design_system/components/inputs/app_text_field.dart';

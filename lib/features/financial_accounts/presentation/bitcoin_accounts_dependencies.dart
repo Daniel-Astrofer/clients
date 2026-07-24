@@ -9,9 +9,9 @@ export 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 export 'package:qr_flutter/qr_flutter.dart';
 export 'package:kerosene/core/l10n/l10n_extension.dart';
 export 'package:kerosene/core/motion/app_motion.dart';
-export 'package:kerosene/features/presentation/widgets/app_notice.dart';
-export 'package:kerosene/features/presentation/widgets/app_primary_navigation.dart';
-export 'package:kerosene/features/presentation/widgets/bitcoin_address_blocks.dart';
+export 'package:kerosene/design_system/components/generic/app_notice.dart';
+export 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
+export 'package:kerosene/design_system/components/generic/bitcoin_address_blocks.dart';
 export 'package:kerosene/core/providers/network_status_provider.dart';
 export 'package:kerosene/core/responsive/kerosene_responsive.dart';
 export 'package:kerosene/design_system/foundation/theme/app_colors.dart';
