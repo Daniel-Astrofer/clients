@@ -547,7 +547,14 @@ class _ReceiveRequestFlowScreenState
     final bolt11 = link.paymentRequest?.trim() ?? '';
     if (isLightning && bolt11.isNotEmpty) {
       _address = bolt11;
-      _paymentUri = bolt11;
+      // Multi-rail: if we also have an on-chain address, generate combined BIP-21.
+      final hasChainDeposit = link.depositAddress.trim().isNotEmpty &&
+          looksLikeBitcoinAddress(link.depositAddress.trim());
+      if (hasChainDeposit) {
+        _paymentUri = _paymentUriFor(link);
+      } else {
+        _paymentUri = bolt11;
+      }
     } else {
       final uri = _paymentUriFor(link);
       if (uri != null && uri.isNotEmpty) {
@@ -670,23 +677,38 @@ class _ReceiveRequestFlowScreenState
 
   String? _paymentUriFor(PaymentLink? link) {
     if (link == null) return null;
-    // Lightning: QR must encode the BOLT11 invoice, not a truncated address.
     final bolt11 = link.paymentRequest?.trim();
-    if (link.isLightningPaymentRequest && bolt11 != null && bolt11.isNotEmpty) {
+    final deposit = link.depositAddress.trim();
+    final hasBolt11 = bolt11 != null &&
+        bolt11.isNotEmpty &&
+        bolt11.toLowerCase().startsWith('ln');
+    final hasChainAddress =
+        deposit.isNotEmpty && looksLikeBitcoinAddress(deposit);
+
+    // Multi-rail: BIP-21 with lightning= parameter so any wallet works.
+    if (hasChainAddress && hasBolt11) {
+      return QrPaymentParser.encode(
+        address: deposit,
+        amountBtc: link.amountBtc > 0 ? link.amountBtc : widget.amountBtc,
+        label: widget.wallet.name,
+        message: link.description,
+        lightning: bolt11,
+      );
+    }
+
+    // Lightning-only: QR must encode the BOLT11 invoice.
+    if (link.isLightningPaymentRequest && hasBolt11) {
       return bolt11;
     }
     final shareable = link.shareablePaymentPayload;
     if (shareable.toLowerCase().startsWith('ln')) {
       return shareable;
     }
-    final address = link.depositAddress.trim();
-    final hasChainAddress =
-        address.isNotEmpty && looksLikeBitcoinAddress(address);
 
-    // Prefer BIP-21 whenever we have a real chain address (testnet tb1 / mainnet).
+    // On-chain only: BIP-21.
     if (hasChainAddress) {
       return QrPaymentParser.encode(
-        address: address,
+        address: deposit,
         amountBtc: link.amountBtc > 0 ? link.amountBtc : widget.amountBtc,
         label: widget.wallet.name,
         message: link.description,
@@ -697,7 +719,6 @@ class _ReceiveRequestFlowScreenState
     if (explicitUri != null &&
         explicitUri.isNotEmpty &&
         !explicitUri.toLowerCase().startsWith('bitcoin:')) {
-      // kerosene://… internal payment URI or raw bolt11
       return explicitUri;
     }
     if (link.isInternalPaymentRequest || !_isOnChainReceive) {

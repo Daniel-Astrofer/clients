@@ -50,6 +50,7 @@ class QrPaymentParser {
     double? amountBtc,
     String? label,
     String? message,
+    String? lightning,
   }) {
     final params = <String, String>{};
 
@@ -65,6 +66,9 @@ class QrPaymentParser {
     }
     if (message != null && message.isNotEmpty) {
       params['message'] = Uri.encodeQueryComponent(message);
+    }
+    if (lightning != null && lightning.isNotEmpty) {
+      params['lightning'] = lightning;
     }
 
     if (params.isEmpty) return 'bitcoin:$address';

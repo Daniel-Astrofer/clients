@@ -64,6 +64,7 @@ import 'package:kerosene/features/movement/presentation/send/send_wallet_resolve
 
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_analyzer.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_loader.dart';
 import 'package:kerosene/features/movement/presentation/send/send_amount_step.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_step.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
@@ -2281,6 +2282,38 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     HapticFeedback.selectionClick();
     await _parsePaymentRequest(value);
+
+    if (!mounted) return;
+
+    // Validate before showing the loading animation.
+    final currentText = _receiverController.text.trim();
+    final currentAnalysis = _currentDestinationAnalysis();
+    if (currentText.isEmpty ||
+        !currentAnalysis.isValid ||
+        currentAnalysis.isEmpty) {
+      return;
+    }
+
+    // Nubank-style sequential loading screen that runs the standard
+    // destination resolution pipeline inside an animated overlay.
+    // When the destination has a locked amount (payment link, BIP-21,
+    // BOLT11), _continueFromDestinationStep automatically calls
+    // _handleContinue → _openPaymentConfirmation underneath the loader,
+    // so the user sees the confirmation the instant the loader dismisses.
+    final barrierColor = Theme.of(context).scaffoldBackgroundColor;
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: barrierColor,
+      builder: (_) => SendDestinationLoader(
+        onResolve: () async {
+          await _continueFromDestinationStep(
+            _currentDestinationAnalysis(),
+          );
+          return mounted;
+        },
+      ),
+    );
   }
 }
 
