@@ -44,11 +44,10 @@ String _resolveUserNameFromFlags(BuildContext context, HomeShellFlags flags) {
   return userName;
 }
 
-/// Viewport-pinned aurora behind the scroll body + debug A/B chip.
+/// Aurora behind the balance header + debug A/B chip.
 ///
-/// Lives outside the [CustomScrollView] so pull-to-refresh never exposes the
-/// black scaffold above the header. The aurora band fades into the scaffold
-/// via a fixed-position veil so the top glow never follows the scroll.
+/// This layer is mounted inside [HomeHeaderLayer], so its shader and veil
+/// share the same scroll coordinate as the balance.
 class HomeAuroraLayer extends StatelessWidget {
   const HomeAuroraLayer({super.key});
 
@@ -460,16 +459,24 @@ class HomeHeaderLayer extends ConsumerWidget {
         : null;
 
     return RepaintBoundary(
-      child: HomeBalanceSection(
-        userName: userName,
-        walletState: walletState,
-        activeWallet: activeWallet,
-        pageHorizontalPadding: pageHorizontalPadding,
-        pageTopPad: pageTopPad,
-        onReceive: onReceive,
-        onSend: onSend,
-        onViewStatement: onViewStatement,
-        onOpenWallets: onOpenWallets,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          // The shader intentionally shares the header's scroll coordinate
+          // with the balance, so their visual relationship never drifts.
+          const HomeAuroraLayer(),
+          HomeBalanceSection(
+            userName: userName,
+            walletState: walletState,
+            activeWallet: activeWallet,
+            pageHorizontalPadding: pageHorizontalPadding,
+            pageTopPad: pageTopPad,
+            onReceive: onReceive,
+            onSend: onSend,
+            onViewStatement: onViewStatement,
+            onOpenWallets: onOpenWallets,
+          ),
+        ],
       ),
     );
   }

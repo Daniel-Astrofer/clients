@@ -15,10 +15,9 @@ import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
 /// GPU Gemini edge-glow — ambient aurora behind the home header.
 ///
-/// Viewport-pinned via [HomeAuroraLayer] (not inside the scrollable header),
-/// so pull-to-refresh never shears a black scaffold bar above the content.
-/// Colors / intensity / theater energy are continuously lerped so enter/exit
-/// never flick.
+/// Mounted inside [HomeHeaderLayer], sharing the balance header's scroll
+/// coordinate. Colors / intensity / theater energy are continuously lerped
+/// so enter/exit never flick.
 class SceneGeminiGlowBackground extends ConsumerStatefulWidget {
   const SceneGeminiGlowBackground({super.key});
 
