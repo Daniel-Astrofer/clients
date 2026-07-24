@@ -12,7 +12,7 @@ import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
@@ -36,9 +36,12 @@ import 'receive_request_flow_components.dart';
 
 enum ReceiveRequestStage { qr, confirmations, identified }
 
-Color get _receiveBackground => KeroseneBrandTokens.background;
-Color get _receiveText => KeroseneBrandTokens.textPrimary;
-Color get _receiveMuted => KeroseneBrandTokens.textMuted;
+SendFlowTheme _flowTokens() => SendFlowTheme.forVariant(
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+
+Color get _receiveBackground => _flowTokens().background;
+Color get _receiveText => _flowTokens().textPrimary;
+Color get _receiveMuted => _flowTokens().textMuted;
 
 class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final Wallet wallet;
@@ -169,13 +172,13 @@ class _ReceiveRequestFlowScreenState
                 ),
           );
     if (remaining == null || total == null || total.inSeconds <= 0) {
-      return KeroseneBrandTokens.success;
+      return _flowTokens().feedbackSuccess;
     }
     final ratio = remaining.inMilliseconds / total.inMilliseconds;
     // Green while above half; yellow around half; red below half.
-    if (ratio > 0.52) return KeroseneBrandTokens.success;
-    if (ratio >= 0.48) return KeroseneBrandTokens.warning;
-    return KeroseneBrandTokens.error;
+    if (ratio > 0.52) return _flowTokens().feedbackSuccess;
+    if (ratio >= 0.48) return _flowTokens().feedbackWarning;
+    return _flowTokens().feedbackError;
   }
 
   String _formatRemaining(Duration? remaining) {
@@ -943,18 +946,18 @@ class _ReceiveRequestFlowScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+        backgroundColor: _flowTokens().surfaceHigh,
         title: Text(
           tr.receivePaymentLinkCancelTitle,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textPrimary,
+            color: _flowTokens().textPrimary,
             fontWeight: FontWeight.w700,
           ),
         ),
         content: Text(
           tr.receivePaymentLinkCancelMessage,
           style: AppTypography.inter(
-            color: KeroseneBrandTokens.textSecondary,
+            color: _flowTokens().textSecondary,
             fontSize: 14,
           ),
         ),
@@ -1177,7 +1180,7 @@ class _ReceiveRequestFlowScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
-        color: KeroseneBrandTokens.surface,
+        color: _flowTokens().surface,
         border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(14),
       ),
@@ -1399,8 +1402,8 @@ class _ReceiveRequestFlowScreenState
                 child: FilledButton(
                   onPressed: _goHome,
                   style: FilledButton.styleFrom(
-                    backgroundColor: KeroseneBrandTokens.textPrimary,
-                    foregroundColor: KeroseneBrandTokens.background,
+                    backgroundColor: _flowTokens().ctaBackground,
+                    foregroundColor: _flowTokens().ctaForeground,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -1419,7 +1422,7 @@ class _ReceiveRequestFlowScreenState
                 child: OutlinedButton.icon(
                   onPressed: _sharePaymentValue,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: KeroseneBrandTokens.textPrimary,
+                    foregroundColor: _flowTokens().textPrimary,
                     side: BorderSide(color: Theme.of(context).dividerColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),

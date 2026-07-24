@@ -324,7 +324,7 @@ class SendFeeTierBar extends StatelessWidget {
             Expanded(
               child: Material(
                 color:
-                    selected == tier ? Theme.of(context).colorScheme.onSurface : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+                    selected == tier ? Theme.of(context).colorScheme.onSurface : SendFlowTheme.of(context).surfaceHigh,
                 borderRadius: tokens.inputBorderRadius,
                 child: InkWell(
                   onTap: () {

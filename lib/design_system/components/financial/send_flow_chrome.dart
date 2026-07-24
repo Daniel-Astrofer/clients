@@ -58,7 +58,7 @@ class SendFlowPrimaryCta extends StatelessWidget {
     final tokens = SendFlowTheme.of(context);
     final ready = enabled && !isLoading && onPressed != null;
     final bg = inverted
-        ? (ready ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)) : tokens.ctaDisabledBackground)
+        ? (ready ? tokens.surfaceHigh : tokens.ctaDisabledBackground)
         : (ready ? tokens.ctaBackground : tokens.ctaDisabledBackground);
     final fg = inverted
         ? (ready ? tokens.textPrimary : tokens.ctaDisabledForeground)
@@ -113,7 +113,7 @@ class SendFlowCard extends StatelessWidget {
     final tokens = SendFlowTheme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+        color: tokens.surfaceHigh,
         borderRadius: tokens.cardBorderRadius,
         border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.55)),
         boxShadow: tokens.cardShadow,

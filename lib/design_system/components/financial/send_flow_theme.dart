@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
-/// Design tokens for financial send / transfer wizards ([ThemeExtension]).
+/// Design tokens for financial send/receive wizards ([ThemeExtension]).
 ///
 /// Rules encoded here (no magic values in feature widgets):
 /// - Thumb-zone CTA dock + min touch 48
@@ -15,10 +16,13 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     required this.background,
     required this.surface,
     required this.surfaceHigh,
+    required this.surfaceRaised,
     required this.border,
+    required this.borderStrong,
     required this.textPrimary,
     required this.textSecondary,
     required this.textMuted,
+    required this.accent,
     required this.feedbackError,
     required this.feedbackSuccess,
     required this.feedbackWarning,
@@ -39,6 +43,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     required this.radiusPill,
     required this.radiusInput,
     required this.radiusCard,
+    required this.radiusPanel,
     required this.pagePadding,
     required this.thumbDockPadding,
   });
@@ -46,10 +51,13 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
   final Color background;
   final Color surface;
   final Color surfaceHigh;
+  final Color surfaceRaised;
   final Color border;
+  final Color borderStrong;
   final Color textPrimary;
   final Color textSecondary;
   final Color textMuted;
+  final Color accent;
   final Color feedbackError;
   final Color feedbackSuccess;
   final Color feedbackWarning;
@@ -71,19 +79,23 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
   final double radiusPill;
   final double radiusInput;
   final double radiusCard;
+  final double radiusPanel;
   final EdgeInsets pagePadding;
   final EdgeInsets thumbDockPadding;
 
-  /// Dark send-flow defaults (current product surface — do not change).
+  /// Dark send/receive flow defaults — aligns surfaceHigh with home card chrome.
   static SendFlowTheme dark() {
     return SendFlowTheme(
       background: KeroseneBrandTheme.dark.background,
       surface: KeroseneBrandTheme.dark.surface,
-      surfaceHigh: KeroseneBrandTheme.dark.surfaceHigh,
-      border: KeroseneBrandTheme.dark.border,
+      surfaceHigh: HomeSurfaceTheme.dark.card,
+      surfaceRaised: const Color(0xFF1A1D1F),
+      border: HomeSurfaceTheme.dark.panelBorder,
+      borderStrong: const Color(0xFF353B41),
       textPrimary: KeroseneBrandTheme.dark.textPrimary,
       textSecondary: KeroseneBrandTheme.dark.textSecondary,
       textMuted: KeroseneBrandTheme.dark.textMuted,
+      accent: KeroseneBrandTokens.keroseneGold,
       feedbackError: KeroseneBrandTokens.error,
       feedbackSuccess: KeroseneBrandTokens.success,
       feedbackWarning: KeroseneBrandTokens.warning,
@@ -101,17 +113,18 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
           offset: const Offset(0, 12),
         ),
       ],
-      spaceXs: AppSpacing.xs, // 4
-      spaceSm: AppSpacing.sm, // 8
-      spaceMd: AppSpacing.base, // 16
-      spaceLg: AppSpacing.xl2, // 24
-      spaceXl: AppSpacing.module, // 32
-      spaceSection: AppSpacing.section, // 48
+      spaceXs: AppSpacing.xs,
+      spaceSm: AppSpacing.sm,
+      spaceMd: AppSpacing.base,
+      spaceLg: AppSpacing.xl2,
+      spaceXl: AppSpacing.module,
+      spaceSection: AppSpacing.section,
       minTouch: AppSpacing.minTouch,
       ctaHeight: AppSpacing.xxxl,
       radiusPill: 999,
       radiusInput: 14,
       radiusCard: 24,
+      radiusPanel: 28,
       pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
       thumbDockPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl2,
@@ -122,17 +135,20 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     );
   }
 
-  /// Light send-flow — inverse of dark chrome; accents unchanged.
+  /// Light send/receive flow — inverse of dark chrome; accents unchanged.
   static SendFlowTheme light() {
     final brand = KeroseneBrandTheme.light;
     return SendFlowTheme(
       background: brand.background,
       surface: brand.surface,
-      surfaceHigh: brand.surfaceHigh,
-      border: brand.border,
+      surfaceHigh: HomeSurfaceTheme.light.card,
+      surfaceRaised: HomeSurfaceTheme.light.card,
+      border: HomeSurfaceTheme.light.panelBorder,
+      borderStrong: const Color(0xFFC5C8C3),
       textPrimary: brand.textPrimary,
       textSecondary: brand.textSecondary,
       textMuted: brand.textMuted,
+      accent: KeroseneBrandTokens.keroseneGold,
       feedbackError: KeroseneBrandTokens.error,
       feedbackSuccess: KeroseneBrandTokens.success,
       feedbackWarning: KeroseneBrandTokens.warning,
@@ -159,6 +175,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       radiusPill: 999,
       radiusInput: 14,
       radiusCard: 24,
+      radiusPanel: 28,
       pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
       thumbDockPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl2,
@@ -181,6 +198,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
   BorderRadius get pillBorderRadius => BorderRadius.circular(radiusPill);
   BorderRadius get inputBorderRadius => BorderRadius.circular(radiusInput);
   BorderRadius get cardBorderRadius => BorderRadius.circular(radiusCard);
+  BorderRadius get panelBorderRadius => BorderRadius.circular(radiusPanel);
 
   /// Hero amount (quantia / revisão).
   TextStyle amountHero({Color? color}) => AppTypography.financial(
@@ -230,10 +248,13 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     Color? background,
     Color? surface,
     Color? surfaceHigh,
+    Color? surfaceRaised,
     Color? border,
+    Color? borderStrong,
     Color? textPrimary,
     Color? textSecondary,
     Color? textMuted,
+    Color? accent,
     Color? feedbackError,
     Color? feedbackSuccess,
     Color? feedbackWarning,
@@ -254,6 +275,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     double? radiusPill,
     double? radiusInput,
     double? radiusCard,
+    double? radiusPanel,
     EdgeInsets? pagePadding,
     EdgeInsets? thumbDockPadding,
   }) {
@@ -261,10 +283,13 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surfaceHigh: surfaceHigh ?? this.surfaceHigh,
+      surfaceRaised: surfaceRaised ?? this.surfaceRaised,
       border: border ?? this.border,
+      borderStrong: borderStrong ?? this.borderStrong,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
       textMuted: textMuted ?? this.textMuted,
+      accent: accent ?? this.accent,
       feedbackError: feedbackError ?? this.feedbackError,
       feedbackSuccess: feedbackSuccess ?? this.feedbackSuccess,
       feedbackWarning: feedbackWarning ?? this.feedbackWarning,
@@ -287,6 +312,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       radiusPill: radiusPill ?? this.radiusPill,
       radiusInput: radiusInput ?? this.radiusInput,
       radiusCard: radiusCard ?? this.radiusCard,
+      radiusPanel: radiusPanel ?? this.radiusPanel,
       pagePadding: pagePadding ?? this.pagePadding,
       thumbDockPadding: thumbDockPadding ?? this.thumbDockPadding,
     );
@@ -298,3 +324,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
     return t < 0.5 ? this : other;
   }
 }
+
+/// Compatibility alias — SendFlowTheme is the canonical movement flow theme
+/// for send, receive, and transfer wizards.
+typedef MovementFlowTheme = SendFlowTheme;

@@ -11,7 +11,8 @@ import 'package:kerosene/core/security/secure_screen_guard.dart';
 import 'package:kerosene/core/security/rasp_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
+import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
@@ -20,7 +21,7 @@ import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/features/presentation/widgets/app_notice.dart';
+import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent_parser.dart';
@@ -87,7 +88,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     with FinancialSurfaceMixin, TickerProviderStateMixin {
   Color get internalBlack => Theme.of(context).scaffoldBackgroundColor;
   Color get internalSurface => Theme.of(context).colorScheme.surface;
-  Color get internalSurfaceHigh => (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
+  Color get internalSurfaceHigh => SendFlowTheme.of(context).surfaceHigh;
   Color get internalBorder => Theme.of(context).dividerColor;
   Color get internalText => Theme.of(context).colorScheme.onSurface;
   Color get internalMutedText => Theme.of(context).colorScheme.onSurfaceVariant;
@@ -1448,7 +1449,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: Material(
-                        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+                        color: SendFlowTheme.of(context).surfaceHigh,
                         borderRadius: BorderRadius.circular(16),
                         child: InkWell(
                           onTap: () => Navigator.of(context).pop(option.rail),

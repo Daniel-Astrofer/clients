@@ -3,26 +3,25 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
-Color get _receiveBackground => KeroseneBrandTokens.background;
-Color get _receiveSurface => KeroseneBrandTokens.surface;
-Color get _receiveSurfaceLowest => KeroseneBrandTokens.surfaceMuted;
-Color get _receiveSurfaceHigh => ThemeTokenBridge.isLight
-    ? const Color(0xFFF2F4F7)
-    : const Color(0xFF141517);
-Color get _receiveWarning => KeroseneBrandTokens.warning;
-Color get _receiveSuccess => KeroseneBrandTokens.success;
-Color get _receiveSurfaceLow => ThemeTokenBridge.isLight
-    ? const Color(0xFFF0F1EE)
-    : const Color(0xFF141517);
-Color get _receiveBorder => KeroseneBrandTokens.border;
-Color get _receiveText => KeroseneBrandTokens.textPrimary;
-Color get _receiveMuted => KeroseneBrandTokens.textMuted;
-Color get _receiveBody => KeroseneBrandTokens.textSecondary;
+SendFlowTheme _receiveTokens() => SendFlowTheme.forVariant(
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+
+Color get _receiveBackground => _receiveTokens().background;
+Color get _receiveSurface => _receiveTokens().surface;
+Color get _receiveSurfaceLowest => _receiveTokens().surface;
+Color get _receiveSurfaceHigh => _receiveTokens().surfaceHigh;
+Color get _receiveSurfaceLow => _receiveTokens().surfaceHigh;
+Color get _receiveWarning => _receiveTokens().feedbackWarning;
+Color get _receiveSuccess => _receiveTokens().feedbackSuccess;
+Color get _receiveBorder => _receiveTokens().border;
+Color get _receiveText => _receiveTokens().textPrimary;
+Color get _receiveMuted => _receiveTokens().textMuted;
+Color get _receiveBody => _receiveTokens().textSecondary;
 
 class ReceiveContextHeader extends StatelessWidget {
   final String title;
@@ -252,7 +251,7 @@ class ReceiveActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = primary ? KeroseneBrandTokens.background : _receiveText;
+    final foreground = primary ? _receiveTokens().ctaForeground : _receiveText;
     return SizedBox(
       height: 56,
       child: TextButton.icon(

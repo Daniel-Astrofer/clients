@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:kerosene/features/presentation/widgets/tor_loading_dots.dart';
+import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
@@ -57,14 +57,14 @@ class ReceiveNfcFlowScreen extends StatefulWidget {
 
 class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     with SingleTickerProviderStateMixin {
-  static Color get _surface => KeroseneBrandTokens.surface;
-  static Color get _surfaceHigh => ThemeTokenBridge.isLight
-      ? const Color(0xFFF2F4F7)
-      : const Color(0xFF141517);
-  static Color get _border => KeroseneBrandTokens.border;
-  static Color get _text => KeroseneBrandTokens.textPrimary;
-  static Color get _mutedText => KeroseneBrandTokens.textMuted;
-  static Color get _success => KeroseneBrandTokens.success;
+  static SendFlowTheme get _tokens => SendFlowTheme.forVariant(
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+  static Color get _surface => _tokens.surface;
+  static Color get _surfaceHigh => _tokens.surfaceHigh;
+  static Color get _border => _tokens.border;
+  static Color get _text => _tokens.textPrimary;
+  static Color get _mutedText => _tokens.textMuted;
+  static Color get _success => _tokens.feedbackSuccess;
 
   late final AnimationController _pulseController;
   final List<Timer> _timers = [];
@@ -290,7 +290,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     }
 
     return Scaffold(
-      backgroundColor: KeroseneBrandTokens.background,
+      backgroundColor: _tokens.background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

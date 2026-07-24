@@ -6,7 +6,9 @@ import 'package:kerosene/features/movement/presentation/send/send_destination_mo
 import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_review_args.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/features/presentation/widgets/kerosene_education_dialog.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
+import 'package:kerosene/design_system/components/generic/kerosene_education_dialog.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
 import 'send_money_screen_dependencies.dart';
 
@@ -231,7 +233,7 @@ class InternalTransferReviewScreenState<T>
     return PopScope(
       canPop: !_isSubmitting,
       child: Scaffold(
-        backgroundColor: _C.background,
+        backgroundColor: _cBackground,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -272,7 +274,7 @@ class InternalTransferReviewScreenState<T>
                                           'Velocidade do envio',
                                           textAlign: TextAlign.center,
                                           style: AppTypography.inter(
-                                            color: _C.muted,
+                                            color: _cMuted,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -282,7 +284,7 @@ class InternalTransferReviewScreenState<T>
                                           'O valor do pagamento está fixo. Você só pode ajustar a velocidade e as taxas.',
                                           textAlign: TextAlign.center,
                                           style: AppTypography.inter(
-                                            color: _C.muted.withValues(
+                                            color: _cMuted.withValues(
                                               alpha: 0.85,
                                             ),
                                             fontSize: 12,
@@ -338,17 +340,17 @@ class InternalTransferReviewScreenState<T>
             if (_isSubmitting)
               Positioned.fill(
                 child: ColoredBox(
-                  color: _C.background.withValues(alpha: 0.92),
+                  color: _cBackground.withValues(alpha: 0.92),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 36,
                           height: 36,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            color: _C.text,
+                            color: _cText,
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -356,7 +358,7 @@ class InternalTransferReviewScreenState<T>
                           submittingLabel,
                           textAlign: TextAlign.center,
                           style: AppTypography.inter(
-                            color: _C.text,
+                            color: _cText,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             height: 1.3,
@@ -415,7 +417,7 @@ class _SendPaymentReceiptScreenState<T>
     ];
 
     return Scaffold(
-      backgroundColor: _C.background,
+      backgroundColor: _cBackground,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -503,8 +505,8 @@ class _ReviewBody extends StatelessWidget {
               onPressed: onBack,
               icon: const Icon(KeroseneIcons.back, size: 31),
               style: IconButton.styleFrom(
-                foregroundColor: _C.text,
-                disabledForegroundColor: _C.muted.withValues(alpha: 0.38),
+                foregroundColor: _cText,
+                disabledForegroundColor: _cMuted.withValues(alpha: 0.38),
                 minimumSize: const Size.square(48),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 padding: EdgeInsets.zero,
@@ -516,7 +518,7 @@ class _ReviewBody extends StatelessWidget {
                 title,
                 textAlign: TextAlign.left,
                 style: AppTypography.newsreader(
-                  color: _C.text,
+                  color: _cText,
                   fontSize: 30.94,
                   fontWeight: FontWeight.w400,
                   height: 1.61,
@@ -532,7 +534,7 @@ class _ReviewBody extends StatelessWidget {
             widthFactor: _cardWidthFactor,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: _C.background,
+                color: _cBackground,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.88)),
               ),
@@ -549,13 +551,13 @@ class _ReviewBody extends StatelessWidget {
                           height: 44,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: _C.background,
+                            color: _cBackground,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.28),
                             ),
                           ),
-                          child: Icon(icon, color: _C.text, size: 20),
+                          child: Icon(icon, color: _cText, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -567,7 +569,7 @@ class _ReviewBody extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppTypography.inter(
-                                  color: _C.text,
+                                  color: _cText,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   height: 1.2,
@@ -580,7 +582,7 @@ class _ReviewBody extends StatelessWidget {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.inter(
-                                    color: _C.muted,
+                                    color: _cMuted,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     height: 1.3,
@@ -688,7 +690,7 @@ class _ReviewLine extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.inter(
-              color: _C.text,
+              color: _cText,
               fontSize: 12.6,
               fontWeight: FontWeight.w500,
               height: 1.3,
@@ -703,7 +705,7 @@ class _ReviewLine extends StatelessWidget {
           overflow: TextOverflow.fade,
           textAlign: TextAlign.right,
           style: AppTypography.inter(
-            color: _C.text,
+            color: _cText,
             fontSize: 12.6,
             fontWeight: FontWeight.w600,
             height: 1.3,
@@ -738,7 +740,7 @@ class _AmountBlock extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.inter(
-              color: _C.text,
+              color: _cText,
               fontSize: emphasize ? 13.5 : 12.6,
               fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
               height: 1.3,
@@ -756,7 +758,7 @@ class _AmountBlock extends StatelessWidget {
               overflow: TextOverflow.fade,
               textAlign: TextAlign.right,
               style: AppTypography.amountLarge.copyWith(
-                color: _C.text,
+                color: _cText,
                 fontSize: emphasize ? 16.2 : 14.4,
                 fontWeight: FontWeight.w700,
                 height: 1.2,
@@ -772,7 +774,7 @@ class _AmountBlock extends StatelessWidget {
                 overflow: TextOverflow.fade,
                 textAlign: TextAlign.right,
                 style: AppTypography.inter(
-                  color: _C.text,
+                  color: _cText,
                   fontSize: 10.8,
                   fontWeight: FontWeight.w500,
                   height: 1.2,
@@ -800,7 +802,7 @@ class _FraudTip extends StatelessWidget {
     return Text.rich(
       TextSpan(
         style: AppTypography.inter(
-          color: _C.muted,
+          color: _cMuted,
           fontSize: 13,
           fontWeight: FontWeight.w500,
           height: 1.4,
@@ -818,12 +820,12 @@ class _FraudTip extends StatelessWidget {
               child: Text(
                 link,
                 style: AppTypography.inter(
-                  color: _C.text,
+                  color: _cText,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   height: 1.4,
                   decoration: TextDecoration.underline,
-                  decorationColor: _C.text.withValues(alpha: 0.55),
+                  decorationColor: _cText.withValues(alpha: 0.55),
                 ),
               ),
             ),
@@ -855,9 +857,9 @@ class _FirstSendAckBlock extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
-        color: _C.surface,
+        color: _cSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.border),
+        border: Border.all(color: _cBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -865,7 +867,7 @@ class _FirstSendAckBlock extends StatelessWidget {
           Text(
             SendMoneyCopy.firstSendAckTitle(context),
             style: AppTypography.inter(
-              color: _C.text,
+              color: _cText,
               fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
@@ -874,7 +876,7 @@ class _FirstSendAckBlock extends StatelessWidget {
           Text(
             SendMoneyCopy.firstSendAckBody(context),
             style: AppTypography.inter(
-              color: _C.secondary,
+              color: _cSecondary,
               fontSize: 13,
               fontWeight: FontWeight.w400,
               height: 1.4,
@@ -886,7 +888,7 @@ class _FirstSendAckBlock extends StatelessWidget {
               preview,
               textAlign: TextAlign.center,
               style: AppTypography.inter(
-                color: _C.text,
+                color: _cText,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
@@ -901,13 +903,13 @@ class _FirstSendAckBlock extends StatelessWidget {
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
             dense: true,
-            activeColor: _C.text,
-            checkColor: _C.background,
-            side: const BorderSide(color: _C.border, width: 1.4),
+            activeColor: _cText,
+            checkColor: _cBackground,
+            side: BorderSide(color: _cBorder, width: 1.4),
             title: Text(
               SendMoneyCopy.firstSendAckCheckbox(context),
               style: AppTypography.inter(
-                color: _C.text,
+                color: _cText,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -1079,8 +1081,8 @@ class _SendFlowHeader extends StatelessWidget {
           onPressed: onClose,
           icon: const Icon(KeroseneIcons.close, size: 22),
           style: IconButton.styleFrom(
-            foregroundColor: _C.muted,
-            disabledForegroundColor: _C.muted.withValues(alpha: 0.38),
+            foregroundColor: _cMuted,
+            disabledForegroundColor: _cMuted.withValues(alpha: 0.38),
             minimumSize: const Size.square(44),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
@@ -1118,9 +1120,9 @@ class _AuthorizeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: Ink(
             decoration: BoxDecoration(
-              color: ready ? _C.text : _C.surfaceHigh.withValues(alpha: 0.64),
+              color: ready ? _cText : _cSurfaceHigh.withValues(alpha: 0.64),
               border: Border.all(
-                color: ready ? _C.text : _C.border,
+                color: ready ? _cText : _cBorder,
               ),
               borderRadius: BorderRadius.circular(999),
             ),
@@ -1141,7 +1143,7 @@ class _AuthorizeButton extends StatelessWidget {
                         child: child,
                       );
                     },
-                    child: const ColoredBox(color: _C.success),
+                    child: ColoredBox(color: _cSuccess),
                   ),
                   Center(
                     child: AnimatedSwitcher(
@@ -1156,8 +1158,8 @@ class _AuthorizeButton extends StatelessWidget {
                             isSubmitting ? submittingLabel : label,
                             style: AppTypography.inter(
                               color: ready || isSubmitting
-                                  ? _C.background
-                                  : _C.muted,
+                                  ? _cBackground
+                                  : _cMuted,
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.2,
@@ -1170,8 +1172,8 @@ class _AuthorizeButton extends StatelessWidget {
                                 ? KeroseneIcons.security
                                 : KeroseneIcons.lock,
                             color: ready || isSubmitting
-                                ? _C.background
-                                : _C.muted,
+                                ? _cBackground
+                                : _cMuted,
                             size: 18,
                           ),
                         ],
@@ -1198,12 +1200,12 @@ class _ReceiptSuccessMark extends StatelessWidget {
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: _C.success.withValues(alpha: 0.16),
+          color: _cSuccess.withValues(alpha: 0.16),
           shape: BoxShape.circle,
         ),
-        child: const Icon(
+        child: Icon(
           KeroseneIcons.check,
-          color: _C.success,
+          color: _cSuccess,
           size: 34,
         ),
       ),
@@ -1227,8 +1229,8 @@ class _ReceiptPrimaryButton extends StatelessWidget {
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: _C.text,
-          foregroundColor: _C.background,
+          backgroundColor: _cText,
+          foregroundColor: _cBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1260,8 +1262,8 @@ class _ReceiptShareButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: _C.text,
-          side: const BorderSide(color: _C.border),
+          foregroundColor: _cText,
+          side: BorderSide(color: _cBorder),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1346,20 +1348,16 @@ String _formatReceiptDate(BuildContext context, DateTime value) {
   return '$day $month ${value.year} · $hour:$minute';
 }
 
-/// Local palette aliases — all map to [KeroseneBrandTokens] for platform coherence.
-class _C {
-  const _C._();
+/// Review palette — redirects to [SendFlowTheme] so send and receive share
+/// one color language.  File-scope getters are kept for minimal diff.
+SendFlowTheme _reviewTokens() => SendFlowTheme.forVariant(
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
 
-  static const background = Color(0xFF000000);
-  static const surface = Color(0xFF000000);
-  static const surfaceHigh = Color(0xFF141517);
-  static const border = Color(0xFF2A2A2A);
-  static const text = Color(0xFFFFFFFF);
-  static const secondary = Color(0xFFA3A3A3);
-  static const muted = Color(0xFF737373);
-  static const success = Color(0xFF4ADE80);
-
-  /// Dark authorize chrome (pre-wipe), matching original send review button.
-  static const button = Color(0xFF141517);
-  static const buttonText = Color(0xFFA3A3A3);
-}
+Color get _cBackground => _reviewTokens().background;
+Color get _cSurface => _reviewTokens().surface;
+Color get _cSurfaceHigh => _reviewTokens().surfaceHigh;
+Color get _cBorder => _reviewTokens().border;
+Color get _cText => _reviewTokens().textPrimary;
+Color get _cSecondary => _reviewTokens().textSecondary;
+Color get _cMuted => _reviewTokens().textMuted;
+Color get _cSuccess => _reviewTokens().feedbackSuccess;

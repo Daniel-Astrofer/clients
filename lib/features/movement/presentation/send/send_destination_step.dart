@@ -54,7 +54,7 @@ class SendDestinationStep extends StatelessWidget {
   });
 
   Color internalBlack(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
-  Color internalSurfaceHigh(BuildContext context) => (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
+  Color internalSurfaceHigh(BuildContext context) => SendFlowTheme.of(context).surfaceHigh;
   Color internalBorder(BuildContext context) => Theme.of(context).dividerColor;
   Color internalText(BuildContext context) => Theme.of(context).colorScheme.onSurface;
   Color internalMutedText(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
@@ -319,7 +319,7 @@ class _ReceiverProfileCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+        color: SendFlowTheme.of(context).surfaceHigh,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
@@ -431,7 +431,7 @@ class _RailChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = selected
         ? Theme.of(context).colorScheme.onSurface
-        : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
+        : SendFlowTheme.of(context).surfaceHigh;
     final fg = selected
         ? KeroseneBrandTokens.background
         : Theme.of(context).colorScheme.onSurface;
@@ -578,7 +578,7 @@ class _EmptyContactsState extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+              color: SendFlowTheme.of(context).surfaceHigh,
             ),
             child: Center(
               child: Icon(

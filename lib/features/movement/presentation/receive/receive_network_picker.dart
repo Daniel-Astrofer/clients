@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
@@ -40,7 +41,10 @@ class ReceiveNetworkPicker extends StatelessWidget {
     required this.onBack,
   });
 
-  static Color _optionBg = Color(0xFF1A1A1A);
+  static Color get _optionBg =>
+      SendFlowTheme.forVariant(
+        ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+      ).surfaceHigh;
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +121,7 @@ class _NetworkOptionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: option.bestValue
-                  ? KeroseneBrandTokens.textPrimary
+                  ? SendFlowTheme.of(context).textPrimary
                   : Theme.of(context).dividerColor,
               width: option.bestValue ? 1.2 : 0.8,
             ),
@@ -129,7 +133,7 @@ class _NetworkOptionCard extends StatelessWidget {
                 Text(
                   ReceiveMoneyCopy.networkBestValue(context),
                   style: AppTypography.captionLarge.copyWith(
-                    color: KeroseneBrandTokens.textPrimary,
+                    color: SendFlowTheme.of(context).textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -138,7 +142,7 @@ class _NetworkOptionCard extends StatelessWidget {
               Text(
                 option.title,
                 style: AppTypography.h3.copyWith(
-                  color: KeroseneBrandTokens.textPrimary,
+                  color: SendFlowTheme.of(context).textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),

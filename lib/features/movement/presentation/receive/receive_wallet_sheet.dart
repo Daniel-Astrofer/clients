@@ -3,11 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 
-const Color _receiveWalletOptionBg = Color(0xFF1A1A1A);
+Color get _receiveWalletOptionBg =>
+    SendFlowTheme.forVariant(
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+    ).surfaceHigh;
 
 /// Wallet picker panel for the receive flow (legacy sheet path).
 class ReceiveWalletPickerPanel extends StatelessWidget {

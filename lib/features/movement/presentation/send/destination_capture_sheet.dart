@@ -253,7 +253,7 @@ class _CaptureOption extends StatelessWidget {
     final tokens = SendFlowTheme.of(context);
 
     return Material(
-      color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+      color: SendFlowTheme.of(context).surfaceHigh,
       borderRadius: BorderRadius.circular(tokens.radiusInput + 2),
       child: InkWell(
         onTap: onTap,

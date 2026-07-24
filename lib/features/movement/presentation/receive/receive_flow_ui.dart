@@ -1,25 +1,58 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/features/presentation/widgets/kerosene_logo.dart';
+import 'package:kerosene/design_system/components/generic/kerosene_logo.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
-const Color receiveFlowBackgroundColor = AppColors.hexFF050708;
-const Color receiveFlowBackgroundTopColor = AppColors.hexFF0A0D10;
-const Color receiveFlowBackgroundBottomColor = AppColors.hexFF020303;
-const Color receiveFlowPanelColor = AppColors.hexFF0B0F12;
-const Color receiveFlowPanelAltColor = AppColors.hexFF11161A;
-const Color receiveFlowPanelRaisedColor = AppColors.hexFF171D22;
-const Color receiveFlowBorderColor = AppColors.hexFF242A2F;
-const Color receiveFlowBorderStrongColor = AppColors.hexFF353B41;
-const Color receiveFlowDividerColor = AppColors.hexFF1D2328;
-const Color receiveFlowTextColor = AppColors.hexFFF4F4F4;
-const Color receiveFlowMutedTextColor = AppColors.hexFFB8BCC2;
-const Color receiveFlowFaintTextColor = AppColors.hexFF7D838A;
-const Color receiveFlowAccentColor = AppColors.hexFFD6A84F;
+/// Resolve receive-flow colors from the canonical [SendFlowTheme] so send
+/// and receive share one palette. Callers that need a [BuildContext] use
+/// [ReceiveFlowColors.of]. Legacy code without a context falls back to the
+/// current mode via static getters.
+///
+/// Old frozen-constant names are kept as static getters for compat.
+abstract final class ReceiveFlowColors {
+  static SendFlowTheme _current() => SendFlowTheme.forVariant(
+        ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+      );
+
+  static Color get backgroundColor => _current().background;
+  static Color get backgroundTopColor => _current().background;
+  static Color get backgroundBottomColor => _current().background;
+  static Color get panelColor => _current().surface;
+  static Color get panelAltColor => _current().surfaceHigh;
+  static Color get panelRaisedColor => _current().surfaceRaised;
+  static Color get borderColor => _current().border;
+  static Color get borderStrongColor => _current().borderStrong;
+  static Color get dividerColor => _current().border;
+  static Color get textColor => _current().textPrimary;
+  static Color get mutedTextColor => _current().textSecondary;
+  static Color get faintTextColor => _current().textMuted;
+  static Color get accentColor => _current().accent;
+
+  static SendFlowTheme of(BuildContext context) => SendFlowTheme.of(context);
+}
+
+// Legacy frozen aliases — kept for tests / external references; prefer
+// [ReceiveFlowColors] or [SendFlowTheme.of].
+Color get receiveFlowBackgroundColor => ReceiveFlowColors.backgroundColor;
+Color get receiveFlowBackgroundTopColor => ReceiveFlowColors.backgroundTopColor;
+Color get receiveFlowBackgroundBottomColor =>
+    ReceiveFlowColors.backgroundBottomColor;
+Color get receiveFlowPanelColor => ReceiveFlowColors.panelColor;
+Color get receiveFlowPanelAltColor => ReceiveFlowColors.panelAltColor;
+Color get receiveFlowPanelRaisedColor => ReceiveFlowColors.panelRaisedColor;
+Color get receiveFlowBorderColor => ReceiveFlowColors.borderColor;
+Color get receiveFlowBorderStrongColor => ReceiveFlowColors.borderStrongColor;
+Color get receiveFlowDividerColor => ReceiveFlowColors.dividerColor;
+Color get receiveFlowTextColor => ReceiveFlowColors.textColor;
+Color get receiveFlowMutedTextColor => ReceiveFlowColors.mutedTextColor;
+Color get receiveFlowFaintTextColor => ReceiveFlowColors.faintTextColor;
+Color get receiveFlowAccentColor => ReceiveFlowColors.accentColor;
 
 class ReceiveFlowScaffold extends StatelessWidget {
   final String title;
@@ -114,7 +147,7 @@ class _ReceiveFlowBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -123,7 +156,7 @@ class _ReceiveFlowBackdrop extends StatelessWidget {
             receiveFlowBackgroundColor,
             receiveFlowBackgroundBottomColor,
           ],
-          stops: [0, 0.44, 1],
+          stops: const [0, 0.44, 1],
         ),
       ),
       child: Stack(
@@ -220,7 +253,7 @@ class _ReceiveFlowBrandBar extends StatelessWidget {
                 child: Container(
                   width: 7,
                   height: 7,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: receiveFlowAccentColor,
                     shape: BoxShape.circle,
                   ),
@@ -330,7 +363,7 @@ class ReceiveFlowIconButton extends StatelessWidget {
         backgroundColor: receiveFlowPanelAltColor.withValues(alpha: 0.78),
         minimumSize: const Size(38, 38),
         padding: const EdgeInsets.all(9),
-        side: const BorderSide(color: receiveFlowBorderColor),
+        side: BorderSide(color: receiveFlowBorderColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
         ),
@@ -654,7 +687,7 @@ class ReceiveFlowSecondaryButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           backgroundColor: receiveFlowPanelColor,
           foregroundColor: receiveFlowTextColor,
-          side: const BorderSide(color: receiveFlowBorderStrongColor),
+          side: BorderSide(color: receiveFlowBorderStrongColor),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -797,8 +830,8 @@ class ReceiveFlowDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Divider(color: receiveFlowDividerColor, height: 1, thickness: 1),
     );
   }
