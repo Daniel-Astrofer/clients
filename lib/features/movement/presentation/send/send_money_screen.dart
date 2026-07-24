@@ -1134,7 +1134,16 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
           SnackbarHelper.showError(msg);
           return;
         }
-        unawaited(_continueFromDestinationStep(currentAnalysis));
+        // External destinations (Lightning, on-chain, payment links) need
+        // network resolution. Show the loader for resolution only, then
+        // navigate after it dismisses. Internal usernames resolve instantly.
+        if (currentAnalysis.isPaymentLink ||
+            currentAnalysis.isLightning ||
+            currentAnalysis.isOnChain) {
+          unawaited(_onContinueWithLoader(currentAnalysis));
+        } else {
+          unawaited(_continueFromDestinationStep(currentAnalysis));
+        }
       },
     );
   }
@@ -2269,6 +2278,31 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       return null;
     }
     return label;
+  }
+
+  /// Resolution-only loader for the Continue button.
+  ///
+  /// Shows [SendDestinationLoader] while resolving the destination via KFE,
+  /// then dismisses it before handling navigation. This avoids blocking the
+  /// loader dialog on [showDialog] or [showModalBottomSheet] calls inside
+  /// [_handleContinue] / [_openPaymentConfirmation].
+  Future<void> _onContinueWithLoader(SendDestinationAnalysis analysis) async {
+    final barrierColor = Theme.of(context).scaffoldBackgroundColor;
+    final success = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: barrierColor,
+      builder: (_) => SendDestinationLoader(
+        onResolve: () async {
+          // Resolution only — no navigation inside the loader.
+          final resolved = await _resolveDestinationForKfe(analysis);
+          return resolved != null;
+        },
+      ),
+    );
+    if (success == true && mounted) {
+      await _continueFromDestinationStep(_currentDestinationAnalysis());
+    }
   }
 
   Future<void> _scanInternalDestination() async {

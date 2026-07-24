@@ -815,6 +815,7 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         data: {
           'walletId': walletId,
           'rail': rail,
+          'rails': [rail],
           if (amount > 0) 'amountSats': _btcToSats(amount),
           if (description != null && description.trim().isNotEmpty)
             'description': description.trim(),
