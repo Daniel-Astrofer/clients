@@ -90,8 +90,34 @@ class HomeAuroraLayer extends StatelessWidget {
             child: const HomeFeedTopVeil(),
           ),
         ),
-        const HomeAuroraRendererDebugToggle(),
       ],
+    );
+  }
+}
+
+/// Keeps the exposed pull-to-refresh area painted with the aurora while the
+/// scrolling header temporarily moves down. It is mounted only while there
+/// is actual overscroll, so the normal header has a single shader instance.
+class HomeAuroraPullUnderlay extends ConsumerWidget {
+  const HomeAuroraPullUnderlay({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final overscroll = ref.watch(homeOverscrollProvider);
+    if (overscroll <= 0) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 220,
+      child: IgnorePointer(
+        child: ClipRect(
+          child: RepaintBoundary(
+            child: HomeAuroraBackground(),
+          ),
+        ),
+      ),
     );
   }
 }
