@@ -76,8 +76,11 @@ abstract final class HomeMotion {
   /// Long reveal (initial load cascade).
   static const Duration long = Duration(milliseconds: 800);
 
-  /// Aurora band height as fraction of screen height.
-  static const double auroraBandFraction = 0.62;
+  /// Fixed aurora band height as fraction of screen height.
+  ///
+  /// The band ends around the middle of the balance hero. The balance
+  /// itself remains in the scroll view; only this background is pinned.
+  static const double auroraBandFraction = 0.42;
 
   /// Veil gradient stops (covers ~0 → 1 from aurora bottom toward feed).
   static const List<double> veilStops = [0.0, 0.22, 0.48, 0.74, 1.0];

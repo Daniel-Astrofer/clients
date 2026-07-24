@@ -71,8 +71,10 @@ class HomeAuroraLayer extends StatelessWidget {
           right: 0,
           height: bandHeight,
           child: IgnorePointer(
-            child: RepaintBoundary(
-              child: HomeAuroraBackground(),
+            child: ClipRect(
+              child: RepaintBoundary(
+                child: HomeAuroraBackground(),
+              ),
             ),
           ),
         ),
