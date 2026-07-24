@@ -34,21 +34,24 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 /// Viewport-pinned aurora behind the scroll body + debug A/B chip.
 ///
 /// Lives outside the [CustomScrollView] so pull-to-refresh never exposes the
-/// black scaffold above the header. The header itself stays transparent and
-/// does not host a second aurora (that caused vibration when chasing overscroll).
+/// black scaffold above the header. The aurora band fades into the scaffold
+/// via a fixed-position veil so the top glow never follows the scroll.
 class HomeAuroraLayer extends StatelessWidget {
   const HomeAuroraLayer({super.key});
 
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.sizeOf(context).height;
-    // Covers status bar + balance theater; feed veil fades into OLED black.
+    // Covers status bar + balance theater.
     final bandHeight =
         (screenH * HomeMotion.auroraBandFraction).clamp(280.0, 720.0);
+    final veilHeight =
+        (screenH * HomeMotion.veilHeightFraction).clamp(72.0, 180.0);
 
     return Stack(
       fit: StackFit.expand,
       children: [
+        // Aurora glow band — viewport-pinned, never scrolls.
         Positioned(
           top: 0,
           left: 0,
@@ -58,6 +61,19 @@ class HomeAuroraLayer extends StatelessWidget {
             child: RepaintBoundary(
               child: HomeAuroraBackground(),
             ),
+          ),
+        ),
+        // Fixed-position veil — fades aurora into OLED black at a
+        // constant position regardless of scroll offset.  When the
+        // user scrolls down, content enters this fade zone instead
+        // of the veil scrolling with the content.
+        Positioned(
+          top: bandHeight,
+          left: 0,
+          right: 0,
+          height: veilHeight,
+          child: IgnorePointer(
+            child: const HomeFeedTopVeil(),
           ),
         ),
         const HomeAuroraRendererDebugToggle(),
@@ -215,7 +231,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
               ),
             ),
             if (!flags.showLoading) ...[
-              const SliverToBoxAdapter(child: HomeFeedTopVeil()),
               ..._feedSlivers(
                 context: context,
                 useWide: useWide,
