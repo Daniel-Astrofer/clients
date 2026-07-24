@@ -692,7 +692,6 @@ class HomeBalanceHero extends ConsumerWidget {
                             regular: homeFontSize(54),
                           ),
                           letterSpacing: -0.5,
-                          fontWeight: FontWeight.w300,
                         ),
                       ),
                     ),

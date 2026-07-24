@@ -449,10 +449,11 @@ class _HomeFundsDistributionSectionState
               Expanded(
                 child: Text(
                   homeFundsDistributionTitle(context),
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  style: AppTypography.newsreader(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: homeFontSize(14),
-                    fontWeight: FontWeight.w300,
+                    fontSize: HomeTypography.sectionTitleSize,
+                    fontWeight: FontWeight.w400,
+                    height: 1.15,
                     letterSpacing: 0,
                   ),
                 ),

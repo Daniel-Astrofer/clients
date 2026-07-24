@@ -892,9 +892,8 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
           Text(
             title,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,
-            style: AppTypography.h3.copyWith(
+            style: AppTypography.bodyMedium.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
-              fontSize: homeFontSize(16),
               fontWeight: FontWeight.w400,
               letterSpacing: 0,
             ),

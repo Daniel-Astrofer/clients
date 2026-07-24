@@ -29,6 +29,7 @@ import 'package:kerosene/features/movement/presentation/activity/home_activity_s
 import 'package:kerosene/features/movement/presentation/activity/transaction_palette.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 enum StatementTransactionCardMode { stacked, separated }
 
@@ -274,8 +275,8 @@ class StatementTransactionCard extends ConsumerWidget {
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
     final cardPadding = isHome ? 14.0 : (compact ? 16.0 : 20.0);
     final iconSize = isHome ? 40.0 : (compact ? 42.0 : 48.0);
-    final titleFontSize = isHome ? 14.5 : (compact ? 15.0 : 17.0);
-    final counterpartyFontSize = isHome ? 11.5 : (compact ? 12.0 : 13.0);
+    final titleFontSize = isHome ? HomeTypography.bodySize : (compact ? 15.0 : 17.0);
+    final counterpartyFontSize = isHome ? HomeTypography.captionSize : (compact ? 12.0 : 13.0);
     final titleColor = colors.title;
     final subtitleColor = colors.subtitle;
     final metaColor = colors.meta;
@@ -389,10 +390,12 @@ class StatementTransactionCard extends ConsumerWidget {
                     amountLabel,
                     maxLines: 1,
                     softWrap: false,
-                    style: AppTypography.financial(
+                    style: AppTypography.homeBalance(
                       color: amountColor,
+                    ).copyWith(
                       fontSize: isHome ? 15 : 16,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -405,7 +408,7 @@ class StatementTransactionCard extends ConsumerWidget {
                   style: TextStyle(
                     color: metaColor,
                     fontFamily: AppTypography.bodyFontFamily,
-                    fontSize: isHome ? 11 : 12,
+                    fontSize: isHome ? HomeTypography.captionSize : 12,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0,
                   ),
@@ -648,7 +651,7 @@ class _BankStatementTransactionRow extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodyMedium.copyWith(
                             color: TransactionPalette.inkOnDark,
-                            fontSize: 14.5,
+                            fontSize: HomeTypography.bodySize,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0,
                             height: 1.15,
@@ -690,10 +693,12 @@ class _BankStatementTransactionRow extends StatelessWidget {
                           textAlign: TextAlign.right,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.financial(
+                          style: AppTypography.homeBalance(
                             color: amountColor,
-                            fontSize: 14.5,
+                          ).copyWith(
+                            fontSize: HomeTypography.bodySize,
                             fontWeight: FontWeight.w600,
+                            letterSpacing: 0,
                           ),
                         ),
                         const SizedBox(height: 5),
