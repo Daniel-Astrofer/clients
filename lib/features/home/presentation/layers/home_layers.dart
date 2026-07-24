@@ -464,7 +464,9 @@ class HomeHeaderLayer extends ConsumerWidget {
         children: [
           // The shader intentionally shares the header's scroll coordinate
           // with the balance, so their visual relationship never drifts.
-          const HomeAuroraLayer(),
+          const Positioned.fill(
+            child: HomeAuroraLayer(),
+          ),
           HomeBalanceSection(
             userName: userName,
             walletState: walletState,
