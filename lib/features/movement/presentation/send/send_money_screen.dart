@@ -1700,26 +1700,32 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     if (!workingIntent.isInternal) {
       // Platform BOLT11 → INTERNAL payment-link settlement (never LND self-pay).
+      // External Lightning invoices will 404 — catch gracefully and fall
+      // through to the local resolver.
       var intentForResolve = workingIntent;
       if (workingIntent.isLightning) {
-        final platformLink = await ref
-            .read(transactionRepositoryProvider)
-            .lookupPlatformLightningInvoice(workingIntent.normalizedValue);
-        if (!mounted) return null;
-        if (platformLink != null) {
-          intentForResolve = PaymentIntent(
-            kind: PaymentDestinationKind.paymentLink,
-            rawInput: workingIntent.rawInput,
-            normalizedValue: platformLink.id,
-            paymentLinkId: platformLink.id,
-            amountBtc: platformLink.amountBtc > 0
-                ? platformLink.amountBtc
-                : workingIntent.amountBtc,
-            label: platformLink.description.isNotEmpty
-                ? platformLink.description
-                : 'Pagamento Kerosene (interno)',
-            message: workingIntent.message,
-          );
+        try {
+          final platformLink = await ref
+              .read(transactionRepositoryProvider)
+              .lookupPlatformLightningInvoice(workingIntent.normalizedValue);
+          if (!mounted) return null;
+          if (platformLink != null) {
+            intentForResolve = PaymentIntent(
+              kind: PaymentDestinationKind.paymentLink,
+              rawInput: workingIntent.rawInput,
+              normalizedValue: platformLink.id,
+              paymentLinkId: platformLink.id,
+              amountBtc: platformLink.amountBtc > 0
+                  ? platformLink.amountBtc
+                  : workingIntent.amountBtc,
+              label: platformLink.description.isNotEmpty
+                  ? platformLink.description
+                  : 'Pagamento Kerosene (interno)',
+              message: workingIntent.message,
+            );
+          }
+        } catch (_) {
+          // Not a platform invoice — treat as external Lightning.
         }
       }
       final local = resolver.resolveLocal(

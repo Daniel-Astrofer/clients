@@ -24,7 +24,7 @@ class SendDestinationLoader extends StatefulWidget {
 }
 
 class _SendDestinationLoaderState extends State<SendDestinationLoader>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // ---- phase constants ----
   static const _phases = <String>[
     'Procurando destino',
