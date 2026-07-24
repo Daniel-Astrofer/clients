@@ -440,10 +440,6 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       unawaited(context.push<void>('/activity'));
     }
 
-    final screenH = MediaQuery.sizeOf(context).height;
-    final bandHeight =
-        (screenH * HomeMotion.auroraBandFraction).clamp(280.0, 720.0);
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: Theme.of(context).brightness == Brightness.light
           ? SystemUiOverlayStyle.dark.copyWith(
@@ -464,12 +460,6 @@ class HomeScreenState extends ConsumerState<HomeScreen>
           fit: StackFit.expand,
           children: [
             const HomeAuroraLayer(),
-            HomeFixedHeaderLayer(
-              onReceive: _openReceiveFlow,
-              onSend: _openSend,
-              onViewStatement: openStatement,
-              onOpenWallets: () => context.push('/accounts'),
-            ),
             const HomeRealtimeBootstrap(),
             const HomeEducationHost(),
             HomeScrollLayer(
@@ -482,7 +472,6 @@ class HomeScreenState extends ConsumerState<HomeScreen>
               onDepositWallet: _openDepositForWallet,
               onOpenDeposit: _openReceiveFlow,
               onOpenSendFromFeed: _openSend,
-              topPadding: bandHeight,
             ),
             const HomeBottomNavigationOverlay(
               currentDestination: AppPrimaryDestination.home,
