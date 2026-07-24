@@ -18,6 +18,7 @@ import 'package:kerosene/features/home/presentation/screens/home_screen_balance.
 import 'package:kerosene/features/home/presentation/screens/home_screen_education.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_surface.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen_transactions.dart';
+import 'package:kerosene/features/home/presentation/design/home_design_tokens.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_aurora_background.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_bitcoin_market_chart_card.dart';
 import 'package:kerosene/features/home/presentation/widgets/home_onboarding_progress_card.dart';
@@ -42,7 +43,8 @@ class HomeAuroraLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenH = MediaQuery.sizeOf(context).height;
     // Covers status bar + balance theater; feed veil fades into OLED black.
-    final bandHeight = (screenH * 0.62).clamp(280.0, 720.0);
+    final bandHeight =
+        (screenH * HomeMotion.auroraBandFraction).clamp(280.0, 720.0);
 
     return Stack(
       fit: StackFit.expand,
@@ -533,7 +535,9 @@ class HomeFeedTopVeil extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = Theme.of(context).scaffoldBackgroundColor;
     return SizedBox(
-      height: (MediaQuery.sizeOf(context).height * 0.12).clamp(72.0, 140.0),
+      height:
+          (MediaQuery.sizeOf(context).height * HomeMotion.veilHeightFraction)
+              .clamp(72.0, 180.0),
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -541,11 +545,12 @@ class HomeFeedTopVeil extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: [
               base.withValues(alpha: 0.0),
-              base.withValues(alpha: 0.40),
-              base.withValues(alpha: 0.80),
+              base.withValues(alpha: 0.18),
+              base.withValues(alpha: 0.44),
+              base.withValues(alpha: 0.72),
               base,
             ],
-            stops: const [0.0, 0.35, 0.72, 1.0],
+            stops: HomeMotion.veilStops,
           ),
         ),
       ),

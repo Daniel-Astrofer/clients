@@ -24,7 +24,9 @@ abstract final class HomeSurfaceTokens {
   static Color get surfaceDim => HomeSurfaceTheme.current.surfaceDim;
   static Color get overlayDim => HomeSurfaceTheme.current.overlayDim;
 
+  // --- radii ---
   static const double radiusSmall = 8.0;
+  static const double radiusMedium = 14.0;
   static const double radiusCard = 18.0;
   static const double radiusPanel = 28.0;
 
@@ -33,12 +35,72 @@ abstract final class HomeSurfaceTokens {
   static double size(double value) => value * densityScale;
   static double fontSize(double value) => value;
 
+  // --- type scale (canonical for all home sections) ---
+  static double get sectionTitleSize => fontSize(22);
+  static double get cardTitleSize => fontSize(18);
+  static double get bodySize => fontSize(14);
+  static double get captionSize => fontSize(12);
+  static double get smallLabelSize => fontSize(10);
+
   static TextStyle get title => HomeSurfaceTheme.current.title;
   static TextStyle get body => HomeSurfaceTheme.current.body;
   static TextStyle get label => HomeSurfaceTheme.current.label;
 
   static HomeSurfaceTheme resolve(BuildContext context) =>
       HomeSurfaceTheme.of(context);
+}
+
+/// Centralized motion tokens for the home screen.
+///
+/// Every entrance / reveal / stagger animation must use these constants so the
+/// home screen shares a single motion language.
+abstract final class HomeMotion {
+  /// Default entrance duration for sections cascading in.
+  static const Duration entrance = Duration(milliseconds: 600);
+
+  /// Stagger delay between sibling items (rows, cards, chips).
+  static const Duration stagger = Duration(milliseconds: 50);
+
+  /// Default reveal curve (soft settle — less abrupt than easeOutCubic).
+  static const Curve curve = Curves.easeOutQuart;
+
+  /// Curve for panel / chart reveals (draw-on effect).
+  static const Curve revealCurve = Curves.easeInOutCubic;
+
+  /// Short transition (cross-fade, chip toggle).
+  static const Duration short = Duration(milliseconds: 280);
+
+  /// Medium transition (card swap, view change).
+  static const Duration medium = Duration(milliseconds: 480);
+
+  /// Long reveal (initial load cascade).
+  static const Duration long = Duration(milliseconds: 800);
+
+  /// Aurora band height as fraction of screen height.
+  static const double auroraBandFraction = 0.62;
+
+  /// Veil gradient stops (covers ~0 → 1 from aurora bottom toward feed).
+  static const List<double> veilStops = [0.0, 0.22, 0.48, 0.74, 1.0];
+
+  /// Veil height as fraction of screen height.
+  static const double veilHeightFraction = 0.14;
+}
+
+/// Theme-adaptive accent palette for ledger balance views.
+///
+/// Avoids hard-coded hex that clash with light mode.
+abstract final class HomeBalanceAccents {
+  static Color total(bool isLight) =>
+      isLight ? const Color(0xFF1A1A1A) : Colors.white;
+
+  static Color platform(bool isLight) =>
+      isLight ? const Color(0xFF0055FF) : Colors.white;
+
+  static Color onChain(bool isLight) =>
+      isLight ? const Color(0xFFE67E00) : const Color(0xFFFF9500);
+
+  static Color cold(bool isLight) =>
+      isLight ? const Color(0xFF0284C7) : const Color(0xFF7DD3FC);
 }
 
 /// Theme-aware home surface (inverse of OLED dark).
@@ -203,6 +265,7 @@ abstract class HomeColors {
 
 abstract class HomeRadius {
   static const double small = HomeSurfaceTokens.radiusSmall;
+  static const double medium = HomeSurfaceTokens.radiusMedium;
   static const double card = HomeSurfaceTokens.radiusCard;
   static const double panel = HomeSurfaceTokens.radiusPanel;
 }
@@ -211,6 +274,12 @@ abstract class HomeTypography {
   static TextStyle get title => HomeSurfaceTokens.title;
   static TextStyle get body => HomeSurfaceTokens.body;
   static TextStyle get label => HomeSurfaceTokens.label;
+
+  static double get sectionTitleSize => HomeSurfaceTokens.sectionTitleSize;
+  static double get cardTitleSize => HomeSurfaceTokens.cardTitleSize;
+  static double get bodySize => HomeSurfaceTokens.bodySize;
+  static double get captionSize => HomeSurfaceTokens.captionSize;
+  static double get smallLabelSize => HomeSurfaceTokens.smallLabelSize;
 }
 
 extension HomeSurfaceThemeContext on BuildContext {

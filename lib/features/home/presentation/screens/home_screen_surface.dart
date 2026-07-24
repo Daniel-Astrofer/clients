@@ -74,6 +74,10 @@ class HomeEntryTransitionState extends State<HomeEntryTransition>
   }
 }
 
+/// Standard card panel for home feed / distribution / empty states.
+///
+/// Uses [HomeSurfaceTheme] tokens so the look stays consistent across
+/// dark OLED and light modes.
 class HomeGlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -85,17 +89,21 @@ class HomeGlassPanel extends StatelessWidget {
     required this.child,
     this.padding = EdgeInsets.zero,
     this.borderRadius =
-        const BorderRadius.all(Radius.circular(HomeRadius.panel)),
+        const BorderRadius.all(Radius.circular(HomeRadius.card)),
     this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final surface = HomeSurfaceTheme.of(context);
+    final resolvedBg = backgroundColor ?? surface.card;
+    final resolvedBorder = surface.surfaceBorder;
+
     final content = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        color: backgroundColor ?? Theme.of(context).dividerColor,
-        border: Border.all(color: Theme.of(context).dividerColor),
+        color: resolvedBg,
+        border: Border.all(color: resolvedBorder),
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -266,14 +274,15 @@ class HomeBalanceActionButton extends StatelessWidget {
         ),
       );
     } else {
+      final surface = HomeSurfaceTheme.of(context);
       final content = Container(
         constraints: BoxConstraints(minHeight: homeSize(52)),
         padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
+          color: surface.surfaceDim,
           borderRadius: borderRadius,
           border: Border.all(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+            color: surface.surfaceBorder,
             width: 0.5,
           ),
         ),
@@ -447,38 +456,88 @@ class _ActionGlassGlowPainter extends CustomPainter {
   bool shouldRepaint(covariant _ActionGlassGlowPainter oldDelegate) => false;
 }
 
+/// Home pagination dots with two visual styles:
+/// - [HomePaginationDotStyle.circle]: round 6dp dots (education carousel, feeds).
+/// - [HomePaginationDotStyle.pill]: animated pill with accent color (balance carousel).
+enum HomePaginationDotStyle { circle, pill }
+
 class HomePaginationDots extends StatelessWidget {
   final int count;
   final int activeIndex;
+  final List<Color>? accents;
+  final ValueChanged<int>? onDotTap;
+  final HomePaginationDotStyle style;
 
   const HomePaginationDots({
+    super.key,
     required this.count,
     required this.activeIndex,
+    this.accents,
+    this.onDotTap,
+    this.style = HomePaginationDotStyle.circle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isPill = style == HomePaginationDotStyle.pill;
+
     return Semantics(
       label: 'Página ${activeIndex + 1} de $count',
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (var index = 0; index < count; index++) ...[
-            if (index > 0) SizedBox(width: homeSize(6)),
-            Container(
-              width: homeSize(6),
-              height: homeSize(6),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: index == activeIndex
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-              ),
-            ),
+            if (index > 0) SizedBox(width: isPill ? homeSize(4) : homeSize(6)),
+            _buildDot(context, index, isPill),
           ],
         ],
       ),
     );
+  }
+
+  Widget _buildDot(BuildContext context, int index, bool isPill) {
+    final active = index == activeIndex;
+    final accent = accents != null && index < accents!.length ? accents![index] : null;
+
+    final dot = isPill
+        ? AnimatedContainer(
+            duration: HomeMotion.short,
+            curve: Curves.easeOutCubic,
+            width: active ? homeSize(18) : homeSize(7),
+            height: homeSize(7),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(homeSize(999)),
+              color: active
+                  ? (accent?.withValues(alpha: 0.95) ??
+                      Theme.of(context).colorScheme.onSurface)
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
+            ),
+          )
+        : AnimatedContainer(
+            duration: HomeMotion.short,
+            curve: Curves.easeOutCubic,
+            width: homeSize(6),
+            height: homeSize(6),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+          );
+
+    if (onDotTap != null) {
+      return GestureDetector(
+        onTap: () => onDotTap!(index),
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: isPill ? homeSize(4) : 0),
+          child: dot,
+        ),
+      );
+    }
+
+    return dot;
   }
 }
 

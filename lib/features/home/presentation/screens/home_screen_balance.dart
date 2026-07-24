@@ -397,7 +397,7 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
                   ),
                   if (tabs.length > 1) ...[
                     SizedBox(height: homeSize(10)),
-                    _HomeBalancePageDots(
+                    HomePaginationDots(
                       count: tabs.length,
                       activeIndex: selectedIndex,
                       accents: [for (final tab in tabs) tab.accent],
@@ -413,6 +413,7 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
                           curve: KeroseneMotion.standard,
                         );
                       },
+                      style: HomePaginationDotStyle.pill,
                     ),
                   ],
                   SizedBox(height: homeSize(20)),
@@ -518,50 +519,6 @@ class _HomeBalanceTab {
     required this.label,
     required this.accent,
   });
-}
-
-class _HomeBalancePageDots extends StatelessWidget {
-  final int count;
-  final int activeIndex;
-  final List<Color> accents;
-  final ValueChanged<int> onDotTap;
-
-  const _HomeBalancePageDots({
-    required this.count,
-    required this.activeIndex,
-    required this.accents,
-    required this.onDotTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final active = index == activeIndex;
-        final accent = accents[index.clamp(0, accents.length - 1)];
-        return GestureDetector(
-          onTap: () => onDotTap(index),
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: homeSize(4)),
-            child: AnimatedContainer(
-              duration: KeroseneMotion.fast,
-              curve: KeroseneMotion.standard,
-              width: active ? homeSize(18) : homeSize(7),
-              height: homeSize(7),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(homeSize(999)),
-                color: active
-                    ? accent.withValues(alpha: 0.95)
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
 }
 
 /// Legacy single-glow widget. Prefer [HomeStageAtmosphereLayer] on the home
@@ -800,7 +757,7 @@ class HomeBalanceHero extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodySmall.copyWith(
                       color: data.dailyChangeColor,
-                      fontSize: homeFontSize(13),
+                      fontSize: HomeTypography.captionSize,
                       fontWeight: FontWeight.w300,
                       letterSpacing: 0,
                     ),
@@ -873,12 +830,11 @@ class HomeBalanceCardData {
 /// Accent colors for each balance carousel page (glow + labels + dots).
 Color homeBalanceAccentFor(HomeLedgerBalanceView view) {
   final isLight = ThemeTokenBridge.isLight;
-  final ink = HomeSurfaceTheme.current.textPrimary;
   return switch (view) {
-    HomeLedgerBalanceView.total => isLight ? ink : const Color(0xFFFFFFFF),
-    HomeLedgerBalanceView.platform => isLight ? ink : const Color(0xFFFFFFFF),
-    HomeLedgerBalanceView.onChain => const Color(0xFFFF9500),
-    HomeLedgerBalanceView.cold => const Color(0xFF7DD3FC),
+    HomeLedgerBalanceView.total => HomeBalanceAccents.total(isLight),
+    HomeLedgerBalanceView.platform => HomeBalanceAccents.platform(isLight),
+    HomeLedgerBalanceView.onChain => HomeBalanceAccents.onChain(isLight),
+    HomeLedgerBalanceView.cold => HomeBalanceAccents.cold(isLight),
   };
 }
 

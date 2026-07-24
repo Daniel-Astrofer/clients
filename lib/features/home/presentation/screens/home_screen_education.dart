@@ -116,7 +116,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     style: AppTypography.newsreader(
                                       textStyle: theme.textTheme.titleMedium,
                                       color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: homeFontSize(20),
+                                      fontSize: HomeTypography.cardTitleSize,
                                       fontWeight: FontWeight.w300,
                                       height: 1.1,
                                       letterSpacing: 0,
@@ -129,7 +129,7 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     overflow: TextOverflow.ellipsis,
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      fontSize: homeFontSize(12),
+                                      fontSize: HomeTypography.captionSize,
                                       height: 1.45,
                                       letterSpacing: 0,
                                     ),
@@ -142,11 +142,10 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                           card.tag.toUpperCase(),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.labelSmall
-                                              ?.copyWith(
+                                          style: theme.textTheme.labelSmall?.copyWith(
                                             color: Theme.of(context).colorScheme.onSurface
                                                 .withValues(alpha: 0.72),
-                                            fontSize: homeFontSize(10),
+                                            fontSize: HomeTypography.smallLabelSize,
                                             fontWeight: FontWeight.w300,
                                             letterSpacing: 1.2,
                                           ),
@@ -155,10 +154,9 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                       if (card.cta?.isNavigate == true)
                                         Text(
                                           card.cta!.label,
-                                          style: theme.textTheme.labelSmall
-                                              ?.copyWith(
+                                          style: theme.textTheme.labelSmall?.copyWith(
                                             color: homeAmberColor,
-                                            fontSize: homeFontSize(10),
+                                            fontSize: HomeTypography.smallLabelSize,
                                             fontWeight: FontWeight.w600,
                                             letterSpacing: 0.4,
                                           ),
@@ -957,7 +955,7 @@ class HomeActivityFilterChip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.label.copyWith(
                   color: selected ? Theme.of(context).scaffoldBackgroundColor : Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: homeFontSize(12),
+                  fontSize: HomeTypography.captionSize,
                   fontWeight: FontWeight.w300,
                   letterSpacing: 0,
                 ),
@@ -1064,7 +1062,7 @@ class HomeSectionHeader extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: AppTypography.newsreader(
               color: Theme.of(context).colorScheme.onSurface,
-              fontSize: homeFontSize(22),
+              fontSize: HomeTypography.sectionTitleSize,
               fontWeight: FontWeight.w400,
               letterSpacing: 0,
               height: 1.15,
@@ -1081,7 +1079,7 @@ class HomeSectionHeader extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w400,
-                fontSize: homeFontSize(13),
+                fontSize: HomeTypography.bodySize,
                 letterSpacing: 0,
               ),
             ),

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kerosene/features/presentation/widgets/tor_navigation_loading_screen.dart';
+import 'package:kerosene/design_system/components/generic/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart'

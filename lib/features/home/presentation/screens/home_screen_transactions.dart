@@ -666,7 +666,7 @@ class _TransactionsSkeletonLoadingState
     super.initState();
     _cascade = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 780),
+      duration: HomeMotion.long,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
