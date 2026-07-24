@@ -45,8 +45,6 @@ String _resolveUserNameFromFlags(BuildContext context, HomeShellFlags flags) {
 }
 
 /// Viewport-pinned aurora behind the scroll body + debug A/B chip.
-
-// ...
 ///
 /// Lives outside the [CustomScrollView] so pull-to-refresh never exposes the
 /// black scaffold above the header. The aurora band fades into the scaffold
@@ -217,10 +215,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             BitcoinRefreshIndicator(onRefresh: widget.onRefresh),
             // ── Spacer for fixed-position header ─────────────────────────
             SliverToBoxAdapter(
-              child: ColoredBox(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: SizedBox(height: widget.topPadding),
-              ),
+              child: SizedBox(height: widget.topPadding),
             ),
             if (!flags.showLoading) ...[
               ..._feedSlivers(

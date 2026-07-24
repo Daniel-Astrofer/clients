@@ -440,6 +440,10 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       unawaited(context.push<void>('/activity'));
     }
 
+    final screenH = MediaQuery.sizeOf(context).height;
+    final bandHeight =
+        (screenH * HomeMotion.auroraBandFraction).clamp(280.0, 720.0);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: Theme.of(context).brightness == Brightness.light
           ? SystemUiOverlayStyle.dark.copyWith(
@@ -456,42 +460,34 @@ class HomeScreenState extends ConsumerState<HomeScreen>
             ),
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Builder(
-          builder: (context) {
-            final screenH = MediaQuery.sizeOf(context).height;
-            final bandHeight = (screenH * HomeMotion.auroraBandFraction)
-                .clamp(280.0, 720.0);
-
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                const HomeAuroraLayer(),
-                HomeFixedHeaderLayer(
-                  onReceive: _openReceiveFlow,
-                  onSend: _openSend,
-                  onViewStatement: openStatement,
-                  onOpenWallets: () => context.push('/accounts'),
-                ),
-                const HomeRealtimeBootstrap(),
-                const HomeEducationHost(),
-                HomeScrollLayer(
-                  onRefresh: _refreshHomeData,
-                  onReceive: _openReceiveFlow,
-                  onSend: _openSend,
-                  onOpenStatement: openStatement,
-                  onOpenWallets: () => context.push('/accounts'),
-                  onCreateWallet: _openCreateWallet,
-                  onDepositWallet: _openDepositForWallet,
-                  onOpenDeposit: _openReceiveFlow,
-                  onOpenSendFromFeed: _openSend,
-                  topPadding: bandHeight,
-                ),
-                const HomeBottomNavigationOverlay(
-                  currentDestination: AppPrimaryDestination.home,
-                ),
-              ],
-            );
-          },
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            const HomeAuroraLayer(),
+            HomeFixedHeaderLayer(
+              onReceive: _openReceiveFlow,
+              onSend: _openSend,
+              onViewStatement: openStatement,
+              onOpenWallets: () => context.push('/accounts'),
+            ),
+            const HomeRealtimeBootstrap(),
+            const HomeEducationHost(),
+            HomeScrollLayer(
+              onRefresh: _refreshHomeData,
+              onReceive: _openReceiveFlow,
+              onSend: _openSend,
+              onOpenStatement: openStatement,
+              onOpenWallets: () => context.push('/accounts'),
+              onCreateWallet: _openCreateWallet,
+              onDepositWallet: _openDepositForWallet,
+              onOpenDeposit: _openReceiveFlow,
+              onOpenSendFromFeed: _openSend,
+              topPadding: bandHeight,
+            ),
+            const HomeBottomNavigationOverlay(
+              currentDestination: AppPrimaryDestination.home,
+            ),
+          ],
         ),
       ),
     );
