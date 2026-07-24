@@ -31,7 +31,22 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 // one layer must NOT rebuild siblings. HomeScreen itself watches almost nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
+String _resolveUserNameFromFlags(BuildContext context, HomeShellFlags flags) {
+  var userName = '';
+  if (flags.userNameRaw.isNotEmpty) {
+    userName = flags.userNameRaw.split(' ').first;
+  } else if (flags.authIsLoading) {
+    userName = '...';
+  }
+  if (userName.isEmpty || userName == 'Not Found') {
+    userName = context.tr.homeFallbackUser;
+  }
+  return userName;
+}
+
 /// Viewport-pinned aurora behind the scroll body + debug A/B chip.
+
+// ...
 ///
 /// Lives outside the [CustomScrollView] so pull-to-refresh never exposes the
 /// black scaffold above the header. The aurora band fades into the scaffold
@@ -93,6 +108,7 @@ class HomeScrollLayer extends ConsumerStatefulWidget {
   final ValueChanged<Wallet> onDepositWallet;
   final VoidCallback onOpenDeposit;
   final VoidCallback onOpenSendFromFeed;
+  final double topPadding;
 
   const HomeScrollLayer({
     super.key,
@@ -105,6 +121,7 @@ class HomeScrollLayer extends ConsumerStatefulWidget {
     required this.onDepositWallet,
     required this.onOpenDeposit,
     required this.onOpenSendFromFeed,
+    this.topPadding = 0,
   });
 
   @override
@@ -129,7 +146,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
     final useWide = responsive.useWideHomeLayout;
     final navigationClearance =
         MediaQuery.viewPaddingOf(context).bottom + homeSize(32);
-    final pageTopPad = responsive.isTinyPhone ? homeSize(8) : homeSize(16);
 
     // Single coarse flag provider — shell structure only.
     final flags = ref.watch(homeShellFlagsProvider);
@@ -153,8 +169,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
         _firstUseActionPanelUserId == userId;
     final showPrimaryActionPanel =
         !flags.isReadyActionsVariant || showFirstUseReadyPanel;
-
-    final userName = _resolveUserName(context, flags);
 
     return RepaintBoundary(
       child: NotificationListener<ScrollNotification>(
@@ -201,33 +215,11 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
           ),
           slivers: [
             BitcoinRefreshIndicator(onRefresh: widget.onRefresh),
-            // ── HEADER layer (balance + theater) ─────────────────────────
+            // ── Spacer for fixed-position header ─────────────────────────
             SliverToBoxAdapter(
-              child: KeroseneAppColumn(
-                maxWidth: contentMaxWidth,
-                child: flags.showLoading
-                    ? Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          pageHorizontalPadding,
-                          pageTopPad + MediaQuery.paddingOf(context).top,
-                          pageHorizontalPadding,
-                          homeSize(8),
-                        ),
-                        child: const HomeLoadingContent()
-                            .animate()
-                            .fade(duration: 220.ms),
-                      )
-                    : HomeEntryTransition(
-                        child: HomeHeaderLayer(
-                          userName: userName,
-                          pageHorizontalPadding: pageHorizontalPadding,
-                          pageTopPad: pageTopPad,
-                          onReceive: widget.onReceive,
-                          onSend: widget.onSend,
-                          onViewStatement: widget.onOpenStatement,
-                          onOpenWallets: widget.onOpenWallets,
-                        ),
-                      ),
+              child: ColoredBox(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: SizedBox(height: widget.topPadding),
               ),
             ),
             if (!flags.showLoading) ...[
@@ -249,19 +241,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
         ),
       ),
     );
-  }
-
-  String _resolveUserName(BuildContext context, HomeShellFlags flags) {
-    var userName = '';
-    if (flags.userNameRaw.isNotEmpty) {
-      userName = flags.userNameRaw.split(' ').first;
-    } else if (flags.authIsLoading) {
-      userName = '...';
-    }
-    if (userName.isEmpty || userName == 'Not Found') {
-      userName = context.tr.homeFallbackUser;
-    }
-    return userName;
   }
 
   List<Widget> _feedSlivers({
@@ -463,6 +442,63 @@ class HomeHeaderLayer extends ConsumerWidget {
         userName: userName,
         walletState: walletState,
         activeWallet: activeWallet,
+        pageHorizontalPadding: pageHorizontalPadding,
+        pageTopPad: pageTopPad,
+        onReceive: onReceive,
+        onSend: onSend,
+        onViewStatement: onViewStatement,
+        onOpenWallets: onOpenWallets,
+      ),
+    );
+  }
+}
+
+/// Fixed-position header layer — lives in the main Stack above
+/// [HomeScrollLayer].  Never scrolls, so the aurora glow stays aligned
+/// behind the balance regardless of scroll offset.
+class HomeFixedHeaderLayer extends ConsumerWidget {
+  final VoidCallback onReceive;
+  final VoidCallback onSend;
+  final VoidCallback onViewStatement;
+  final VoidCallback onOpenWallets;
+
+  const HomeFixedHeaderLayer({
+    super.key,
+    required this.onReceive,
+    required this.onSend,
+    required this.onViewStatement,
+    required this.onOpenWallets,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final responsive = context.responsive;
+    final flags = ref.watch(homeShellFlagsProvider);
+    final pageHorizontalPadding = responsive.isTinyPhone
+        ? homeSize(18)
+        : responsive.isCompact
+            ? homeSize(24)
+            : responsive.isWide
+                ? AppSpacing.xxxl
+                : responsive.horizontalPadding;
+    final pageTopPad = responsive.isTinyPhone ? homeSize(8) : homeSize(16);
+    final userName = _resolveUserNameFromFlags(context, flags);
+
+    if (flags.showLoading) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          pageHorizontalPadding,
+          pageTopPad + MediaQuery.paddingOf(context).top,
+          pageHorizontalPadding,
+          homeSize(8),
+        ),
+        child: const HomeLoadingContent().animate().fade(duration: 220.ms),
+      );
+    }
+
+    return HomeEntryTransition(
+      child: HomeHeaderLayer(
+        userName: userName,
         pageHorizontalPadding: pageHorizontalPadding,
         pageTopPad: pageTopPad,
         onReceive: onReceive,
