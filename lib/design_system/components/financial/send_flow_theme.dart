@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
@@ -6,11 +7,11 @@ import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.da
 
 /// Design tokens for financial send/receive wizards ([ThemeExtension]).
 ///
-/// Rules encoded here (no magic values in feature widgets):
-/// - Thumb-zone CTA dock + min touch 48
-/// - Modular spacing 4 / 8 / 16 / 24 / 32 / 48
-/// - Pill primary CTA (radius 999), input 14, card 24
-/// - Tabular / mono financial type for amounts
+/// Linear-inspired:
+/// - Outlined pill CTA (9999px radius, 1px border, no fill)
+/// - 4px input radius, 8px card radius
+/// - No drop shadows — 1px hairline borders for separation
+/// - 4px spacing base
 class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
   const SendFlowTheme({
     required this.background,
@@ -83,36 +84,30 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
   final EdgeInsets pagePadding;
   final EdgeInsets thumbDockPadding;
 
-  /// Dark send/receive flow defaults — aligns surfaceHigh with home card chrome.
+  /// Dark send/receive flow — Linear monochrome stack.
   static SendFlowTheme dark() {
     return SendFlowTheme(
       background: KeroseneBrandTheme.dark.background,
       surface: KeroseneBrandTheme.dark.surface,
       surfaceHigh: HomeSurfaceTheme.dark.card,
-      surfaceRaised: const Color(0xFF1A1D1F),
+      surfaceRaised: AppColors.graphiteSurface,
       border: HomeSurfaceTheme.dark.panelBorder,
-      borderStrong: const Color(0xFF353B41),
+      borderStrong: AppColors.ashBorder,
       textPrimary: KeroseneBrandTheme.dark.textPrimary,
       textSecondary: KeroseneBrandTheme.dark.textSecondary,
       textMuted: KeroseneBrandTheme.dark.textMuted,
-      accent: KeroseneBrandTokens.keroseneGold,
+      accent: KeroseneBrandTokens.brand,
       feedbackError: KeroseneBrandTokens.error,
       feedbackSuccess: KeroseneBrandTokens.success,
       feedbackWarning: KeroseneBrandTokens.warning,
-      ctaBackground: KeroseneBrandTheme.dark.textPrimary,
-      ctaForeground: KeroseneBrandTheme.dark.background,
-      ctaDisabledBackground:
-          KeroseneBrandTheme.dark.surfaceHigh.withValues(alpha: 0.64),
-      ctaDisabledForeground: KeroseneBrandTheme.dark.textMuted,
+      ctaBackground: Colors.transparent,
+      ctaForeground: KeroseneBrandTheme.dark.textPrimary,
+      ctaDisabledBackground: Colors.transparent,
+      ctaDisabledForeground:
+          KeroseneBrandTheme.dark.textMuted.withValues(alpha: 0.64),
       inputFocusRing:
           KeroseneBrandTheme.dark.textPrimary.withValues(alpha: 0.28),
-      cardShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 32,
-          offset: const Offset(0, 12),
-        ),
-      ],
+      cardShadow: const [], // Linear: no drop shadows
       spaceXs: AppSpacing.xs,
       spaceSm: AppSpacing.sm,
       spaceMd: AppSpacing.base,
@@ -121,10 +116,10 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       spaceSection: AppSpacing.section,
       minTouch: AppSpacing.minTouch,
       ctaHeight: AppSpacing.xxxl,
-      radiusPill: 999,
-      radiusInput: 14,
-      radiusCard: 24,
-      radiusPanel: 28,
+      radiusPill: 9999,
+      radiusInput: 4,
+      radiusCard: 8,
+      radiusPanel: 8,
       pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
       thumbDockPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl2,
@@ -148,7 +143,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       textPrimary: brand.textPrimary,
       textSecondary: brand.textSecondary,
       textMuted: brand.textMuted,
-      accent: KeroseneBrandTokens.keroseneGold,
+      accent: KeroseneBrandTokens.brand,
       feedbackError: KeroseneBrandTokens.error,
       feedbackSuccess: KeroseneBrandTokens.success,
       feedbackWarning: KeroseneBrandTokens.warning,
@@ -157,13 +152,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       ctaDisabledBackground: brand.surfaceHigh.withValues(alpha: 0.64),
       ctaDisabledForeground: brand.textMuted,
       inputFocusRing: brand.textPrimary.withValues(alpha: 0.22),
-      cardShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
-          blurRadius: 24,
-          offset: const Offset(0, 10),
-        ),
-      ],
+      cardShadow: const [], // Linear: no drop shadows
       spaceXs: AppSpacing.xs,
       spaceSm: AppSpacing.sm,
       spaceMd: AppSpacing.base,
@@ -172,10 +161,10 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       spaceSection: AppSpacing.section,
       minTouch: AppSpacing.minTouch,
       ctaHeight: AppSpacing.xxxl,
-      radiusPill: 999,
-      radiusInput: 14,
-      radiusCard: 24,
-      radiusPanel: 28,
+      radiusPill: 9999,
+      radiusInput: 4,
+      radiusCard: 8,
+      radiusPanel: 8,
       pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
       thumbDockPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl2,
@@ -221,9 +210,9 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
 
   TextStyle titleCard({Color? color}) => AppTypography.inter(
         fontSize: 22,
-        fontWeight: FontWeight.w600,
+        fontWeight: AppTypography.w510,
         height: 1.22,
-        letterSpacing: -0.2,
+        letterSpacing: -0.264,
         color: color ?? textPrimary,
       );
 
@@ -231,15 +220,15 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
         fontSize: 16,
         fontWeight: FontWeight.w400,
         height: 1.6,
-        letterSpacing: 0,
+        letterSpacing: -0.16,
         color: color ?? textSecondary,
       );
 
   TextStyle ctaLabel({Color? color}) => AppTypography.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
+        fontSize: 14,
+        fontWeight: AppTypography.w510,
         height: 1.2,
-        letterSpacing: -0.2,
+        letterSpacing: -0.14,
         color: color ?? ctaForeground,
       );
 

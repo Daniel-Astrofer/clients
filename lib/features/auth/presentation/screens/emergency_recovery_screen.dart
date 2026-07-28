@@ -658,7 +658,7 @@ class _TotpQrPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         border: Border.all(color: AppColors.white10),
         borderRadius: BorderRadius.circular(8),
       ),

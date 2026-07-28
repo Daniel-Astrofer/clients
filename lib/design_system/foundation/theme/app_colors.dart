@@ -96,11 +96,13 @@ class AppColors {
   static const Color hexFF4A2A07 = Color(0xFF4A2A07);
   static const Color hexFF4A3520 = Color(0xFF4A3520);
   static const Color hexFF4ADE80 = Color(0xFF4ADE80);
+  static const Color hexFF4CAF50 = Color(0xFF4CAF50);
   static const Color hexFF525252 = Color(0xFF525252);
   static const Color hexFF52525B = Color(0xFF52525B);
   static const Color hexFF555550 = Color(0xFF555550);
   static const Color hexFF5A4217 = Color(0xFF5A4217);
   static const Color hexFF5D5D58 = Color(0xFF5D5D58);
+  static const Color hexFF5EE9A0 = Color(0xFF5EE9A0);
   static const Color hexFF60A5FA = Color(0xFF60A5FA);
   static const Color hexFF62675F = Color(0xFF62675F);
   static const Color hexFF63FEA7 = Color(0xFF63FEA7);
@@ -179,6 +181,7 @@ class AppColors {
   static const Color hexFFE3B85A = Color(0xFFE3B85A);
   static const Color hexFFE4BE64 = Color(0xFFE4BE64);
   static const Color hexFFE4E4E7 = Color(0xFFE4E4E7);
+  static const Color hexFFE53935 = Color(0xFFE53935);
   static const Color hexFFE5D19F = Color(0xFFE5D19F);
   static const Color hexFFE5E2E1 = Color(0xFFE5E2E1);
   static const Color hexFFE5E7E3 = Color(0xFFE5E7E3);
@@ -197,11 +200,15 @@ class AppColors {
   static const Color hexFFF1F1EC = Color(0xFFF1F1EC);
   static const Color hexFFF1F1ED = Color(0xFFF1F1ED);
   static const Color hexFFF2F4F5 = Color(0xFFF2F4F5);
+  static const Color hexFFF2F2F7 = Color(0xFFF2F2F7);
+  static const Color hexFFF2F2F3 = Color(0xFFF2F2F3);
   static const Color hexFFF4C430 = Color(0xFFF4C430);
   static const Color hexFFF4C7C7 = Color(0xFFF4C7C7);
   static const Color hexFFF4E7C8 = Color(0xFFF4E7C8);
   static const Color hexFFF4F4F4 = Color(0xFFF4F4F4);
+  static const Color hexFFF9F6F0 = Color(0xFFF9F6F0);
   static const Color hexFFF59E0B = Color(0xFFF59E0B);
+  static const Color hexFFF7931A = Color(0xFFF7931A);
   static const Color hexFFF7E4AF = Color(0xFFF7E4AF);
   static const Color hexFFF7E5BE = Color(0xFFF7E5BE);
   static const Color hexFFF7F7F1 = Color(0xFFF7F7F1);
@@ -228,15 +235,29 @@ class AppColors {
   static const Color hexFFFFF1C9 = Color(0xFFFFF1C9);
   static const Color hexFFFFFFFF = Color(0xFFFFFFFF);
 
+  // ─── Linear Monochrome tokens ──────────────────────
+  static const Color onyxCanvas = Color(0xFF08090A);
+  static const Color carbonSurface = Color(0xFF141516);
+  static const Color graphiteSurface = Color(0xFF1C1C1F);
+  static const Color smokeSurface = Color(0xFF23252A);
+  static const Color ironSurface = Color(0xFF2D2E31);
+  static const Color ashBorder = Color(0xFF34343A);
+  static const Color ferriteBorder = Color(0xFF3E3E44);
+  static const Color steelText = Color(0xFF62666D);
+  static const Color pewterText = Color(0xFF7F7F80);
+  static const Color fogText = Color(0xFF8A8F98);
+  static const Color mistText = Color(0xFFD0D6E0);
+  static const Color chalkBorder = Color(0xFFE4E5E9);
+  static const Color snow = Color(0xFFF7F8F8);
+  static const Color voidColor = Color(0xFF030404);
+
   // ─── Core Colors ─────────────────────────────────────
-  static const Color primary = Color(0xFFF2A900); // Bitcoin gold
+  static const Color primary = Color(0xFFD6A84F); // Bitcoin gold (slightly muted)
   static const Color secondary = Color(0xFF4B8BFF); // Institutional blue
   static const Color accent = Color(0xFF22C7A9); // Teal accent
-  static const Color background = Color(0xFF030405);
-  static const Color surface = Color(0xFF15171A);
 
   // Backward compatibility from initial design
-  static const Color darkSurface = surface;
+  static const Color darkSurface = Color(0xFF141516);
   static const Color secondary1 = Color(0xFF4B8BFF);
   static const Color secondary2 = Color(0xFF2D6CDF);
   static const Color secondary3 = Color(0xFF22C7A9);
@@ -272,24 +293,24 @@ class AppColors {
       : const Color(0xB3FFFFFF);
 
   // ─── Extended Tokens for Compatibility ────────────────
-  static const Color bgDeep = background;
-  static const Color bgCard = surface;
-  static const Color border = Color(0xFF2B3037);
+  static const Color bgDeep = Color(0xFF030404);
+  static const Color bgCard = Color(0xFF141516);
+  static const Color border = Color(0xFF23252A);
   static Color get textPrimary =>
-      ThemeTokenBridge.isLight ? const Color(0xFF181A17) : white;
-  static Color get textSecondary => white70;
+      ThemeTokenBridge.isLight ? const Color(0xFF181A17) : snow;
+  static Color get textSecondary => fogText;
   static const Color textMuted = grey;
   static const Color neonCyan = accent;
-  static const Color bgInput = Color(0xFF101215);
+  static const Color bgInput = Color(0xFF141516);
 
-  static const Color surfaceLight = Color(0xFF1C2025);
-  static const Color surfaceDark = Color(0xFF070809);
+  static const Color surfaceLight = Color(0xFF1C1C1F);
+  static const Color surfaceDark = Color(0xFF08090A);
 
   /// Button gradient used by solid action surfaces.
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFF8C45B), Color(0xFFF2A900)],
+    colors: [Color(0xFFF8C45B), Color(0xFFD6A84F)],
   );
 
   /// Alias kept for clarity
@@ -298,20 +319,20 @@ class AppColors {
   static const LinearGradient bgGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF11151B), Color(0xFF030405)],
+    colors: [Color(0xFF11151B), Color(0xFF08090A)],
   );
 
   static const LinearGradient onboardingBackgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF030405),
+      Color(0xFF08090A),
       Color(0xFF10171B),
       Color(0xFF15120A),
     ],
   );
 
-  static TextStyle heading({required double size, Color color = white}) {
+  static TextStyle heading({required double size, Color color = snow}) {
     return TextStyle(
       fontSize: size,
       fontWeight: FontWeight.bold,

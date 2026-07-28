@@ -25,10 +25,10 @@ abstract final class HomeSurfaceTokens {
   static Color get overlayDim => HomeSurfaceTheme.current.overlayDim;
 
   // --- radii ---
-  static const double radiusSmall = 8.0;
-  static const double radiusMedium = 14.0;
-  static const double radiusCard = 18.0;
-  static const double radiusPanel = 28.0;
+  static const double radiusSmall = 4.0;
+  static const double radiusMedium = 4.0;
+  static const double radiusCard = 8.0;
+  static const double radiusPanel = 8.0;
 
   static const double densityScale = 1.0;
 
@@ -140,18 +140,18 @@ class HomeSurfaceTheme extends ThemeExtension<HomeSurfaceTheme> {
   Color get positive => HomeSurfaceTokens.positive;
 
   static final HomeSurfaceTheme dark = HomeSurfaceTheme(
-    background: AppColors.hexFF000000,
-    card: AppColors.hexFF141517,
-    panelTop: AppColors.hexFF1A1A1A,
-    panelBottom: AppColors.hexFF121212,
-    panelBorder: AppColors.hexFF2A2A2A,
-    mutedText: AppColors.hexFFA3A3A3,
-    textPrimary: Colors.white,
-    textSecondary: Colors.white.withValues(alpha: 0.62),
-    textMuted: Colors.white.withValues(alpha: 0.42),
-    surfaceBorder: Colors.white.withValues(alpha: 0.08),
-    surfaceDim: Colors.white.withValues(alpha: 0.06),
-    overlayDim: Colors.black.withValues(alpha: 0.5),
+    background: AppColors.onyxCanvas,
+    card: AppColors.carbonSurface,
+    panelTop: AppColors.carbonSurface,
+    panelBottom: AppColors.graphiteSurface,
+    panelBorder: AppColors.smokeSurface,
+    mutedText: AppColors.fogText,
+    textPrimary: AppColors.snow,
+    textSecondary: AppColors.mistText,
+    textMuted: AppColors.fogText,
+    surfaceBorder: Color(0x1AF7F8F8),
+    surfaceDim: Color(0x0FF7F8F8),
+    overlayDim: Colors.black.withValues(alpha: 0.6),
   );
 
   static final HomeSurfaceTheme light = HomeSurfaceTheme(

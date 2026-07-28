@@ -8,6 +8,7 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/auth/auth_form_field.dart';
 import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -15,29 +16,29 @@ import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 Color get _signupInk => ThemeTokenBridge.isLight
-    ? const Color(0xFFF7F7F5)
-    : AppColors.hexFF000000;
+    ? KeroseneBrandTheme.light.background
+    : KeroseneBrandTheme.dark.background;
 Color get _signupSurface => ThemeTokenBridge.isLight
-    ? const Color(0xFFFFFFFF)
-    : AppColors.hexFF0A0A0A;
+    ? KeroseneBrandTheme.light.surface
+    : KeroseneBrandTheme.dark.surface;
 Color get _signupField => ThemeTokenBridge.isLight
-    ? const Color(0xFFF0F1EE)
-    : AppColors.hexFF1A1A1A;
+    ? KeroseneBrandTheme.light.surfaceHigh
+    : KeroseneBrandTheme.dark.surfaceElevated;
 Color get _signupBorder => ThemeTokenBridge.isLight
-    ? const Color(0xFFDDE0D8)
-    : AppColors.hexFF333333;
+    ? KeroseneBrandTheme.light.border
+    : KeroseneBrandTheme.dark.border;
 Color get _signupBorderSoft => ThemeTokenBridge.isLight
-    ? const Color(0xFFE2E4DE)
-    : AppColors.hexFF27272A;
+    ? KeroseneBrandTheme.light.border
+    : KeroseneBrandTheme.dark.borderSubtle;
 Color get _signupMuted => ThemeTokenBridge.isLight
-    ? const Color(0xFF62675F)
-    : AppColors.hexFFA1A1AA;
+    ? KeroseneBrandTheme.light.textSecondary
+    : KeroseneBrandTheme.dark.textMuted;
 Color get _signupDim => ThemeTokenBridge.isLight
-    ? const Color(0xFF8B9087)
-    : AppColors.hexFF71717A;
+    ? KeroseneBrandTheme.light.textMuted
+    : KeroseneBrandTheme.dark.textMuted;
 Color get _signupText => ThemeTokenBridge.isLight
-    ? const Color(0xFF181A17)
-    : AppColors.hexFFFFFFFF;
+    ? KeroseneBrandTheme.light.textPrimary
+    : KeroseneBrandTheme.dark.textPrimary;
 
 class SignupTypography {
   const SignupTypography._();

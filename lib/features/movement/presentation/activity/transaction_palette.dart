@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
@@ -10,15 +11,11 @@ import 'package:kerosene/features/movement/presentation/activity/transaction_vis
 /// - **Amounts** are always near-black for max readability on light card fills.
 /// - Surfaces use expanded [TxVisualVariant] (16 variants: rail × direction +
 ///   product + lifecycle) — not only white/orange/yellow.
-/// - Status accents (rings) stay saturated against light surfaces.
+/// - Status accents delegate to [KeroseneBrandTokens.success/warning/error].
+/// - Light card surface colors are local (specific to activity statement cards).
 enum TransactionCardSurface {
-  /// Kerosene-to-Kerosene — neutral light paper.
   internal,
-
-  /// On-chain — orange / peach wash.
   onchain,
-
-  /// Lightning — soft gold (not competing with on-chain orange).
   lightning,
 }
 
@@ -32,57 +29,54 @@ enum TransactionStatusTone {
 }
 
 /// Single source of truth for transaction UI colors.
+///
+/// ## Design rules
+/// - Ink on light surfaces: `inkPrimary`, `inkSecondary`, `inkTertiary`.
+/// - Status: delegates to [KeroseneBrandTokens] (green success, amber warning, red error).
+/// - Card surfaces: light paper per rail (internal/onchain/lightning).
+/// - Amounts always black on card surfaces (no green/red tint).
 abstract final class TransactionPalette {
-  // ── Ink on light surfaces ────────────────────────────────────────────────
-  /// Titles and **amounts** — pure black for maximum contrast.
+  // ── Ink on light card surfaces ──────────────────────────────────────────
+  /// Titles and amounts.
   static const Color inkPrimary = Color(0xFF000000);
-
-  /// Counterparty / secondary lines.
   static const Color inkSecondary = Color(0xFF4B4F57);
-
-  /// Timestamp / meta.
   static const Color inkTertiary = Color(0xFF6E737C);
-
-  /// Text on pure black rows (bank mode list).
   static const Color inkOnDark = Color(0xFFF2F2F3);
 
-  // ── Status ───────────────────────────────────────────────────────────────
-  static const Color statusConfirmed = Color(0xFF1F8A4C);
-  static const Color statusConfirmedSoft = Color(0xFF2FA85F);
-
-  static const Color statusPending = Color(0xFFE08912);
-  static const Color statusPendingSoft = Color(0xFFF0A020);
-
-  static const Color statusConfirming = Color(0xFFD4780C);
-  static const Color statusConfirmingSoft = Color(0xFFE89218);
-
-  static const Color statusFailed = Color(0xFFC43C3C);
-  static const Color statusFailedSoft = Color(0xFFD45555);
-  static const Color statusCancelled = Color(0xFFB04A4A);
-
-  /// Empty ring track on light cards.
+  // ── Status (delegates to brand tokens) ───────────────────────────────────
+  static Color get statusConfirmed => KeroseneBrandTokens.success;
+  static Color get statusConfirmedSoft =>
+      KeroseneBrandTokens.success.withValues(alpha: 0.85);
+  static Color get statusPending => KeroseneBrandTokens.warning;
+  static Color get statusPendingSoft =>
+      KeroseneBrandTokens.warning.withValues(alpha: 0.85);
+  static Color get statusConfirming =>
+      KeroseneBrandTokens.warning.withValues(alpha: 0.9);
+  static Color get statusConfirmingSoft =>
+      KeroseneBrandTokens.warning.withValues(alpha: 0.75);
+  static Color get statusFailed => KeroseneBrandTokens.error;
+  static Color get statusFailedSoft =>
+      KeroseneBrandTokens.error.withValues(alpha: 0.85);
+  static Color get statusCancelled =>
+      KeroseneBrandTokens.error.withValues(alpha: 0.7);
   static const Color statusTrack = Color(0xFF9AA0A8);
 
-  // ── Amounts: always black (no green/red amount tint) ─────────────────────
+  // ── Amounts: always black ────────────────────────────────────────────────
   static const Color amountCredit = inkPrimary;
   static const Color amountDebit = inkPrimary;
   static const Color amountNeutral = inkPrimary;
 
-  // ── Surfaces ─────────────────────────────────────────────────────────────
+  // ── Light card surface paper ─────────────────────────────────────────────
   /// Neutral paper.
   static const Color surfaceInternal = Color(0xFFF4F4F5);
   static const Color borderInternal = Color(0xFFD8DADF);
-
-  /// On-chain — quiet warm paper (rail shown by glyph, not neon wash).
+  /// On-chain — quiet warm paper.
   static const Color surfaceOnchain = Color(0xFFF6F1EA);
   static const Color borderOnchain = Color(0xFFD8D0C6);
-
   /// Lightning — quiet neutral paper.
   static const Color surfaceLightning = Color(0xFFF3F2EE);
   static const Color borderLightning = Color(0xFFD5D2C9);
-
   static const Color surfaceDivider = Color(0x290F0F10);
-
   /// Icon disc.
   static const Color iconWell = Color(0xFF141416);
   static const Color iconWellBorder = Color(0xFF2A2A2E);
@@ -97,14 +91,12 @@ abstract final class TransactionPalette {
 
   static TransactionStatusTone toneFor(Transaction tx) {
     if (tx.isCancelled) return TransactionStatusTone.cancelled;
-    // 24h with zero backend confs while still open → treat as not confirmed.
     if (tx.isUnconfirmedExpired || tx.status == TransactionStatus.failed) {
       return TransactionStatusTone.failed;
     }
     if (tx.status == TransactionStatus.confirmed || tx.isConfirmed) {
       return TransactionStatusTone.confirmed;
     }
-    // Only treat block confs as "confirming" for real on-chain rails.
     if (tx.status == TransactionStatus.confirming ||
         (tx.showsOnchainConfirmations && tx.confirmations > 0)) {
       return TransactionStatusTone.confirming;

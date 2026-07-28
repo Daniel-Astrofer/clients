@@ -456,7 +456,7 @@ class TransactionTypeIconBadge extends StatelessWidget {
         size: size,
         wellColor: backgroundColor,
         wellBorder: borderColor,
-        iconColor: const Color(0xFFF2F2F3),
+        iconColor: AppColors.hexFFF2F2F3,
       );
     }
     return Container(

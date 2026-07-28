@@ -209,7 +209,7 @@ class _HomeFeedMediaThumb extends StatelessWidget {
     final accent = switch (kind) {
       HomeFeedKind.promo => homeAmberColor,
       HomeFeedKind.announcement => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
-      HomeFeedKind.feature => const Color(0xFF5EE9A0),
+      HomeFeedKind.feature => AppColors.hexFF5EE9A0,
       _ => Theme.of(context).colorScheme.onSurface,
     };
 
@@ -961,7 +961,7 @@ class HomeActivityFilterChip extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE53935),
+                    color: AppColors.hexFFE53935,
                     shape: BoxShape.circle,
                     border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1),
                   ),

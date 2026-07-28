@@ -9,6 +9,7 @@ import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart'
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
@@ -985,7 +986,9 @@ class _StatementColors {
   static Color background(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
   static Color surface(BuildContext context) => Theme.of(context).colorScheme.surface;
   static Color surfaceHigh(BuildContext context) =>
-      (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7));
+      Theme.of(context).brightness == Brightness.dark
+          ? KeroseneBrandTheme.dark.surface
+          : KeroseneBrandTheme.light.surface;
   static Color border(BuildContext context) => Theme.of(context).dividerColor;
   static Color borderHigh(BuildContext context) => Theme.of(context).dividerColor;
   static Color textPrimary(BuildContext context) => Theme.of(context).colorScheme.onSurface;

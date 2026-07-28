@@ -356,7 +356,7 @@ class _ReceiveLiveGlassCutoutPainter extends CustomPainter {
     final bounds = Offset.zero & size;
     canvas.saveLayer(bounds, Paint());
 
-    canvas.drawRect(bounds, Paint()..color = const Color(0xFFFFFFFF));
+    canvas.drawRect(bounds, Paint()..color = AppColors.hexFFFFFFFF);
 
     // Punch opaque glyphs out of the white fill → live backdrop shows through.
     canvas.saveLayer(bounds, Paint()..blendMode = BlendMode.dstOut);
@@ -368,7 +368,7 @@ class _ReceiveLiveGlassCutoutPainter extends CustomPainter {
           fontSize: iconSize,
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
-          color: const Color(0xFF000000),
+          color: AppColors.hexFF000000,
           height: 1,
         ),
       ),
@@ -384,7 +384,7 @@ class _ReceiveLiveGlassCutoutPainter extends CustomPainter {
           fontWeight: fontWeight,
           fontFamily: fontFamily,
           fontFamilyFallback: fontFamilyFallback,
-          color: const Color(0xFF000000),
+          color: AppColors.hexFF000000,
           height: 1.1,
           letterSpacing: 0,
         ),

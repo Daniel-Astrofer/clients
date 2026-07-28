@@ -384,10 +384,10 @@ class _SafeToSpendChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = selected
         ? AppColors.hexFF000000.withValues(alpha: 0.72)
-        : const Color(0xFF4CAF50);
+        : AppColors.hexFF4CAF50;
     final bg = selected
         ? AppColors.hexFF000000.withValues(alpha: 0.06)
-        : const Color(0xFF4CAF50).withValues(alpha: 0.15);
+        : AppColors.hexFF4CAF50.withValues(alpha: 0.15);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 10,

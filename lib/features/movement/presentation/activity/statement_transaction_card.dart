@@ -11,6 +11,7 @@ import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -791,9 +792,15 @@ class _TransactionDetailsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = presentation.expandedFields;
-    final labelColor = dark ? const Color(0xFFC8CCD4) : const Color(0xFF1C1C1F);
-    final valueColor = dark ? const Color(0xFFF4F5F7) : const Color(0xFF0A0A0B);
-    final lineColor = dark ? const Color(0xFF3A3A40) : const Color(0xFFD4D4D8);
+    final labelColor = dark
+        ? KeroseneBrandTheme.dark.textPrimary
+        : KeroseneBrandTheme.light.textPrimary;
+    final valueColor = dark
+        ? KeroseneBrandTheme.dark.textPrimary
+        : KeroseneBrandTheme.light.textPrimary;
+    final lineColor = dark
+        ? KeroseneBrandTheme.dark.border
+        : KeroseneBrandTheme.light.border;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -887,9 +894,9 @@ class _HomeQuickExpandState extends State<_HomeQuickExpand> {
   @override
   Widget build(BuildContext context) {
     final rows = _expandRows;
-    const labelColor = Color(0xFF1C1C1F);
-    const valueColor = Color(0xFF0A0A0B);
-    const lineColor = Color(0xFFD0D0D4);
+    final labelColor = KeroseneBrandTheme.light.textSecondary;
+    final valueColor = KeroseneBrandTheme.light.textPrimary;
+    final lineColor = KeroseneBrandTheme.light.border;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1178,8 +1185,8 @@ class _ConfirmationProgressLine extends StatefulWidget {
 
 class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
     with SingleTickerProviderStateMixin {
-  static const _yellow = Color(0xFFE0A012);
-  static const _yellowDone = Color(0xFF34C759);
+  static Color get _yellow => KeroseneBrandTokens.warning;
+  static Color get _yellowDone => KeroseneBrandTokens.success;
 
   late final AnimationController _shimmer;
 
@@ -1219,9 +1226,9 @@ class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
   @override
   Widget build(BuildContext context) {
     final trackBase =
-        widget.dark ? const Color(0xFF3A3A40) : const Color(0xFFE4E4E8);
+        widget.dark ? KeroseneBrandTheme.dark.border : KeroseneBrandTheme.light.border;
     final trackHi =
-        widget.dark ? const Color(0xFF55555C) : const Color(0xFFF0F0F3);
+        widget.dark ? KeroseneBrandTheme.dark.textMuted : KeroseneBrandTheme.light.textMuted;
     final fill = _isComplete ? _yellowDone : _yellow;
 
     return ClipRRect(
@@ -1407,9 +1414,9 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
   ScrollPosition? _scrollPosition;
   bool _scrollPaused = false;
 
-  static const Color _yellow = Color(0xFFE0A012);
-  static const Color _green = Color(0xFF34C759);
-  static const Color _red = Color(0xFFFF453A);
+  static Color get _yellow => KeroseneBrandTokens.warning;
+  static Color get _green => KeroseneBrandTokens.success;
+  static Color get _red => KeroseneBrandTokens.error;
 
   @override
   void initState() {

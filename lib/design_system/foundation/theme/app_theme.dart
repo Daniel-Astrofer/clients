@@ -11,29 +11,38 @@ import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 
-/// Kerosene — Borders and Radii
+/// Kerosene — Borders and Radii (Linear-inspired)
+/// - Inputs: 4px
+/// - Cards: 8px
+/// - Buttons/nav: 9999px (pill)
+/// - No drop shadows — elevation via 1px hairline borders
 class AppRadius {
-  static final BorderRadius small = BorderRadius.circular(AppSpacing.sm);
-  static final BorderRadius medium = BorderRadius.circular(AppSpacing.md);
-  static final BorderRadius large = BorderRadius.circular(AppSpacing.lg);
+  static final BorderRadius small = BorderRadius.circular(4);
+  static final BorderRadius medium = BorderRadius.circular(4);
+  static final BorderRadius large = BorderRadius.circular(8);
 
   /// Text fields / compact controls.
-  static final BorderRadius input = BorderRadius.circular(14);
+  static final BorderRadius input = BorderRadius.circular(4);
 
   /// Information cards / panels.
-  static final BorderRadius card = BorderRadius.circular(24);
+  static final BorderRadius card = BorderRadius.circular(8);
 
   /// Primary CTAs (pill).
-  static final BorderRadius pill = BorderRadius.circular(999);
+  static final BorderRadius pill = BorderRadius.circular(9999);
 }
 
-/// Kerosene — Shadows
+/// Kerosene — Shadows (Linear: no drop shadows — use 1px borders instead)
 class AppShadows {
-  static final List<BoxShadow> soft = [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.5),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
+  /// No shadow — use `1px` border for separation.
+  static const List<BoxShadow> none = <BoxShadow>[];
+
+  /// Linear-style inner stroke pattern for elevated states.
+  static final List<BoxShadow> subtle = [
+    const BoxShadow(
+      color: AppColors.ferriteBorder,
+      offset: Offset(0, 0),
+      blurRadius: 0,
+      spreadRadius: 0,
     ),
   ];
 
@@ -119,13 +128,13 @@ class AppTheme {
     switch (variant) {
       case AppThemeVariant.dark:
         return const AppThemePalette(
-          background: Color(0xFF000000),
-          backgroundTop: Color(0xFF050608),
-          backgroundMid: Color(0xFF0A0C10),
-          backgroundBottom: Color(0xFF000000),
-          surface: Color(0xFF13161B),
-          border: Color(0xFF20242C),
-          inputFill: Color(0xFF0E1014),
+          background: AppColors.onyxCanvas,
+          backgroundTop: AppColors.onyxCanvas,
+          backgroundMid: AppColors.onyxCanvas,
+          backgroundBottom: AppColors.voidColor,
+          surface: AppColors.carbonSurface,
+          border: AppColors.smokeSurface,
+          inputFill: AppColors.carbonSurface,
         );
       case AppThemeVariant.light:
         return const AppThemePalette(
@@ -145,17 +154,22 @@ class AppTheme {
     final palette = paletteFor(variant);
     final isLight = variant == AppThemeVariant.light;
     final brightness = isLight ? Brightness.light : Brightness.dark;
-    final onSurface = isLight ? const Color(0xFF141517) : AppColors.white;
+    final onSurface = isLight ? const Color(0xFF181A17) : AppColors.snow;
     final onSurfaceVariant =
-        isLight ? const Color(0xFF62675F) : AppColors.white70;
-    final hintColor = isLight
-        ? const Color(0xFF8B9087)
-        : Colors.white.withValues(alpha: 0.48);
-    final labelColor = isLight
-        ? const Color(0xFF5F645B)
-        : Colors.white.withValues(alpha: 0.72);
+        isLight ? const Color(0xFF62675F) : AppColors.fogText;
+    final hintColor =
+        isLight ? const Color(0xFF8B9087) : AppColors.pewterText;
+    final labelColor =
+        isLight ? const Color(0xFF5F645B) : AppColors.fogText;
     final baseTextTheme =
         isLight ? ThemeData.light().textTheme : ThemeData.dark().textTheme;
+
+    // Outlined pill: 1px border, no fill — Linear's primary action style.
+    final pillOutlinedBorder = RoundedRectangleBorder(
+      borderRadius: AppRadius.pill,
+      side: BorderSide(color: onSurface, width: 1),
+    );
+
     final colorScheme = isLight
         ? ColorScheme.light(
             primary: AppColors.black,
@@ -172,25 +186,22 @@ class AppTheme {
             onSecondaryContainer: onSurface,
           )
         : ColorScheme.dark(
-            primary: AppColors.primary,
+            primary: AppColors.snow,
             secondary: AppColors.secondary,
             surface: palette.surface,
             surfaceContainerHighest: palette.inputFill,
             error: AppColors.error,
-            onPrimary: AppColors.white,
+            onPrimary: AppColors.onyxCanvas,
             onSecondary: AppColors.white,
             onSurface: onSurface,
             onSurfaceVariant: onSurfaceVariant,
             onError: AppColors.white,
             secondaryContainer: AppColors.secondary.withValues(alpha: 0.2),
-            onSecondaryContainer: AppColors.white,
+            onSecondaryContainer: AppColors.snow,
           );
-    final filledBackground = isLight ? AppColors.black : AppColors.white;
-    final filledForeground = isLight ? AppColors.white : AppColors.black;
-    final disabledBackground =
-        onSurface.withValues(alpha: isLight ? 0.08 : 0.08);
-    final disabledForeground =
-        onSurface.withValues(alpha: isLight ? 0.38 : 0.54);
+
+    final disabledTextColor =
+        onSurface.withValues(alpha: isLight ? 0.38 : 0.40);
 
     // Match status bar icons to scaffold brightness without touching dark look.
     SystemChrome.setSystemUIOverlayStyle(
@@ -220,17 +231,16 @@ class AppTheme {
       fontFamily: AppTypography.fontFamily,
       useMaterial3: true,
       colorScheme: colorScheme,
-      disabledColor: onSurface.withValues(alpha: 0.42),
+      disabledColor: disabledTextColor,
       pageTransitionsTheme: kerosenePageTransitionsTheme,
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: onSurface,
         selectionColor: onSurface.withValues(alpha: 0.18),
         selectionHandleColor: onSurface,
       ),
-      // Base TextTheme: Inter for body/labels.
-      // Display and hero moments use Newsreader.
-      // Primary amount input and Home balance use Inter SemiBold tabular; ledger/technical values use IBM Plex Mono.
-      textTheme: AppTypography.interTextTheme(baseTextTheme).copyWith(
+      // Linear-style text theme: Plus Jakarta Sans for body/UI,
+      // Playfair Display for display/hero.
+      textTheme: AppTypography.plusJakartaSansTextTheme(baseTextTheme).copyWith(
         displayLarge: AppTypography.displayLarge.copyWith(color: onSurface),
         displayMedium: AppTypography.display.copyWith(color: onSurface),
         displaySmall: AppTypography.h2.copyWith(color: onSurface),
@@ -248,130 +258,159 @@ class AppTheme {
             AppTypography.captionLarge.copyWith(color: onSurfaceVariant),
         labelSmall: AppTypography.caption.copyWith(color: onSurfaceVariant),
       ),
+      // ─── Input / Text Field (Linear: 4px radius, 1px border) ───────
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: palette.inputFill,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
+          horizontal: AppSpacing.base,
           vertical: AppSpacing.md,
         ),
         border: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
+          borderRadius: AppRadius.input,
           borderSide: BorderSide(color: palette.border, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
+          borderRadius: AppRadius.input,
           borderSide: BorderSide(color: palette.border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderRadius: AppRadius.input,
+          borderSide: BorderSide(color: onSurface, width: 1),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
+          borderRadius: AppRadius.input,
           borderSide: const BorderSide(color: AppColors.error, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
-          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+          borderRadius: AppRadius.input,
+          borderSide: const BorderSide(color: AppColors.error, width: 1),
         ),
         hintStyle: AppTypography.bodyMedium.copyWith(color: hintColor),
         labelStyle: AppTypography.bodyMedium.copyWith(color: labelColor),
         floatingLabelStyle: AppTypography.bodyMedium.copyWith(
           color: onSurface,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppTypography.w510,
         ),
         errorStyle: AppTypography.bodySmall.copyWith(
           color: AppColors.error,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppTypography.w590,
         ),
         prefixIconColor: labelColor,
         suffixIconColor: labelColor,
       ),
+      // ─── Elevated Button ──────────────────────────────────────────
+      // Linear-style: outlined pill, 1px snow border.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: filledBackground,
-          foregroundColor: filledForeground,
-          disabledBackgroundColor: disabledBackground,
-          disabledForegroundColor: disabledForeground,
+          backgroundColor: Colors.transparent,
+          foregroundColor: onSurface,
+          disabledBackgroundColor: Colors.transparent,
+          disabledForegroundColor: disabledTextColor,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+          shadowColor: Colors.transparent,
+          shape: pillOutlinedBorder,
           padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md,
-            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.base,
           ),
-          textStyle: AppTypography.buttonText,
+          textStyle: AppTypography.buttonText.copyWith(
+            fontWeight: AppTypography.w510,
+          ),
+          side: BorderSide(color: onSurface, width: 1),
         ),
       ),
+      // ─── Filled Button ────────────────────────────────────────────
+      // Primary CTA: outlined pill (Linear style) — transparent bg,
+      // 1px snow border. No filled background.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: filledBackground,
-          foregroundColor: filledForeground,
-          disabledBackgroundColor: disabledBackground,
-          disabledForegroundColor: disabledForeground,
+          backgroundColor: Colors.transparent,
+          foregroundColor: onSurface,
+          disabledBackgroundColor: Colors.transparent,
+          disabledForegroundColor: disabledTextColor,
           minimumSize: const Size.fromHeight(AppSpacing.minTouch),
           padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md,
-            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.base,
+          ),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: pillOutlinedBorder,
+          textStyle: AppTypography.buttonText.copyWith(
+            fontWeight: AppTypography.w510,
+          ),
+          side: BorderSide(color: onSurface, width: 1),
+        ),
+      ),
+      // ─── Outlined Button ──────────────────────────────────────────
+      // Secondary outlined action.
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: onSurface,
+          disabledForegroundColor: disabledTextColor,
+          side: BorderSide(
+            color: onSurface.withValues(alpha: isLight ? 0.22 : 0.32),
+            width: 1,
+          ),
+          minimumSize: const Size.fromHeight(48),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.base,
           ),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.pill),
           textStyle: AppTypography.buttonText.copyWith(
-            fontWeight: FontWeight.w700,
+            fontWeight: AppTypography.w510,
           ),
         ),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: palette.surface,
-          foregroundColor: onSurface,
-          disabledForegroundColor: onSurface.withValues(alpha: 0.52),
-          side: BorderSide(color: onSurface.withValues(alpha: 0.22)),
-          minimumSize: const Size.fromHeight(48),
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md,
-            horizontal: AppSpacing.lg,
-          ),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-          textStyle: AppTypography.buttonText.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
+      // ─── Text Button (Ghost: no border, no bg, muted text) ────────
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: onSurface,
-          disabledForegroundColor: onSurface.withValues(alpha: 0.50),
+          foregroundColor: onSurfaceVariant,
+          disabledForegroundColor: disabledTextColor,
           padding: const EdgeInsets.symmetric(
             vertical: AppSpacing.sm,
-            horizontal: AppSpacing.md,
+            horizontal: AppSpacing.sm,
           ),
           textStyle: AppTypography.buttonText.copyWith(
-            fontWeight: FontWeight.w700,
+            fontWeight: AppTypography.w510,
           ),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: onSurface,
-          disabledForegroundColor: onSurface.withValues(alpha: 0.46),
+          disabledForegroundColor: disabledTextColor,
         ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: AppTypography.h2,
         iconTheme: IconThemeData(color: onSurface),
       ),
+      // ─── Card (Linear: 8px radius, 1px hairline border, no shadow) ─
       cardTheme: CardThemeData(
         color: palette.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.card,
+          side: BorderSide(color: palette.border, width: 1),
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: palette.surface,
         surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.card,
+          side: BorderSide(color: palette.border, width: 1),
+        ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: palette.surface,
@@ -379,20 +418,38 @@ class AppTheme {
         modalBackgroundColor: palette.surface,
         modalBarrierColor:
             Colors.black.withValues(alpha: isLight ? 0.30 : 0.74),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: AppRadius.card.topLeft),
+        ),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: palette.surface,
         surfaceTintColor: Colors.transparent,
         textStyle: AppTypography.bodyMedium.copyWith(color: onSurface),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.card,
+          side: BorderSide(color: palette.border, width: 1),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: filledBackground,
+        backgroundColor: palette.surface,
         contentTextStyle: AppTypography.bodyMedium.copyWith(
-          color: filledForeground,
-          fontWeight: FontWeight.w600,
+          color: onSurface,
+          fontWeight: AppTypography.w510,
         ),
-        actionTextColor: filledForeground,
-        disabledActionTextColor: filledForeground.withValues(alpha: 0.48),
+        actionTextColor: onSurface,
+        disabledActionTextColor: disabledTextColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.pill,
+          side: BorderSide(color: palette.border, width: 1),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.transparent,
+        side: BorderSide(color: palette.border, width: 1),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.pill),
+        labelStyle: AppTypography.caption.copyWith(color: onSurfaceVariant),
       ),
     );
   }

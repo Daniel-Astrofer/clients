@@ -6,8 +6,9 @@ import 'theme_token_bridge.dart';
 
 /// Kerosene brand color tokens.
 ///
-/// Dark hexes stay frozen. Chrome colors resolve via [ThemeTokenBridge] /
-/// [KeroseneBrandTheme]; accents (gold, bitcoin, status) are shared.
+/// Dark hexes follow the Linear monochrome stack (5 levels of near-black).
+/// Chrome colors resolve via [ThemeTokenBridge] / [KeroseneBrandTheme];
+/// accents (gold, bitcoin, status) are shared.
 class KeroseneBrandTokens {
   const KeroseneBrandTokens._();
 
@@ -32,7 +33,6 @@ class KeroseneBrandTokens {
   static Color get textInverse => KeroseneBrandTheme.current.textInverse;
 
   static const Color brand = AppColors.hexFFD6A84F;
-  static const Color keroseneGold = brand;
   static const Color bitcoin = AppColors.hexFFF59E0B;
   static const Color bitcoinOrange = bitcoin;
   static const Color amberDeep = AppColors.hexFF715128;
@@ -43,7 +43,7 @@ class KeroseneBrandTokens {
   static const Color info = AppColors.hexFF60A5FA;
   static const Color lightning = AppColors.hexFF7B61FF;
 
-  static const Color railInternal = keroseneGold;
+  static const Color railInternal = brand;
   static const Color railOnchain = bitcoinOrange;
   static const Color railLightning = lightning;
   static const Color railSettlement = success;
@@ -91,7 +91,6 @@ class KeroseneBrandTheme extends ThemeExtension<KeroseneBrandTheme> {
   final Color textInverse;
 
   Color get brand => KeroseneBrandTokens.brand;
-  Color get keroseneGold => KeroseneBrandTokens.keroseneGold;
   Color get bitcoin => KeroseneBrandTokens.bitcoin;
   Color get bitcoinOrange => KeroseneBrandTokens.bitcoinOrange;
   Color get success => KeroseneBrandTokens.success;
@@ -106,23 +105,23 @@ class KeroseneBrandTheme extends ThemeExtension<KeroseneBrandTheme> {
   Color get railPending => KeroseneBrandTokens.railPending;
   Color get railFailed => KeroseneBrandTokens.railFailed;
 
-  /// Frozen dark map (identical to pre-light-mode brand chrome).
+  /// Linear monochrome dark map — 5-level gray stack.
   static const KeroseneBrandTheme dark = KeroseneBrandTheme(
-    background: AppColors.hexFF030405,
-    backgroundSoft: AppColors.hexFF0A0D10,
-    backgroundElevated: AppColors.hexFF111111,
-    surface: AppColors.hexFF111111,
-    surfaceHigh: AppColors.hexFF181A17,
-    surfaceElevated: AppColors.hexFF1D2328,
-    surfaceMuted: AppColors.hexFF0A0A0A,
-    border: AppColors.hexFF2F3131,
-    borderStrong: AppColors.hexFF3A3A3A,
-    borderSubtle: AppColors.hex14FFFFFF,
-    textPrimary: AppColors.hexFFF7F7F1,
-    textSecondary: AppColors.hexFFB8B8BC,
-    textMuted: AppColors.hexFF7D838A,
-    textDisabled: AppColors.hexFF555550,
-    textInverse: AppColors.hexFF030405,
+    background: AppColors.onyxCanvas,
+    backgroundSoft: AppColors.carbonSurface,
+    backgroundElevated: AppColors.graphiteSurface,
+    surface: AppColors.carbonSurface,
+    surfaceHigh: AppColors.carbonSurface,
+    surfaceElevated: AppColors.graphiteSurface,
+    surfaceMuted: AppColors.onyxCanvas,
+    border: AppColors.smokeSurface,
+    borderStrong: AppColors.ashBorder,
+    borderSubtle: AppColors.smokeSurface,
+    textPrimary: AppColors.snow,
+    textSecondary: AppColors.mistText,
+    textMuted: AppColors.fogText,
+    textDisabled: AppColors.pewterText,
+    textInverse: AppColors.onyxCanvas,
   );
 
   static const KeroseneBrandTheme light = KeroseneBrandTheme(

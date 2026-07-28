@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'admin_colors.dart';
-import 'admin_typography.dart';
 
 /// Kerosene Enterprise — Material Theme Data
 /// Square corners, monochrome palette, institutional look.
+/// Extends [AppTheme] tokens where possible.
 class AdminTheme {
   AdminTheme._();
 
-  // ─── Spacing Tokens ─────────────────────────────
-  static const double spacingXs = 4;
-  static const double spacingSm = 8;
-  static const double spacingMd = 12;
-  static const double spacingLg = 16;
-  static const double spacingXl = 24;
-  static const double spacingXxl = 32;
-  static const double spacing3xl = 48;
+  // ─── Spacing Tokens (delegates to AppSpacing) ─────
+  static const double spacingXs = AppSpacing.spacing4;
+  static const double spacingSm = AppSpacing.spacing8;
+  static const double spacingMd = AppSpacing.spacing12;
+  static const double spacingLg = AppSpacing.spacing16;
+  static const double spacingXl = AppSpacing.spacing24;
+  static const double spacingXxl = AppSpacing.spacing32;
+  static const double spacing3xl = AppSpacing.spacing48;
 
-  // ─── Border Radius ──────────────────────────────
+  // ─── Border Radius (admin uses 4px, 6px) ──────────
   static const double radiusNone = 0;
   static const double radiusXs = 2;
   static const double radiusSm = 4;
@@ -40,7 +43,7 @@ class AdminTheme {
       scaffoldBackgroundColor: AdminColors.background,
       canvasColor: AdminColors.background,
       dividerColor: AdminColors.border,
-      fontFamily: AdminTypography.fontFamily,
+      fontFamily: AppTypography.bodyFontFamily,
       useMaterial3: true,
       colorScheme: const ColorScheme.dark(
         primary: AdminColors.textPrimary,
@@ -60,18 +63,71 @@ class AdminTheme {
         selectionHandleColor: AdminColors.textPrimary,
       ),
       textTheme: TextTheme(
-        displayLarge: AdminTypography.displayLarge,
-        headlineLarge: AdminTypography.h1,
-        headlineMedium: AdminTypography.h2,
-        headlineSmall: AdminTypography.h3,
-        titleLarge: AdminTypography.h3,
-        titleMedium: AdminTypography.h4,
-        bodyLarge: AdminTypography.bodyLarge,
-        bodyMedium: AdminTypography.bodyMedium,
-        bodySmall: AdminTypography.bodySmall,
-        labelLarge: AdminTypography.button,
-        labelMedium: AdminTypography.label,
-        labelSmall: AdminTypography.caption,
+        displayLarge: AppTypography.playfairDisplay(
+          fontSize: 48,
+          color: AdminColors.textPrimary,
+          height: 1.1,
+        ),
+        headlineLarge: AppTypography.playfairDisplay(
+          fontSize: 28,
+          color: AdminColors.textPrimary,
+          height: 1.2,
+        ),
+        headlineMedium: AppTypography.playfairDisplay(
+          fontSize: 22,
+          color: AdminColors.textPrimary,
+          height: 1.25,
+        ),
+        headlineSmall: AppTypography.playfairDisplay(
+          fontSize: 18,
+          color: AdminColors.textPrimary,
+          height: 1.3,
+        ),
+        titleLarge: AppTypography.playfairDisplay(
+          fontSize: 18,
+          color: AdminColors.textPrimary,
+          height: 1.3,
+        ),
+        titleMedium: AppTypography.playfairDisplay(
+          fontSize: 15,
+          color: AdminColors.textPrimary,
+          height: 1.35,
+        ),
+        bodyLarge: AppTypography.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+          color: AdminColors.textPrimary,
+          height: 1.5,
+        ),
+        bodyMedium: AppTypography.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: AdminColors.textSecondary,
+          height: 1.5,
+        ),
+        bodySmall: AppTypography.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: AdminColors.textTertiary,
+          height: 1.4,
+        ),
+        labelLarge: AppTypography.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: AdminColors.textPrimary,
+        ),
+        labelMedium: AppTypography.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AdminColors.textTertiary,
+          height: 1.3,
+        ),
+        labelSmall: AppTypography.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w400,
+          color: AdminColors.textTertiary,
+          height: 1.3,
+        ),
       ),
       scrollbarTheme: ScrollbarThemeData(
         thumbColor: WidgetStateProperty.all(AdminColors.borderStrong),
@@ -109,21 +165,27 @@ class AdminTheme {
           borderRadius: borderRadiusSm,
           borderSide: const BorderSide(color: AdminColors.negative, width: 1.5),
         ),
-        hintStyle: AdminTypography.bodyMedium.copyWith(
+        hintStyle: AppTypography.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
           color: AdminColors.textSecondary,
         ),
-        labelStyle: AdminTypography.bodyMedium.copyWith(
+        labelStyle: AppTypography.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
           color: AdminColors.textSecondary,
         ),
-        floatingLabelStyle: AdminTypography.bodyMedium.copyWith(
-          color: AdminColors.textPrimary,
+        floatingLabelStyle: AppTypography.inter(
+          fontSize: 13,
           fontWeight: FontWeight.w600,
+          color: AdminColors.textPrimary,
         ),
         prefixIconColor: AdminColors.textSecondary,
         suffixIconColor: AdminColors.textSecondary,
-        errorStyle: AdminTypography.caption.copyWith(
-          color: AdminColors.negative,
+        errorStyle: AppTypography.inter(
+          fontSize: 11,
           fontWeight: FontWeight.w600,
+          color: AdminColors.negative,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -138,7 +200,11 @@ class AdminTheme {
             vertical: spacingMd,
             horizontal: spacingXl,
           ),
-          textStyle: AdminTypography.button,
+          textStyle: AppTypography.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AdminColors.textPrimary,
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -153,7 +219,11 @@ class AdminTheme {
             vertical: spacingMd,
             horizontal: spacingXl,
           ),
-          textStyle: AdminTypography.button,
+          textStyle: AppTypography.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AdminColors.textPrimary,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -167,7 +237,11 @@ class AdminTheme {
             vertical: spacingMd,
             horizontal: spacingXl,
           ),
-          textStyle: AdminTypography.button,
+          textStyle: AppTypography.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AdminColors.textPrimary,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -179,7 +253,11 @@ class AdminTheme {
             vertical: spacingSm,
             horizontal: spacingLg,
           ),
-          textStyle: AdminTypography.buttonSmall,
+          textStyle: AppTypography.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AdminColors.textSecondary,
+          ),
         ),
       ),
       cardTheme: CardThemeData(
@@ -211,7 +289,9 @@ class AdminTheme {
           borderRadius: borderRadiusSm,
           border: Border.all(color: AdminColors.border),
         ),
-        textStyle: AdminTypography.caption.copyWith(
+        textStyle: AppTypography.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w400,
           color: AdminColors.textPrimary,
         ),
       ),
@@ -223,8 +303,18 @@ class AdminTheme {
           }
           return Colors.transparent;
         }),
-        headingTextStyle: AdminTypography.tableHeader,
-        dataTextStyle: AdminTypography.tableCell,
+        headingTextStyle: AppTypography.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AdminColors.textTertiary,
+          height: 1.3,
+        ),
+        dataTextStyle: AppTypography.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: AdminColors.textPrimary,
+          height: 1.4,
+        ),
         dividerThickness: 1,
       ),
       dividerTheme: const DividerThemeData(

@@ -360,7 +360,7 @@ class RevolutCardPalette {
         surface: Color(0xFF1A1A1C),
         surfaceEdge: Color(0xFF141416),
         shine: Color(0x14FFFFFF),
-        ink: Color(0xFFF2F2F7),
+        ink: AppColors.hexFFF2F2F7,
         inkMuted: Color(0xFF8E8E93),
         borderTop: Color(0x4DFFFFFF),
         borderBottom: Color(0xB3000000),
@@ -371,7 +371,7 @@ class RevolutCardPalette {
         surface: Color(0xFF151916),
         surfaceEdge: Color(0xFF101412),
         shine: Color(0x1228C47A),
-        ink: Color(0xFFF2F2F7),
+        ink: AppColors.hexFFF2F2F7,
         inkMuted: Color(0xFF8E9A93),
         borderTop: Color(0x40FFFFFF),
         borderBottom: Color(0xB3000000),
@@ -413,7 +413,7 @@ class _CardShell extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isFocused ? 0.48 : 0.30),
+            color: AppColors.hexFF000000.withValues(alpha: isFocused ? 0.48 : 0.30),
             blurRadius: isFocused ? 20 : 12,
             offset: const Offset(0, 10),
           ),
@@ -730,7 +730,7 @@ class _CardBack extends StatelessWidget {
           const SizedBox(height: 22),
           Container(
             height: 44,
-            color: const Color(0xFF080808),
+            color: AppColors.hexFF080808,
           ),
           const Spacer(),
           Padding(
@@ -766,7 +766,7 @@ class _CvvBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Color(0xFFF2F2F7),
+        color: AppColors.hexFFF2F2F7,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

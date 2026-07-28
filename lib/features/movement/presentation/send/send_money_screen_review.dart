@@ -178,24 +178,10 @@ class InternalTransferReviewScreenState<T>
 
     if (result != null) {
       _stopSubmittingPhases();
-      final receipt = widget.receiptBuilder?.call(result);
-      if (receipt != null) {
-        final receiptResult = await context.push<T>(
-          '/send-money/receipt',
-          extra: SendPaymentReceiptArgs<T>(
-            data: receipt,
-            result: result,
-          ),
-        );
-        if (!mounted) return;
-        final completed = receiptResult ?? result;
-        _finishWithResult(completed);
-        return;
-      }
-
       _finishWithResult(result);
       return;
     }
+
 
     _stopSubmittingPhases();
     setState(() => _isSubmitting = false);

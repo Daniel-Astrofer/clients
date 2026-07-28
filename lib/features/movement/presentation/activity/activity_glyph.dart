@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
@@ -116,9 +117,9 @@ class ActivityGlyph extends StatelessWidget {
     this.size = 42,
     this.wellColor = TransactionPalette.iconWell,
     this.wellBorder = TransactionPalette.iconWellBorder,
-    this.iconColor = const Color(0xFFF2F2F3),
+    this.iconColor = AppColors.hexFFF2F2F3,
     this.badgeWellColor = const Color(0xFF2A2A2E),
-    this.badgeIconColor = const Color(0xFFF2F2F3),
+    this.badgeIconColor = AppColors.hexFFF2F2F3,
     this.pipWellColor,
     this.pipIconColor,
     this.showWell = true,
@@ -139,7 +140,7 @@ class ActivityGlyph extends StatelessWidget {
       size: size,
       wellColor: wellColor ?? TransactionPalette.iconWell,
       wellBorder: wellBorder ?? TransactionPalette.iconWellBorder,
-      iconColor: iconColor ?? const Color(0xFFF2F2F3),
+      iconColor: iconColor ?? AppColors.hexFFF2F2F3,
       showWell: showWell,
     );
   }
@@ -171,7 +172,7 @@ class ActivityGlyph extends StatelessWidget {
       size: size,
       wellColor: wellColor ?? TransactionPalette.iconWell,
       wellBorder: wellBorder ?? TransactionPalette.iconWellBorder,
-      iconColor: iconColor ?? const Color(0xFFF2F2F3),
+      iconColor: iconColor ?? AppColors.hexFFF2F2F3,
       showWell: showWell,
     );
   }

@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 import 'theme_token_bridge.dart';
 
-/// Dark monochrome map — freeze these hexes; light mode is additive only.
-const Color monoBackgroundColorDark = Color(0xFF020202);
-const Color monoSurfaceColorDark = Color(0xFF0D0D0D);
-const Color monoSurfaceAltColorDark = Color(0xFF141414);
-const Color monoSurfaceRaisedColorDark = Color(0xFF1A1A1A);
-const Color monoBorderColorDark = Color(0xFF262626);
-const Color monoBorderStrongColorDark = Color(0xFF383838);
-const Color monoDividerColorDark = Color(0xFF1B1B1B);
-const Color monoTextColorDark = Color(0xFFF1F1ED);
-const Color monoMutedTextColorDark = Color(0xFFA0A09B);
-const Color monoFaintTextColorDark = Color(0xFF6B6B66);
+/// Linear monochrome tokens (dark).
+const Color monoBackgroundColorDark = AppColors.onyxCanvas;
+const Color monoSurfaceColorDark = AppColors.carbonSurface;
+const Color monoSurfaceAltColorDark = AppColors.graphiteSurface;
+const Color monoSurfaceRaisedColorDark = AppColors.ironSurface;
+const Color monoBorderColorDark = AppColors.smokeSurface;
+const Color monoBorderStrongColorDark = AppColors.ashBorder;
+const Color monoDividerColorDark = AppColors.smokeSurface;
+const Color monoTextColorDark = AppColors.snow;
+const Color monoMutedTextColorDark = AppColors.fogText;
+const Color monoFaintTextColorDark = AppColors.steelText;
 
 /// Theme-resolved aliases (dark when bridge unbound / dark mode).
 Color get monoBackgroundColor => MonochromeColors.current.background;
@@ -57,16 +58,16 @@ class MonochromeColors extends ThemeExtension<MonochromeColors> {
   final Color faintText;
 
   static const MonochromeColors dark = MonochromeColors(
-    background: monoBackgroundColorDark,
-    surface: monoSurfaceColorDark,
-    surfaceAlt: monoSurfaceAltColorDark,
-    surfaceRaised: monoSurfaceRaisedColorDark,
-    border: monoBorderColorDark,
-    borderStrong: monoBorderStrongColorDark,
-    divider: monoDividerColorDark,
-    text: monoTextColorDark,
-    mutedText: monoMutedTextColorDark,
-    faintText: monoFaintTextColorDark,
+    background: AppColors.onyxCanvas,
+    surface: AppColors.carbonSurface,
+    surfaceAlt: AppColors.graphiteSurface,
+    surfaceRaised: AppColors.ironSurface,
+    border: AppColors.smokeSurface,
+    borderStrong: AppColors.ashBorder,
+    divider: AppColors.smokeSurface,
+    text: AppColors.snow,
+    mutedText: AppColors.fogText,
+    faintText: AppColors.steelText,
   );
 
   /// Inverse of dark: light paper + dark ink.
@@ -172,7 +173,7 @@ InputDecoration monochromeInputDecoration({
   final mono =
       context != null ? MonochromeColors.of(context) : MonochromeColors.current;
   final border = OutlineInputBorder(
-    borderRadius: monoRadius,
+    borderRadius: const BorderRadius.all(Radius.circular(4)),
     borderSide: BorderSide(color: mono.borderStrong),
   );
 
@@ -193,15 +194,15 @@ InputDecoration monochromeInputDecoration({
     border: border,
     enabledBorder: border,
     focusedBorder: OutlineInputBorder(
-      borderRadius: monoRadius,
+      borderRadius: const BorderRadius.all(Radius.circular(4)),
       borderSide: BorderSide(color: mono.text),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: monoRadius,
+      borderRadius: const BorderRadius.all(Radius.circular(4)),
       borderSide: BorderSide(color: mono.text),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: monoRadius,
+      borderRadius: const BorderRadius.all(Radius.circular(4)),
       borderSide: BorderSide(color: mono.text),
     ),
   );
@@ -237,7 +238,9 @@ ButtonStyle monochromeFilledButtonStyle({
       letterSpacing: 0.4,
       fontWeight: FontWeight.w600,
     ),
-    shape: const RoundedRectangleBorder(borderRadius: monoRadius),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(999)),
+    ),
     side: BorderSide(color: border),
   );
 }
@@ -253,7 +256,9 @@ ButtonStyle monochromeTextButtonStyle({BuildContext? context}) {
       letterSpacing: 1.1,
       fontWeight: FontWeight.w700,
     ),
-    shape: const RoundedRectangleBorder(borderRadius: monoRadius),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(4)),
+    ),
   );
 }
 
@@ -270,7 +275,9 @@ ButtonStyle monochromeOutlinedButtonStyle({
     disabledForegroundColor: mono.faintText,
     side: BorderSide(color: mono.borderStrong),
     backgroundColor: mono.surfaceAlt,
-    shape: const RoundedRectangleBorder(borderRadius: monoRadius),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(999)),
+    ),
     textStyle: AppTypography.buttonText.copyWith(
       letterSpacing: 0.4,
       fontWeight: FontWeight.w600,

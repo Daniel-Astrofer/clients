@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Styling tokens for the Financial Hub flow.
-/// Uses Playfair Display for H1/Titles and Plus Jakarta Sans for body, labels, and numbers.
+///
+/// Typography delegates to [AppTypography] (Playfair Display for titles,
+/// Plus Jakarta Sans for body/numbers/descriptions). Color values come from
+/// [KeroseneBrandTokens].
 class FinancialHubTokens {
   const FinancialHubTokens._();
 
@@ -14,7 +18,7 @@ class FinancialHubTokens {
     FontWeight fontWeight = FontWeight.w400,
     double letterSpacing = -0.5,
   }) {
-    return GoogleFonts.playfairDisplay(
+    return AppTypography.playfairDisplay(
       color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -28,7 +32,7 @@ class FinancialHubTokens {
     FontWeight fontWeight = FontWeight.w600,
     double letterSpacing = -0.3,
   }) {
-    return GoogleFonts.playfairDisplay(
+    return AppTypography.playfairDisplay(
       color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -43,7 +47,7 @@ class FinancialHubTokens {
     FontWeight fontWeight = FontWeight.w400,
     double height = 1.4,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return AppTypography.inter(
       color: color ?? textMuted,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -57,7 +61,7 @@ class FinancialHubTokens {
     FontWeight fontWeight = FontWeight.w700,
     double letterSpacing = -0.8,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return AppTypography.inter(
       color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -71,7 +75,7 @@ class FinancialHubTokens {
     FontWeight fontWeight = FontWeight.w600,
     double letterSpacing = -0.2,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return AppTypography.inter(
       color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -85,7 +89,7 @@ class FinancialHubTokens {
     FontWeight fontWeight = FontWeight.w500,
     double letterSpacing = 0.1,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return AppTypography.inter(
       color: color ?? textMuted,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -98,7 +102,7 @@ class FinancialHubTokens {
     double fontSize = 12.0,
     FontWeight fontWeight = FontWeight.w600,
   }) {
-    return GoogleFonts.plusJakartaSans(
+    return AppTypography.inter(
       color: color ?? textPrimary,
       fontSize: fontSize,
       fontWeight: fontWeight,
@@ -115,5 +119,5 @@ class FinancialHubTokens {
   static Color get accentGold => KeroseneBrandTokens.brand;
   /// Dark island for circular actions (icons stay light on this fill).
   static const Color circularButtonBg = Color(0xFF1E1E2C);
-  static const Color circularButtonIcon = Color(0xFFFFFFFF);
+  static const Color circularButtonIcon = AppColors.hexFFFFFFFF;
 }

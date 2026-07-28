@@ -9,6 +9,7 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
@@ -19,23 +20,23 @@ import 'signup_flow_copy.dart';
 import 'signup_success_scene.dart';
 
 Color get _signupInk => ThemeTokenBridge.isLight
-    ? const Color(0xFFF7F7F5)
-    : AppColors.hexFF000000;
+    ? KeroseneBrandTheme.light.background
+    : KeroseneBrandTheme.dark.background;
 Color get _signupPanel => ThemeTokenBridge.isLight
-    ? const Color(0xFFFFFFFF)
-    : AppColors.hexFF111111;
+    ? KeroseneBrandTheme.light.surface
+    : KeroseneBrandTheme.dark.surface;
 Color get _signupField => ThemeTokenBridge.isLight
-    ? const Color(0xFFF0F1EE)
-    : AppColors.hexFF1A1A1A;
+    ? KeroseneBrandTheme.light.surfaceHigh
+    : KeroseneBrandTheme.dark.surfaceElevated;
 Color get _signupBorderSoft => ThemeTokenBridge.isLight
-    ? const Color(0xFFE2E4DE)
-    : AppColors.hexFF27272A;
+    ? KeroseneBrandTheme.light.border
+    : KeroseneBrandTheme.dark.borderSubtle;
 Color get _signupMuted => ThemeTokenBridge.isLight
-    ? const Color(0xFF62675F)
-    : AppColors.hexFFA1A1AA;
+    ? KeroseneBrandTheme.light.textSecondary
+    : KeroseneBrandTheme.dark.textMuted;
 Color get _signupText => ThemeTokenBridge.isLight
-    ? const Color(0xFF181A17)
-    : AppColors.hexFFFFFFFF;
+    ? KeroseneBrandTheme.light.textPrimary
+    : KeroseneBrandTheme.dark.textPrimary;
 
 enum _SignupErrorTarget {
   username,

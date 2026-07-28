@@ -111,6 +111,13 @@ class _HomeBitcoinMarketChartCardState
     final displayPrice = displayPoint?.price ?? snapshot.lastPrice;
     final money = ref.watch(moneyFormatConfigProvider);
 
+    final firstPrice = points.isNotEmpty ? points.first.price : 0.0;
+    final changePercent =
+        firstPrice > 0 ? ((displayPrice - firstPrice) / firstPrice) * 100 : 0.0;
+    final isPositiveChange = changePercent >= 0;
+    final changeSign = isPositiveChange ? '+' : '';
+    final changeText = '$changeSign${changePercent.toStringAsFixed(2)}%';
+
     // Stable shell key so range changes don't remount the whole card into loading.
     return _ChartCardShell(
       key: const ValueKey('btc-chart-shell'),
@@ -118,23 +125,55 @@ class _HomeBitcoinMarketChartCardState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Container(
+                width: homeSize(38),
+                height: homeSize(38),
+                decoration: BoxDecoration(
+                  color: AppColors.hexFFF7931A.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    KeroseneIcons.bitcoin,
+                    color: AppColors.hexFFF7931A,
+                    size: homeSize(20),
+                  ),
+                ),
+              ),
+              SizedBox(width: homeSize(10)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bitcoin',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: homeFontSize(12),
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.6,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Bitcoin',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: homeFontSize(14),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(width: homeSize(6)),
+                        Text(
+                          snapshot.request.pairLabel,
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.42),
+                            fontFamily: AppTypography.financialFontFamily,
+                            fontSize: homeFontSize(11),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: homeSize(6)),
+                    SizedBox(height: homeSize(2)),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
@@ -148,33 +187,52 @@ class _HomeBitcoinMarketChartCardState
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontFamily: AppTypography.financialFontFamily,
-                          fontSize: homeFontSize(28),
-                          fontWeight: FontWeight.w500,
-                          height: 1.0,
-                          letterSpacing: -0.6,
+                          fontSize: homeFontSize(24),
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
+                          letterSpacing: -0.5,
                         ),
                       ),
                     ),
-                    SizedBox(height: homeSize(8)),
                   ],
                 ),
               ),
-              SizedBox(width: homeSize(12)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const SizedBox.shrink(),
-                  SizedBox(height: homeSize(6)),
-                  Text(
-                    snapshot.request.pairLabel,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42),
-                      fontFamily: AppTypography.financialFontFamily,
-                      fontSize: homeFontSize(10),
-                      fontWeight: FontWeight.w500,
-                    ),
+              SizedBox(width: homeSize(8)),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: homeSize(8),
+                  vertical: homeSize(5),
+                ),
+                decoration: BoxDecoration(
+                  color: trendColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(homeSize(8)),
+                  border: Border.all(
+                    color: trendColor.withValues(alpha: 0.25),
+                    width: 1,
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPositiveChange
+                          ? KeroseneIcons.up
+                          : KeroseneIcons.down,
+                      color: trendColor,
+                      size: homeSize(12),
+                    ),
+                    SizedBox(width: homeSize(3)),
+                    Text(
+                      changeText,
+                      style: TextStyle(
+                        color: trendColor,
+                        fontFamily: AppTypography.financialFontFamily,
+                        fontSize: homeFontSize(11),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -576,14 +634,19 @@ class _RangeSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Horizontal chips — always visible; swipeable list for more presets.
+    // Horizontal chips — segment control track container.
     final presets = BitcoinMarketChartRange.values;
-    return SizedBox(
-      height: homeSize(36),
+    return Container(
+      height: homeSize(38),
+      padding: EdgeInsets.all(homeSize(3)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(homeSize(10)),
+      ),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: presets.length + 1,
-        separatorBuilder: (_, __) => SizedBox(width: homeSize(4)),
+        separatorBuilder: (_, __) => SizedBox(width: homeSize(2)),
         itemBuilder: (context, index) {
           if (index == presets.length) {
             final selected = customDays != null;
@@ -636,23 +699,43 @@ class _RangeChip extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(homeSize(8)),
+        borderRadius: BorderRadius.circular(homeSize(7)),
         child: AnimatedContainer(
           duration: KeroseneMotion.fast,
           padding: EdgeInsets.symmetric(
             horizontal: homeSize(12),
-            vertical: homeSize(8),
+            vertical: homeSize(6),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
-              fontFamily: AppTypography.fontFamily,
-              fontSize: homeFontSize(11),
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              letterSpacing: 0.4,
+          decoration: BoxDecoration(
+            color: selected
+                ? Theme.of(context).colorScheme.surface
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(homeSize(7)),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.45),
+                fontFamily: AppTypography.fontFamily,
+                fontSize: homeFontSize(11),
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
         ),
@@ -754,13 +837,31 @@ class _ChartTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(homeSize(8)),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .onSurface
+              .withValues(alpha: 0.12),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       padding: EdgeInsets.symmetric(
-        horizontal: homeSize(9),
-        vertical: homeSize(7),
+        horizontal: homeSize(10),
+        vertical: homeSize(6),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
@@ -770,22 +871,25 @@ class _ChartTooltip extends StatelessWidget {
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontFamily: AppTypography.financialFontFamily,
-              fontSize: homeFontSize(11),
+              fontSize: homeFontSize(12),
               fontWeight: FontWeight.w700,
-              height: 1,
+              height: 1.1,
             ),
           ),
-          SizedBox(height: homeSize(4)),
+          SizedBox(height: homeSize(2)),
           Text(
             time,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.52),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.52),
               fontFamily: AppTypography.financialFontFamily,
-              fontSize: homeFontSize(9),
+              fontSize: homeFontSize(10),
               fontWeight: FontWeight.w500,
-              height: 1,
+              height: 1.1,
             ),
           ),
         ],
@@ -856,7 +960,7 @@ class _BitcoinMarketChartPainter extends CustomPainter {
         ),
     ];
 
-    final path = _straightPath(offsets);
+    final path = _curvedPath(offsets);
     final metrics = path.computeMetrics().toList();
     if (metrics.isEmpty) return;
 
@@ -876,9 +980,11 @@ class _BitcoinMarketChartPainter extends CustomPainter {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              lineColor.withValues(alpha: 0.16),
-              lineColor.withValues(alpha: 0.01),
+              lineColor.withValues(alpha: 0.28),
+              lineColor.withValues(alpha: 0.08),
+              lineColor.withValues(alpha: 0.0),
             ],
+            stops: const [0.0, 0.6, 1.0],
           ).createShader(plotRect),
       );
 
@@ -999,22 +1105,61 @@ class _BitcoinMarketChartPainter extends CustomPainter {
     Color accent,
   ) {
     final selectionPaint = Paint()
-      ..color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.22)
-      ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(offset.dx, plotRect.top),
-      Offset(offset.dx, plotRect.bottom),
-      selectionPaint,
-    );
-    canvas.drawCircle(offset, 5.5, Paint()..color = backgroundColor);
-    canvas.drawCircle(offset, 4.0, Paint()..color = Theme.of(context).colorScheme.onSurface);
-    canvas.drawCircle(offset, 2.6, Paint()..color = accent);
+      ..color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18)
+      ..strokeWidth = 1.0;
+
+    const dashWidth = 4.0;
+    const dashSpace = 3.0;
+    var startY = plotRect.top;
+    while (startY < plotRect.bottom) {
+      canvas.drawLine(
+        Offset(offset.dx, startY),
+        Offset(offset.dx, math.min(startY + dashWidth, plotRect.bottom)),
+        selectionPaint,
+      );
+      startY += dashWidth + dashSpace;
+    }
+
+    final haloPaint = Paint()
+      ..color = accent.withValues(alpha: 0.22)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(offset, 10.0, haloPaint);
+
+    final outerRing = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(offset, 6.0, outerRing);
+
+    final borderRing = Paint()
+      ..color = Theme.of(context).colorScheme.onSurface
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(offset, 4.2, borderRing);
+
+    final innerCore = Paint()
+      ..color = accent
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(offset, 2.6, innerCore);
   }
 
-  Path _straightPath(List<Offset> offsets) {
+  Path _curvedPath(List<Offset> offsets) {
+    if (offsets.length < 2) return Path();
     final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
-    for (var index = 1; index < offsets.length; index++) {
-      path.lineTo(offsets[index].dx, offsets[index].dy);
+    if (offsets.length == 2) {
+      path.lineTo(offsets[1].dx, offsets[1].dy);
+      return path;
+    }
+    for (var i = 0; i < offsets.length - 1; i++) {
+      final p0 = i > 0 ? offsets[i - 1] : offsets[i];
+      final p1 = offsets[i];
+      final p2 = offsets[i + 1];
+      final p3 = i < offsets.length - 2 ? offsets[i + 2] : p2;
+
+      final cp1x = p1.dx + (p2.dx - p0.dx) / 6;
+      final cp1y = p1.dy + (p2.dy - p0.dy) / 6;
+      final cp2x = p2.dx - (p3.dx - p1.dx) / 6;
+      final cp2y = p2.dy - (p3.dy - p1.dy) / 6;
+
+      path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.dx, p2.dy);
     }
     return path;
   }

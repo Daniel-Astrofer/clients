@@ -14,6 +14,7 @@ import 'package:kerosene/features/movement/kernel/execution/send_contexts.dart';
 import 'package:kerosene/features/movement/kernel/execution/send_rail_handlers.dart';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
 import 'package:kerosene/features/movement/kernel/presentation/movement_registry.dart';
+import 'package:kerosene/features/movement/presentation/send/send_payment_execution_overlay.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 
 export 'package:kerosene/features/movement/presentation/send/send_rail_executors.dart';
@@ -124,22 +125,28 @@ Future<dynamic> confirmSendPayment({
     return null;
   }
 
-  return handler.execute(
-    SendExecuteContext(
-      context: context,
-      confirmationContext: confirmationContext,
-      ref: ref,
-      wallet: wallet,
-      destination: destination,
-      amount: amount,
-      feeQuote: feeQuote,
-      toAddress: toAddress,
-      pendingPaymentLinkId: pendingPaymentLinkId,
-      authResult: authResult,
-      showSentTransactionNotification: showSentTransactionNotification,
-      resolveRecentDestinationLabel: resolveRecentDestinationLabel,
-      resolveRecentDestinationAddress: resolveRecentDestinationAddress,
-      isMounted: isMounted,
-    ),
+  return SendPaymentExecutionOverlay.show(
+    confirmationContext,
+    onExecute: () async {
+      final result = await handler.execute(
+        SendExecuteContext(
+          context: context,
+          confirmationContext: confirmationContext,
+          ref: ref,
+          wallet: wallet,
+          destination: destination,
+          amount: amount,
+          feeQuote: feeQuote,
+          toAddress: toAddress,
+          pendingPaymentLinkId: pendingPaymentLinkId,
+          authResult: authResult,
+          showSentTransactionNotification: showSentTransactionNotification,
+          resolveRecentDestinationLabel: resolveRecentDestinationLabel,
+          resolveRecentDestinationAddress: resolveRecentDestinationAddress,
+          isMounted: isMounted,
+        ),
+      );
+      return result != null;
+    },
   );
 }

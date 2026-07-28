@@ -141,8 +141,8 @@ class _CircularRevealClipper extends CustomClipper<Path> {
 
 Color get _receiveBackground => KeroseneBrandTokens.background;
 Color get _receiveSurfaceHigh => ThemeTokenBridge.isLight
-    ? const Color(0xFFF2F4F7)
-    : const Color(0xFF141517);
+    ? KeroseneBrandTheme.light.surface
+    : KeroseneBrandTheme.dark.surface;
 Color get _receiveTextColor => KeroseneBrandTokens.textPrimary;
 Color get _receiveMutedTextColor => KeroseneBrandTokens.textMuted;
 Color get _receiveSubtleTextColor => KeroseneBrandTokens.textMuted;
@@ -910,7 +910,9 @@ class _GatewayProviderTile extends StatelessWidget {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? KeroseneBrandTheme.dark.surface
+                          : KeroseneBrandTheme.light.surface,
                     ),
                     child: Icon(
                       provider.icon,

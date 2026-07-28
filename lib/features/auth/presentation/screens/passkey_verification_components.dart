@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -16,23 +17,23 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
 Color get _authBlack => ThemeTokenBridge.isLight
-    ? const Color(0xFFF7F7F5)
-    : AppColors.hexFF000000;
+    ? KeroseneBrandTheme.light.background
+    : KeroseneBrandTheme.dark.background;
 Color get _authWhite => ThemeTokenBridge.isLight
-    ? const Color(0xFF181A17)
-    : AppColors.hexFFFFFFFF;
+    ? KeroseneBrandTheme.light.textPrimary
+    : KeroseneBrandTheme.dark.textPrimary;
 Color get _authMuted => ThemeTokenBridge.isLight
-    ? const Color(0xFF62675F)
-    : AppColors.hexFFA3A3A3;
+    ? KeroseneBrandTheme.light.textSecondary
+    : KeroseneBrandTheme.dark.textMuted;
 Color get _authSurface => ThemeTokenBridge.isLight
-    ? const Color(0xFFFFFFFF)
-    : AppColors.hexFF141313;
+    ? KeroseneBrandTheme.light.surface
+    : KeroseneBrandTheme.dark.surface;
 Color get _authSurfaceRaised => ThemeTokenBridge.isLight
-    ? const Color(0xFFF0F1EE)
-    : AppColors.hexFF1C1C1E;
+    ? KeroseneBrandTheme.light.surfaceHigh
+    : KeroseneBrandTheme.dark.surfaceElevated;
 Color get _authBorder => ThemeTokenBridge.isLight
-    ? const Color(0xFFDDE0D8)
-    : AppColors.hexFF2A2A2A;
+    ? KeroseneBrandTheme.light.border
+    : KeroseneBrandTheme.dark.border;
 const Color _authErrorText = AppColors.hexFFF4C7C7;
 const Color _authSuccess = AppColors.hexFF4ADE80;
 

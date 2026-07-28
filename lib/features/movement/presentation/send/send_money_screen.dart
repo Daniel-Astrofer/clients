@@ -64,7 +64,6 @@ import 'package:kerosene/features/movement/presentation/send/send_wallet_resolve
 
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_analyzer.dart';
-import 'package:kerosene/features/movement/presentation/send/send_destination_loader.dart';
 import 'package:kerosene/features/movement/presentation/send/send_amount_step.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_step.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
@@ -2293,21 +2292,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   /// loader dialog on [showDialog] or [showModalBottomSheet] calls inside
   /// [_handleContinue] / [_openPaymentConfirmation].
   Future<void> _onContinueWithLoader(SendDestinationAnalysis analysis) async {
-    final barrierColor = Theme.of(context).scaffoldBackgroundColor;
-    final success = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: barrierColor,
-      builder: (_) => SendDestinationLoader(
-        onResolve: () async {
-          // Resolution only — no navigation inside the loader.
-          final resolved = await _resolveDestinationForKfe(analysis);
-          return resolved != null;
-        },
-      ),
-    );
-    if (success == true && mounted) {
-      await _continueFromDestinationStep(_currentDestinationAnalysis());
+    setState(() => _destinationResolutionBusy = true);
+    final resolved = await _resolveDestinationForKfe(analysis);
+    if (mounted) {
+      setState(() => _destinationResolutionBusy = false);
+      if (resolved != null) {
+        await _continueFromDestinationStep(_currentDestinationAnalysis());
+      }
     }
   }
 
@@ -2334,26 +2325,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       return;
     }
 
-    // Nubank-style sequential loading screen that runs the standard
-    // destination resolution pipeline inside an animated overlay.
-    // When the destination has a locked amount (payment link, BIP-21,
-    // BOLT11), _continueFromDestinationStep automatically calls
-    // _handleContinue → _openPaymentConfirmation underneath the loader,
-    // so the user sees the confirmation the instant the loader dismisses.
-    final barrierColor = Theme.of(context).scaffoldBackgroundColor;
-    await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: barrierColor,
-      builder: (_) => SendDestinationLoader(
-        onResolve: () async {
-          await _continueFromDestinationStep(
-            _currentDestinationAnalysis(),
-          );
-          return mounted;
-        },
-      ),
+    setState(() => _destinationResolutionBusy = true);
+    await _continueFromDestinationStep(
+      _currentDestinationAnalysis(),
     );
+    if (mounted) {
+      setState(() => _destinationResolutionBusy = false);
+    }
   }
 }
 

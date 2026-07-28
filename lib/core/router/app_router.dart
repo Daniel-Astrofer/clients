@@ -179,35 +179,6 @@ GoRouter buildAppRouter({
                   ),
                 ),
               );
-            },
-          ),
-          GoRoute(
-            path: 'receipt',
-            pageBuilder: (context, state) {
-              final args = state.extra as SendPaymentReceiptArgs<dynamic>;
-              return CustomTransitionPage(
-                key: state.pageKey,
-                child: DeferredPage(
-                  loadLibrary: send_money_review.loadLibrary,
-                  builder: (_) =>
-                      send_money_review.SendPaymentReceiptScreen<dynamic>(
-                    data: args.data,
-                    result: args.result,
-                  ),
-                ),
-                transitionDuration: const Duration(milliseconds: 600),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                  return ClipPath(
-                    clipper: CircularRevealClipper(
-                      fraction: CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      ).value,
-                    ),
-                    child: child,
-                  );
-                },
               );
             },
           ),
