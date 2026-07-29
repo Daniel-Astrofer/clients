@@ -76,3 +76,4 @@ artifacts/visual_e2e/*.png
 
 # Device session export (may contain real balances)
 test/goldens/real_data/fixtures/device_ui_snapshot.json
+.smart_build_state.json
