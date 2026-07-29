@@ -12,7 +12,7 @@ jobs:
   flutter:
     uses: Daniel-Astrofer/.github/.github/workflows/flutter-ci.yml@7b1da98fbf1159e80b7ea3d055a137d749226d2f
     with:
-      flutter-version: '3.32.8'
+      flutter-version: '3.44.6'
       enforce-analyze: false
       run-tests: false
 
