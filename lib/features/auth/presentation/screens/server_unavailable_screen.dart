@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
@@ -153,7 +155,7 @@ class ServerUnavailableScreen extends ConsumerWidget {
 
     if (retryRouteName != null) {
       Navigator.of(context)
-          .pushNamedAndRemoveUntil(retryRouteName!, (_) => false);
+          GoRouter.of(context).go(retryRouteName!);
       return;
     }
 

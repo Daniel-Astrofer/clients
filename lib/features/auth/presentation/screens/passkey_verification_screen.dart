@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -402,7 +403,7 @@ class _PasskeyVerificationScreenState
           return;
         }
         HomeScreen.skipNextAuth = true;
-        navigator.pushNamedAndRemoveUntil('/home_loading', (route) => false);
+        GoRouter.of(context).go('/home_loading');
       } else if (next is AuthRequiresLoginTotp) {
         _cancelSequenceWait();
         _isRunningSequence = false;
