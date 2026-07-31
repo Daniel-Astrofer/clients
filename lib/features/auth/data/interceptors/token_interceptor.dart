@@ -13,9 +13,9 @@ import '../../../../core/l10n/l10n_extension.dart';
 import '../datasources/auth_local_datasource.dart';
 
 class TokenInterceptor extends QueuedInterceptor {
-  static const int _sessionCredentialWarmupAttempts = 12;
+  static const int _sessionCredentialWarmupAttempts = 40;
   static const Duration _sessionCredentialWarmupDelay =
-      Duration(milliseconds: 150);
+      Duration(milliseconds: 250);
 
   final AuthLocalDataSource localDataSource;
   final ApiClient apiClient;
@@ -23,6 +23,10 @@ class TokenInterceptor extends QueuedInterceptor {
   /// Guard para evitar múltiplos redirects simultâneos (caso várias requests
   /// falhem com 500/401 ao mesmo tempo)
   bool _redirecting = false;
+
+  /// Cache do último token usado com sucesso para evitar race conditions
+  /// entre saveToken assíncrono e requests KFE imediatas pós-onboarding.
+  String? _lastKnownGoodToken;
 
   TokenInterceptor({required this.localDataSource, required this.apiClient});
 
@@ -163,11 +167,17 @@ class TokenInterceptor extends QueuedInterceptor {
   }
 
   Future<String?> _getTokenForRequest({required bool waitForCredential}) async {
+    // Reuse last known good token immediately — avoids race between
+    // async saveToken and immediate KFE requests post-onboarding.
+    if (_lastKnownGoodToken != null && _isUsableJwt(_lastKnownGoodToken)) {
+      return _lastKnownGoodToken!.trim();
+    }
     final attempts = waitForCredential ? _sessionCredentialWarmupAttempts : 1;
     for (var attempt = 0; attempt < attempts; attempt++) {
       final token = await localDataSource.getToken();
       if (_isUsableJwt(token)) {
-        return token!.trim();
+        _lastKnownGoodToken = token!.trim();
+        return _lastKnownGoodToken;
       }
       if (!waitForCredential || attempt == attempts - 1) {
         break;
@@ -276,6 +286,7 @@ class TokenInterceptor extends QueuedInterceptor {
         cleanToken = cleanToken.substring(7).trim();
       }
       await localDataSource.saveToken(cleanToken);
+      _lastKnownGoodToken = cleanToken;
       try {
         apiClient.ref
             .read(sessionCredentialVersionProvider.notifier)
@@ -320,6 +331,7 @@ class TokenInterceptor extends QueuedInterceptor {
       try {
         await localDataSource.clearAll();
       } catch (_) {}
+      _lastKnownGoodToken = null;
       try {
         apiClient.ref.read(sessionInvalidationProvider.notifier).emit();
       } catch (_) {}
