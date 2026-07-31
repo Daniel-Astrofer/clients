@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:go_router/go_router.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
@@ -321,8 +320,7 @@ class _EmergencyRecoveryScreenState
         ),
         const SizedBox(height: AppSpacing.base),
         OutlinedButton.icon(
-          onPressed: () => Navigator.of(context)
-              GoRouter.of(context).go('/login');
+          onPressed: () => GoRouter.of(context).go('/login'),
           icon: const Icon(KeroseneIcons.login, size: 18),
           label: Text(
             context.tr.emergencyRecoverySignInAgain,
