@@ -267,3 +267,19 @@ git diff --check
 ```
 
 Quando houver teste focado, ele deve ser executado junto da fase.
+
+## 8. Drift Note (2026-07-31)
+
+The actual feature tree has evolved since this contract was written. The contract references `send`, `receive`, `financial_activity`, and `admin`, but the live directories are:
+
+| Contract name | Real directory |
+|--------------|----------------|
+| `send` | `lib/features/movement/presentation/send/` |
+| `receive` | `lib/features/movement/presentation/receive/` |
+| `financial_activity` | `lib/features/movement/presentation/activity/` |
+| `admin` | `lib/features/web/` + `lib/features/web_admin/` |
+| (not in contract) | `lib/features/movement/` — hosts send/receive/activity |
+| (not in contract) | `lib/features/ledger/` — local ledger sync |
+| (not in contract) | `lib/features/landing/` — public web landing |
+
+This document's rules (layer boundaries, import restrictions, naming) remain authoritative. Refer to `docs/product/design/README.md` for the canonical Design OS index.

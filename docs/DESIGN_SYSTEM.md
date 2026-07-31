@@ -271,7 +271,7 @@ color: AppColors.hexFF000000.withValues(alpha: 0.48);
 When modifying design system files, reference:
 
 ```
-[SDD Check: docs/frontend/DESIGN_SYSTEM.md — Section <X.Y>]
+[SDD Check: docs/DESIGN_SYSTEM.md — Section <X.Y>]
 ```
 
 When modifying features that consume design system tokens, cross-check the Design Rules (Section 5) above.
