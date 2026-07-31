@@ -12,9 +12,9 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-FRONTEND="$ROOT/frontend"
-NS="${KEROSENE_NAMESPACE:-kerosene-local}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FRONTEND="$ROOT"
+NS="${KEROSENE_NAMESPACE:-kerosene-staging}"
 FLUTTER_BIN="${FLUTTER_BIN:-flutter}"
 RELEASE=0
 DEVICE_ID="${DEVICE_ID:-}"
@@ -69,12 +69,49 @@ resolve_onion() {
     printf '%s\n' "${KERO_NODE_IS_URL}"
     return
   fi
-  if [[ -f "$ROOT/infra/status.sh" ]]; then
-    local line host
-    line="$(bash "$ROOT/infra/status.sh" 2>/dev/null | grep -E 'tor onion:' | head -1 || true)"
-    host="$(printf '%s\n' "$line" | grep -oE 'http://[a-z2-7]+\.onion' | head -1 || true)"
-    if [[ -n "$host" ]]; then
-      printf '%s\n' "$host"
+  # Auto-detect from K8s — tenta deployment tor-onion (local-full) e statefulset staging-tor
+  if command -v kubectl >/dev/null 2>&1; then
+    local onion pod_path
+    for pod_path in \
+      "deploy/tor-onion:/keys/hostname" \
+      "deploy/tor-onion:/var/lib/tor/kerosene_service/hostname" \
+      "statefulset/staging-tor:/data/kerosene_service/hostname"; do
+      local pod="${pod_path%%:*}"
+      local path="${pod_path#*:}"
+      onion="$(kubectl -n "${NS}" exec "$pod" -- cat "$path" 2>/dev/null | tr -d '[:space:]' || true)"
+      if [[ -n "$onion" ]]; then
+        printf 'http://%s\n' "$onion"
+        return
+      fi
+    done
+  fi
+  # Auto-detect from host filesystem
+  local hostname_file="${HOME}/.local/state/kerosene/tor/keys/local-full/hostname"
+  if [[ -f "$hostname_file" ]]; then
+    local onion
+    onion="$(tr -d '[:space:]' < "$hostname_file" 2>/dev/null || true)"
+    if [[ -n "$onion" ]]; then
+      printf 'http://%s\n' "$onion"
+      return
+    fi
+  fi
+  # Auto-detect from Docker tor container
+  if command -v docker >/dev/null 2>&1; then
+    local onion probe_paths
+    probe_paths=(
+      "/var/lib/tor/kerosene_service/hostname"
+      "/keys/hostname"
+    )
+    for c in "$(docker ps -q --filter name=tor 2>/dev/null | head -1)"; do
+      [[ -z "$c" ]] && continue
+      for p in "${probe_paths[@]}"; do
+        onion="$(docker exec "$c" cat "$p" 2>/dev/null | tr -d '[:space:]' || true)"
+        [[ -n "$onion" ]] && break
+      done
+      [[ -n "$onion" ]] && break
+    done
+    if [[ -n "$onion" ]]; then
+      printf 'http://%s\n' "$onion"
       return
     fi
   fi
