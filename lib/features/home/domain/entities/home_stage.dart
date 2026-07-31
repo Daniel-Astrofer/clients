@@ -1,3 +1,8 @@
+// architecture-allow-large-file: Domain entity with JSON serialization for
+// server-driven home theater. Models (HomeStage, HomeStageContent, HomeStageMedia,
+// HomeStageLayout, HomeStageMotion, HomeStageAtmosphere) + their fromJson/toJson
+// form a cohesive serialization contract that is clearer kept together. Split
+// only when individual models need independent versioning.
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/home/domain/entities/home_surface.dart'

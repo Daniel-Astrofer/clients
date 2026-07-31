@@ -1,12 +1,18 @@
 # Inventario de telas e cobertura do Storybook
 
-Data da atualizacao: 2026-05-29
+Data da atualizacao: 2026-05-29 | Atualizado: 2026-07-31 (correcao de paths)
 
-Escopo analisado: `frontend/lib/features`, rotas mobile em
-`frontend/lib/bootstrap/mobile_bootstrap.dart`, rotas web em
-`frontend/lib/bootstrap/web_bootstrap.dart`, roteador admin em
-`frontend/lib/features/web_admin/navigation/admin_content_router.dart` e stories
-em `frontend/lib/storybook`.
+> **Nota de drift (2026-07-31):** Os paths abaixo ainda usam `lib/` como prefixo
+> herdado da estrutura monorepo antiga. O prefixo correto atual e `lib/`.
+> Alguns diretorios de features migraram — ex.: `features/wallet/` → `features/movement/`,
+> `features/bitcoin_accounts/` → `features/financial_accounts/`.
+> Consulte `docs/KEROSENE_FRONTEND_ARCHITECTURE.md` §8 para o mapa completo de drift.
+
+Escopo analisado: `lib/features`, rotas mobile em
+`lib/bootstrap/mobile_bootstrap.dart`, rotas web em
+`lib/bootstrap/web_bootstrap.dart`, roteador admin em
+`lib/features/web_admin/navigation/admin_content_router.dart` e stories
+em `lib/storybook`.
 
 ## Resumo
 
@@ -63,82 +69,82 @@ em `frontend/lib/storybook`.
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `WelcomeScreen` | `frontend/lib/features/auth/presentation/screens/welcome_screen.dart` | `Kerosene/App Flow` -> `/welcome` |
-| `LoginScreen` | `frontend/lib/features/auth/presentation/screens/login_screen.dart` | `Kerosene/App Flow` -> `/login` |
-| `EmergencyRecoveryScreen` | `frontend/lib/features/auth/presentation/screens/emergency_recovery_screen.dart` | `Kerosene/App Flow` -> `/recovery/emergency` |
-| `PasskeyVerificationScreen` | `frontend/lib/features/auth/presentation/screens/passkey_verification_screen.dart` | `Kerosene/App Flow` -> `/passkey` |
-| `SignupFlowScreen` | `frontend/lib/features/auth/presentation/screens/signup/signup_flow_screen.dart` | `Kerosene/App Flow` -> `/signup` |
-| `ServerUnavailableScreen` | `frontend/lib/features/auth/presentation/screens/server_unavailable_screen.dart` | `Kerosene/App Flow` -> `/server-unavailable` |
+| `WelcomeScreen` | `lib/features/auth/presentation/screens/welcome_screen.dart` | `Kerosene/App Flow` -> `/welcome` |
+| `LoginScreen` | `lib/features/auth/presentation/screens/login_screen.dart` | `Kerosene/App Flow` -> `/login` |
+| `EmergencyRecoveryScreen` | `lib/features/auth/presentation/screens/emergency_recovery_screen.dart` | `Kerosene/App Flow` -> `/recovery/emergency` |
+| `PasskeyVerificationScreen` | `lib/features/auth/presentation/screens/passkey_verification_screen.dart` | `Kerosene/App Flow` -> `/passkey` |
+| `SignupFlowScreen` | `lib/features/auth/presentation/screens/signup/signup_flow_screen.dart` | `Kerosene/App Flow` -> `/signup` |
+| `ServerUnavailableScreen` | `lib/features/auth/presentation/screens/server_unavailable_screen.dart` | `Kerosene/App Flow` -> `/server-unavailable` |
 
 ### App mobile
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `HomeLoadingScreen` | `frontend/lib/features/home/presentation/screens/home_loading_screen.dart` | `Kerosene/App Flow` -> `/home_loading` |
-| `HomeScreen` | `frontend/lib/features/home/presentation/screens/home_screen.dart` | `Kerosene/App Flow` -> `/home` |
-| `BitcoinAccountsScreen` | `frontend/lib/features/bitcoin_accounts/presentation/bitcoin_accounts_screen.dart` | `Kerosene/App Flow` -> `/card`, `/bitcoin/advanced`; `Bitcoin/Advanced` |
-| `TransactionStatementScreen` | `frontend/lib/features/transactions/presentation/screens/deposits_screen.dart` | `Kerosene/App Flow` -> `/history` |
-| `SendMoneyScreen` | `frontend/lib/features/wallet/presentation/screens/send_money_screen.dart` | `Kerosene/App Flow` -> `/send-money` |
-| `WithdrawScreen` | `frontend/lib/features/transactions/presentation/screens/withdraw_screen.dart` | `Kerosene/App Flow` -> `/withdraw/onchain`, `/withdraw/lightning` |
-| `SettingsScreen` | `frontend/lib/features/settings/presentation/screens/settings_screen.dart` | `Kerosene/App Flow` -> `/settings` |
-| `NotificationCenterScreen` | `frontend/lib/features/notifications/presentation/screens/notification_center_screen.dart` | `Kerosene/App Flow` -> `/notifications` |
+| `HomeLoadingScreen` | `lib/features/home/presentation/screens/home_loading_screen.dart` | `Kerosene/App Flow` -> `/home_loading` |
+| `HomeScreen` | `lib/features/home/presentation/screens/home_screen.dart` | `Kerosene/App Flow` -> `/home` |
+| `BitcoinAccountsScreen` | `lib/features/bitcoin_accounts/presentation/bitcoin_accounts_screen.dart` | `Kerosene/App Flow` -> `/card`, `/bitcoin/advanced`; `Bitcoin/Advanced` |
+| `TransactionStatementScreen` | `lib/features/transactions/presentation/screens/deposits_screen.dart` | `Kerosene/App Flow` -> `/history` |
+| `SendMoneyScreen` | `lib/features/wallet/presentation/screens/send_money_screen.dart` | `Kerosene/App Flow` -> `/send-money` |
+| `WithdrawScreen` | `lib/features/transactions/presentation/screens/withdraw_screen.dart` | `Kerosene/App Flow` -> `/withdraw/onchain`, `/withdraw/lightning` |
+| `SettingsScreen` | `lib/features/settings/presentation/screens/settings_screen.dart` | `Kerosene/App Flow` -> `/settings` |
+| `NotificationCenterScreen` | `lib/features/notifications/presentation/screens/notification_center_screen.dart` | `Kerosene/App Flow` -> `/notifications` |
 
 ### Payments
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `PaymentIntentFlowScreen` | `frontend/lib/features/payments/presentation/screens/payment_intent_flow_screen.dart` | `Payments/Intent Start`, `Payments/Intent Capabilities`, `Payments/Intent Quote`, `Payments/Intent Settled`, `Payments/Intent Failed`, `Payments/Intent Missing Rail`, `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE`, `REMOVED_LEGACY_FINANCIAL_ROUTE`, `REMOVED_LEGACY_FINANCIAL_ROUTE` |
+| `PaymentIntentFlowScreen` | `lib/features/payments/presentation/screens/payment_intent_flow_screen.dart` | `Payments/Intent Start`, `Payments/Intent Capabilities`, `Payments/Intent Quote`, `Payments/Intent Settled`, `Payments/Intent Failed`, `Payments/Intent Missing Rail`, `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE`, `REMOVED_LEGACY_FINANCIAL_ROUTE`, `REMOVED_LEGACY_FINANCIAL_ROUTE` |
 
 ### Conta e seguranca
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `SecuritySettingsScreen` | `frontend/lib/features/profile/presentation/screens/security_settings_screen.dart` | `Kerosene/App Flow` -> `/account/security` com inventario de passkeys, TOTP, backup codes e PIN mockados. |
-| `NotificationSettingsScreen` | `frontend/lib/features/profile/presentation/screens/notification_settings_screen.dart` | `Kerosene/App Flow` -> `/account/notifications` |
-| `SovereigntyStatusScreen` | `frontend/lib/features/security/presentation/screens/sovereignty_status_screen.dart` | `Kerosene/App Flow` -> `/security/sovereignty` |
+| `SecuritySettingsScreen` | `lib/features/profile/presentation/screens/security_settings_screen.dart` | `Kerosene/App Flow` -> `/account/security` com inventario de passkeys, TOTP, backup codes e PIN mockados. |
+| `NotificationSettingsScreen` | `lib/features/profile/presentation/screens/notification_settings_screen.dart` | `Kerosene/App Flow` -> `/account/notifications` |
+| `SovereigntyStatusScreen` | `lib/features/security/presentation/screens/sovereignty_status_screen.dart` | `Kerosene/App Flow` -> `/security/sovereignty` |
 
 ### Receber e deposito
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `DepositsScreen` | `frontend/lib/features/transactions/presentation/screens/deposits_screen.dart` | `Kerosene/App Flow` -> `/receive` |
-| `ReceiveGatewayProvidersScreen` | `frontend/lib/features/transactions/presentation/screens/deposits_screen.dart` | `Kerosene/App Flow` -> `/receive/providers` |
-| `BitcoinAccountsScreen` receive requests | `frontend/lib/features/bitcoin_accounts/presentation/bitcoin_accounts_screen.dart` | `Receive/Requests/Loading`, `Receive/Requests/Empty`, `Receive/Requests/Pending`, `Receive/Requests/Paid`, `Receive/Requests/Expired`, `Receive/Requests/Error`, `Kerosene/App Flow` -> `/receive/requests/loading`, `/receive/requests/empty`, `/receive/requests/pending`, `/receive/requests/paid`, `/receive/requests/expired`, `/receive/requests/error` |
-| `ReceiveAmountScreen` | `frontend/lib/features/wallet/presentation/screens/receive_amount_screen.dart` | `Kerosene/App Flow` -> `/receive/amount/qr`, `/receive/amount/link`, `/receive/amount/nfc` |
-| `ReceiveRequestFlowScreen` | `frontend/lib/features/wallet/presentation/screens/receive_request_flow_screen.dart` | `Kerosene/App Flow` -> `/receive/qr`, `/receive/onchain-confirming`, `/receive/onchain-identified` |
-| `ReceivePaymentLinkScreen` | `frontend/lib/features/wallet/presentation/screens/receive_payment_link_screen.dart` | `Kerosene/App Flow` -> `/receive/payment-link`, `/receive/payment-link-paid` |
-| `ReceiveNfcFlowScreen` | `frontend/lib/features/wallet/presentation/screens/receive_nfc_flow_screen.dart` | `Kerosene/App Flow` -> `/receive/nfc`, `/receive/onchain-nfc` |
-| `DepositAmountScreen` | `frontend/lib/features/wallet/presentation/screens/deposit/deposit_amount_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
-| `DepositMethodScreen` | `frontend/lib/features/wallet/presentation/screens/deposit/deposit_method_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
-| `DepositLightningInvoiceScreen` | `frontend/lib/features/wallet/presentation/screens/deposit/deposit_lightning_invoice_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
-| `DepositOnchainInvoiceScreen` | `frontend/lib/features/wallet/presentation/screens/deposit/deposit_onchain_invoice_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
+| `DepositsScreen` | `lib/features/transactions/presentation/screens/deposits_screen.dart` | `Kerosene/App Flow` -> `/receive` |
+| `ReceiveGatewayProvidersScreen` | `lib/features/transactions/presentation/screens/deposits_screen.dart` | `Kerosene/App Flow` -> `/receive/providers` |
+| `BitcoinAccountsScreen` receive requests | `lib/features/bitcoin_accounts/presentation/bitcoin_accounts_screen.dart` | `Receive/Requests/Loading`, `Receive/Requests/Empty`, `Receive/Requests/Pending`, `Receive/Requests/Paid`, `Receive/Requests/Expired`, `Receive/Requests/Error`, `Kerosene/App Flow` -> `/receive/requests/loading`, `/receive/requests/empty`, `/receive/requests/pending`, `/receive/requests/paid`, `/receive/requests/expired`, `/receive/requests/error` |
+| `ReceiveAmountScreen` | `lib/features/wallet/presentation/screens/receive_amount_screen.dart` | `Kerosene/App Flow` -> `/receive/amount/qr`, `/receive/amount/link`, `/receive/amount/nfc` |
+| `ReceiveRequestFlowScreen` | `lib/features/wallet/presentation/screens/receive_request_flow_screen.dart` | `Kerosene/App Flow` -> `/receive/qr`, `/receive/onchain-confirming`, `/receive/onchain-identified` |
+| `ReceivePaymentLinkScreen` | `lib/features/wallet/presentation/screens/receive_payment_link_screen.dart` | `Kerosene/App Flow` -> `/receive/payment-link`, `/receive/payment-link-paid` |
+| `ReceiveNfcFlowScreen` | `lib/features/wallet/presentation/screens/receive_nfc_flow_screen.dart` | `Kerosene/App Flow` -> `/receive/nfc`, `/receive/onchain-nfc` |
+| `DepositAmountScreen` | `lib/features/wallet/presentation/screens/deposit/deposit_amount_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
+| `DepositMethodScreen` | `lib/features/wallet/presentation/screens/deposit/deposit_method_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
+| `DepositLightningInvoiceScreen` | `lib/features/wallet/presentation/screens/deposit/deposit_lightning_invoice_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
+| `DepositOnchainInvoiceScreen` | `lib/features/wallet/presentation/screens/deposit/deposit_onchain_invoice_screen.dart` | `Kerosene/App Flow` -> `REMOVED_LEGACY_FINANCIAL_ROUTE` |
 
 ### Web publico
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `KeroseneLandingPage` | `frontend/lib/features/landing/presentation/kerosene_landing_page.dart` | `Kerosene/App Flow` -> `/public/landing`, `/public/download` |
-| `KerosenePublicStatusPage` | `frontend/lib/features/landing/presentation/kerosene_landing_page.dart` | `Kerosene/App Flow` -> `/public/status` |
+| `KeroseneLandingPage` | `lib/features/landing/presentation/kerosene_landing_page.dart` | `Kerosene/App Flow` -> `/public/landing`, `/public/download` |
+| `KerosenePublicStatusPage` | `lib/features/landing/presentation/kerosene_landing_page.dart` | `Kerosene/App Flow` -> `/public/status` |
 
 ### Admin web
 
 | Tela | Arquivo | Storybook |
 | --- | --- | --- |
-| `AdminLoginScreen` | `frontend/lib/features/web_admin/screens/login/admin_login_screen.dart` | `Admin/Login`, `Kerosene/App Flow` -> `/admin/login` |
-| `DashboardScreen` | `frontend/lib/features/web_admin/screens/dashboard/dashboard_screen.dart` | `Admin/Dashboard`, `Kerosene/App Flow` -> `/admin/dashboard` |
-| `MonitoringScreen` | `frontend/lib/features/web_admin/screens/monitoring/monitoring_screen.dart` | `Admin/Monitoring`, `Kerosene/App Flow` -> `/admin/monitoring` |
-| `TransactionsScreen` | `frontend/lib/features/web_admin/screens/transactions/transactions_screen.dart` | `Admin/Integrity Proofs`, `Kerosene/App Flow` -> `/admin/transactions` |
-| `LightningScreen` | `frontend/lib/features/web_admin/screens/lightning/lightning_screen.dart` | `Admin/Lightning`, `Kerosene/App Flow` -> `/admin/lightning` |
-| `OnchainScreen` | `frontend/lib/features/web_admin/screens/onchain/onchain_screen.dart` | `Admin/On-chain`, `Kerosene/App Flow` -> `/admin/onchain` |
-| `ChecksScreen` | `frontend/lib/features/web_admin/screens/checks/checks_screen.dart` | `Admin/Hash Chain`, `Kerosene/App Flow` -> `/admin/checks` |
-| `PaymentLinksScreen` | `frontend/lib/features/web_admin/screens/payment_links/payment_links_screen.dart` | `Admin/Payment Metrics`, `Kerosene/App Flow` -> `/admin/payment-links` |
-| `AnalyticsScreen` | `frontend/lib/features/web_admin/screens/analytics/analytics_screen.dart` | `Admin/Analytics`, `Kerosene/App Flow` -> `/admin/analytics` |
-| `VolatilityScreen` | `frontend/lib/features/web_admin/screens/volatility/volatility_screen.dart` | `Admin/Volatility`, `Kerosene/App Flow` -> `/admin/volatility` |
-| `CompaniesScreen` | `frontend/lib/features/web_admin/screens/companies/companies_screen.dart` | `Admin/Infrastructure`, `Kerosene/App Flow` -> `/admin/companies` |
-| `AuditScreen` | `frontend/lib/features/web_admin/screens/audit/audit_screen.dart` | `Admin/Audit & Security`, `Kerosene/App Flow` -> `/admin/audit` |
-| `AuthenticatedDevicesScreen` | `frontend/lib/features/web_admin/screens/authenticated_devices/authenticated_devices_screen.dart` | `Admin/Dispositivos autenticados`, `Kerosene/App Flow` -> `/admin/authenticated-devices` |
-| `NotificationsScreen` | `frontend/lib/features/web_admin/screens/notifications/notifications_screen.dart` | `Admin/Notifications`, `Kerosene/App Flow` -> `/admin/notifications` |
-| `AdminSettingsScreen` | `frontend/lib/features/web_admin/screens/settings/admin_settings_screen.dart` | `Admin/Settings`, `Kerosene/App Flow` -> `/admin/settings` |
+| `AdminLoginScreen` | `lib/features/web_admin/screens/login/admin_login_screen.dart` | `Admin/Login`, `Kerosene/App Flow` -> `/admin/login` |
+| `DashboardScreen` | `lib/features/web_admin/screens/dashboard/dashboard_screen.dart` | `Admin/Dashboard`, `Kerosene/App Flow` -> `/admin/dashboard` |
+| `MonitoringScreen` | `lib/features/web_admin/screens/monitoring/monitoring_screen.dart` | `Admin/Monitoring`, `Kerosene/App Flow` -> `/admin/monitoring` |
+| `TransactionsScreen` | `lib/features/web_admin/screens/transactions/transactions_screen.dart` | `Admin/Integrity Proofs`, `Kerosene/App Flow` -> `/admin/transactions` |
+| `LightningScreen` | `lib/features/web_admin/screens/lightning/lightning_screen.dart` | `Admin/Lightning`, `Kerosene/App Flow` -> `/admin/lightning` |
+| `OnchainScreen` | `lib/features/web_admin/screens/onchain/onchain_screen.dart` | `Admin/On-chain`, `Kerosene/App Flow` -> `/admin/onchain` |
+| `ChecksScreen` | `lib/features/web_admin/screens/checks/checks_screen.dart` | `Admin/Hash Chain`, `Kerosene/App Flow` -> `/admin/checks` |
+| `PaymentLinksScreen` | `lib/features/web_admin/screens/payment_links/payment_links_screen.dart` | `Admin/Payment Metrics`, `Kerosene/App Flow` -> `/admin/payment-links` |
+| `AnalyticsScreen` | `lib/features/web_admin/screens/analytics/analytics_screen.dart` | `Admin/Analytics`, `Kerosene/App Flow` -> `/admin/analytics` |
+| `VolatilityScreen` | `lib/features/web_admin/screens/volatility/volatility_screen.dart` | `Admin/Volatility`, `Kerosene/App Flow` -> `/admin/volatility` |
+| `CompaniesScreen` | `lib/features/web_admin/screens/companies/companies_screen.dart` | `Admin/Infrastructure`, `Kerosene/App Flow` -> `/admin/companies` |
+| `AuditScreen` | `lib/features/web_admin/screens/audit/audit_screen.dart` | `Admin/Audit & Security`, `Kerosene/App Flow` -> `/admin/audit` |
+| `AuthenticatedDevicesScreen` | `lib/features/web_admin/screens/authenticated_devices/authenticated_devices_screen.dart` | `Admin/Dispositivos autenticados`, `Kerosene/App Flow` -> `/admin/authenticated-devices` |
+| `NotificationsScreen` | `lib/features/web_admin/screens/notifications/notifications_screen.dart` | `Admin/Notifications`, `Kerosene/App Flow` -> `/admin/notifications` |
+| `AdminSettingsScreen` | `lib/features/web_admin/screens/settings/admin_settings_screen.dart` | `Admin/Settings`, `Kerosene/App Flow` -> `/admin/settings` |
 
 ## Telas internas
 
@@ -147,11 +153,11 @@ publica dona:
 
 | Tela privada | Arquivo | Validacao |
 | --- | --- | --- |
-| `_PaymentLinkEntryScreen` | `frontend/lib/features/home/presentation/screens/home_screen_payment_link.dart` | `HomeScreen` |
-| `_SendMethodScreen` | `frontend/lib/features/home/presentation/screens/home_screen_send_method.dart` | `HomeScreen` |
-| `_AppEntryPinLockScreen` | `frontend/lib/features/security/presentation/widgets/app_entry_pin_gate.dart` | fluxo autenticado real |
-| `_InternalTransferReviewScreen` | `frontend/lib/features/wallet/presentation/screens/send_money_screen_review.dart` | `SendMoneyScreen` |
-| `ColdWalletCreationScreen` | `frontend/lib/features/bitcoin_accounts/presentation/bitcoin_accounts_screen.dart` | `BitcoinAccountsScreen` |
+| `_PaymentLinkEntryScreen` | `lib/features/home/presentation/screens/home_screen_payment_link.dart` | `HomeScreen` |
+| `_SendMethodScreen` | `lib/features/home/presentation/screens/home_screen_send_method.dart` | `HomeScreen` |
+| `_AppEntryPinLockScreen` | `lib/features/security/presentation/widgets/app_entry_pin_gate.dart` | fluxo autenticado real |
+| `_InternalTransferReviewScreen` | `lib/features/wallet/presentation/screens/send_money_screen_review.dart` | `SendMoneyScreen` |
+| `ColdWalletCreationScreen` | `lib/features/bitcoin_accounts/presentation/bitcoin_accounts_screen.dart` | `BitcoinAccountsScreen` |
 
 ## Observacoes
 

@@ -43,3 +43,9 @@ export 'components/auth/auth.dart';
 
 // Components - Feedback (notices / empty-error states)
 export 'components/feedback/feedback.dart';
+
+// States (standardized loading, empty, error, offline)
+export 'states/kerosene_states.dart';
+
+// Patterns (canonical Kerosene UI compositions)
+export 'patterns/kerosene_patterns.dart';
