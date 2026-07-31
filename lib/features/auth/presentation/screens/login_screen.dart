@@ -341,8 +341,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (next is AuthAuthenticated) {
         HomeScreen.skipNextAuth = true;
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil('/home_loading', (route) => false);
+        GoRouter.of(context).go('/home_loading');
         return;
       }
 
