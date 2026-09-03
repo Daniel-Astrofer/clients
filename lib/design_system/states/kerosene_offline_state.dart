@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -41,7 +42,7 @@ class KeroseneOfflineBanner extends StatelessWidget {
         vertical: AppSpacing.xs,
         horizontal: AppSpacing.base,
       ),
-      color: AppColors.hexFF23252A, // Smoke surface
+      color: AppColors.hexFF0B0F12, // Smoke surface
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -126,7 +127,7 @@ class _KeroseneOfflineFullScreenState extends State<KeroseneOfflineFullScreen> {
             Icon(
               Icons.cloud_off,
               size: 48,
-              color: palette.textTertiary,
+              color: palette.textMuted,
               semanticLabel: 'Sem conexao',
             ),
             SizedBox(height: AppSpacing.base),

@@ -14,7 +14,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FRONTEND="$ROOT"
-NS="${KEROSENE_NAMESPACE:-kerosene-staging}"
+NS="${KEROSENE_NAMESPACE:-kerosene-local}"
 FLUTTER_BIN="${FLUTTER_BIN:-flutter}"
 RELEASE=0
 DEVICE_ID="${DEVICE_ID:-}"

@@ -5,13 +5,16 @@ Outputs:
   kerosene-icon-black.png   — White logo on black (combined icon for iOS/Win/Mac)
 """
 import json
+from pathlib import Path
+
 from PIL import Image, ImageDraw
 
-LOTTIE_PATH = "/home/astrofer/Kerosene/frontend/assets/logo/kerosene-logo-white.json"
-OUTPUT_FG = "/home/astrofer/Kerosene/frontend/assets/logo/kerosene-logo-white.png"
-OUTPUT_COMBINED = "/home/astrofer/Kerosene/frontend/assets/logo/kerosene-icon-black.png"
+ASSET_DIR = Path(__file__).resolve().parent
+LOTTIE_PATH = ASSET_DIR / "kerosene-logo-white.json"
+OUTPUT_FG = ASSET_DIR / "kerosene-logo-white.png"
+OUTPUT_COMBINED = ASSET_DIR / "kerosene-icon-black.png"
 
-with open(LOTTIE_PATH) as f:
+with LOTTIE_PATH.open(encoding="utf-8") as f:
     anim = json.load(f)
 
 W, H = anim["w"], anim["h"]

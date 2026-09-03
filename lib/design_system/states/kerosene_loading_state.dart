@@ -232,7 +232,7 @@ class _SubtleLoader extends StatelessWidget {
             height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 1.5,
-              valueColor: AlwaysStoppedAnimation(palette.textTertiary),
+              valueColor: AlwaysStoppedAnimation(palette.textMuted),
             ),
           ),
           if (message != null) ...[
@@ -241,7 +241,7 @@ class _SubtleLoader extends StatelessWidget {
               message!,
               style: AppTypography.inter(
                 fontSize: 12,
-                color: palette.textTertiary,
+                color: palette.textMuted,
               ),
             ),
           ],

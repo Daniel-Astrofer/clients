@@ -10,49 +10,52 @@ import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.da
 class AdminColors {
   AdminColors._();
 
-  // --- Delegates to KeroseneBrandTheme.dark ---
-  static Color get background => KeroseneBrandTheme.dark.background;
-  static Color get backgroundElevated => KeroseneBrandTheme.dark.backgroundSoft;
-  static Color get surface => KeroseneBrandTheme.dark.surface;
-  static Color get surfaceElevated => KeroseneBrandTheme.dark.surfaceElevated;
-  static Color get surfaceHover => KeroseneBrandTheme.dark.surfaceHigh;
+  // --- Dark admin palette ---
+  // Keep these aliases const: this file is used extensively from const Flutter
+  // widgets. Getters delegated through KeroseneBrandTheme are not compile-time
+  // constants, even though the dark theme itself is const.
+  static const Color background = AppColors.onyxCanvas;
+  static const Color backgroundElevated = AppColors.graphiteSurface;
+  static const Color surface = AppColors.carbonSurface;
+  static const Color surfaceElevated = AppColors.graphiteSurface;
+  static const Color surfaceHover = AppColors.carbonSurface;
 
-  static Color get borderSubtle => KeroseneBrandTheme.dark.borderSubtle;
-  static Color get border => KeroseneBrandTheme.dark.border;
-  static Color get borderStrong => KeroseneBrandTheme.dark.borderStrong;
+  static const Color borderSubtle = AppColors.smokeSurface;
+  static const Color border = AppColors.smokeSurface;
+  static const Color borderStrong = AppColors.ashBorder;
 
-  static Color get textPrimary => KeroseneBrandTheme.dark.textPrimary;
-  static Color get textSecondary => KeroseneBrandTheme.dark.textSecondary;
-  static Color get textTertiary => KeroseneBrandTheme.dark.textMuted;
-  static Color get textDisabled => KeroseneBrandTheme.dark.textDisabled;
+  static const Color textPrimary = AppColors.snow;
+  static const Color textSecondary = AppColors.mistText;
+  static const Color textTertiary = AppColors.fogText;
+  static const Color textDisabled = AppColors.pewterText;
 
   // --- Admin-specific semantic accents ---
-  static Color get accent => KeroseneBrandTokens.brand;
-  static Color get info => KeroseneBrandTokens.info;
-  static Color get positive => KeroseneBrandTokens.success;
-  static Color get warning => KeroseneBrandTokens.warning;
-  static Color get negative => KeroseneBrandTokens.error;
+  static const Color accent = KeroseneBrandTokens.brand;
+  static const Color info = KeroseneBrandTokens.info;
+  static const Color positive = KeroseneBrandTokens.success;
+  static const Color warning = KeroseneBrandTokens.warning;
+  static const Color negative = KeroseneBrandTokens.error;
 
-  static Color get positiveSubtle => positive;
-  static Color get warningSubtle => warning;
-  static Color get negativeSubtle => negative;
-  static Color get infoSubtle => info;
-  static Color get accentSubtle => accent;
+  static const Color positiveSubtle = positive;
+  static const Color warningSubtle = warning;
+  static const Color negativeSubtle = negative;
+  static const Color infoSubtle = info;
+  static const Color accentSubtle = accent;
 
   // --- Admin-only: sidebar, table, chart ---
-  static Color get sidebarBg => backgroundElevated;
-  static Color get sidebarHover => surface;
-  static Color get sidebarActive => surfaceHover;
-  static Color get sidebarText => textSecondary;
-  static Color get sidebarTextActive => textPrimary;
+  static const Color sidebarBg = backgroundElevated;
+  static const Color sidebarHover = surface;
+  static const Color sidebarActive = surfaceHover;
+  static const Color sidebarText = textSecondary;
+  static const Color sidebarTextActive = textPrimary;
 
-  static Color get tableHeader => surface;
-  static Color get tableRowHover => surfaceHover;
-  static Color get tableRowAlt => backgroundElevated;
+  static const Color tableHeader = surface;
+  static const Color tableRowHover = surfaceHover;
+  static const Color tableRowAlt = backgroundElevated;
 
-  static Color get chartLine => accent;
-  static Color get chartArea => accent;
-  static Color get chartGrid => borderSubtle;
+  static const Color chartLine = accent;
+  static const Color chartArea = accent;
+  static const Color chartGrid = borderSubtle;
 
   static Color withAlpha(Color color, double opacity) =>
       color.withValues(alpha: opacity);

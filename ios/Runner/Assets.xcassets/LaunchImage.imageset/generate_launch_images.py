@@ -1,12 +1,13 @@
 """Generate iOS LaunchImage PNGs from the kerosene-logo-white.png foreground."""
+from pathlib import Path
 import sys
-import os
+
 from PIL import Image
 
-src = "/home/astrofer/Kerosene/frontend/assets/logo/kerosene-logo-white.png"
-out_dir = os.path.dirname(os.path.abspath(__file__))
+out_dir = Path(__file__).resolve().parent
+src = out_dir.parents[3] / "assets" / "logo" / "kerosene-logo-white.png"
 
-if not os.path.exists(src):
+if not src.is_file():
     print(f"Source not found: {src}")
     sys.exit(1)
 
@@ -23,7 +24,7 @@ sizes = {
 }
 
 for filename, target_size in sizes.items():
-    out_path = os.path.join(out_dir, filename)
+    out_path = out_dir / filename
     resized = src_img.resize((target_size, target_size), Image.LANCZOS)
     resized.save(out_path, "PNG")
     print(f"Saved: {out_path} ({target_size}x{target_size})")

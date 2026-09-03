@@ -1,3 +1,12 @@
+<!--
+Kerosene documentation metadata
+status: review-required
+audience: internal
+owner: clients
+source_of_truth: clients
+last_reviewed: 2026-09-03
+-->
+
 # UI Feature Agent
 
 > Status: Draft | Last revised: 2026-07-31
@@ -17,7 +26,7 @@ Read these before writing any code:
 5. `docs/product/design/motion-system.md` — animation categories and tokens
 6. `docs/product/design/anti-patterns.md` — what NOT to do
 7. `docs/product/design/accessibility-rules.md` — contrast, semantics, touch targets
-8. `docs/DESIGN_SYSTEM.md` — tokens, typography, spacing, radii
+8. `docs/product/DESIGN_SYSTEM.md` — tokens, typography, spacing, radii
 9. Existing implementation in `lib/design_system/` and `lib/features/`
 
 ---

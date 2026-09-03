@@ -1,3 +1,12 @@
+<!--
+Kerosene documentation metadata
+status: review-required
+audience: internal
+owner: clients
+source_of_truth: clients
+last_reviewed: 2026-09-03
+-->
+
 # Kerosene Agent Definitions
 
 > Prompts e definicoes de papeis para agentes que trabalham no frontend Kerosene.

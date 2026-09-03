@@ -1,3 +1,12 @@
+<!--
+Kerosene documentation metadata
+status: review-required
+audience: internal
+owner: clients
+source_of_truth: clients
+last_reviewed: 2026-09-03
+-->
+
 # Role: Visual Critic
 
 > Writes code? No

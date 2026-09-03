@@ -136,7 +136,7 @@ resolve_onion() {
     for pod_path in \
       "deploy/tor-onion:/keys/hostname" \
       "deploy/tor-onion:/var/lib/tor/kerosene_service/hostname" \
-      "statefulset/staging-tor:/data/kerosene_service/hostname"; do
+      "statefulset/staging-tor:/var/lib/tor/kerosene_service/hostname"; do
       local pod="${pod_path%%:*}"
       local path="${pod_path#*:}"
       onion="$(kubectl -n "${NS}" exec "$pod" -- cat "$path" 2>/dev/null | tr -d '[:space:]' || true)"

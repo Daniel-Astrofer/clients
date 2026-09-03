@@ -90,7 +90,7 @@ class KeroseneErrorState extends StatelessWidget {
                 'Codigo: ${errorCode!}',
                 style: AppTypography.inter(
                   fontSize: 12,
-                  color: palette.textTertiary,
+                  color: palette.textMuted,
                 ),
               ),
             ],
@@ -111,7 +111,7 @@ class KeroseneErrorState extends StatelessWidget {
                     AppButton(
                       label: primaryAction!.label,
                       onPressed: primaryAction!.onPressed,
-                      variant: AppButtonVariant.outlined,
+                      variant: AppButtonVariant.secondary,
                     ),
                 ],
               ),

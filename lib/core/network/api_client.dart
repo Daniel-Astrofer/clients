@@ -13,9 +13,10 @@ import 'package:kerosene/core/network/api_client_route_policy.dart';
 import 'package:kerosene/core/network/api_client_platform.dart' as platform;
 import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
+import 'api_transport.dart';
 
 /// Cliente HTTP configurado com Dio
-class ApiClient {
+class ApiClient implements ApiTransport {
   static const int _paranoidMaxPayloadBytes = 2048;
   static const int _psbtMaxPayloadBytes = 64 * 1024;
   static const Set<String> _challengeConsumingAuthPaths = {
@@ -132,6 +133,7 @@ class ApiClient {
   }
 
   /// GET request
+  @override
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -154,6 +156,7 @@ class ApiClient {
   }
 
   /// POST request
+  @override
   Future<Response> post(
     String path, {
     dynamic data,
