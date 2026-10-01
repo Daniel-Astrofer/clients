@@ -76,6 +76,8 @@ ProviderContainer _containerFor(AdminRoute route) {
       adminVaultMeshHealthProvider.overrideWith((ref) async => _vaultHealth),
       adminReleaseSnapshotProvider
           .overrideWith((ref) async => _releaseSnapshot),
+      adminCellOperationsProvider.overrideWith((ref) async => const {}),
+      adminCellUpdatesProvider.overrideWith((ref) async => const {'plans': []}),
       adminMobileReleaseProvider.overrideWith((ref) async => _mobileRelease),
       adminOperationalMetricsProvider
           .overrideWith((ref) async => _operationalMetrics),

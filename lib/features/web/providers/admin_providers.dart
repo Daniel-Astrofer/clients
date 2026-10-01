@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
 import '../data/admin_data_service.dart';
 
@@ -56,6 +57,18 @@ final adminVaultMeshHealthProvider =
 final adminReleaseSnapshotProvider =
     FutureProvider<Map<String, dynamic>>((ref) {
   return ref.watch(adminDataServiceProvider).fetchReleaseSnapshot();
+});
+
+final adminCellOperationsProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
+  final timer = Timer(const Duration(seconds: 30), ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+  return ref.watch(adminDataServiceProvider).fetchCellOperations();
+});
+
+final adminCellUpdatesProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
+  return ref.watch(adminDataServiceProvider).fetchCellUpdates();
 });
 
 final adminMobileReleaseProvider = FutureProvider<Map<String, dynamic>>((ref) {

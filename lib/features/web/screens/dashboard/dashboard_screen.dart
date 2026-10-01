@@ -6,6 +6,7 @@ import '../../theme/admin_typography.dart';
 import '../../theme/admin_copy.dart';
 import '../../theme/admin_theme.dart';
 import '../../widgets/admin_widgets.dart';
+import '../../widgets/cell_operations_card.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Executive dashboard for operational and integrity posture.
@@ -29,6 +30,8 @@ class DashboardScreen extends ConsumerWidget {
         ref.invalidate(adminOperationsOverviewProvider);
         ref.invalidate(adminAuditLatestRootProvider);
         ref.invalidate(adminReleaseSnapshotProvider);
+        ref.invalidate(adminCellOperationsProvider);
+        ref.invalidate(adminCellUpdatesProvider);
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -238,24 +241,32 @@ class _ReleaseCard extends StatelessWidget {
     return _Panel(
       title: 'Release',
       icon: KeroseneIcons.security,
-      child: release.when(
-        data: (data) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _InfoRow('Authorized', '${data['authorized'] == true}'),
-            _InfoRow('Reason', '${data['reason'] ?? 'unknown'}'),
-            _InfoRow('Commit', _short(data['gitCommit'])),
-            _InfoRow('Image', _short(data['imageDigest'])),
-          ],
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        release.when(
+          data: (data) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _InfoRow('Authorized', '${data['authorized'] == true}'),
+              _InfoRow(
+                  'Signature',
+                  data['manifestSignatureValid'] == true
+                      ? 'VERIFIED'
+                      : 'UNVERIFIED'),
+              _InfoRow('Reason', '${data['reason'] ?? 'unknown'}'),
+              _InfoRow('Commit', _short(data['gitCommit'])),
+              _InfoRow('Image', _short(data['imageDigest'])),
+            ],
+          ),
+          loading: () => const LinearProgressIndicator(
+            color: AdminColors.textTertiary,
+          ),
+          error: (error, _) => Text(
+            AdminCopy.loadFailure('a versão atual'),
+            style: AdminTypography.caption,
+          ),
         ),
-        loading: () => const LinearProgressIndicator(
-          color: AdminColors.textTertiary,
-        ),
-        error: (error, _) => Text(
-          AdminCopy.loadFailure('a versão atual'),
-          style: AdminTypography.caption,
-        ),
-      ),
+        const CellOperationsCard()
+      ]),
     );
   }
 }

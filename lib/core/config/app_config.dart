@@ -317,6 +317,9 @@ class AppConfig {
   static const String adminOperationsVaultMesh =
       '/api/admin/operations/vault-mesh';
   static const String adminOperationsRelease = '/api/admin/operations/release';
+  static const String adminCellOperations = '/api/admin/operations/cell';
+  static const String adminCellUpdates = '$adminCellOperations/updates';
+  static const String adminCellPlans = '$adminCellUpdates/plans';
   static const String adminOperationsLogs = '/api/admin/operations/logs';
   static const String adminOperationsMobile = '/api/admin/operations/mobile';
   static const String adminOperationsMetrics = '/api/admin/operations/metrics';
