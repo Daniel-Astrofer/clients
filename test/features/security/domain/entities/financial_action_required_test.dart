@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -14,11 +13,10 @@ import 'package:kerosene/features/movement/data/repositories/transaction_reposit
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/security/domain/entities/passkey_action_required.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../support/test_vectors.dart';
 
 Map<String, dynamic> _challenge() => Map<String, dynamic>.from(
-      (jsonDecode(
-          File('../contracts/test-vectors/financial-payment-approval-v1.json')
-              .readAsStringSync()) as Map)['challenge'] as Map,
+      loadPaymentApprovalVector()['challenge'] as Map,
     );
 
 void main() {

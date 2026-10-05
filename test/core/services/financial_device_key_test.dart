@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,6 +7,7 @@ import 'package:kerosene/core/security/financial_payment_challenge.dart';
 import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../support/test_vectors.dart';
 
 final _seed = List<int>.generate(32, (i) => i); // Local test key only.
 String get _prefix => keroseneSecurePrefix();
@@ -17,9 +17,7 @@ String get _counterKey =>
     '${_prefix}device_key_counter.YWxpY2U.credential-test';
 
 FinancialPaymentChallenge _challenge() {
-  final vector = jsonDecode(File(
-    '../contracts/test-vectors/financial-payment-approval-v1.json',
-  ).readAsStringSync()) as Map<String, dynamic>;
+  final vector = loadPaymentApprovalVector();
   return FinancialPaymentChallenge.fromJson(
     Map<String, dynamic>.from(vector['challenge'] as Map),
   );
@@ -62,9 +60,7 @@ void main() {
     });
     expect(proof['type'], 'FINANCIAL_DEVICE_KEY');
     expect(proof['version'], 1);
-    final vector = jsonDecode(File(
-      '../contracts/test-vectors/financial-payment-approval-v1.json',
-    ).readAsStringSync()) as Map<String, dynamic>;
+    final vector = loadPaymentApprovalVector();
     expect(proof['signedPayload'], vector['signedPayload']);
     final keyPair = await Ed25519().newKeyPairFromSeed(_seed);
     expect(

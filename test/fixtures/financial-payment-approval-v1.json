@@ -1,0 +1,40 @@
+{
+  "context": {
+    "userId": 41,
+    "deviceRef": "device-ref-test",
+    "idempotencyKey": " chave | á ",
+    "rail": "ONCHAIN",
+    "direction": "OUTBOUND",
+    "sourceWalletId": "00000000-0000-0000-0000-000000000001",
+    "destinationWalletId": null,
+    "amountSats": 12345,
+    "networkFeeSats": 234,
+    "externalReference": "bc1-example",
+    "memo": " memo | 漢 ",
+    "paymentRequestPublicId": null,
+    "feeRateSatPerVbyte": 27,
+    "feeTargetBlocks": 3,
+    "quoteId": "quote-test"
+  },
+  "bindingHash": "c2198060c47b2af87c51971deacbb85c6bf48463392d55e8ff217be4ed05782e",
+  "challenge": {
+    "version": 1,
+    "purpose": "KFE_PAYMENT_APPROVAL",
+    "challengeId": "00000000-0000-0000-0000-000000000003",
+    "challenge": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bindingHash": "c2198060c47b2af87c51971deacbb85c6bf48463392d55e8ff217be4ed05782e",
+    "username": "alice",
+    "onionServiceId": "auth-test",
+    "issuedAtEpochSeconds": 1800000000,
+    "expiresAtEpochSeconds": 1800000090,
+    "algorithm": "Ed25519",
+    "canonicalization": "KEROSENE_JSON_V1"
+  },
+  "credentialId": "credential-test",
+  "deviceInstallId": "install-test",
+  "counter": 7,
+  "issuedAtEpochSeconds": 1800000001,
+  "signedPayload": "{\"bindingHash\":\"c2198060c47b2af87c51971deacbb85c6bf48463392d55e8ff217be4ed05782e\",\"challenge\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"challengeId\":\"00000000-0000-0000-0000-000000000003\",\"counter\":7,\"credentialId\":\"credential-test\",\"deviceInstallId\":\"install-test\",\"issuedAtEpochSeconds\":1800000001,\"onionServiceId\":\"auth-test\",\"type\":\"KFE_PAYMENT_APPROVAL\",\"username\":\"alice\",\"version\":1}",
+  "publicKey": "j99PPGQhnIxKoK1OEz8rzdBoAGBQdYRjoGv4cgq_YSw",
+  "signature": "cVVXaJfe-0ddoAshklOVkIA6X-vRpSQ7JkZe1Mia3wfKpWEs-yarBnogLY77BUn1s0E_hXaNZLo_Uc1XVy3aCw"
+}

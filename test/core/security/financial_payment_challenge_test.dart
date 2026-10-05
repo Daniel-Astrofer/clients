@@ -1,14 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/security/financial_payment_challenge.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
+import '../../support/test_vectors.dart';
 
-Map<String, dynamic> _vector() => jsonDecode(File(
-      '../contracts/test-vectors/financial-payment-approval-v1.json',
-    ).readAsStringSync()) as Map<String, dynamic>;
+Map<String, dynamic> _vector() => loadPaymentApprovalVector();
 
 void main() {
   test('matches shared canonical payload and real Ed25519 vector', () async {
