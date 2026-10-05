@@ -11,7 +11,7 @@ import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 
-const Duration kWalletHoldSelectionDuration = Duration(seconds: 1);
+const Duration kWalletHoldSelectionDuration = KeroseneMotion.calm;
 
 String walletSelectionBalanceLabel(Wallet wallet, {Locale? appLocale}) {
   final amount = MoneyDisplay.formatCompact(
@@ -142,150 +142,142 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
         onPointerDown: (_) => _startHold(),
         onPointerUp: (_) => _cancelHold(),
         onPointerCancel: (_) => _cancelHold(),
-        child: AnimatedScale(
-          scale: selected ? 1 : 0.965,
-          duration: AppAnimations.standard,
-          curve: AppAnimations.emphasizedCurve,
-          child: AnimatedContainer(
-            duration: AppAnimations.emphasized,
-            curve: AppAnimations.emphasizedCurve,
-            padding: EdgeInsets.fromLTRB(
-              compact ? 16 : 20,
-              verticalPadding,
-              compact ? 16 : 20,
-              verticalPadding,
-            ),
-            decoration: BoxDecoration(
-              color: surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: border, width: selected ? 1.2 : 1),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        blurRadius: 30,
-                        spreadRadius: -14,
-                        offset: const Offset(0, 18),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox.square(
-                  dimension: iconOuterSize,
-                  child: AnimatedBuilder(
-                    animation: _holdController,
-                    builder: (context, child) {
-                      final showProgress =
-                          selected && (_holding || _holdController.value > 0);
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (selected && showProgress)
-                            SizedBox.square(
-                              dimension: iconOuterSize,
-                              child: CircularProgressIndicator(
-                                value: _holdController.value,
-                                strokeWidth: 3.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(foreground),
-                                backgroundColor:
-                                    foreground.withValues(alpha: 0.12),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 16 : 20,
+            verticalPadding,
+            compact ? 16 : 20,
+            verticalPadding,
+          ),
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: border, width: selected ? 1.2 : 1),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      blurRadius: 30,
+                      spreadRadius: -14,
+                      offset: const Offset(0, 18),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox.square(
+                dimension: iconOuterSize,
+                child: AnimatedBuilder(
+                  animation: _holdController,
+                  builder: (context, child) {
+                    final showProgress =
+                        selected && (_holding || _holdController.value > 0);
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (selected && showProgress)
+                          SizedBox.square(
+                            dimension: iconOuterSize,
+                            child: CircularProgressIndicator(
+                              value: _holdController.value,
+                              strokeWidth: 3.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                foreground,
+                              ),
+                              backgroundColor: foreground.withValues(
+                                alpha: 0.12,
                               ),
                             ),
-                          child!,
-                        ],
-                      );
-                    },
-                    child: AnimatedContainer(
-                      duration: AppAnimations.emphasized,
-                      curve: AppAnimations.standardCurve,
-                      width: iconInnerSize,
-                      height: iconInnerSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                          ),
+                        child!,
+                      ],
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: AppAnimations.emphasized,
+                    curve: AppAnimations.standardCurve,
+                    width: iconInnerSize,
+                    height: iconInnerSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected
+                          ? AppColors.hexFF000000.withValues(alpha: 0.08)
+                          : AppColors.hexFF242424,
+                      border: Border.all(
                         color: selected
-                            ? AppColors.hexFF000000.withValues(alpha: 0.08)
-                            : AppColors.hexFF242424,
-                        border: Border.all(
-                          color: selected
-                              ? AppColors.hexFF000000.withValues(alpha: 0.12)
-                              : AppColors.hexFF333333,
-                        ),
-                      ),
-                      child: Icon(
-                        _walletIcon(widget.wallet),
-                        color: foreground,
-                        size: compact ? 23 : 26,
+                            ? AppColors.hexFF000000.withValues(alpha: 0.12)
+                            : AppColors.hexFF333333,
                       ),
                     ),
-                  ),
-                ),
-                SizedBox(height: compact ? 14 : 18),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    _displayName(widget.wallet),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: AppTypography.inter(
+                    child: Icon(
+                      _walletIcon(widget.wallet),
                       color: foreground,
-                      fontSize: nameSize,
-                      fontWeight: FontWeight.w700,
-                      height: 1.06,
-                      letterSpacing: 0,
+                      size: compact ? 23 : 26,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    walletSelectionBalanceLabel(widget.wallet),
-                    maxLines: 1,
-                    softWrap: false,
-                    style: AppTypography.inter(
-                      color: muted,
-                      fontSize: compact ? 13 : 14,
-                      fontWeight: FontWeight.w600,
-                      height: 1,
-                      letterSpacing: 1.2,
-                    ),
+              ),
+              SizedBox(height: compact ? 14 : 18),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _displayName(widget.wallet),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: AppTypography.inter(
+                    color: foreground,
+                    fontSize: nameSize,
+                    fontWeight: FontWeight.w700,
+                    height: 1.06,
+                    letterSpacing: 0,
                   ),
                 ),
-                if (_supportsLightning(widget.wallet)) ...[
-                  SizedBox(height: compact ? 10 : 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _LightningCapabilityChip(
-                        selected: selected,
-                        compact: compact,
-                      ),
-                      if (widget.wallet.spendable &&
-                          widget.wallet.balance > 0) ...[
-                        const SizedBox(width: 8),
-                        _SafeToSpendChip(
+              ),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  walletSelectionBalanceLabel(widget.wallet),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: AppTypography.inter(
+                    color: muted,
+                    fontSize: compact ? 13 : 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              if (_supportsLightning(widget.wallet)) ...[
+                SizedBox(height: compact ? 10 : 12),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _LightningCapabilityChip(
+                      selected: selected,
+                      compact: compact,
+                    ),
+                    if (widget.wallet.spendable && widget.wallet.balance > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: _SafeToSpendChip(
                           selected: selected,
                           compact: compact,
                         ),
-                      ],
-                    ],
-                  ),
-                ] else if (widget.wallet.spendable &&
-                    widget.wallet.balance > 0) ...[
-                  SizedBox(height: compact ? 10 : 12),
-                  _SafeToSpendChip(
-                    selected: selected,
-                    compact: compact,
-                  ),
-                ],
+                      ),
+                  ],
+                ),
+              ] else if (widget.wallet.spendable &&
+                  widget.wallet.balance > 0) ...[
+                SizedBox(height: compact ? 10 : 12),
+                _SafeToSpendChip(selected: selected, compact: compact),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -308,6 +300,8 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
   }
 
   static String _displayName(Wallet wallet) {
+    final trimmed = wallet.name.trim();
+    if (trimmed.isNotEmpty) return trimmed;
     if (wallet.isInternalCustody) {
       return 'Carteira Dia a Dia';
     } else if (wallet.isCustodialOnchain) {
@@ -315,8 +309,7 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
     } else if (wallet.isColdWallet) {
       return 'Cofre (Frio)';
     }
-    final trimmed = wallet.name.trim();
-    return trimmed.isEmpty ? 'Carteira' : trimmed;
+    return 'Carteira';
   }
 }
 
@@ -351,21 +344,16 @@ class _LightningCapabilityChip extends StatelessWidget {
               : AppColors.hexFF333333,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(KeroseneIcons.lightning, size: compact ? 11 : 12, color: fg),
-          const SizedBox(width: 5),
-          Text(
-            'Lightning',
-            style: AppTypography.inter(
-              color: fg,
-              fontSize: compact ? 10 : 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
+      child: Tooltip(
+        message: 'Lightning',
+        child: Semantics(
+          label: 'Lightning',
+          child: Icon(
+            KeroseneIcons.lightning,
+            size: compact ? 14 : 16,
+            color: fg,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -375,10 +363,7 @@ class _SafeToSpendChip extends StatelessWidget {
   final bool selected;
   final bool compact;
 
-  const _SafeToSpendChip({
-    required this.selected,
-    required this.compact,
-  });
+  const _SafeToSpendChip({required this.selected, required this.compact});
 
   @override
   Widget build(BuildContext context) {
@@ -399,24 +384,19 @@ class _SafeToSpendChip extends StatelessWidget {
         border: Border.all(
           color: selected
               ? AppColors.hexFF000000.withValues(alpha: 0.10)
-              : const Color(0xFF4CAF50).withValues(alpha: 0.3),
+              : AppColors.hexFF4CAF50.withValues(alpha: 0.3),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(KeroseneIcons.security, size: compact ? 11 : 12, color: fg),
-          const SizedBox(width: 5),
-          Text(
-            'Seguro para gastar',
-            style: AppTypography.inter(
-              color: fg,
-              fontSize: compact ? 10 : 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
+      child: Tooltip(
+        message: 'Seguro para gastar',
+        child: Semantics(
+          label: 'Seguro para gastar',
+          child: Icon(
+            KeroseneIcons.security,
+            size: compact ? 14 : 16,
+            color: fg,
           ),
-        ],
+        ),
       ),
     );
   }

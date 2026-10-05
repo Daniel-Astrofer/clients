@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/auth/auth_form_field.dart';
 import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -54,8 +53,7 @@ class SignupTypography {
   }
 
   static TextStyle subtitle() {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: _signupMuted,
       fontSize: 15,
       fontWeight: FontWeight.w400,
@@ -65,8 +63,7 @@ class SignupTypography {
   }
 
   static TextStyle label() {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: _signupText,
       fontSize: 14,
       fontWeight: FontWeight.w600,
@@ -76,8 +73,7 @@ class SignupTypography {
   }
 
   static TextStyle field() {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: _signupText,
       fontSize: 16,
       fontWeight: FontWeight.w500,
@@ -87,8 +83,7 @@ class SignupTypography {
   }
 
   static TextStyle bodySmall({Color? color}) {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: color ?? _signupMuted,
       fontSize: 14,
       fontWeight: FontWeight.w400,
@@ -98,8 +93,7 @@ class SignupTypography {
   }
 
   static TextStyle bodyMedium({Color? color}) {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: color ?? _signupText,
       fontSize: 15,
       fontWeight: FontWeight.w400,
@@ -109,8 +103,7 @@ class SignupTypography {
   }
 
   static TextStyle sectionTitle() {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: _signupText,
       fontSize: 20,
       fontWeight: FontWeight.w600,
@@ -120,11 +113,10 @@ class SignupTypography {
   }
 
   static TextStyle button({required Color color}) {
-    return TextStyle(
-      fontFamily: AppTypography.fontFamily,
+    return AppTypography.inter(
       color: color,
       fontSize: 16,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w600,
       height: 1,
       letterSpacing: 0,
     );
@@ -199,7 +191,10 @@ class SignupTopBar extends StatelessWidget {
                             ? _signupText.withValues(
                                 alpha: index == step ? 1 : 0.58,
                               )
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.18),
                       ),
                     ),
                   ),
@@ -266,7 +261,8 @@ class SignupInlineFeedback extends StatelessWidget {
           Icon(
             icon,
             size: 18,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.82),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.82),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -348,7 +344,8 @@ class SignupTextField extends StatelessWidget {
       suffixIcon: suffixIcon,
       fillColor: _signupField,
       borderColor: _signupBorder,
-      focusedBorderColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+      focusedBorderColor:
+          Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
       textColor: _signupText,
       hintColor: _signupDim,
       cursorColor: _signupText,
@@ -458,7 +455,10 @@ class SignupPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
     final background = outlined
-        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: disabled ? 0.02 : 0.03)
+        ? Theme.of(context)
+            .colorScheme
+            .onSurface
+            .withValues(alpha: disabled ? 0.02 : 0.03)
         : disabled
             ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.42)
             : _signupText;

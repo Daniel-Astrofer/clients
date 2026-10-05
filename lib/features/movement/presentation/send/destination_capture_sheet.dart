@@ -104,7 +104,7 @@ class DestinationCaptureSheet extends StatelessWidget {
                 ],
                 SizedBox(height: tokens.spaceSm),
                 _CaptureOption(
-                  icon: Icons.content_paste_rounded,
+                  icon: KeroseneIcons.paste,
                   title: _pasteTitle(context),
                   subtitle: _pasteSubtitle(context),
                   onTap: () => _pickPaste(context),
@@ -135,10 +135,7 @@ class DestinationCaptureSheet extends StatelessWidget {
     );
     final value = payload?.trim();
     if (!context.mounted) return;
-    if (value == null || value.isEmpty) {
-      Navigator.of(context).pop();
-      return;
-    }
+    if (value == null || value.isEmpty) return;
     Navigator.of(context).pop(value);
   }
 
@@ -150,10 +147,7 @@ class DestinationCaptureSheet extends StatelessWidget {
     );
     final value = payload?.trim();
     if (!context.mounted) return;
-    if (value == null || value.isEmpty) {
-      Navigator.of(context).pop();
-      return;
-    }
+    if (value == null || value.isEmpty) return;
     Navigator.of(context).pop(value);
   }
 
@@ -299,7 +293,7 @@ class _CaptureOption extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.chevron_right_rounded,
+                KeroseneIcons.chevronRight,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],

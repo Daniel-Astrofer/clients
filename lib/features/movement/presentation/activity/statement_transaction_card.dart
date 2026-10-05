@@ -1,3 +1,5 @@
+// architecture-allow-large-file: transaction card states and interaction
+// choreography remain co-located to preserve the existing widget API.
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -18,9 +20,10 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/data/activity_archive_store.dart';
-import 'package:kerosene/features/movement/data/activity_cancel.dart';
+import 'package:kerosene/app/storage/activity_archive_store.dart';
+import 'package:kerosene/features/movement/application/activity_cancel.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_presentation.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_party_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart'
     hide transactionRepositoryProvider;
@@ -28,7 +31,7 @@ import 'package:kerosene/features/movement/presentation/activity/transaction_det
 import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
 import 'package:kerosene/features/movement/presentation/activity/home_activity_surface.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_palette.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
@@ -90,6 +93,84 @@ void _pruneHomeSnapshotCache() {
   while (_homeStatementSnapshotCache.length > _homeStatementSnapshotCacheMax) {
     _homeStatementSnapshotCache.remove(_homeStatementSnapshotCache.keys.first);
   }
+}
+
+String _homePartyLabel(
+  BuildContext context,
+  Transaction transaction,
+  TransactionPresentation presentation,
+  List<Wallet> wallets,
+  List<BitcoinAccount> accounts,
+) {
+  String? clean(String raw) {
+    var value = raw.trim();
+    if (value.isEmpty) return null;
+    if (RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value)) {
+      return null;
+    }
+    final lower = value.toLowerCase();
+    if (lower.startsWith('de ')) value = value.substring(3).trim();
+    if (lower.startsWith('from ')) value = value.substring(5).trim();
+    if (lower.startsWith('para ')) value = value.substring(5).trim();
+    if (lower.startsWith('to ')) value = value.substring(3).trim();
+    if (value.isEmpty) return null;
+
+    final normalized = value.toLowerCase();
+    // These are rail fallbacks, not people or addresses. Home should never
+    // spend the party line on a generic "Bitcoin network" label.
+    if (normalized.contains('rede bitcoin') ||
+        normalized.contains('bitcoin network') ||
+        normalized.contains('on-chain') ||
+        normalized.contains('onchain') ||
+        normalized.contains('endereço externo') ||
+        normalized.contains('external address') ||
+        normalized == 'destino' ||
+        normalized == 'origem') {
+      return null;
+    }
+    return looksLikeOnchainAddress(value) ? shortenHash(value) : value;
+  }
+
+  final direct = transaction.isCredit
+      ? <String?>[
+          transaction.counterpartyLabel,
+          transaction.senderDisplayName,
+          transaction.fromAddress,
+          transaction.sourceWalletLabel,
+          transaction.blockchainTxid,
+          transaction.id,
+        ]
+      : <String?>[
+          transaction.counterpartyLabel,
+          transaction.receiverDisplayName,
+          transaction.destinationWalletLabel,
+          transaction.toAddress,
+          transaction.externalReference,
+          transaction.blockchainTxid,
+          transaction.id,
+        ];
+  for (final candidate in direct) {
+    final resolved = clean(candidate ?? '');
+    if (resolved != null) return resolved;
+  }
+
+  final resolvedParty = transaction.isCredit
+      ? resolveTransactionFromParty(
+          transaction,
+          wallets: wallets,
+          accounts: accounts,
+          languageCode: Localizations.localeOf(context).languageCode,
+        )
+      : resolveTransactionToParty(
+          transaction,
+          wallets: wallets,
+          accounts: accounts,
+          compactHash: true,
+          languageCode: Localizations.localeOf(context).languageCode,
+        );
+  return clean(resolvedParty) ?? clean(presentation.subtitle) ?? '—';
 }
 
 _HomeStatementSnapshot _resolveHomeSnapshot({
@@ -179,9 +260,7 @@ class StatementTransactionScrollStack extends StatelessWidget {
       children: [
         for (var index = 0; index < itemCount; index++) ...[
           if (index > 0) SizedBox(height: itemGap),
-          RepaintBoundary(
-            child: itemBuilder(context, index),
-          ),
+          RepaintBoundary(child: itemBuilder(context, index)),
         ],
       ],
     );
@@ -235,7 +314,7 @@ class StatementTransactionCard extends ConsumerWidget {
     final accounts = isHome ? _accountsFromRefRead(ref) : _accountsFromRef(ref);
 
     final TransactionPresentation presentation;
-    final TransactionCardColors colors;
+    final TransactionCardColors resolvedColors;
     if (isHome && !expanded) {
       final snap = _resolveHomeSnapshot(
         context: context,
@@ -249,7 +328,7 @@ class StatementTransactionCard extends ConsumerWidget {
         btcBrl: btcBrl,
       );
       presentation = snap.presentation;
-      colors = snap.colors;
+      resolvedColors = snap.colors;
     } else {
       presentation = TransactionPresentation.fromTransaction(
         context,
@@ -263,25 +342,37 @@ class StatementTransactionCard extends ConsumerWidget {
         appLocale: money.locale,
         includeExpandPayload: !isHome || expanded,
       );
-      colors = TransactionCardColors.resolve(
+      resolvedColors = TransactionCardColors.resolve(
         transaction,
         wallets: wallets,
         accounts: accounts,
       );
     }
+    final colors = isHome
+        ? resolvedColors.forHomeSurface(HomeSurfaceTheme.of(context))
+        : resolvedColors;
     final amountLabel = presentation.primaryAmountLabel;
     final title = presentation.title;
     final counterparty = presentation.subtitle;
     final timestampLabel = presentation.tertiary;
+    final homeParty = isHome
+        ? _homePartyLabel(context, transaction, presentation, wallets, accounts)
+        : '';
+    final homeTitle = isHome ? title.split(' · ').first.trim() : title;
     final compact = mode == StatementTransactionCardMode.stacked && !expanded;
-    final cardPadding = isHome ? 14.0 : (compact ? 16.0 : 20.0);
-    final iconSize = isHome ? 40.0 : (compact ? 42.0 : 48.0);
-    final titleFontSize = isHome ? HomeTypography.bodySize : (compact ? 15.0 : 17.0);
-    final counterpartyFontSize = isHome ? HomeTypography.captionSize : (compact ? 12.0 : 13.0);
+    final cardPadding = isHome ? 9.0 : (compact ? 16.0 : 20.0);
+    final iconSize = isHome ? 32.0 : (compact ? 42.0 : 48.0);
+    final titleFontSize =
+        isHome ? HomeTypography.bodySize : (compact ? 15.0 : 17.0);
+    final counterpartyFontSize =
+        isHome ? HomeTypography.captionSize : (compact ? 12.0 : 13.0);
     final titleColor = colors.title;
     final subtitleColor = colors.subtitle;
     final metaColor = colors.meta;
     final amountColor = colors.title;
+    final networkLabel = TransactionPresentationCopy.of(
+      context,
+    ).railShort(presentation.axes.rail);
 
     if (mode == StatementTransactionCardMode.separated) {
       return _BankStatementTransactionRow(
@@ -349,7 +440,7 @@ class StatementTransactionCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    homeTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -360,11 +451,26 @@ class StatementTransactionCard extends ConsumerWidget {
                       letterSpacing: 0,
                     ),
                   ),
-                  if (!isHome || counterparty.trim().isNotEmpty) ...[
+                  if (isHome) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${timestampLabel.trim()} · De $homeParty',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: subtitleColor,
+                        fontFamily: AppTypography.bodyFontFamily,
+                        fontSize: HomeTypography.captionSize,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0,
+                        height: 1.15,
+                      ),
+                    ),
+                  ] else if (counterparty.trim().isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       counterparty,
-                      maxLines: isHome ? 1 : 2,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: subtitleColor,
@@ -376,43 +482,54 @@ class StatementTransactionCard extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  const SizedBox(height: AppSpacing.xs),
+                  _ActivityStatusLine(
+                    transaction: transaction,
+                    presentation: presentation,
+                    includeRail: !isHome,
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    amountLabel,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: HomeTypography.transactionAmount(
-                      color: amountColor,
-                    ).copyWith(
-                      fontSize: isHome ? 15 : 16,
+            SizedBox(
+              width: isHome ? 116 : (compact ? 108 : 156),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        amountLabel,
+                        maxLines: 1,
+                        softWrap: false,
+                        textAlign: TextAlign.right,
+                        style: HomeTypography.transactionAmount(
+                          color: amountColor,
+                        ).copyWith(fontSize: isHome ? 15 : 16),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isHome ? networkLabel : timestampLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: isHome ? subtitleColor : metaColor,
+                        fontFamily: AppTypography.bodyFontFamily,
+                        fontSize: isHome ? HomeTypography.captionSize : 12,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  timestampLabel,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: metaColor,
-                    fontFamily: AppTypography.bodyFontFamily,
-                    fontSize: isHome ? HomeTypography.captionSize : 12,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -420,10 +537,7 @@ class StatementTransactionCard extends ConsumerWidget {
         // empty child makes content vanish before the close animation can run.
         _CollapsingDetails(
           expanded: expanded,
-          duration: KeroseneMotion.duration(
-            context,
-            const Duration(milliseconds: 800),
-          ),
+          duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
           detailsBuilder: (context) => isHome
               ? _HomeQuickExpand(
                   transaction: transaction,
@@ -443,6 +557,7 @@ class StatementTransactionCard extends ConsumerWidget {
                   colors: colors,
                 ),
         ),
+        if (!expanded && !isHome) _SeeDetailsLink(transaction: transaction),
       ],
     );
 
@@ -559,7 +674,9 @@ class _CollapsingDetailsState extends State<_CollapsingDetails>
         builder: (context, child) {
           return Align(
             alignment: Alignment.topCenter,
-            heightFactor: Curves.easeInOutCubic.transform(_controller.value),
+            heightFactor: KeroseneMotion.standardInOut.transform(
+              _controller.value,
+            ),
             child: child,
           );
         },
@@ -626,19 +743,14 @@ class _BankStatementTransactionRow extends StatelessWidget {
             vertical: 15,
           ),
           decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: AppColors.hexFF222222),
-            ),
+            border: Border(bottom: BorderSide(color: AppColors.hexFF222222)),
           ),
           child: Column(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  ActivityGlyph.forAxes(
-                    presentation.axes,
-                    size: 40,
-                  ),
+                  ActivityGlyph.forAxes(presentation.axes, size: 40),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -730,6 +842,8 @@ class _BankStatementTransactionRow extends StatelessWidget {
                       )
                     : const SizedBox.shrink(),
               ),
+              if (!expanded)
+                _SeeDetailsLink(transaction: transaction, dark: true),
             ],
           ),
         ),
@@ -748,20 +862,14 @@ class _DarkStatusPill extends StatelessWidget {
     final tone = TransactionPalette.toneFor(transaction);
     final fg = TransactionPalette.statusStrong(tone);
     final axes = TransactionAxes.classify(transaction);
-    final label =
-        TransactionPresentationCopy.of(context).lifecycleLabel(axes.lifecycle);
+    final label = TransactionPresentationCopy.of(
+      context,
+    ).lifecycleLabel(axes.lifecycle);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 5,
-          height: 5,
-          decoration: BoxDecoration(
-            color: fg,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
+        Icon(_statusIcon(tone), size: 13, color: fg),
+        const SizedBox(width: 5),
         Text(
           label,
           style: AppTypography.caption.copyWith(
@@ -774,6 +882,67 @@ class _DarkStatusPill extends StatelessWidget {
       ],
     );
   }
+
+  IconData _statusIcon(TransactionStatusTone tone) => switch (tone) {
+        TransactionStatusTone.confirmed => KeroseneIcons.success,
+        TransactionStatusTone.confirming ||
+        TransactionStatusTone.pending =>
+          KeroseneIcons.timer,
+        TransactionStatusTone.cancelled => KeroseneIcons.closeCircle,
+        TransactionStatusTone.failed => KeroseneIcons.error,
+      };
+}
+
+/// Compact, explicit status metadata for every history row. Status is always
+/// conveyed by icon, label, and semantic colour; colour alone is insufficient.
+class _ActivityStatusLine extends StatelessWidget {
+  final Transaction transaction;
+  final TransactionPresentation presentation;
+  final bool includeRail;
+
+  const _ActivityStatusLine({
+    required this.transaction,
+    required this.presentation,
+    this.includeRail = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = TransactionPalette.toneFor(transaction);
+    final color = TransactionPalette.statusStrong(tone);
+    final copy = TransactionPresentationCopy.of(context);
+    final type = copy.railShort(presentation.axes.rail);
+    final label = includeRail
+        ? '${presentation.statusLabel} · $type'
+        : presentation.statusLabel;
+    return Row(
+      children: [
+        Icon(_statusIcon(tone), size: 13, color: color),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.caption.copyWith(
+              color: color,
+              fontWeight: AppTypography.w590,
+              height: 1.1,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _statusIcon(TransactionStatusTone tone) => switch (tone) {
+        TransactionStatusTone.confirmed => KeroseneIcons.success,
+        TransactionStatusTone.confirming ||
+        TransactionStatusTone.pending =>
+          KeroseneIcons.timer,
+        TransactionStatusTone.cancelled => KeroseneIcons.closeCircle,
+        TransactionStatusTone.failed => KeroseneIcons.error,
+      };
 }
 
 class _TransactionDetailsTable extends StatelessWidget {
@@ -798,9 +967,8 @@ class _TransactionDetailsTable extends StatelessWidget {
     final valueColor = dark
         ? KeroseneBrandTheme.dark.textPrimary
         : KeroseneBrandTheme.light.textPrimary;
-    final lineColor = dark
-        ? KeroseneBrandTheme.dark.border
-        : KeroseneBrandTheme.light.border;
+    final lineColor =
+        dark ? KeroseneBrandTheme.dark.border : KeroseneBrandTheme.light.border;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -820,10 +988,7 @@ class _TransactionDetailsTable extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          _ActivityExpandedActions(
-            transaction: transaction,
-            dark: dark,
-          ),
+          _ActivityExpandedActions(transaction: transaction, dark: dark),
           const SizedBox(height: 8),
           _SeeDetailsLink(transaction: transaction, dark: dark),
         ],
@@ -894,9 +1059,10 @@ class _HomeQuickExpandState extends State<_HomeQuickExpand> {
   @override
   Widget build(BuildContext context) {
     final rows = _expandRows;
-    final labelColor = KeroseneBrandTheme.light.textSecondary;
-    final valueColor = KeroseneBrandTheme.light.textPrimary;
-    final lineColor = KeroseneBrandTheme.light.border;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = widget.colors.subtitle;
+    final valueColor = widget.colors.title;
+    final lineColor = widget.colors.divider;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -914,13 +1080,14 @@ class _HomeQuickExpandState extends State<_HomeQuickExpand> {
               field: rows[i],
               labelColor: labelColor,
               valueColor: valueColor,
+              dark: dark,
             ),
           ],
           const SizedBox(height: 12),
         ],
-        _ActivityExpandedActions(transaction: widget.transaction, dark: false),
+        _ActivityExpandedActions(transaction: widget.transaction, dark: dark),
         const SizedBox(height: 4),
-        _SeeDetailsLink(transaction: widget.transaction, dark: false),
+        _SeeDetailsLink(transaction: widget.transaction, dark: dark),
       ],
     );
   }
@@ -983,7 +1150,7 @@ class _ActivityExpandedActionsState
     setState(() => _busy = true);
     try {
       await cancelActivity(ref.read(transactionRepositoryProvider), tx);
-      // Stay in global feed until user archives or opens detail.
+      // Stay in global feed until the user explicitly archives.
       ref.invalidate(transactionHistoryProvider);
       ref.invalidate(paymentLinksProvider);
       if (!mounted) return;
@@ -998,9 +1165,9 @@ class _ActivityExpandedActionsState
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr.txDetailCancelError)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr.txDetailCancelError)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1010,10 +1177,7 @@ class _ActivityExpandedActionsState
     if (_busy && !silent) return;
     setState(() => _busy = true);
     try {
-      await archiveActivity(
-        ref.read(activityArchiveProvider.notifier),
-        tx,
-      );
+      await archiveActivity(ref.read(activityArchiveProvider.notifier), tx);
       ref.invalidate(paymentLinksProvider);
       if (!mounted || silent) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1195,7 +1359,7 @@ class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
     super.initState();
     _shimmer = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: KeroseneMotion.progressShimmer,
     );
     if (!_isComplete) {
       _shimmer.repeat();
@@ -1225,10 +1389,12 @@ class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
 
   @override
   Widget build(BuildContext context) {
-    final trackBase =
-        widget.dark ? KeroseneBrandTheme.dark.border : KeroseneBrandTheme.light.border;
-    final trackHi =
-        widget.dark ? KeroseneBrandTheme.dark.textMuted : KeroseneBrandTheme.light.textMuted;
+    final trackBase = widget.dark
+        ? KeroseneBrandTheme.dark.border
+        : KeroseneBrandTheme.light.border;
+    final trackHi = widget.dark
+        ? KeroseneBrandTheme.dark.textMuted
+        : KeroseneBrandTheme.light.textMuted;
     final fill = _isComplete ? _yellowDone : _yellow;
 
     return ClipRRect(
@@ -1267,8 +1433,8 @@ class _ConfirmationProgressLineState extends State<_ConfirmationProgressLine>
                   alignment: Alignment.centerLeft,
                   child: RepaintBoundary(
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOutCubic,
+                      duration: KeroseneMotion.progressFill,
+                      curve: KeroseneMotion.standard,
                       width: filledW,
                       height: 5,
                       color: fill,
@@ -1305,11 +1471,7 @@ class _GreyLoadingTrackPainter extends CustomPainter {
     final shader = LinearGradient(
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
-      colors: [
-        base,
-        highlight,
-        base,
-      ],
+      colors: [base, highlight, base],
       stops: const [0.0, 0.5, 1.0],
     ).createShader(Rect.fromLTWH(x, 0, band, size.height));
     canvas.drawRect(
@@ -1330,10 +1492,7 @@ class _SeeDetailsLink extends StatelessWidget {
   final Transaction transaction;
   final bool dark;
 
-  const _SeeDetailsLink({
-    required this.transaction,
-    this.dark = false,
-  });
+  const _SeeDetailsLink({required this.transaction, this.dark = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1485,7 +1644,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     if (needsSpin) {
       _spinController ??= AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 1100),
+        duration: KeroseneMotion.progressRing,
       );
       if (!_scrollPaused && !(_spinController!.isAnimating)) {
         _spinController!.repeat();
@@ -1625,7 +1784,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     if (widget.expanded && failed) {
       // Error/cancel: red X only while the card is open.
       centerChild = Icon(
-        Icons.close_rounded,
+        KeroseneIcons.closeRounded,
         key: const ValueKey('icon-x'),
         size: widget.iconSize * 0.42,
         color: _red,
@@ -1633,7 +1792,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     } else if (widget.expanded && settled) {
       // Confirmed (internal / LN / on-chain): green check inside.
       centerChild = Icon(
-        Icons.check_rounded,
+        KeroseneIcons.checkRounded,
         key: ValueKey(fullOnchain ? 'icon-check-6' : 'icon-check'),
         size: widget.iconSize * 0.44,
         color: _green,
@@ -1681,10 +1840,8 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
             RepaintBoundary(
               child: AnimatedBuilder(
                 animation: spin,
-                builder: (_, __) => buildRing(
-                  spinValue: spin.value,
-                  loadValue: spin.value,
-                ),
+                builder: (_, __) =>
+                    buildRing(spinValue: spin.value, loadValue: spin.value),
               ),
             )
           else
@@ -1698,12 +1855,12 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
             ),
             alignment: Alignment.center,
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
+              duration: KeroseneMotion.inputHeroSettle,
+              switchInCurve: KeroseneMotion.standard,
+              switchOutCurve: KeroseneMotion.exit,
               child: showSettledCheck
                   ? Icon(
-                      Icons.check_rounded,
+                      KeroseneIcons.checkRounded,
                       key: const ValueKey('icon-check-settled'),
                       size: widget.iconSize * 0.44,
                       color: _green,
@@ -1815,12 +1972,9 @@ class _RingConfirmationPainter extends CustomPainter {
       } else if (i == filled && mode == _RingMode.greenProgress) {
         // Next confirmation segment pulses with the animation clock.
         final t = (math.sin(loadValue * 2 * math.pi) + 1) / 2;
-        paint.color = Color.lerp(
-              greenColor.withValues(alpha: 0.28),
-              greenColor,
-              t,
-            ) ??
-            greenColor.withValues(alpha: 0.6);
+        paint.color =
+            Color.lerp(greenColor.withValues(alpha: 0.28), greenColor, t) ??
+                greenColor.withValues(alpha: 0.6);
       } else {
         paint.color = inactiveColor.withValues(alpha: 0.55);
       }

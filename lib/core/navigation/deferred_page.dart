@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 typedef DeferredWidgetBuilder = Widget Function(BuildContext context);
@@ -226,7 +225,7 @@ class _DeferredPageLoadingView extends StatelessWidget {
   /// a mid-transition swap does not flash a soft grey + indicator.
   final bool matchRouteChrome;
 
-  _DeferredPageLoadingView({this.matchRouteChrome = false});
+  const _DeferredPageLoadingView({this.matchRouteChrome = false});
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +253,7 @@ class _DeferredPageErrorView extends StatelessWidget {
   final Object? error;
   final VoidCallback? onRetry;
 
-  _DeferredPageErrorView({this.error, this.onRetry});
+  const _DeferredPageErrorView({this.error, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +273,8 @@ class _DeferredPageErrorView extends StatelessWidget {
               SizedBox(height: 12),
               Text(
                 context.tr.deferredLoadFailure,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               if (error != null) ...[

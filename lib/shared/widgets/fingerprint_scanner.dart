@@ -4,7 +4,7 @@ import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.da
 class KeroseneFingerprintScanner extends StatelessWidget {
   final double size;
 
-  KeroseneFingerprintScanner({super.key, this.size = 96});
+  const KeroseneFingerprintScanner({super.key, this.size = 96});
 
   @override
   Widget build(BuildContext context) {

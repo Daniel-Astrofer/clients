@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
+import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/wallet_transaction_list.dart';
@@ -24,7 +26,7 @@ void main() {
     await _pumpList(tester, const TransactionList(isLoading: true));
 
     expect(find.text('Carregando transações'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
   });
 
   testWidgets('shows retry action after an empty load error', (tester) async {
@@ -72,8 +74,8 @@ void main() {
 
     expect(
         find.byKey(const ValueKey('transaction-list-items')), findsOneWidget);
-    expect(find.text('Recebimento on-chain'), findsOneWidget);
-    expect(find.text('Envio on-chain'), findsOneWidget);
+    expect(find.text('Recebido · On-chain'), findsOneWidget);
+    expect(find.text('Enviado · On-chain'), findsOneWidget);
     expect(find.textContaining('+'), findsWidgets);
     expect(find.textContaining('-'), findsWidgets);
   });
@@ -81,10 +83,12 @@ void main() {
 
 Future<void> _pumpList(WidgetTester tester, Widget child) async {
   SharedPreferences.setMockInitialValues(const {});
+  final sharedPreferences = await SharedPreferences.getInstance();
 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         latestBtcPriceProvider.overrideWith((ref) => 65000),
         btcEurPriceProvider.overrideWith((ref) => 60000),
         btcBrlPriceProvider.overrideWith((ref) => 350000),

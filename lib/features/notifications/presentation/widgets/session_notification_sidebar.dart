@@ -49,7 +49,11 @@ class SessionNotificationSidebar extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppColors.hexFF050607,
         border: Border(
-          left: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+          left: BorderSide(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.08)),
         ),
       ),
       child: SafeArea(
@@ -82,7 +86,10 @@ class SessionNotificationSidebar extends ConsumerWidget {
                         Text(
                           headerSubtitle,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.46),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.46),
                             fontSize: responsive.isTinyPhone ? 11 : 12,
                             height: 1.25,
                             letterSpacing: 0,
@@ -95,7 +102,10 @@ class SessionNotificationSidebar extends ConsumerWidget {
                     IconButton(
                       onPressed: onClose,
                       icon: const Icon(KeroseneIcons.close),
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.68),
                       iconSize: 17,
                       style: IconButton.styleFrom(
                         shape: const RoundedRectangleBorder(),
@@ -119,13 +129,19 @@ class SessionNotificationSidebar extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: AppColors.hexFF0D1014,
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.10),
                       ),
                     ),
                     child: Text(
                       unreadLabel,
                       style: AppTypography.bodySmall.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.74),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.74),
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                         letterSpacing: 0,
@@ -139,9 +155,10 @@ class SessionNotificationSidebar extends ConsumerWidget {
                             .read(sessionNotificationFeedProvider.notifier)
                             .markAllRead(),
                     style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(
-                        alpha: unreadCount == 0 ? 0.22 : 0.7,
-                      ),
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onSurface.withValues(
+                                alpha: unreadCount == 0 ? 0.22 : 0.7,
+                              ),
                       shape: const RoundedRectangleBorder(),
                       textStyle: AppTypography.bodySmall.copyWith(
                         fontWeight: FontWeight.w800,
@@ -158,9 +175,10 @@ class SessionNotificationSidebar extends ConsumerWidget {
                             .read(sessionNotificationFeedProvider.notifier)
                             .clear(),
                     style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(
-                        alpha: notifications.isEmpty ? 0.22 : 0.7,
-                      ),
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onSurface.withValues(
+                                alpha: notifications.isEmpty ? 0.22 : 0.7,
+                              ),
                       shape: const RoundedRectangleBorder(),
                       textStyle: AppTypography.bodySmall.copyWith(
                         fontWeight: FontWeight.w800,
@@ -208,7 +226,10 @@ class SessionNotificationSidebar extends ConsumerWidget {
                             border: item.read
                                 ? null
                                 : Border.all(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.12),
                                   ),
                           ),
                           child: Stack(

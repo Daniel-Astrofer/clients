@@ -11,7 +11,7 @@ import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_visuals.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 
 class RecentTransactionsList extends ConsumerWidget {
@@ -388,8 +388,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isProcessing) ...[
-            CupertinoActivityIndicator(
-                radius: 3, color: AppColors.warning),
+            CupertinoActivityIndicator(radius: 3, color: AppColors.warning),
             SizedBox(width: 4),
           ],
           Text(

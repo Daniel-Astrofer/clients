@@ -20,15 +20,16 @@ class SceneTransition extends StatelessWidget {
     final reduce = KeroseneMotion.reduceMotion(context);
     // Longer than medium so theater open/swap feels intentional.
     final d = reduce
-        ? Duration.zero
-        : (duration ?? const Duration(milliseconds: 560));
+        ? KeroseneMotion.instant
+        : (duration ?? KeroseneMotion.sceneTransition);
 
     return AnimatedSwitcher(
       duration: d,
-      reverseDuration:
-          reduce ? Duration.zero : const Duration(milliseconds: 360),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
+      reverseDuration: reduce
+          ? KeroseneMotion.instant
+          : KeroseneMotion.sceneTransitionReverse,
+      switchInCurve: KeroseneMotion.standard,
+      switchOutCurve: KeroseneMotion.exit,
       layoutBuilder: (currentChild, previousChildren) {
         return Stack(
           alignment: Alignment.topCenter,
@@ -42,8 +43,8 @@ class SceneTransition extends StatelessWidget {
       transitionBuilder: (child, animation) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
+          curve: KeroseneMotion.standard,
+          reverseCurve: KeroseneMotion.exit,
         );
         final fade = FadeTransition(opacity: curved, child: child);
         // Soft open from slightly above — never a hard pop-in.

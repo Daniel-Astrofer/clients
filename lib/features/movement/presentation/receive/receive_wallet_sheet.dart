@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/app/widgets/wallet_expand_chip.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
@@ -9,10 +10,9 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 
-Color get _receiveWalletOptionBg =>
-    SendFlowTheme.forVariant(
-      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
-    ).surfaceHigh;
+Color get _receiveWalletOptionBg => SendFlowTheme.forVariant(
+  ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+).surfaceHigh;
 
 /// Wallet picker panel for the receive flow (legacy sheet path).
 class ReceiveWalletPickerPanel extends StatelessWidget {
@@ -116,79 +116,123 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final custody = ReceiveMoneyCopy.walletCustodyLabel(context, wallet);
     final name = wallet.name.trim();
+    final identifier = _shortIdentifier(wallet.address, wallet.id);
+    final balance = '${wallet.balance.toStringAsFixed(8)} BTC';
 
-    return Material(
-      color: _receiveWalletOptionBg,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: '$custody, $balance',
+      child: Material(
+        color: _receiveWalletOptionBg,
         borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          padding: EdgeInsets.fromLTRB(16, 14, 12, 14),
-          decoration: BoxDecoration(
-            color: _receiveWalletOptionBg,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.onSurface,
-              width: selected ? 1.2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
-                child: Icon(
-                  ReceiveWalletPickerPanel.iconFor(wallet),
-                  color: Theme.of(context).colorScheme.onSurface,
-                  size: 20,
-                ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: KeroseneMotion.receiveWallet,
+            curve: KeroseneMotion.standard,
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.06)
+                  : _receiveWalletOptionBg,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: selected
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).dividerColor,
+                width: selected ? 1.2 : 0.8,
               ),
-              SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      custody,
-                      style: AppTypography.h3.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (name.isNotEmpty) ...[
-                      SizedBox(height: 4),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: Icon(
+                    ReceiveWalletPickerPanel.iconFor(wallet),
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        name,
+                        custody,
+                        style: AppTypography.h3.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (name.isNotEmpty) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.captionLarge.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w400,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      Text(
+                        identifier,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.captionLarge.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.75),
+                          fontSize: 11,
                           fontWeight: FontWeight.w400,
-                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        balance,
+                        style: AppTypography.captionLarge.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Icon(
-                KeroseneIcons.chevronRight,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
-                size: 20,
-              ),
-            ],
+                Icon(
+                  selected ? KeroseneIcons.success : KeroseneIcons.chevronRight,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
+                  size: 20,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  String _shortIdentifier(String address, String id) {
+    final value = address.trim().isNotEmpty ? address.trim() : id.trim();
+    if (value.length <= 18) return value;
+    return '${value.substring(0, 8)}…${value.substring(value.length - 7)}';
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/scene/models/home_scene_mapper.dart';
 
@@ -24,6 +23,5 @@ void main() {
     expect(scene.content.title, 'Recebido');
     expect(scene.content.subtitle, contains('Transferência recebida'));
     expect(scene.content.subtitle, contains('R\$ 10,00'));
-    print('OK title=${scene.content.title} sub=${scene.content.subtitle}');
   });
 }

@@ -1,12 +1,9 @@
 import 'dart:async';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
-import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
-import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
 
 class SendMoneyFlowState {
   final int currentStep;

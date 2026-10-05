@@ -125,17 +125,18 @@ SceneContent _contentFor(HomeStage stage) {
   final body = c.hasRichBlocks
       ? c.blocks
           .where(
-            (b) =>
-                b.hasVisibleText &&
-                b.role != TheaterBlockRole.h1 &&
-                b.role != TheaterBlockRole.h2,
-          )
+          (b) =>
+              b.hasVisibleText &&
+              b.role != TheaterBlockRole.h1 &&
+              b.role != TheaterBlockRole.h2,
+        )
           .map((b) {
-            final lead = (b.emoji ?? '').trim();
-            final text = b.text.trim();
-            return lead.isEmpty ? text : '$lead $text';
-          })
-          .join('\n')
+          final text = b.text.trim();
+          // Emoji leads are legacy decoration, not part of the financial
+          // message. Keep the block text and let the scene renderer apply
+          // one consistent typography system on every device.
+          return text;
+        }).join('\n')
       : (c.body ?? '');
 
   var textMode = switch (c.textMode) {

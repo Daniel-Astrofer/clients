@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/app/security/local_transaction_history_store.dart';
+import 'package:kerosene/app/security/local_transaction_sqlite.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MemoryKv implements LocalHistoryKvStore {
   final Map<String, String> data = {};
@@ -36,6 +38,9 @@ Transaction _tx(String id) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
   test('save/load roundtrip with HMAC blob', () async {
     final kv = _MemoryKv();
     final store = LocalTransactionHistoryStore.withKv(kv);
@@ -52,6 +57,21 @@ void main() {
     expect(map['v'], 2);
     expect(map['mac'], isNotEmpty);
     expect(map['payload'], contains('tx-1'));
+  });
+
+  test('SQLite projection roundtrip is isolated by session scope', () async {
+    const scope = '__kerosene_scoped_sqlite_test__';
+    addTearDown(() => LocalTransactionSqlite.clear(scope));
+
+    final saved = await LocalTransactionSqlite.save(scope, [_tx('sqlite-1')]);
+    if (!saved) {
+      markTestSkipped('SQLite native backend unavailable in this runner');
+      return;
+    }
+
+    final loaded = await LocalTransactionSqlite.load(scope);
+    expect(loaded, hasLength(1));
+    expect(loaded!.single.id, 'sqlite-1');
   });
 
   test('tampered payload is discarded', () async {

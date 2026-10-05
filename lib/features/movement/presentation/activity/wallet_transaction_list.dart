@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_list_item.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Reusable wallet transaction list with empty, loading and retry states.
@@ -94,7 +94,7 @@ class _StateContainer extends StatelessWidget {
   final VoidCallback? onActionPressed;
   final Widget? trailing;
 
-  _StateContainer({
+  const _StateContainer({
     required this.icon,
     required this.title,
     required this.message,

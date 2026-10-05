@@ -78,7 +78,7 @@ class KeroseneEmptyState extends StatelessWidget {
               AppButton(
                 label: actionLabel!,
                 onPressed: onAction,
-                variant: AppButtonVariant.outlined,
+                variant: AppButtonVariant.secondary,
               ),
             ],
           ],

@@ -10,6 +10,8 @@ import 'package:kerosene/features/movement/presentation/activity/statement_trans
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +84,7 @@ void main() {
     WidgetTester tester, {
     required Size size,
     required Widget child,
+    ThemeData? theme,
   }) async {
     SharedPreferences.setMockInitialValues(const {});
     final sharedPreferences = await SharedPreferences.getInstance();
@@ -104,6 +107,7 @@ void main() {
           btcEurPriceProvider.overrideWithValue(70380),
         ],
         child: MaterialApp(
+          theme: theme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -117,6 +121,38 @@ void main() {
   }
 
   group('StatementTransactionCard responsiveness', () {
+    testWidgets('home density consumes the OLED surface palette',
+        (tester) async {
+      await pumpCard(
+        tester,
+        size: regularPortrait,
+        theme: AppTheme.darkTheme,
+        child: SizedBox(
+          width: 340,
+          height: 174,
+          child: StatementTransactionCard(
+            transaction: transaction,
+            density: StatementTransactionCardDensity.home,
+          ),
+        ),
+      );
+
+      final card = find.byType(StatementTransactionCard);
+      final material = tester.widget<Material>(
+        find.descendant(of: card, matching: find.byType(Material)).first,
+      );
+      final ink = tester.widget<Ink>(
+        find.descendant(of: card, matching: find.byType(Ink)).first,
+      );
+      final decoration = ink.decoration! as BoxDecoration;
+
+      expect(material.color, HomeSurfaceTheme.dark.card);
+      expect(decoration.color, HomeSurfaceTheme.dark.card);
+      expect(decoration.border!.top.color, HomeSurfaceTheme.dark.surfaceBorder);
+      expect(decoration.boxShadow, isNull);
+      expect(takeAllExceptions(tester), isEmpty);
+    });
+
     testWidgets('stacked card fits its fixed stack extent', (tester) async {
       for (final size in [compactPortrait, compactLandscape, regularPortrait]) {
         await pumpCard(

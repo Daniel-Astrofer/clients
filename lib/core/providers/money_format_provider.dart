@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/app_display_preferences_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
+import 'package:kerosene/core/localization/app_localization_manager.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 
 /// Snapshot of global money presentation prefs (currency + app locale).
@@ -108,9 +109,19 @@ class MoneyFormatConfig {
 
 /// Reactive money formatting bound to [appDisplayPreferencesProvider].
 final moneyFormatConfigProvider = Provider<MoneyFormatConfig>((ref) {
-  final prefs = ref.watch(appDisplayPreferencesProvider);
-  return MoneyFormatConfig(
-    currency: prefs.currency,
-    locale: prefs.locale,
-  );
+  try {
+    final prefs = ref.watch(appDisplayPreferencesProvider);
+    return MoneyFormatConfig(
+      currency: prefs.currency,
+      locale: prefs.locale,
+    );
+  } catch (_) {
+    // The app bootstrap supplies SharedPreferences before this provider is
+    // read. Keep isolated surfaces renderable when a host/test intentionally
+    // omits that platform dependency.
+    return MoneyFormatConfig(
+      currency: Currency.btc,
+      locale: AppLocalizationManager.deviceOrFallback(),
+    );
+  }
 });

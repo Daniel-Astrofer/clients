@@ -54,11 +54,15 @@ class SendDestinationStep extends StatelessWidget {
     this.onRailSelected,
   });
 
-  Color internalBlack(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
-  Color internalSurfaceHigh(BuildContext context) => SendFlowTheme.of(context).surfaceHigh;
+  Color internalBlack(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+  Color internalSurfaceHigh(BuildContext context) =>
+      SendFlowTheme.of(context).surfaceHigh;
   Color internalBorder(BuildContext context) => Theme.of(context).dividerColor;
-  Color internalText(BuildContext context) => Theme.of(context).colorScheme.onSurface;
-  Color internalMutedText(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
+  Color internalText(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface;
+  Color internalMutedText(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurfaceVariant;
 
   @override
   Widget build(BuildContext context) {
@@ -130,8 +134,9 @@ class SendDestinationStep extends StatelessWidget {
                                   return const SizedBox.shrink();
                                 }
                                 return Padding(
-                                  padding:
-                                      EdgeInsets.only(top: tokens.spaceMd - 4),
+                                  padding: EdgeInsets.only(
+                                    top: tokens.spaceMd - 4,
+                                  ),
                                   child: Column(
                                     children: [
                                       _DestinationFeedback(
@@ -145,11 +150,12 @@ class SendDestinationStep extends StatelessWidget {
                                             top: tokens.spaceLg,
                                           ),
                                           child: AnimatedSwitcher(
-                                            duration: const Duration(
-                                              milliseconds: 300,
-                                            ),
-                                            switchInCurve: Curves.easeIn,
-                                            switchOutCurve: Curves.easeOut,
+                                            duration:
+                                                KeroseneMotion.homeDistribution,
+                                            switchInCurve:
+                                                KeroseneMotion.linearIn,
+                                            switchOutCurve:
+                                                KeroseneMotion.linearOut,
                                             child: _ReceiverProfileCard(
                                               key: ValueKey(destination),
                                               analysis: analysis,
@@ -175,7 +181,9 @@ class SendDestinationStep extends StatelessWidget {
                             Text(
                               SendMoneyCopy.allDestinations(context),
                               style: AppTypography.inter(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 height: 1.2,
@@ -244,17 +252,20 @@ class SendDestinationStep extends StatelessWidget {
     final q = query.trim().toLowerCase();
     if (q.length < 3) return all;
     final needle = q.startsWith('@') ? q.substring(1) : q;
-    return all.where((dest) {
-      final label = (dest.label ?? '').toLowerCase();
-      final address = dest.address.toLowerCase();
-      final labelBare = label.startsWith('@') ? label.substring(1) : label;
-      final addressBare =
-          address.startsWith('@') ? address.substring(1) : address;
-      return labelBare.contains(needle) ||
-          addressBare.contains(needle) ||
-          label.contains(q) ||
-          address.contains(q);
-    }).toList(growable: false);
+    return all
+        .where((dest) {
+          final label = (dest.label ?? '').toLowerCase();
+          final address = dest.address.toLowerCase();
+          final labelBare = label.startsWith('@') ? label.substring(1) : label;
+          final addressBare = address.startsWith('@')
+              ? address.substring(1)
+              : address;
+          return labelBare.contains(needle) ||
+              addressBare.contains(needle) ||
+              label.contains(q) ||
+              address.contains(q);
+        })
+        .toList(growable: false);
   }
 
   /// Live resolve only — no "detected internal/on-chain/…" helper labels.
@@ -269,6 +280,9 @@ class SendDestinationStep extends StatelessWidget {
     }
     if (liveResolving) {
       return SendMoneyCopy.progressResolving(context);
+    }
+    if (resolved == null && liveError == null && analysis.isInvalid) {
+      return SendMoneyCopy.destinationInvalidHint(context);
     }
     if (resolved != null) {
       if (resolved.blockers.isNotEmpty) {
@@ -366,98 +380,6 @@ class _ReceiverProfileCard extends StatelessWidget {
   }
 }
 
-class _RailPicker extends StatelessWidget {
-  final List<RailOption> options;
-  final PaymentRail selected;
-  final ValueChanged<PaymentRail> onSelected;
-
-  const _RailPicker({
-    required this.options,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Compact rail choice only — no section title / subtitles / stars.
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final option in options)
-          _RailChip(
-            label: _railLabel(context, option.rail),
-            selected: option.rail == selected,
-            onTap: () => onSelected(option.rail),
-          ),
-      ],
-    );
-  }
-
-  static String _railLabel(BuildContext context, PaymentRail rail) {
-    final lang = Localizations.localeOf(context).languageCode;
-    return switch (rail) {
-      PaymentRail.internal => switch (lang) {
-          'en' => 'Instant',
-          'es' => 'Instantáneo',
-          _ => 'Instantâneo',
-        },
-      PaymentRail.onchain || PaymentRail.coldOnchain => switch (lang) {
-          'en' => 'On-chain',
-          'es' => 'On-chain',
-          _ => 'On-chain',
-        },
-      PaymentRail.lightning => 'Lightning',
-      PaymentRail.paymentLink => switch (lang) {
-          'en' => 'Link',
-          'es' => 'Link',
-          _ => 'Link',
-        },
-    };
-  }
-}
-
-class _RailChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _RailChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = selected
-        ? Theme.of(context).colorScheme.onSurface
-        : SendFlowTheme.of(context).surfaceHigh;
-    final fg = selected
-        ? KeroseneBrandTokens.background
-        : Theme.of(context).colorScheme.onSurface;
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Text(
-            label,
-            style: AppTypography.inter(
-              color: fg,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DestinationHeader extends StatelessWidget {
   final bool hasContacts;
   final bool canWizardBack;
@@ -496,7 +418,7 @@ class _DestinationHeader extends StatelessWidget {
         ),
         SizedBox(height: hasContacts ? 18 : 20),
         Text(
-          'Para quem você quer enviar dinheiro?',
+          SendMoneyCopy.destinationTitle(context),
           textAlign: TextAlign.left,
           style: HomeTypography.heroTitle(
             color: Theme.of(context).colorScheme.onSurface,
@@ -512,16 +434,15 @@ class _DestinationFeedback extends StatelessWidget {
   final SendDestinationAnalysis analysis;
   final String message;
 
-  const _DestinationFeedback({
-    required this.analysis,
-    required this.message,
-  });
+  const _DestinationFeedback({required this.analysis, required this.message});
 
   @override
   Widget build(BuildContext context) {
     final tokens = SendFlowTheme.of(context);
     final invalid = analysis.isInvalid;
-    final color = invalid ? tokens.feedbackError : Theme.of(context).colorScheme.onSurfaceVariant;
+    final color = invalid
+        ? tokens.feedbackError
+        : Theme.of(context).colorScheme.onSurfaceVariant;
     final icon = invalid ? KeroseneIcons.warning : KeroseneIcons.info;
 
     return AnimatedContainer(
@@ -550,10 +471,9 @@ class _DestinationFeedback extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: tokens.bodyReading(color: color).copyWith(
-                    fontSize: 14,
-                    height: 1.35,
-                  ),
+              style: tokens
+                  .bodyReading(color: color)
+                  .copyWith(fontSize: 14, height: 1.35),
             ),
           ),
         ],
@@ -669,8 +589,8 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
     final borderColor = widget.analysis.isInvalid
         ? KeroseneBrandTokens.error
         : widget.isLoading || _hasFocus
-            ? activeElementColor
-            : Theme.of(context).dividerColor;
+        ? activeElementColor
+        : Theme.of(context).dividerColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -695,8 +615,9 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
                   letterSpacing: 0,
                 ),
                 decoration: InputDecoration(
-                  hintText:
-                      _hasFocus ? null : SendMoneyCopy.destinationHint(context),
+                  hintText: _hasFocus
+                      ? null
+                      : SendMoneyCopy.destinationHint(context),
                   hintStyle: AppTypography.inter(
                     color: activeElementColor.withValues(alpha: 0.55),
                     fontSize: 18,
@@ -844,12 +765,12 @@ class _FrequentContact extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          height: 1.15,
-                          letterSpacing: 0,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                      letterSpacing: 0,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -858,11 +779,11 @@ class _FrequentContact extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 11,
-                          height: 1.2,
-                          letterSpacing: 0,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                      height: 1.2,
+                      letterSpacing: 0,
+                    ),
                   ),
                 ],
               ),
@@ -878,8 +799,10 @@ class _RecentDestinationRow extends StatelessWidget {
   final RecentTransactionDestination destination;
   final ValueChanged<RecentTransactionDestination> onSelected;
 
-  const _RecentDestinationRow(
-      {required this.destination, required this.onSelected});
+  const _RecentDestinationRow({
+    required this.destination,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -891,7 +814,9 @@ class _RecentDestinationRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.10),
             ),
           ),
         ),

@@ -10,7 +10,6 @@ import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
@@ -19,15 +18,14 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
-import 'package:kerosene/features/movement/data/activity_archive_store.dart';
-import 'package:kerosene/features/movement/data/activity_cancel.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/application/activity_cancel.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_presentation.dart';
 import 'package:kerosene/core/security/financial_secure_scope.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart'
     hide transactionRepositoryProvider;
-import 'package:kerosene/features/movement/data/blockchain_explorer.dart';
-import 'package:kerosene/features/movement/data/transaction_display.dart';
+import 'package:kerosene/features/movement/presentation/activity/blockchain_explorer.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
 import 'package:kerosene/features/movement/presentation/activity/home_activity_surface.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_palette.dart';
@@ -46,7 +44,8 @@ class TransactionDetailScreen extends ConsumerStatefulWidget {
     Rect? originRect,
   }) {
     final size = MediaQuery.sizeOf(context);
-    final origin = originRect ??
+    final origin =
+        originRect ??
         keroseneOriginRectFromContext(context) ??
         Rect.fromCenter(
           center: size.center(Offset.zero),
@@ -82,18 +81,8 @@ class _TransactionDetailScreenState
     _tx = widget.transaction;
     _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 720),
+      duration: KeroseneMotion.medium,
     )..forward();
-    // Cancelled items stay in the global feed until the user opens them;
-    // opening the dossier moves them to Arquivadas.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_tx.isArchiveEligible) {
-        unawaited(
-          ref.read(activityArchiveProvider.notifier).markArchived(_tx.id),
-        );
-      }
-    });
   }
 
   @override
@@ -151,25 +140,19 @@ class _TransactionDetailScreenState
         _tx = updated;
         _cancelling = false;
       });
-      // Refresh feeds; archive after cancel from open detail (already viewed).
+      // Cancellation updates the record; archiving remains an explicit action.
       ref.invalidate(transactionHistoryProvider);
       ref.invalidate(paymentLinksProvider);
-      if (updated.isArchiveEligible) {
-        await archiveActivity(
-          ref.read(activityArchiveProvider.notifier),
-          updated,
-        );
-      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr.txDetailCancelSuccess)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr.txDetailCancelSuccess)));
     } catch (_) {
       if (!mounted) return;
       setState(() => _cancelling = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr.txDetailCancelError)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr.txDetailCancelError)));
     }
   }
 
@@ -217,11 +200,7 @@ class _TransactionDetailScreenState
 
     final primaryRows = <_DetailRowData>[
       for (final field in presentation.expandedFields)
-        _DetailRowData(
-          field.label,
-          field.value,
-          copyable: field.copyable,
-        ),
+        _DetailRowData(field.label, field.value, copyable: field.copyable),
     ];
 
     final technicalRows = <_DetailRowData>[
@@ -287,11 +266,7 @@ class _TransactionDetailScreenState
       if ((tx.externalTransferType ?? '').trim().isNotEmpty)
         _DetailRowData(copy.externalType, tx.externalTransferType!.trim()),
       if ((tx.walletId ?? '').trim().isNotEmpty)
-        _DetailRowData(
-          copy.yourWallet,
-          tx.walletId!.trim(),
-          copyable: true,
-        ),
+        _DetailRowData(copy.yourWallet, tx.walletId!.trim(), copyable: true),
       if ((tx.sourceWalletId ?? '').trim().isNotEmpty)
         _DetailRowData(
           copy.sourceWallet,
@@ -334,26 +309,17 @@ class _TransactionDetailScreenState
       if (tx.displayAmountUsd != null)
         _DetailRowData(
           copy.frozenUsd,
-          money.format(
-            amount: tx.displayAmountUsd!,
-            currency: Currency.usd,
-          ),
+          money.format(amount: tx.displayAmountUsd!, currency: Currency.usd),
         ),
       if (tx.displayAmountBrl != null)
         _DetailRowData(
           copy.frozenBrl,
-          money.format(
-            amount: tx.displayAmountBrl!,
-            currency: Currency.brl,
-          ),
+          money.format(amount: tx.displayAmountBrl!, currency: Currency.brl),
         ),
       if (tx.displayAmountEur != null)
         _DetailRowData(
           copy.frozenEur,
-          money.format(
-            amount: tx.displayAmountEur!,
-            currency: Currency.eur,
-          ),
+          money.format(amount: tx.displayAmountEur!, currency: Currency.eur),
         ),
     ];
 
@@ -391,7 +357,9 @@ class _TransactionDetailScreenState
                           child: Text(
                             SendMoneyCopy.detailExplorer(context),
                             style: AppTypography.caption.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -425,21 +393,24 @@ class _TransactionDetailScreenState
                       FadeTransition(
                         opacity: CurvedAnimation(
                           parent: _entrance,
-                          curve: const Interval(0, 0.35, curve: Curves.easeOut),
+                          curve: const Interval(
+                            0,
+                            0.35,
+                            curve: KeroseneMotion.decelerated,
+                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ActivityGlyph.forAxes(
-                              presentation.axes,
-                              size: 56,
-                            ),
+                            ActivityGlyph.forAxes(presentation.axes, size: 56),
                             SizedBox(width: 16),
                             Expanded(
                               child: Text(
                                 actionTitle,
                                 style: HomeTypography.heroTitle(
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   fontSize: 28,
                                 ),
                               ),
@@ -454,7 +425,7 @@ class _TransactionDetailScreenState
                           curve: const Interval(
                             0.08,
                             0.42,
-                            curve: Curves.easeOut,
+                            curve: KeroseneMotion.decelerated,
                           ),
                         ),
                         child: Text(
@@ -473,13 +444,15 @@ class _TransactionDetailScreenState
                           curve: const Interval(
                             0.12,
                             0.48,
-                            curve: Curves.easeOut,
+                            curve: KeroseneMotion.decelerated,
                           ),
                         ),
                         child: Text(
                           btcLabel,
                           style: AppTypography.inter(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -492,7 +465,7 @@ class _TransactionDetailScreenState
                           curve: const Interval(
                             0.14,
                             0.5,
-                            curve: Curves.easeOut,
+                            curve: KeroseneMotion.decelerated,
                           ),
                         ),
                         child: Align(
@@ -546,7 +519,9 @@ class _TransactionDetailScreenState
                                   child: Text(
                                     SendMoneyCopy.detailTechnical(context),
                                     style: AppTypography.inter(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -554,9 +529,11 @@ class _TransactionDetailScreenState
                                 ),
                                 Icon(
                                   _technicalExpanded
-                                      ? Icons.keyboard_arrow_up_rounded
-                                      : Icons.keyboard_arrow_down_rounded,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ? KeroseneIcons.keyboardArrowUp
+                                      : KeroseneIcons.keyboardArrowDown,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                   size: 22,
                                 ),
                               ],
@@ -579,13 +556,13 @@ class _TransactionDetailScreenState
                           child: OutlinedButton(
                             onPressed: _cancelling ? null : _confirmAndCancel,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.error,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.error,
                               side: BorderSide(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .error
-                                    .withValues(alpha: 0.55),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.error.withValues(alpha: 0.55),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
@@ -646,7 +623,7 @@ class _StaggeredDetailRow extends StatelessWidget {
     final end = (start + 0.18).clamp(0.0, 1.0);
     final curved = CurvedAnimation(
       parent: animation,
-      curve: Interval(start, end, curve: Curves.easeOutCubic),
+      curve: Interval(start, end, curve: KeroseneMotion.standard),
     );
 
     return FadeTransition(
@@ -691,12 +668,16 @@ class _StaggeredDetailRow extends StatelessWidget {
                             textAlign: TextAlign.right,
                             style: row.mono
                                 ? AppTypography.technicalMono(
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     fontSize: 14,
                                     height: 1.35,
                                   )
                                 : AppTypography.bodyMedium.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     height: 1.35,
                                   ),
                           ),
@@ -716,14 +697,17 @@ class _StaggeredDetailRow extends StatelessWidget {
                                   SnackBar(
                                     content: Text(context.tr.btcAccountsCopied),
                                     behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 1),
+                                    duration:
+                                        KeroseneMotion.detailClipboardHold,
                                   ),
                                 );
                             },
                             child: Icon(
                               KeroseneIcons.copy,
                               size: 16,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],

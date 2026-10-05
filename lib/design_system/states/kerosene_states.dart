@@ -22,6 +22,7 @@
 ///     );
 /// }
 /// ```
+library;
 
 export 'kerosene_loading_state.dart';
 export 'kerosene_empty_state.dart';

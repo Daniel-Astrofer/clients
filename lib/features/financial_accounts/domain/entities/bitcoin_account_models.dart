@@ -1,22 +1,61 @@
+/// Client-side snapshot of an account and its custody/balance characteristics.
+///
+/// Balances are satoshis. Available, pending, locked, auto-held, and chain-
+/// observed values remain distinct because they have different spendability
+/// and reconciliation meanings.
 class BitcoinAccount {
+  /// Service account identifier.
   final String id;
+
+  /// Account category returned by the account service.
   final String type;
+
+  /// Custody model used to decide how the account may be operated.
   final String custody;
+
+  /// Lifecycle state of the account.
   final String status;
+
+  /// User-facing account name.
   final String label;
+
+  /// Optional explanatory label for the wallet type.
   final String walletTypeDescription;
+
+  /// Service risk classification associated with this account.
   final String riskTier;
+
+  /// Associated card identifier for card-backed accounts.
   final String? cardId;
+
+  /// Associated cold-wallet identifier for watch-only accounts.
   final String? coldWalletId;
+
+  /// Ledger funds available for immediate spending, in satoshis.
   final int balanceAvailableSats;
+
+  /// Incoming or otherwise pending ledger funds, in satoshis.
   final int balancePendingSats;
+
+  /// Ledger funds locked by an active operation, in satoshis.
   final int balanceLockedSats;
+
+  /// Ledger funds temporarily held by an automated risk control, in satoshis.
   final int balanceAutoHoldSats;
+
+  /// Balance observed from the blockchain rather than the internal ledger.
   final int observedBalanceSats;
+
+  /// Fingerprint identifying the extended public key, when applicable.
   final String? xpubFingerprint;
+
+  /// Wallet derivation path associated with the public key.
   final String? derivationPath;
+
+  /// Script type/policy used to derive the wallet's addresses.
   final String? scriptPolicy;
 
+  /// Creates an account snapshot; omitted balances default to zero.
   const BitcoinAccount({
     required this.id,
     required this.type,
@@ -37,18 +76,23 @@ class BitcoinAccount {
     this.scriptPolicy,
   });
 
+  /// Whether the account is an internal or Kerosene-custodied account.
   bool get isInternal =>
       type == 'INTERNAL_CARD' ||
       custody == 'KEROSENE_CUSTODIAL' ||
       custody == 'INTERNAL';
 
+  /// Whether the account is a hosted on-chain wallet.
   bool get isCustodialOnchain => custody == 'CUSTODIAL_ONCHAIN';
 
+  /// Whether the account exposes public cold-wallet data without signing keys.
   bool get isWatchOnly =>
       type == 'WATCH_ONLY_COLD_WALLET' || custody == 'WATCH_ONLY';
 
+  /// Whether the service reports the account as active.
   bool get isActive => status == 'ACTIVE';
 
+  /// User-facing custody label derived from the account custody mode.
   String get custodyDisplayLabel {
     if (isWatchOnly) return 'Cold wallet';
     if (isCustodialOnchain) return 'Custodial on-chain';
@@ -77,6 +121,7 @@ class BitcoinAccount {
   /// Blockchain-observed sats for cold/custodial on-chain reconciliation.
   int get chainObservedSats => observedBalanceSats;
 
+  /// Parses the service account payload, accepting its legacy fingerprint alias.
   factory BitcoinAccount.fromJson(Map<String, dynamic> json) {
     return BitcoinAccount(
       id: json['id'] as String? ?? '',
@@ -100,6 +145,7 @@ class BitcoinAccount {
     );
   }
 
+  /// Serializes this account snapshot using the account API's JSON keys.
   Map<String, dynamic> toJson() => {
         'id': id,
         'type': type,
@@ -120,6 +166,7 @@ class BitcoinAccount {
         'scriptPolicy': scriptPolicy,
       };
 
+  /// Converts integer/number/string JSON values to an integer, defaulting to zero.
   static int _intFromJson(Object? value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
@@ -127,17 +174,36 @@ class BitcoinAccount {
   }
 }
 
+/// Receive request/address details shown to the wallet owner.
 class ReceivingRequestView {
+  /// Service request identifier or deterministic KFE address key.
   final String id;
+
+  /// Account that owns the receiving address.
   final String accountId;
+
+  /// Plain Bitcoin address to receive funds.
   final String address;
+
+  /// BIP-21 URI containing the address and optional amount.
   final String bip21;
+
+  /// Server-side state of the receiving request.
   final String status;
+
+  /// Requested amount in satoshis, if the request fixes an amount.
   final int? amountSats;
+
+  /// Expiry instant or provider expiry text supplied by the service.
   final String expiry;
+
+  /// Whether the address/request is intended for a single payment.
   final bool oneTime;
+
+  /// Creation timestamp used for display and local ordering.
   final DateTime createdAt;
 
+  /// Creates a receive request snapshot.
   const ReceivingRequestView({
     required this.id,
     required this.accountId,
@@ -150,6 +216,7 @@ class ReceivingRequestView {
     required this.createdAt,
   });
 
+  /// Copies this value while optionally replacing its lifecycle status.
   ReceivingRequestView copyWith({String? status}) {
     return ReceivingRequestView(
       id: id,
@@ -164,6 +231,7 @@ class ReceivingRequestView {
     );
   }
 
+  /// Parses a receive-request payload, using fallback account and date defaults.
   factory ReceivingRequestView.fromJson(
     Map<String, dynamic> json, {
     String? fallbackAccountId,
@@ -185,6 +253,11 @@ class ReceivingRequestView {
     );
   }
 
+  /// Adapts an active address response from KFE into a receive request view.
+  ///
+  /// Trims the address, derives a BIP-21 URI from an optional satoshi amount,
+  /// and uses a deterministic ID so repeated observations identify the same
+  /// account/address pair.
   factory ReceivingRequestView.fromKfeActiveAddress({
     required String accountId,
     required String address,
@@ -213,6 +286,7 @@ class ReceivingRequestView {
     );
   }
 
+  /// Serializes the view into the client API's JSON field names.
   Map<String, dynamic> toJson() => {
         'id': id,
         'accountId': accountId,
@@ -225,6 +299,7 @@ class ReceivingRequestView {
         'createdAt': createdAt.toIso8601String(),
       };
 
+  /// Parses a nullable satoshi amount without converting missing input to zero.
   static int? _nullableIntFromJson(Object? value) {
     if (value == null) return null;
     if (value is int) return value;
@@ -233,14 +308,27 @@ class ReceivingRequestView {
   }
 }
 
+/// Public view of one unspent transaction output controlled by a cold wallet.
 class ColdWalletUtxoView {
+  /// Service UTXO identifier, or a transaction/output fallback identifier.
   final String id;
+
+  /// Transaction ID containing this output.
   final String txidRef;
+
+  /// Zero-based output index within [txidRef].
   final int vout;
+
+  /// Output value in satoshis.
   final int amountSats;
+
+  /// Number of confirmations reported by the chain observer.
   final int confirmations;
+
+  /// Service spend state, such as `UNSPENT`.
   final String status;
 
+  /// Creates a cold-wallet UTXO snapshot.
   const ColdWalletUtxoView({
     required this.id,
     required this.txidRef,
@@ -250,8 +338,10 @@ class ColdWalletUtxoView {
     required this.status,
   });
 
+  /// Whether the normalized service status marks this output unspent.
   bool get isSpendable => status.toUpperCase() == 'UNSPENT';
 
+  /// Parses a UTXO payload and synthesizes its ID when the API omits one.
   factory ColdWalletUtxoView.fromJson(Map<String, dynamic> json) {
     final txid = (json['txidRef'] ?? json['txid'] ?? '').toString();
     final vout = _intFromJson(json['vout']);
@@ -265,6 +355,7 @@ class ColdWalletUtxoView {
     );
   }
 
+  /// Serializes the UTXO fields using the service-facing JSON keys.
   Map<String, dynamic> toJson() => {
         'id': id,
         'txidRef': txidRef,
@@ -275,19 +366,45 @@ class ColdWalletUtxoView {
       };
 }
 
+/// State and unsigned payload for one cold-wallet PSBT signing workflow.
+///
+/// The unsigned PSBT is sensitive transaction material: callers should only
+/// expose it to the intended signing flow and must not log it.
 class PsbtWorkflowView {
+  /// Workflow identifier used to query or advance this signing session.
   final String id;
+
+  /// Cold wallet that owns the inputs being spent.
   final String coldWalletId;
+
+  /// Unsigned PSBT that must be signed outside the online application.
   final String unsignedPsbt;
+
+  /// Current service state of the signing workflow.
   final String status;
+
+  /// Destination address encoded by the unsigned transaction.
   final String destinationAddress;
+
+  /// Amount being sent, in satoshis.
   final int amountSats;
+
+  /// Service-estimated transaction fee, in satoshis.
   final int estimatedFeeSats;
+
+  /// Transaction ID returned after broadcast, if available.
   final String? broadcastTxid;
+
+  /// Alternate service reference for the broadcast transaction.
   final String? broadcastTxidRef;
+
+  /// Workflow expiry value supplied by the service.
   final String expiresAt;
+
+  /// Workflow creation value supplied by the service.
   final String createdAt;
 
+  /// Creates an immutable PSBT workflow snapshot.
   const PsbtWorkflowView({
     required this.id,
     required this.coldWalletId,
@@ -302,6 +419,7 @@ class PsbtWorkflowView {
     required this.createdAt,
   });
 
+  /// Whether the workflow is still awaiting an external signature.
   bool get awaitsSignature {
     final normalized = status.toUpperCase();
     return normalized == 'CREATED' ||
@@ -310,6 +428,7 @@ class PsbtWorkflowView {
         normalized == 'DRAFT';
   }
 
+  /// Parses a workflow payload, accepting legacy aliases for ID and PSBT fields.
   factory PsbtWorkflowView.fromJson(Map<String, dynamic> json) {
     return PsbtWorkflowView(
       id: (json['workflowId'] ?? json['id'] ?? json['psbtHash'] ?? '')
@@ -329,6 +448,7 @@ class PsbtWorkflowView {
     );
   }
 
+  /// Serializes the workflow snapshot using client model field names.
   Map<String, dynamic> toJson() => {
         'id': id,
         'coldWalletId': coldWalletId,
@@ -344,19 +464,42 @@ class PsbtWorkflowView {
       };
 }
 
+/// One sanitized tax-classification event exported by the service.
 class TaxEventView {
+  /// Event identifier.
   final String id;
+
+  /// Service-defined event category.
   final String eventType;
+
+  /// Asset code associated with the quantity, normally BTC.
   final String asset;
+
+  /// Event quantity in satoshis.
   final int quantitySats;
+
+  /// Tax classification assigned by the service or user workflow.
   final String classification;
+
+  /// Sanitized source reference used to trace the originating activity.
   final String sourceRef;
+
+  /// Creation timestamp returned by the service.
   final String createdAt;
+
+  /// Related account, if known.
   final String? accountId;
+
+  /// Related card, if known.
   final String? cardId;
+
+  /// Related wallet, if known.
   final String? walletId;
+
+  /// Retention/purge deadline supplied by the service, if applicable.
   final String? purgeAfter;
 
+  /// Creates an immutable tax event snapshot.
   const TaxEventView({
     required this.id,
     required this.eventType,
@@ -371,6 +514,7 @@ class TaxEventView {
     this.purgeAfter,
   });
 
+  /// Parses a tax event payload, preserving absent relationships as `null`.
   factory TaxEventView.fromJson(Map<String, dynamic> json) {
     return TaxEventView(
       id: (json['id'] ?? '').toString(),
@@ -387,6 +531,7 @@ class TaxEventView {
     );
   }
 
+  /// Serializes the tax event using the export API's field names.
   Map<String, dynamic> toJson() => {
         'id': id,
         'eventType': eventType,
@@ -402,13 +547,24 @@ class TaxEventView {
       };
 }
 
+/// Complete export response containing metadata and sanitized tax events.
 class TaxEventsExportView {
+  /// Encoding format selected by the export endpoint.
   final String format;
+
+  /// Suggested output filename for a downloaded export.
   final String filename;
+
+  /// Educational notice that must accompany the exported data.
   final String educationalNotice;
+
+  /// Pre-rendered export body when the server provides one.
   final String? content;
+
+  /// Parsed event list; empty when the response does not include an event array.
   final List<TaxEventView> events;
 
+  /// Creates an export snapshot with an empty event list by default.
   const TaxEventsExportView({
     required this.format,
     required this.filename,
@@ -417,6 +573,7 @@ class TaxEventsExportView {
     this.events = const [],
   });
 
+  /// Parses export metadata and converts map entries into [TaxEventView] values.
   factory TaxEventsExportView.fromJson(Map<String, dynamic> json) {
     final rawEvents = json['events'];
     return TaxEventsExportView(
@@ -435,6 +592,7 @@ class TaxEventsExportView {
     );
   }
 
+  /// Serializes export metadata and its events into a JSON-compatible map.
   Map<String, dynamic> toJson() => {
         'format': format,
         'filename': filename,
@@ -444,6 +602,7 @@ class TaxEventsExportView {
       };
 }
 
+/// Converts supported JSON numeric representations to an integer or zero.
 int _intFromJson(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();

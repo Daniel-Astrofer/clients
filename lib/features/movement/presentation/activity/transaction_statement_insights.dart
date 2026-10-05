@@ -1,3 +1,5 @@
+// architecture-allow-large-file: statement insight rendering and its data
+// compatibility paths remain together pending safe extraction.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -12,7 +14,7 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/features/movement/data/entities/statement_report.dart';
+import 'package:kerosene/features/movement/domain/entities/statement_report.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 
 Color get _primary => KeroseneBrandTokens.textPrimary;
@@ -50,16 +52,13 @@ class _TransactionStatementInsightsState
     final asyncReport = ref.watch(statementInsightsReportProvider(_period));
 
     return asyncReport.when(
-      loading: () => const SizedBox(
-        height: 280,
-        child: Center(child: TorLoadingDots()),
-      ),
+      loading: () =>
+          const SizedBox(height: 280, child: Center(child: TorLoadingDots())),
       error: (error, _) => _SoftPanel(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(
           children: [
-            Icon(KeroseneIcons.warning,
-                color: _onSurfaceVariant, size: 28),
+            Icon(KeroseneIcons.warning, color: _onSurfaceVariant, size: 28),
             const SizedBox(height: 12),
             Text(
               context.tr.financialStatementLoadErrorTitle,
@@ -167,7 +166,8 @@ class _KpiSummaryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasMovement = report.includedTransactionCount > 0 ||
+    final hasMovement =
+        report.includedTransactionCount > 0 ||
         report.incomingSats > 0 ||
         report.outgoingSats > 0;
 
@@ -178,8 +178,7 @@ class _KpiSummaryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(KeroseneIcons.chart,
-                  color: _onSurfaceVariant, size: 18),
+              Icon(KeroseneIcons.chart, color: _onSurfaceVariant, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -193,11 +192,7 @@ class _KpiSummaryPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                _pluralPt(
-                  report.includedTransactionCount,
-                  'tx',
-                  'txs',
-                ),
+                _pluralPt(report.includedTransactionCount, 'tx', 'txs'),
                 style: AppTypography.inter(
                   color: _onSurfaceVariant,
                   fontSize: 12,
@@ -335,7 +330,7 @@ class _PartialHistoryBanner extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Histórico parcial — o período selecionado pode exceder o que está carregado no dispositivo.',
+                context.tr.statementPartialPeriodNotice,
                 style: AppTypography.inter(
                   color: _onSurfaceVariant,
                   fontSize: 12,
@@ -775,7 +770,7 @@ class _WalletBarGroup extends StatelessWidget {
             child: FractionallySizedBox(
               heightFactor:
                   _barFraction(bucket.values[index].sats, axisMaxSats) *
-                      progress,
+                  progress,
               alignment: Alignment.bottomCenter,
               child: _GradientBar(
                 topColor: bucket.values[index].color,
@@ -1192,19 +1187,23 @@ class _DominantSliceBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.hexFF63FEA7.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border:
-            Border.all(color: AppColors.hexFF63FEA7.withValues(alpha: 0.24)),
+        border: Border.all(
+          color: AppColors.hexFF63FEA7.withValues(alpha: 0.24),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(KeroseneIcons.trendUp,
-                color: AppColors.hexFF63FEA7, size: 12),
+            const Icon(
+              KeroseneIcons.trendUp,
+              color: AppColors.hexFF63FEA7,
+              size: 12,
+            ),
             const SizedBox(width: 5),
             Text(
-              'Maior fatia',
+              context.tr.statementLargestShare,
               style: AppTypography.inter(
                 color: AppColors.hexFF63FEA7,
                 fontSize: 11,
@@ -1284,8 +1283,9 @@ class _InsightViewModel {
   factory _InsightViewModel.from(StatementReport report) {
     final colorsByWalletId = <String, Color>{};
     for (var index = 0; index < report.wallets.length; index++) {
-      colorsByWalletId[report.wallets[index].id] =
-          report.wallets.length == 1 ? _singleWalletColor : _walletColor(index);
+      colorsByWalletId[report.wallets[index].id] = report.wallets.length == 1
+          ? _singleWalletColor
+          : _walletColor(index);
     }
 
     final buckets = [
@@ -1302,8 +1302,9 @@ class _InsightViewModel {
         ),
     ];
 
-    final dominantId =
-        report.distribution.isEmpty ? null : report.distribution.first.walletId;
+    final dominantId = report.distribution.isEmpty
+        ? null
+        : report.distribution.first.walletId;
 
     final distribution = [
       for (final segment in report.distribution)

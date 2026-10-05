@@ -102,7 +102,7 @@ class AppPinManagementSheetState extends ConsumerState<AppPinManagementSheet> {
       AppPinSheetMode.disable => context.tr.securityPinDisableBody,
     };
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: AppSpacing.lg,
         right: AppSpacing.lg,

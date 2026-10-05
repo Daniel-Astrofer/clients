@@ -161,12 +161,12 @@ void main() {
       expect(ids.contains('fail'), isFalse);
     });
 
-    test('all excludes cancelled', () {
+    test('all includes non-archived cancelled', () {
       final r = TransactionFilterEngine.apply(
         source: rows,
         activity: ActivityFilter.all,
       );
-      expect(r.any((e) => e.id == 'can'), isFalse);
+      expect(r.any((e) => e.id == 'can'), isTrue);
     });
   });
 }

@@ -3,6 +3,12 @@ import 'dart:convert';
 
 import 'package:kerosene/core/utils/app_date_time.dart';
 
+enum NotificationPresentationPolicy {
+  autoDismiss,
+  persistUntilSeen,
+  persistUntilAction,
+}
+
 class SessionNotificationItem extends Equatable {
   static const severityInfo = 'info';
   static const severitySuccess = 'success';
@@ -54,6 +60,19 @@ class SessionNotificationItem extends Equatable {
   });
 
   factory SessionNotificationItem.fromJson(Map<String, dynamic> json) {
+    final metadata = <String, String>{..._parseMetadata(json['metadata'])};
+    for (final key in const [
+      'amount',
+      'currency',
+      'status',
+      'expiresAt',
+      'presentationPolicy',
+    ]) {
+      final value = json[key]?.toString();
+      if (value != null && value.trim().isNotEmpty) {
+        metadata.putIfAbsent(key, () => value.trim());
+      }
+    }
     return SessionNotificationItem(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
@@ -67,7 +86,7 @@ class SessionNotificationItem extends Equatable {
       deeplink: json['deeplink']?.toString(),
       entityType: json['entityType']?.toString(),
       entityId: json['entityId']?.toString(),
-      metadata: _parseMetadata(json['metadata']),
+      metadata: metadata,
       read: json['read'] == true || json['isRead'] == true,
     );
   }
@@ -89,6 +108,44 @@ class SessionNotificationItem extends Equatable {
 
   bool get isActionable => deeplink != null && deeplink!.trim().isNotEmpty;
   bool get canSyncRead => int.tryParse(id) != null;
+
+  /// Priority is intentionally derived from the domain kind, rather than from
+  /// presentation code. This keeps money and security events ahead of
+  /// editorial/educational content wherever they are rendered.
+  int get presentationPriority {
+    if (isSecurityEvent) return 400;
+    if (isFinancialEvent) return 300;
+    if (severity == severityError || severity == severityWarning) return 200;
+    if (kind == kindMarketAlert) return 100;
+    return 50;
+  }
+
+  bool get isSecurityEvent => kind.startsWith('security_');
+
+  bool get isFinancialEvent => const {
+        kindTransferReceived,
+        kindTransferSent,
+        kindPaymentRequestCreated,
+        kindPaymentRequestPaid,
+        kindDepositDetected,
+        kindDepositConfirmed,
+        kindPaymentSent,
+        kindLightningInvoicePaid,
+        kindLightningPaymentSent,
+        kindLightningPaymentFailed,
+      }.contains(kind);
+
+  bool get shouldPersistBanner =>
+      isSecurityEvent || isFinancialEvent || severity == severityError;
+
+  NotificationPresentationPolicy get presentationPolicy {
+    if (shouldPersistBanner) {
+      return isActionable
+          ? NotificationPresentationPolicy.persistUntilAction
+          : NotificationPresentationPolicy.persistUntilSeen;
+    }
+    return NotificationPresentationPolicy.autoDismiss;
+  }
 
   SessionNotificationItem copyWith({
     String? id,

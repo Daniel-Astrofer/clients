@@ -4,10 +4,10 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
 
 const Duration kKerosenePageTransitionDuration = KeroseneMotion.medium;
-const Duration kKerosenePageReverseTransitionDuration = KeroseneMotion.short;
+const Duration kKerosenePageReverseTransitionDuration = KeroseneMotion.pageOut;
 
 /// Shared with the in-flow send wizard (destination → wallet → amount → review).
-const Duration kKeroseneFlowNavDuration = Duration(milliseconds: 340);
+const Duration kKeroseneFlowNavDuration = KeroseneMotion.pageTransition;
 const Curve kKeroseneFlowNavCurve = Curves.easeInOutCubic;
 
 const PageTransitionsTheme kerosenePageTransitionsTheme = PageTransitionsTheme(
@@ -77,41 +77,19 @@ Widget buildKeroseneHorizontalTransition({
     curve: KeroseneMotion.entrance,
     reverseCurve: KeroseneMotion.exit,
   );
-  final outgoing = CurvedAnimation(
-    parent: secondaryAnimation,
-    curve: KeroseneMotion.standard,
-    reverseCurve: KeroseneMotion.exit,
-  );
 
   return RepaintBoundary(
+      child: FadeTransition(
+    opacity: incoming,
     child: SlideTransition(
       position: Tween<Offset>(
-        begin: Offset.zero,
-        end: const Offset(-0.025, 0),
-      ).animate(outgoing),
+        begin: const Offset(0.035, 0),
+        end: Offset.zero,
+      ).animate(incoming),
       transformHitTests: false,
-      child: ScaleTransition(
-        scale: Tween<double>(begin: 1, end: 0.992).animate(outgoing),
-        child: FadeTransition(
-          opacity: Tween<double>(begin: 1, end: 0.82).animate(outgoing),
-          child: FadeTransition(
-            opacity: Tween<double>(begin: 0, end: 1).animate(incoming),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.075, 0),
-                end: Offset.zero,
-              ).animate(incoming),
-              transformHitTests: false,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.985, end: 1).animate(incoming),
-                child: child,
-              ),
-            ),
-          ),
-        ),
-      ),
+      child: child,
     ),
-  );
+  ));
 }
 
 Widget buildKeroseneRouteTransition({

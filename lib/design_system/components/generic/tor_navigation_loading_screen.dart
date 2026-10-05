@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Full-screen Tor dots loader with a **fixed** visual center.
 ///

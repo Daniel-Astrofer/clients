@@ -34,7 +34,6 @@ ONION_URL="${ONION_URL:-}"
 RUN_MODE="${KERO_LINUX_RUN_MODE:-debug}"
 FORCE_REBUILD=0
 DEVICE="${KERO_LINUX_DEVICE:-linux}"
-NS="${KEROSENE_NAMESPACE:-kerosene-staging}"
 
 # Force primary namespace — do NOT inherit ambient KERO_SECURE_PREFIX
 PROFILE_LABEL="primary"
@@ -96,9 +95,6 @@ while (($#)); do
       export XDG_STATE_HOME="${PRIMARY_HOME}/state"
       mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
       ;;
-    --namespace=*)
-      NS="${arg#--namespace=}"
-      ;;
     -h|--help)
       usage
       exit 0
@@ -130,23 +126,7 @@ resolve_onion() {
     printf '%s\n' "${KERO_NODE_IS_URL}"
     return
   fi
-  # Auto-detect from K8s
-  if command -v kubectl >/dev/null 2>&1; then
-    local onion pod_path
-    for pod_path in \
-      "deploy/tor-onion:/keys/hostname" \
-      "deploy/tor-onion:/var/lib/tor/kerosene_service/hostname" \
-      "statefulset/staging-tor:/data/kerosene_service/hostname"; do
-      local pod="${pod_path%%:*}"
-      local path="${pod_path#*:}"
-      onion="$(kubectl -n "${NS}" exec "$pod" -- cat "$path" 2>/dev/null | tr -d '[:space:]' || true)"
-      if [[ -n "$onion" ]]; then
-        printf 'http://%s\n' "$onion"
-        return
-      fi
-    done
-  fi
-  die "Could not resolve the active deployment onion. Set ONION_URL=http://….onion or start the integrated quorum."
+  die "Set ONION_URL=http://….onion or KERO_NODE_IS_URL explicitly. Endpoint auto-discovery is intentionally disabled."
 }
 
 normalize_onion() {
@@ -307,7 +287,7 @@ if port_in_use "$DDS_PORT"; then
   echo "[!] Do not relaunch this script — hot reload in the existing terminal (r/R)." >&2
   echo "[!] Second session options:" >&2
   echo "      bash tools/run-linux-secondary.sh          # Linux #2 → DDS 9111" >&2
-  echo "      bash tools/run-android-local-full-onion.sh # Android  → DDS 9102" >&2
+  echo "      ONION_URL=$ONION_URL bash tools/run-android-local-full-onion.sh # Android → DDS 9102" >&2
   echo "[!] Or override: KERO_DDS_PORT=9103 $0 ..." >&2
   exit 1
 fi

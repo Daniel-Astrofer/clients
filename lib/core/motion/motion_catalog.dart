@@ -74,26 +74,11 @@ class MotionContract {
     this.description = '',
   });
 
-  /// Returns the duration adjusted for reduceMotion.
-  /// Functional + continuity collapse to instant. Brand plays accelerated.
-  /// Ambient removed entirely.
-  Duration resolvedEnter(bool reduceMotion) {
-    if (!reduceMotion) return enter;
-    return switch (category) {
-      KeroseneMotionCategory.ambient => Duration.zero,
-      KeroseneMotionCategory.brand => enter ~/ 2,
-      _ => Duration.zero,
-    };
-  }
-
-  Duration resolvedExit(bool reduceMotion) {
-    if (!reduceMotion) return exit;
-    return switch (category) {
-      KeroseneMotionCategory.ambient => Duration.zero,
-      KeroseneMotionCategory.brand => exit ~/ 2,
-      _ => Duration.zero,
-    };
-  }
+  /// Every visual contract resolves immediately with reduced motion.
+  Duration resolvedEnter(bool reduceMotion) =>
+      reduceMotion ? Duration.zero : enter;
+  Duration resolvedExit(bool reduceMotion) =>
+      reduceMotion ? Duration.zero : exit;
 }
 
 /// Registry of all KeroseneMotion tokens mapped to their semantic categories.
@@ -116,6 +101,18 @@ class KeroseneMotionRegistry {
 
   /// All registered contracts, keyed by their KeroseneMotion constant name.
   static const Map<String, MotionContract> _registry = {
+    'pageTransition': MotionContract(
+        enter: KeroseneMotion.pageTransition,
+        category: KeroseneMotionCategory.continuity),
+    'statusChange': MotionContract(
+        enter: KeroseneMotion.statusChange,
+        category: KeroseneMotionCategory.functional),
+    'sheet': MotionContract(
+        enter: KeroseneMotion.sheet,
+        category: KeroseneMotionCategory.continuity),
+    'success': MotionContract(
+        enter: KeroseneMotion.success,
+        category: KeroseneMotionCategory.feedback),
     // ── Functional ───────────────────────────────────────────────────────
     'fast': MotionContract(
       enter: KeroseneMotion.fast,
@@ -434,11 +431,5 @@ extension KeroseneMotionCategoryLabel on KeroseneMotionCategory {
       };
 
   /// Whether this category should collapse to instant under reduceMotion.
-  bool get collapseOnReduceMotion => switch (this) {
-        KeroseneMotionCategory.functional => true,
-        KeroseneMotionCategory.continuity => true,
-        KeroseneMotionCategory.loading => true,
-        KeroseneMotionCategory.nfc => true,
-        _ => false,
-      };
+  bool get collapseOnReduceMotion => this != KeroseneMotionCategory.ambient;
 }

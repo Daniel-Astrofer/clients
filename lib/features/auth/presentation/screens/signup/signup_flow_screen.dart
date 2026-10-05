@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
@@ -439,20 +438,33 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: (Theme.of(context).brightness == Brightness.light
-            ? SystemUiOverlayStyle.dark
-            : SystemUiOverlayStyle.light)
-            .copyWith(
+              ? SystemUiOverlayStyle.dark
+              : SystemUiOverlayStyle.light)
+          .copyWith(
         statusBarColor: Colors.transparent,
         systemNavigationBarColor: _signupInk,
-        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light
+        systemNavigationBarIconBrightness:
+            Theme.of(context).brightness == Brightness.light
                 ? Brightness.dark
                 : Brightness.light,
       ),
       child: Scaffold(
         backgroundColor: _signupInk,
         resizeToAvoidBottomInset: true,
-        body: ColoredBox(
-          color: _signupInk,
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                _signupText.withValues(
+                    alpha: ThemeTokenBridge.isLight ? 0.035 : 0.06),
+                _signupInk,
+                _signupInk,
+              ],
+              stops: const [0, 0.34, 1],
+            ),
+          ),
           child: _step == 6
               ? _buildSuccessStep()
               : SafeArea(
@@ -656,7 +668,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
         SignupPrimaryButton(
           text: signupProceedAction(context),
           onPressed: _continueFromPassword,
-          borderRadius: 16,
+          borderRadius: 999,
         ),
       ],
     );
@@ -736,14 +748,20 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
               Icon(
                 KeroseneIcons.shield,
                 size: 82,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.92),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.92),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 14),
                 child: Icon(
                   KeroseneIcons.lock,
                   size: 28,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.92),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.92),
                 ),
               ),
             ],
@@ -828,7 +846,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
                 text: signupSkipAction(context),
                 outlined: true,
                 onPressed: isLoading ? null : _skipTotp,
-                borderRadius: 16,
+                borderRadius: 999,
               ),
             ),
             const SizedBox(width: 12),
@@ -837,7 +855,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
                 text: signupConfirmAction(context),
                 isLoading: isLoading,
                 onPressed: isLoading ? null : _verifyTotp,
-                borderRadius: 16,
+                borderRadius: 999,
               ),
             ),
           ],
@@ -886,7 +904,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
           text: signupAuthorizeDeviceAction(context),
           isLoading: isLoading,
           onPressed: isLoading ? null : _registerPasskey,
-          borderRadius: 12,
+          borderRadius: 999,
         ),
       ],
     );

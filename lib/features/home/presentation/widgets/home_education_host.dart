@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/controller/auth_providers.dart';
@@ -13,7 +14,7 @@ import 'package:kerosene/features/home/presentation/providers/incoming_transfer_
 import 'package:kerosene/features/home/presentation/providers/theater_scheduler.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show HomeLedgerBalanceView, homeLedgerBalanceViewProvider;
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
 /// Injects education / receive copy into the **home theater** (Communication Stage).
@@ -69,14 +70,14 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     _educationTimer?.cancel();
     _educationKickTimer?.cancel();
     // Periodic tick: offer catalog tip when home is quiet.
-    _educationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _educationTimer = Timer.periodic(KeroseneMotion.educationPoll, (_) {
       if (!mounted) return;
       _tryEnqueueEducation();
     });
     // First attempt after a short quiet period (after TOTP window).
     // Must be a cancelable [Timer] — bare Future.delayed survives dispose and
     // can touch defunct elements on hot restart.
-    _educationKickTimer = Timer(const Duration(seconds: 50), () {
+    _educationKickTimer = Timer(KeroseneMotion.educationKick, () {
       if (!mounted) return;
       _tryEnqueueEducation();
     });
@@ -111,7 +112,8 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
 
     final surface = ref.read(homeSurfaceProvider);
     final stage = surface.stage;
-    final busy = stage.isActive &&
+    final busy =
+        stage.isActive &&
         (stage.id.startsWith('local-incoming') ||
             stage.id.startsWith('local-totp') ||
             stage.priority >= 120);
@@ -132,11 +134,9 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
         : DateTime.now().difference(_stageIdleSince!);
 
     final prefs = ref.read(sharedPreferencesProvider);
-    final lang = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .split(RegExp(r'[_-]'))
-        .first;
+    final lang = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().split(RegExp(r'[_-]')).first;
     final piece = pickNextTheaterPiece(
       prefs: prefs,
       context: TheaterSchedulerContext(
@@ -155,11 +155,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
       piece: piece,
     );
     unawaited(
-      markTheaterPieceShown(
-        prefs: prefs,
-        userId: auth.user.id,
-        piece: piece,
-      ),
+      markTheaterPieceShown(prefs: prefs, userId: auth.user.id, piece: piece),
     );
     _schedulerSession = _schedulerSession.copyWith(
       educationPresentedThisSession:
@@ -175,7 +171,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     if (_totpCheckScheduled) return;
     _totpCheckScheduled = true;
     // Wait for auth + first surface load, then try a few times.
-    Future<void>.delayed(const Duration(milliseconds: 1200), () {
+    Future<void>.delayed(KeroseneMotion.educationAuthWarmup, () {
       if (mounted) unawaited(_tryEnqueueTotp(attempt: 0));
     });
   }
@@ -184,7 +180,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     if (!mounted || attempt > 6) return;
     final auth = ref.read(authControllerProvider);
     if (auth is! AuthAuthenticated) {
-      Future<void>.delayed(const Duration(seconds: 2), () {
+      Future<void>.delayed(KeroseneMotion.educationAuthRetry, () {
         if (mounted) unawaited(_tryEnqueueTotp(attempt: attempt + 1));
       });
       return;
@@ -212,7 +208,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
       _tryPresentNext(force: true);
     } catch (e, st) {
       debugPrint('[homeEducation] totp check failed (retry): $e\n$st');
-      Future<void>.delayed(const Duration(seconds: 2), () {
+      Future<void>.delayed(KeroseneMotion.educationAuthRetry, () {
         if (mounted) unawaited(_tryEnqueueTotp(attempt: attempt + 1));
       });
     }
@@ -239,17 +235,13 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     }
 
     final event = queue.first;
-    final lang = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .split(RegExp(r'[_-]'))
-        .first;
+    final lang = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().split(RegExp(r'[_-]')).first;
     final stage = homeEducationToStage(event, lang: lang);
 
     if (!stage.isActive) {
-      debugPrint(
-        '[homeEducation] built inactive stage id=${stage.id} — skip',
-      );
+      debugPrint('[homeEducation] built inactive stage id=${stage.id} — skip');
       ref.read(homeEducationQueueProvider.notifier).dequeue(event.id);
       return;
     }
@@ -318,8 +310,11 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
 
     // Bound memory for long sessions.
     if (_seenCreditIds.length > 400) {
-      final keep =
-          txs.where((t) => t.isCredit).map((t) => t.id).take(200).toSet();
+      final keep = txs
+          .where((t) => t.isCredit)
+          .map((t) => t.id)
+          .take(200)
+          .toSet();
       _seenCreditIds
         ..clear()
         ..addAll(keep);
@@ -338,8 +333,10 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
 
     // Extrato path: when poll/WS refresh brings a new credit, show theater even
     // if /queue/notifications never delivered the financial notification.
-    ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider,
-        (prev, next) {
+    ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider, (
+      prev,
+      next,
+    ) {
       final txs = next.asData?.value;
       if (txs == null) return;
       _onHistorySnapshot(txs);

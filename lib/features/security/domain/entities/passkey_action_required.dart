@@ -1,3 +1,5 @@
+import 'package:kerosene/core/security/financial_payment_challenge.dart';
+
 import 'passkey_inventory.dart';
 
 /// Typed challenge for one step-up factor (DEVICE_KEY or PASSKEY).
@@ -63,6 +65,8 @@ class PasskeyActionRequired {
   final List<String> acceptedFactors;
   final Map<String, DeviceCredentialChallenge> challenges;
   final String? preferredFactor;
+  final FinancialPaymentChallenge? financialChallenge;
+  final bool financialApprovalRequired;
 
   const PasskeyActionRequired({
     required this.action,
@@ -76,9 +80,32 @@ class PasskeyActionRequired {
     this.acceptedFactors = const [],
     this.challenges = const {},
     this.preferredFactor,
+    this.financialChallenge,
+    this.financialApprovalRequired = false,
   });
 
   factory PasskeyActionRequired.fromJson(Map<String, dynamic> json) {
+    if (_hasFinancialMarker(json)) {
+      FinancialPaymentChallenge? financial;
+      final raw = json['financialChallenge'];
+      if (json['action'] == FinancialPaymentChallenge.action && raw is Map) {
+        try {
+          financial = FinancialPaymentChallenge.fromJson(
+            Map<String, dynamic>.from(raw),
+          );
+        } on FormatException {
+          // Keep the marker, even when malformed: never downgrade the purpose.
+        } on TypeError {
+          // Non-string map keys cannot be a financial challenge.
+        }
+      }
+      return PasskeyActionRequired(
+        action: FinancialPaymentChallenge.action,
+        reason: '',
+        financialApprovalRequired: true,
+        financialChallenge: financial,
+      );
+    }
     final challenges = <String, DeviceCredentialChallenge>{};
     final rawChallenges = json['challenges'];
     if (rawChallenges is Map) {
@@ -140,6 +167,9 @@ class PasskeyActionRequired {
 
   /// Walks common error envelopes (`data`, nested maps) for this DTO.
   static PasskeyActionRequired? fromErrorPayload(Object? data) {
+    // Inspect all envelope layers before accepting any generic challenge.
+    final financial = _financialFromEnvelope(data, 0);
+    if (financial != null) return financial;
     final direct = fromDynamic(data);
     if (direct != null && direct.hasUsableStepUp) {
       return direct;
@@ -153,7 +183,28 @@ class PasskeyActionRequired {
     return direct;
   }
 
+  static bool _hasFinancialMarker(Map json) =>
+      json['action'] == FinancialPaymentChallenge.action ||
+      json.containsKey('financialChallenge') ||
+      json['errorCode'] == FinancialPaymentChallenge.errorCode ||
+      json['code'] == FinancialPaymentChallenge.errorCode;
+
+  static PasskeyActionRequired? _financialFromEnvelope(
+      Object? data, int depth) {
+    if (data is! Map || depth > 8) return null;
+    final nested = _financialFromEnvelope(data['data'], depth + 1);
+    if (nested != null) return nested;
+    if (!_hasFinancialMarker(data)) return null;
+    return PasskeyActionRequired.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  bool get isFinancialApproval =>
+      financialApprovalRequired ||
+      action == FinancialPaymentChallenge.action ||
+      financialChallenge != null;
+
   DeviceCredentialChallenge? challengeFor(String kind) {
+    if (isFinancialApproval) return null;
     final normalized = kind.trim().toUpperCase();
     return challenges[normalized];
   }
@@ -169,6 +220,7 @@ class PasskeyActionRequired {
   }
 
   bool get hasUsableStepUp {
+    if (isFinancialApproval) return financialChallenge != null;
     if (challenges.values.any((c) => c.isComplete)) {
       return true;
     }
@@ -177,6 +229,7 @@ class PasskeyActionRequired {
 
   /// Prefer typed PASSKEY challenge; fall back to legacy single field.
   String? get legacyOrPasskeyChallenge {
+    if (isFinancialApproval) return null;
     final typed = challengeFor('PASSKEY');
     if (typed != null && typed.challenge.isNotEmpty) {
       return typed.challenge;

@@ -52,7 +52,7 @@ class _BouncingButtonState extends State<BouncingButton> {
   Widget build(BuildContext context) {
     final reduceMotion = KeroseneMotion.reduceMotion(context);
     final body = AnimatedScale(
-      scale: _pressed && !reduceMotion ? 0.96 : 1.0,
+      scale: _pressed && !reduceMotion ? KeroseneMotion.pressScale : 1.0,
       duration: KeroseneMotion.duration(context, KeroseneMotion.fast),
       curve: KeroseneMotion.standard,
       child: widget.child,

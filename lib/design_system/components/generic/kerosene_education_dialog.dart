@@ -3,16 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/buttons/app_button.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Visual tone for education / event dialogs on the dark home surface.
-enum KeroseneEducationTone {
-  info,
-  success,
-  warning,
-  security,
-}
+enum KeroseneEducationTone { info, success, warning, security }
 
 /// Shared dark education dialog (TOTP tips, receive confirmations, etc.).
 class KeroseneEducationDialog extends StatelessWidget {
@@ -101,7 +97,7 @@ class KeroseneEducationDialog extends StatelessWidget {
     return switch (tone) {
       KeroseneEducationTone.success => KeroseneBrandTokens.success,
       KeroseneEducationTone.warning => KeroseneBrandTokens.warning,
-      KeroseneEducationTone.security => const Color(0xFF7DD3FC),
+      KeroseneEducationTone.security => AppColors.securityAccent,
       KeroseneEducationTone.info => KeroseneBrandTokens.info,
     };
   }
@@ -121,11 +117,9 @@ class KeroseneEducationDialog extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF121214),
+                  color: AppColors.educationSurface,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: accent.withValues(alpha: 0.28),
-                  ),
+                  border: Border.all(color: accent.withValues(alpha: 0.28)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.55),
@@ -243,10 +237,7 @@ class _BulletRow extends StatelessWidget {
           child: Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: accent,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
           ),
         ),
         const SizedBox(width: 10),
@@ -284,20 +275,20 @@ Future<bool?> showTotpEducationDialog(BuildContext context) {
   };
   final bullets = switch (lang) {
     'en' => const [
-        'Works offline — no SMS that can be intercepted',
-        'Required for sensitive actions and stronger account recovery',
-        'Takes about a minute to set up',
-      ],
+      'Works offline — no SMS that can be intercepted',
+      'Required for sensitive actions and stronger account recovery',
+      'Takes about a minute to set up',
+    ],
     'es' => const [
-        'Funciona sin conexión — sin SMS interceptables',
-        'Refuerza acciones sensibles y la recuperación de la cuenta',
-        'Se configura en cerca de un minuto',
-      ],
+      'Funciona sin conexión — sin SMS interceptables',
+      'Refuerza acciones sensibles y la recuperación de la cuenta',
+      'Se configura en cerca de un minuto',
+    ],
     _ => const [
-        'Funciona offline — sem SMS que possam ser interceptados',
-        'Reforça ações sensíveis e a recuperação da conta',
-        'Leva cerca de um minuto para ativar',
-      ],
+      'Funciona offline — sem SMS que possam ser interceptados',
+      'Reforça ações sensíveis e a recuperação da conta',
+      'Leva cerca de um minuto para ativar',
+    ],
   };
   final primary = switch (lang) {
     'en' => 'Enable TOTP',

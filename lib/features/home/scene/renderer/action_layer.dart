@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show homeSize;
@@ -35,28 +34,31 @@ class SceneActionLayer extends StatelessWidget {
 
     return BouncingButtonWrapper(
       onTap: () {
-        HapticFeedback.selectionClick();
         onAction?.call(cta.action);
       },
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: homeSize(16),
-          vertical: homeSize(10),
-        ),
-        decoration: BoxDecoration(
-          color: chipFill,
-          borderRadius: BorderRadius.circular(homeSize(20)),
-          border: Border.all(
-            color: chipBorder,
-            width: 0.5,
+      child: Semantics(
+        button: true,
+        label: cta.label,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: homeSize(16),
+            vertical: homeSize(10),
           ),
-        ),
-        child: Text(
-          cta.label,
-          style: AppTypography.label.copyWith(
-            color: labelColor,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
+          decoration: BoxDecoration(
+            color: chipFill,
+            borderRadius: BorderRadius.circular(homeSize(20)),
+            border: Border.all(
+              color: chipBorder,
+              width: 0.5,
+            ),
+          ),
+          child: Text(
+            cta.label,
+            style: AppTypography.label.copyWith(
+              color: labelColor,
+              fontWeight: AppTypography.w510,
+              fontSize: 13,
+            ),
           ),
         ),
       ),

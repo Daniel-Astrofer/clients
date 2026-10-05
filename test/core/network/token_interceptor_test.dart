@@ -82,7 +82,52 @@ void main() {
     });
   });
 
+  group('TokenInterceptor.isPublicAuthPath', () {
+    test('keeps PoW challenge free of stale bearer credentials', () {
+      expect(
+        TokenInterceptor.isPublicAuthPath('/auth/pow/challenge'),
+        isTrue,
+      );
+      expect(
+        TokenInterceptor.isPublicAuthPath(
+          'http://127.0.0.1:43123/auth/pow/challenge',
+        ),
+        isTrue,
+      );
+      expect(
+        TokenInterceptor.isPublicAuthPath('/kfe/dashboard'),
+        isFalse,
+      );
+    });
+  });
+
   group('TokenInterceptor.shouldInvalidateSessionForError', () {
+    test('keeps session while KFE authentication dependency is unavailable',
+        () {
+      expect(
+        TokenInterceptor.shouldInvalidateSessionForError(
+          statusCode: 503,
+          path: '/kfe/dashboard',
+          errorCode: 'SYS_500',
+          responseDataText:
+              '{"success":false,"message":"Authentication temporarily unavailable","errorCode":"SYS_500"}',
+          requestHadAuthorizationHeader: true,
+        ),
+        isFalse,
+      );
+      expect(
+        TokenInterceptor.shouldInvalidateSessionForError(
+          statusCode: 401,
+          path: '/kfe/dashboard',
+          errorCode: 'INVALID_SESSION',
+          responseDataText:
+              '{"success":false,"message":"invalid session","errorCode":"INVALID_SESSION"}',
+          requestHadAuthorizationHeader: true,
+        ),
+        isTrue,
+      );
+    });
+
     test('keeps session for KFE transaction authorization failures', () {
       expect(
         TokenInterceptor.shouldInvalidateSessionForError(

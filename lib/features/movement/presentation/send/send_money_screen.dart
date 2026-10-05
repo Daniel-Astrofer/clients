@@ -1,4 +1,6 @@
 // ignore_for_file: unused_import, unused_element, use_key_in_widget_constructors
+// architecture-allow-large-file: send-flow orchestration preserves deferred
+// imports, DI, and payment authorization callbacks.
 
 import 'dart:async';
 
@@ -26,14 +28,14 @@ import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent_parser.dart';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 import 'package:kerosene/features/movement/presentation/send/destination_capture_sheet.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
-import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
-import 'package:kerosene/features/movement/data/entities/withdraw_fee_quote_calculation.dart';
-import 'package:kerosene/features/movement/data/fee_tier_selection.dart';
+import 'package:kerosene/features/movement/domain/entities/fee_estimate.dart';
+import 'package:kerosene/features/movement/domain/entities/withdraw_fee_quote_calculation.dart';
+import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
 import 'package:kerosene/features/movement/kernel/routing/movement_flow_coordinator.dart';
 import 'package:kerosene/features/movement/kernel/presentation/movement_registry.dart';
 import 'package:kerosene/features/movement/kernel/routing/send_movement_gate.dart';
@@ -109,7 +111,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       ref.read(sendMoneyFlowProvider).value?.lockedRecipientAddress ?? '';
   set _lockedRecipientAddress(String value) =>
       ref.read(sendMoneyFlowProvider.notifier).updateDestination(
-            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis,
             lockedAddress: value,
           );
   String? _recentDestinationAddressForSave;
@@ -117,14 +119,14 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       ref.read(sendMoneyFlowProvider).value?.lockedAmountBtc ?? 0.0;
   set _lockedAmountBtc(double value) =>
       ref.read(sendMoneyFlowProvider.notifier).updateDestination(
-            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis,
             lockedAmount: value,
           );
   String? get _lockedRecipientLabel =>
       ref.read(sendMoneyFlowProvider).value?.lockedRecipientLabel;
   set _lockedRecipientLabel(String? value) =>
       ref.read(sendMoneyFlowProvider.notifier).updateDestination(
-            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis ?? null,
+            ref.read(sendMoneyFlowProvider).value?.destinationAnalysis,
             lockedLabel: value,
           );
   Wallet? get _selectedWallet =>
@@ -176,10 +178,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   int get _firstStep => 0;
 
   Animation<Offset> _slideFromRight(AnimationController controller) {
-    return Tween<Offset>(
-      begin: const Offset(1, 0),
-      end: Offset.zero,
-    ).animate(
+    return Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
       CurvedAnimation(
         parent: controller,
         curve: _navCurve,
@@ -634,10 +633,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   }
 
   Widget _buildInternalTopBar(BuildContext context) {
-    return InternalTopBar(
-      onBack: _handleBack,
-      textColor: internalText,
-    );
+    return InternalTopBar(onBack: _handleBack, textColor: internalText);
   }
 
   Widget _buildInternalPrimaryButton({
@@ -660,8 +656,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   Future<void> _handleContinue() async {
     if (!_ensureOnline()) return;
-    final insufficientBalanceMessage =
-        SendMoneyCopy.insufficientBalance(context);
+    final insufficientBalanceMessage = SendMoneyCopy.insufficientBalance(
+      context,
+    );
     final walletState = ref.read(walletProvider);
     final currentWallet = _resolveWallet(walletState);
     if (currentWallet == null) {
@@ -726,10 +723,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     if (ownColdOnchain != null) {
       // Internal UUID of own cold wallet → fund via on-chain address instead.
       destination = ownColdOnchain;
-    } else if (_isSameSourceWalletDestination(
-      currentWallet,
-      destination,
-    )) {
+    } else if (_isSameSourceWalletDestination(currentWallet, destination)) {
       // Only block sending to the *same* source wallet (true self-loop).
       // INTERNAL → CUSTODIAL_ONCHAIN (same user, different wallets) is allowed.
       setState(() => _destinationResolutionBusy = false);
@@ -784,19 +778,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         amountBtc: amountBtc,
       );
       if (feeQuote == null || feeQuote.isQuoteExpired) {
+        if (!mounted) return;
         setState(() => _destinationResolutionBusy = false);
-        SnackbarHelper.showError(
-          SendMoneyCopy.networkFeeUnavailable(context),
-        );
+        SnackbarHelper.showError(SendMoneyCopy.networkFeeUnavailable(context));
         return;
       }
     }
+    if (!mounted) return;
 
     if (destination.isOnChain && !feeQuote.isReadyForOnchainSubmit) {
       setState(() => _destinationResolutionBusy = false);
-      SnackbarHelper.showError(
-        SendMoneyCopy.networkFeeUnavailable(context),
-      );
+      SnackbarHelper.showError(SendMoneyCopy.networkFeeUnavailable(context));
       return;
     }
 
@@ -885,8 +877,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     required SendDestinationAnalysis destination,
     required double amountBtc,
   }) async {
-    final networkFeeUnavailableMessage =
-        SendMoneyCopy.networkFeeUnavailable(context);
+    final networkFeeUnavailableMessage = SendMoneyCopy.networkFeeUnavailable(
+      context,
+    );
 
     final caps = MovementCapability(
       wallet: wallet,
@@ -975,17 +968,72 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   List<Wallet> _eligibleSendWallets(WalletState walletState) {
     if (walletState is! WalletLoaded) return const [];
     final ids = _liveCapabilities?.eligibleSourceWalletIds;
-    final rail = _userSelectedRail ?? _liveResolvedIntent?.selectedRail;
+    final resolved = _liveResolvedIntent;
+    final selectedRail = _userSelectedRail;
+    final rails = selectedRail != null
+        ? <PaymentRail>[selectedRail]
+        : resolved == null || resolved.alternatives.isEmpty
+            ? <PaymentRail>[if (resolved != null) resolved.selectedRail]
+            : <PaymentRail>{
+                for (final option in resolved.alternatives) option.rail,
+              }.toList(growable: false);
     return walletState.wallets.where((wallet) {
       if (!wallet.isActive) return false;
-      if (ids != null) {
-        if (ids.isEmpty) return false;
+      // Older capability responses may omit eligibleSourceWallets. An
+      // empty list means that no backend restriction was supplied; keep
+      // the local rail/custody check as the source of truth in that case.
+      if (ids != null && ids.isNotEmpty) {
         if (!ids.contains(wallet.id) && !ids.contains(wallet.name)) {
           return false;
         }
       }
-      return walletMatchesSendRail(wallet, rail);
+      return rails.isEmpty
+          ? walletMatchesSendRail(wallet, null)
+          : rails.any((rail) => walletMatchesSendRail(wallet, rail));
     }).toList(growable: false);
+  }
+
+  void _setSelectedSendRail(PaymentRail rail) {
+    final current = _liveResolvedIntent;
+    setState(() {
+      _userSelectedRail = rail;
+      if (current == null) return;
+      _liveResolvedIntent = ResolvedPaymentIntent(
+        intent: current.intent,
+        source: current.source,
+        selectedRail: rail,
+        alternatives: current.alternatives
+            .map(
+              (option) => RailOption(
+                rail: option.rail,
+                title: option.title,
+                subtitle: option.subtitle,
+                recommended: option.rail == rail,
+              ),
+            )
+            .toList(growable: false),
+        destWalletId: current.destWalletId,
+        destOnchainAddress: current.destOnchainAddress,
+        explainWhy: current.explainWhy,
+        amountLocked: current.amountLocked,
+        blockers: current.blockers,
+      );
+    });
+  }
+
+  void _selectSendWallet(Wallet selected) {
+    final activeRail = _userSelectedRail ?? _liveResolvedIntent?.selectedRail;
+    PaymentRail? compatibleRail;
+    if (activeRail != null && !walletMatchesSendRail(selected, activeRail)) {
+      for (final option in _liveResolvedIntent?.alternatives ?? const []) {
+        if (walletMatchesSendRail(selected, option.rail)) {
+          compatibleRail = option.rail;
+          break;
+        }
+      }
+    }
+    if (compatibleRail != null) _setSelectedSendRail(compatibleRail);
+    setState(() => _selectedWallet = selected);
   }
 
   void _ensureSendWalletSelected(WalletState walletState) {
@@ -1000,9 +1048,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     // spendable custodial so cold/self-custody passphrase is opt-in via chip.
     Wallet? preferred;
     for (final wallet in wallets) {
-      if (wallet.spendable &&
-          !wallet.isColdWallet &&
-          !wallet.isSelfCustody) {
+      if (wallet.spendable && !wallet.isColdWallet && !wallet.isSelfCustody) {
         preferred = wallet;
         break;
       }
@@ -1045,7 +1091,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         .where(
           (d) =>
               d.kind == RecentTransactionDestinationKind.internal &&
-              isKeroseneUsername(d.address),
+              isValidInternalDestination(d.address),
         )
         .toList(growable: false);
     final analysis = _currentDestinationAnalysis();
@@ -1054,7 +1100,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       receiverController: _receiverController,
       analysis: analysis,
       recentDestinations: recentDestinations,
-      isLoading: _destinationResolutionBusy || _liveResolving,
+      // Background capability resolution must not hide the primary CTA; the
+      // explicit Continue action performs the authoritative resolution.
+      isLoading: _destinationResolutionBusy,
       canWizardBack: _currentStep > _firstStep,
       onLeading: _handleBack,
       onDestinationChanged: () {
@@ -1086,32 +1134,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       isLiveResolving: _liveResolving,
       liveResolveError: _liveResolveError,
       onRailSelected: (rail) {
-        setState(() {
-          _userSelectedRail = rail;
-          final current = _liveResolvedIntent;
-          if (current != null) {
-            _liveResolvedIntent = ResolvedPaymentIntent(
-              intent: current.intent,
-              source: current.source,
-              selectedRail: rail,
-              alternatives: current.alternatives
-                  .map(
-                    (o) => RailOption(
-                      rail: o.rail,
-                      title: o.title,
-                      subtitle: o.subtitle,
-                      recommended: o.rail == rail,
-                    ),
-                  )
-                  .toList(growable: false),
-              destWalletId: current.destWalletId,
-              destOnchainAddress: current.destOnchainAddress,
-              explainWhy: current.explainWhy,
-              amountLocked: current.amountLocked,
-              blockers: current.blockers,
-            );
-          }
-        });
+        _setSelectedSendRail(rail);
       },
       onContinue: () {
         final currentDestination = _receiverController.text.trim();
@@ -1225,8 +1248,10 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         _liveResolving = false;
         _liveResolvedIntent = null;
         _liveCapabilities = null;
-        _liveResolveError =
-            ErrorTranslator.translate(context.tr, error.toString());
+        _liveResolveError = ErrorTranslator.translate(
+          context.tr,
+          error.toString(),
+        );
       });
     }
   }
@@ -1259,8 +1284,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
       // Cold source: require local seed and on-chain destination only.
       if (_isColdSource(sourceWallet)) {
-        final hasSeed =
-            await ColdWalletKeyVault.instance.hasSeed(sourceWallet!.id.trim());
+        final hasSeed = await ColdWalletKeyVault.instance.hasSeed(
+          sourceWallet!.id.trim(),
+        );
         if (!mounted || editVersion != _destinationEditVersion) return;
         if (!hasSeed) {
           SnackbarHelper.showError(SendMoneyCopy.coldSeedMissing(context));
@@ -1287,8 +1313,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         }
         destination = _currentDestinationAnalysis();
       } else {
-        final resolvedDestination =
-            await _resolveDestinationForKfe(destination);
+        final resolvedDestination = await _resolveDestinationForKfe(
+          destination,
+        );
         if (resolvedDestination == null ||
             !mounted ||
             editVersion != _destinationEditVersion) {
@@ -1369,20 +1396,18 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   /// Rails the receiver can actually accept for this destination (no false LN).
   List<RailOption> _feasibleSendRailOptions(ResolvedPaymentIntent intent) {
-    return intent.alternatives
-        .where((option) {
-          return switch (option.rail) {
-            PaymentRail.lightning =>
-              looksLikeLightningRequest(intent.intent.normalizedValue) ||
-                  looksLikeLightningAddress(intent.intent.normalizedValue),
-            PaymentRail.internal ||
-            PaymentRail.onchain ||
-            PaymentRail.coldOnchain ||
-            PaymentRail.paymentLink =>
-              true,
-          };
-        })
-        .toList(growable: false);
+    return intent.alternatives.where((option) {
+      return switch (option.rail) {
+        PaymentRail.lightning =>
+          looksLikeLightningRequest(intent.intent.normalizedValue) ||
+              looksLikeLightningAddress(intent.intent.normalizedValue),
+        PaymentRail.internal ||
+        PaymentRail.onchain ||
+        PaymentRail.coldOnchain ||
+        PaymentRail.paymentLink =>
+          true,
+      };
+    }).toList(growable: false);
   }
 
   Future<PaymentRail?> _showCapabilitiesBottomSheet(
@@ -1432,7 +1457,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                   ),
                   SizedBox(height: 24),
                   Text(
-                    'Como deseja enviar?',
+                    context.tr.sendMethodTitle,
                     style: HomeTypography.heroTitle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 24,
@@ -1440,7 +1465,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Escolha o método de transferência compatível com este recebedor.',
+                    context.tr.sendMethodSubtitle,
                     textAlign: TextAlign.center,
                     style: AppTypography.inter(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1449,8 +1474,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                   ),
                   SizedBox(height: 24),
                   ...options.map((option) {
-                    final (title, subtitle, icon) =
-                        _sendRailPresentation(option);
+                    final (title, subtitle, icon) = _sendRailPresentation(
+                      option,
+                    );
                     final isRecommended =
                         option.rail == resolvedIntent.selectedRail ||
                             option.recommended;
@@ -1478,7 +1504,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                               children: [
                                 Icon(
                                   icon,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   size: 24,
                                 ),
                                 SizedBox(width: 16),
@@ -1490,7 +1518,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                                       Text(
                                         title,
                                         style: AppTypography.inter(
-                                          color: Theme.of(context).colorScheme.onSurface,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -1499,7 +1529,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                                       Text(
                                         subtitle,
                                         style: AppTypography.inter(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
                                           fontSize: 14,
                                         ),
                                       ),
@@ -1513,16 +1545,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      'Recomendado',
+                                      context.tr.recommendedLabel,
                                       style: AppTypography.inter(
-                                        color: Theme.of(context)
-                                            .scaffoldBackgroundColor,
+                                        color: Theme.of(
+                                          context,
+                                        ).scaffoldBackgroundColor,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -1892,8 +1925,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       wallets: wallets,
       onWalletSelected: (selected) {
         HapticFeedback.selectionClick();
-        setState(() => _selectedWallet = selected);
-        ref.read(sendMoneyFlowProvider.notifier).selectWallet(selected);
+        _selectSendWallet(selected);
       },
       destination: destination,
       destinationLabel: _currentRecipientLabel(),
@@ -2035,7 +2067,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     final result = await completer.future;
     if (!mounted) return;
-    if (result != null) {
+    if (result != null && result != false) {
       if (context.canPop()) {
         context.pop(result);
       } else {
@@ -2063,10 +2095,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     final btcUsd = ref.read(latestBtcPriceProvider);
     final btcEur = ref.read(btcEurPriceProvider);
     final btcBrl = ref.read(btcBrlPriceProvider);
-    final isPaymentLink = session.destination.isPaymentLink ||
-        _pendingPaymentLinkId != null;
-    final showFeeTiers =
-        session.amountLocked && session.destination.isOnChain;
+    final isPaymentLink =
+        session.destination.isPaymentLink || _pendingPaymentLinkId != null;
+    final showFeeTiers = session.amountLocked && session.destination.isOnChain;
 
     final args = await prepareSendPaymentReview(
       context: context,
@@ -2259,11 +2290,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       _amount.value = '0';
     });
     _scheduleLiveResolve();
-    // Skip Continue — resolve destination and go to amount when possible.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      unawaited(_continueFromDestinationStep(_currentDestinationAnalysis()));
-    });
   }
 
   String _resolveRecentInternalDestinationAddress(String toAddress) {
@@ -2326,9 +2352,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     }
 
     setState(() => _destinationResolutionBusy = true);
-    await _continueFromDestinationStep(
-      _currentDestinationAnalysis(),
-    );
+    await _continueFromDestinationStep(_currentDestinationAnalysis());
     if (mounted) {
       setState(() => _destinationResolutionBusy = false);
     }
@@ -2368,7 +2392,7 @@ class _LockedPaymentReviewSession {
 class _OfflineSendBanner extends StatelessWidget {
   final VoidCallback onRetry;
 
-  _OfflineSendBanner({required this.onRetry});
+  const _OfflineSendBanner({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -2386,7 +2410,7 @@ class _OfflineSendBanner extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    Icons.wifi_off_rounded,
+                    KeroseneIcons.wifiOff,
                     size: 18,
                     color: Theme.of(context).colorScheme.error,
                   ),

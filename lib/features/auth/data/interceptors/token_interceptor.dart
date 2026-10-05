@@ -6,7 +6,7 @@ import 'package:flutter/scheduler.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/session_invalidation_provider.dart';
-import '../../../../core/router/mobile_go_router.dart';
+import '../../../../app/router/mobile_go_router.dart';
 import '../../../../core/utils/device_helper.dart';
 import '../../../../core/utils/snackbar_helper.dart';
 import '../../../../core/l10n/l10n_extension.dart';
@@ -24,8 +24,8 @@ class TokenInterceptor extends QueuedInterceptor {
   /// falhem com 500/401 ao mesmo tempo)
   bool _redirecting = false;
 
-  /// Cache do último token usado com sucesso para evitar race conditions
-  /// entre saveToken assíncrono e requests KFE imediatas pós-onboarding.
+  /// Último token observado. Storage remains authoritative so signup/logout
+  /// cannot accidentally reuse this value after removing the session.
   String? _lastKnownGoodToken;
 
   TokenInterceptor({required this.localDataSource, required this.apiClient});
@@ -108,12 +108,38 @@ class TokenInterceptor extends QueuedInterceptor {
   static bool _isAuthRoute(String path) {
     return path.contains('/auth/login') ||
         path.contains('/auth/signup') ||
+        path.contains('/auth/pow/challenge') ||
         path.contains('/auth/passkey/') ||
         path.contains('/auth/hardware/');
   }
 
-  /// App entry PIN / security PIN endpoints and their factor error codes.
+  /// Routes that begin an unauthenticated authentication/onboarding flow.
+  ///
+  /// In particular, PoW is requested before an account exists.  A cached JWT
+  /// from a previous session must never be attached to this request: the Core
+  /// validates the bearer before issuing the one-time challenge and a revoked
+  /// token would make a valid signup look unavailable.
   @visibleForTesting
+  static bool isPublicAuthPath(String path) {
+    final requestPath = Uri.tryParse(path)?.path ?? path;
+    return requestPath.contains('/auth/login') ||
+        requestPath.contains('/auth/signup') ||
+        requestPath.contains('/auth/pow/challenge') ||
+        requestPath.contains('/auth/recovery/emergency/') ||
+        requestPath.contains('/auth/passkey/challenge') ||
+        requestPath.contains('/auth/passkey/verify') ||
+        requestPath.contains('/auth/passkey/onboarding/') ||
+        requestPath.contains('/auth/passkey/login/') ||
+        requestPath.contains('/auth/passkey/register/onboarding') ||
+        requestPath.contains('/auth/device-key/challenge') ||
+        requestPath.contains('/auth/device-key/verify') ||
+        requestPath.contains('/auth/device-key/onboarding/') ||
+        requestPath.contains('/auth/hardware/challenge') ||
+        requestPath.contains('/auth/hardware/verify') ||
+        requestPath.contains('/auth/hardware/register/onboarding');
+  }
+
+  /// App entry PIN / security PIN endpoints and their factor error codes.
   static bool _isAppPinFactorFailure({
     required String path,
     required String errorCode,
@@ -167,17 +193,18 @@ class TokenInterceptor extends QueuedInterceptor {
   }
 
   Future<String?> _getTokenForRequest({required bool waitForCredential}) async {
-    // Reuse last known good token immediately — avoids race between
-    // async saveToken and immediate KFE requests post-onboarding.
-    if (_lastKnownGoodToken != null && _isUsableJwt(_lastKnownGoodToken)) {
-      return _lastKnownGoodToken!.trim();
-    }
+    // Storage is authoritative. Signup/logout deliberately remove the
+    // persisted token; returning an old in-memory JWT here would make the
+    // next private request fail with INVALID_SESSION after a new-account flow.
     final attempts = waitForCredential ? _sessionCredentialWarmupAttempts : 1;
     for (var attempt = 0; attempt < attempts; attempt++) {
       final token = await localDataSource.getToken();
       if (_isUsableJwt(token)) {
         _lastKnownGoodToken = token!.trim();
         return _lastKnownGoodToken;
+      }
+      if (attempt == attempts - 1) {
+        _lastKnownGoodToken = null;
       }
       if (!waitForCredential || attempt == attempts - 1) {
         break;
@@ -197,20 +224,7 @@ class TokenInterceptor extends QueuedInterceptor {
       // Public auth routes must not receive an Authorization header.
       // Some flows use sessionId or username/challenge only, and injecting a
       // stale token can force an unnecessary JWT failure before auth starts.
-      final isOnboardingOrAuth = path.contains('/auth/login') ||
-          path.contains('/auth/signup') ||
-          path.contains('/auth/recovery/emergency/') ||
-          path.contains('/auth/passkey/challenge') ||
-          path.contains('/auth/passkey/verify') ||
-          path.contains('/auth/passkey/onboarding/') ||
-          path.contains('/auth/passkey/login/') ||
-          path.contains('/auth/passkey/register/onboarding') ||
-          path.contains('/auth/device-key/challenge') ||
-          path.contains('/auth/device-key/verify') ||
-          path.contains('/auth/device-key/onboarding/') ||
-          path.contains('/auth/hardware/challenge') ||
-          path.contains('/auth/hardware/verify') ||
-          path.contains('/auth/hardware/register/onboarding');
+      final isOnboardingOrAuth = isPublicAuthPath(path);
 
       // 1. Injetar Token se não for rota de Auth/Onboarding e se não estiver presente
       if (!isOnboardingOrAuth && options.headers['Authorization'] == null) {
@@ -288,9 +302,7 @@ class TokenInterceptor extends QueuedInterceptor {
       await localDataSource.saveToken(cleanToken);
       _lastKnownGoodToken = cleanToken;
       try {
-        apiClient.ref
-            .read(sessionCredentialVersionProvider.notifier)
-            .bump();
+        apiClient.ref.read(sessionCredentialVersionProvider.notifier).bump();
       } catch (_) {}
     }
 

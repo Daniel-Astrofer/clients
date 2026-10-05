@@ -32,16 +32,16 @@ import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 import 'package:kerosene/shared/widgets/bouncing_button_wrapper.dart';
 
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
-import 'package:kerosene/features/movement/data/entities/payment_link.dart';
-import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart'
     deferred as deposits;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
 import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'
     deferred as receive;
-import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'

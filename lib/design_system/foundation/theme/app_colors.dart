@@ -252,7 +252,9 @@ class AppColors {
   static const Color voidColor = Color(0xFF030404);
 
   // ─── Core Colors ─────────────────────────────────────
-  static const Color primary = Color(0xFFD6A84F); // Bitcoin gold (slightly muted)
+  static const Color primary = Color(
+    0xFFD6A84F,
+  ); // Bitcoin gold (slightly muted)
   static const Color secondary = Color(0xFF4B8BFF); // Institutional blue
   static const Color accent = Color(0xFF22C7A9); // Teal accent
 
@@ -267,6 +269,22 @@ class AppColors {
   static const Color error = Color(0xFFFF5A67);
   static const Color warning = Color(0xFFFFC46B);
   static const Color success = Color(0xFF3EDB9B);
+
+  // Specialized semantic tokens kept here so feature widgets do not embed
+  // platform or surface-specific hex values inline.
+  static const Color captureAction = Color(0xFF0A84FF);
+  static const Color captureBusy = Color(0xFF555555);
+  static const Color walletChipBackground = Color(0xFF2C2C2E);
+  static const Color walletChipMuted = Color(0xFF8E8E93);
+  static const Color walletChipDivider = Color(0xFF3A3A3C);
+  static const Color calculatorLightSurface = Color(0xFFF2F4F7);
+  static const Color sendFlowLightBorderStrong = Color(0xFFC5C8C3);
+  static const Color securityAccent = Color(0xFF7DD3FC);
+  static const Color educationSurface = Color(0xFF121214);
+  static const Color financialHubActionSurface = Color(0xFF1E1E2C);
+  static const Color activityIconWell = Color(0xFF2A2A2E);
+  static const Color activityStatusTrack = Color(0xFF9AA0A8);
+  static const Color brushedMetalLightSurface = Color(0xFFF2F4F7);
 
   // ─── Neutral Colors ──────────────────────────────────
   static const Color white = Colors.white;
@@ -325,18 +343,10 @@ class AppColors {
   static const LinearGradient onboardingBackgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF08090A),
-      Color(0xFF10171B),
-      Color(0xFF15120A),
-    ],
+    colors: [Color(0xFF08090A), Color(0xFF10171B), Color(0xFF15120A)],
   );
 
   static TextStyle heading({required double size, Color color = snow}) {
-    return TextStyle(
-      fontSize: size,
-      fontWeight: FontWeight.bold,
-      color: color,
-    );
+    return TextStyle(fontSize: size, fontWeight: FontWeight.bold, color: color);
   }
 }

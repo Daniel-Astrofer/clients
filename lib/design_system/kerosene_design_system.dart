@@ -1,4 +1,4 @@
-library kerosene_design_system;
+library;
 
 // Foundation - Theme
 export 'foundation/theme/app_theme.dart';
@@ -26,6 +26,7 @@ export 'foundation/assets/motion/kerosene_motion.dart';
 
 // Foundation - Interaction
 export 'foundation/interaction/kerosene_interaction.dart';
+export 'foundation/interaction/kerosene_pressable.dart';
 
 // Components
 export 'components/buttons/app_button.dart';

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:bip39/bip39.dart' as bip39;
+// The package does not expose its English wordlist through the public API.
+// ignore: implementation_imports
 import 'package:bip39/src/wordlists/english.dart' as bip39_english;
 import 'package:crypto/crypto.dart';
 

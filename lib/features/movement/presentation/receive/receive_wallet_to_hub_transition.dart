@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_wallet_sheet.dart';
 
-const Duration _receiveWalletToHubDuration = Duration(milliseconds: 520);
-const Curve _receiveWalletToHubCurve = Curves.easeInOutCubic;
+const Duration _receiveWalletToHubDuration = KeroseneMotion.receiveWalletToHub;
+const Curve _receiveWalletToHubCurve = KeroseneMotion.standardInOut;
 
 /// Opens the receive method hub with a wallet already chosen (skips picker).
 Future<void> pushReceiveHub({
@@ -53,10 +54,7 @@ Future<void> pushReceiveWalletToHub({
     enableDrag: true,
     isDismissible: true,
     builder: (context) {
-      return _ReceiveWalletToHubSheet(
-        wallets: wallets,
-        amountBtc: amountBtc,
-      );
+      return _ReceiveWalletToHubSheet(wallets: wallets, amountBtc: amountBtc);
     },
   );
 }
@@ -97,21 +95,19 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
     );
     _sheetFade = CurvedAnimation(
       parent: _transitionController,
-      curve: const Interval(0, 0.34, curve: Curves.easeIn),
+      curve: const Interval(0, 0.34, curve: KeroseneMotion.linearIn),
     );
-    _hubSlide = Tween<Offset>(
-      begin: const Offset(0, 0.12),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _transitionController,
-        curve: const Interval(0.08, 1, curve: _receiveWalletToHubCurve),
-      ),
-    );
+    _hubSlide = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _transitionController,
+            curve: const Interval(0.08, 1, curve: _receiveWalletToHubCurve),
+          ),
+        );
     _hubFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _transitionController,
-        curve: const Interval(0.26, 0.92, curve: Curves.easeOut),
+        curve: const Interval(0.26, 0.92, curve: KeroseneMotion.linearOut),
       ),
     );
   }
@@ -160,8 +156,9 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
           final expand = _selectedWallet == null ? 0.0 : _expand.value;
           final sheetHeight =
               contentHeight + (expandedHeight - contentHeight) * expand;
-          final sheetOpacity =
-              _selectedWallet == null ? 1.0 : (1 - _sheetFade.value);
+          final sheetOpacity = _selectedWallet == null
+              ? 1.0
+              : (1 - _sheetFade.value);
 
           return Align(
             alignment: Alignment.bottomCenter,

@@ -6,4 +6,4 @@ export 'amount_entry_surface.dart';
 export 'confirmation_surface.dart';
 export 'send_flow_chrome.dart';
 export 'send_flow_theme.dart';
-export 'wallet_expand_chip.dart';
+export 'package:kerosene/app/widgets/wallet_expand_chip.dart';

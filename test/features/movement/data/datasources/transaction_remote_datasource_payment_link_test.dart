@@ -50,10 +50,14 @@ void main() {
     expect(apiClient.postedData?['rail'], 'ONCHAIN');
     expect(apiClient.postedData?['issueFreshAddress'], isTrue);
     expect(link.paymentRail, 'ONCHAIN');
-    expect(link.depositAddress, 'bcrt1qpaymentrequest');
+    expect(link.depositAddress, 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x');
     expect(link.destinationHash, isNull);
     expect(link.locked, isFalse);
-    expect(link.paymentUri, isNull);
+    expect(
+      link.paymentUri,
+      'bitcoin:tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x'
+      '?amount=0.0001&label=Conta+principal',
+    );
   });
 
   test('maps LIGHTNING payment request bolt11 into shareable payload',
@@ -143,7 +147,7 @@ class _PaymentRequestApiClient implements ApiClient {
             ? 'kerosene:wallet:$walletId'
             : lightning
                 ? ''
-                : 'bcrt1qpaymentrequest',
+                : 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x',
         if (lightning)
           'paymentRequest': 'lntb100n1pkerosenetestinvoiceforfrontend',
         if (lightning) 'paymentHash': 'hash-lightning-1',

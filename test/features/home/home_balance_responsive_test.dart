@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/providers/shader_provider.dart';
+import 'package:kerosene/core/providers/shared_preferences_provider.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/home/presentation/widgets/animated_balance_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -45,6 +47,11 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        latestBtcPriceProvider.overrideWith((ref) => 65000),
+        btcEurPriceProvider.overrideWith((ref) => 60000),
+        btcBrlPriceProvider.overrideWith((ref) => 350000),
+        sharedPreferencesProvider
+            .overrideWithValue(await SharedPreferences.getInstance()),
         metalShaderProvider.overrideWith(
           (ref) async =>
               throw UnsupportedError('Shader disabled in widget test'),

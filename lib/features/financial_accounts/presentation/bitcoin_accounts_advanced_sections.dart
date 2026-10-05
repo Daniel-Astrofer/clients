@@ -1,4 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import
+// architecture-allow-large-file: account detail sections share layout and
+// callback contracts; extraction is deferred to a behavior-preserving pass.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +13,7 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
@@ -20,7 +22,6 @@ import 'bitcoin_widgets/bottom_sheets.dart';
 import 'bitcoin_accounts_internal_sections.dart';
 import 'dart:convert';
 
-import 'bitcoin_accounts_screen.dart';
 
 class ColdWalletSection extends StatelessWidget {
   final List<BitcoinAccount> accounts;

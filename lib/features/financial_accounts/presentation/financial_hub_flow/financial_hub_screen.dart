@@ -15,7 +15,7 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_header.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_wallet_support.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/internal_account_creation_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/wallet_setup_hub_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/widgets/revolut_account_card.dart';
@@ -48,8 +48,9 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
     final bottom = AppPrimaryNavigationBar.scaffoldBottomClearance(context);
     final responsive = context.responsive;
     final authState = ref.watch(authControllerProvider);
-    final userDisplayName =
-        authState is AuthAuthenticated ? authState.user.name.trim() : '';
+    final userDisplayName = authState is AuthAuthenticated
+        ? authState.user.name.trim()
+        : '';
 
     return accounts.when(
       loading: () => TorNavigationLoadingScreen(),
@@ -57,9 +58,24 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Center(
-            child: Text(
-              'Erro ao carregar contas financeiras',
-              style: FinancialHubTokens.body(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.tr.bitcoinAccountsErrorMessage,
+                  style: FinancialHubTokens.body(),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () =>
+                      ref.read(bitcoinAccountsProvider.notifier).refresh(),
+                  child: Text(context.tr.tryAgain),
+                ),
+                TextButton(
+                  onPressed: _handleBack,
+                  child: Icon(KeroseneIcons.back),
+                ),
+              ],
             ),
           ),
         ),
@@ -85,11 +101,14 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
           );
         }
 
-        final selectedIndex =
-            _selectedAccountIndex.clamp(0, visibleAccounts.length - 1);
+        final selectedIndex = _selectedAccountIndex.clamp(
+          0,
+          visibleAccounts.length - 1,
+        );
         final selectedAccount = visibleAccounts[selectedIndex];
-        final balanceAmount =
-            formatSats(bitcoinAccountVisibleBalance(selectedAccount));
+        final balanceAmount = formatSats(
+          bitcoinAccountVisibleBalance(selectedAccount),
+        );
 
         final requestsAsync = selectedAccount.isWatchOnly
             ? const AsyncValue<List<ReceivingRequestView>>.data([])
@@ -101,7 +120,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
 
         final currentReceiveRequest =
             _receiveAddressOverrides[selectedAccount.id] ??
-                firstBitcoinReceiveRequest(requestsAsync);
+            firstBitcoinReceiveRequest(requestsAsync);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -110,8 +129,9 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
               SafeArea(
                 child: RefreshIndicator(
                   color: Theme.of(context).colorScheme.onSurface,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                   onRefresh: () =>
                       ref.read(bitcoinAccountsProvider.notifier).refresh(),
                   child: ListView(
@@ -139,11 +159,11 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    'Saldo Atual',
+                                    context.tr.financialHubCurrentBalance,
                                     style: FinancialHubTokens.titleH2(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -165,9 +185,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                             const SizedBox(height: 20),
                             CircularActionBar(
                               onAddWalletTap: () {
-                                unawaited(
-                                  _openAddWalletFlow(visibleAccounts),
-                                );
+                                unawaited(_openAddWalletFlow(visibleAccounts));
                               },
                               onManageTap: () {
                                 WalletManageBottomSheet.show(
@@ -183,11 +201,6 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                               },
                             ),
                             const SizedBox(height: 24),
-                            Text(
-                              'Transações',
-                              style: FinancialHubTokens.titleH1(fontSize: 20),
-                            ),
-                            const SizedBox(height: 12),
                             account_details.FocusedAccountHistory(
                               account: selectedAccount,
                               transactionsAsync: txAsync,
@@ -262,7 +275,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Adicionar outra carteira',
+                  context.tr.financialHubAddWallet,
                   style: FinancialHubTokens.titleH2(fontSize: 20),
                 ),
                 const SizedBox(height: 16),
@@ -284,7 +297,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                     KeroseneIcons.security,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text('Cold Wallet'),
+                  title: Text(context.tr.bitcoinAccountsColdWalletSection),
                   onTap: () {
                     HapticFeedback.selectionClick();
                     Navigator.of(context).pop(_AddWalletChoice.cold);

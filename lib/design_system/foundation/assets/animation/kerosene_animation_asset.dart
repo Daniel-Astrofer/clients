@@ -3,6 +3,8 @@
 /// The design system owns names and use-cases before runtime packages are added.
 /// Rive/Lottie wrappers should consume this enum instead of raw asset paths.
 enum KeroseneAnimationAsset {
+  brandLogo,
+  brandMark,
   successCheck,
   pendingConfirmation,
   emptyWallet,
@@ -20,6 +22,9 @@ enum KeroseneAnimationAsset {
 extension KeroseneAnimationAssetPath on KeroseneAnimationAsset {
   String get path {
     return switch (this) {
+      KeroseneAnimationAsset.brandLogo =>
+        'assets/logo/kerosene-logo-white.json',
+      KeroseneAnimationAsset.brandMark => 'assets/logo/kerosene-k-logo.json',
       KeroseneAnimationAsset.successCheck =>
         'assets/animations/lottie/success_check.json',
       KeroseneAnimationAsset.pendingConfirmation =>

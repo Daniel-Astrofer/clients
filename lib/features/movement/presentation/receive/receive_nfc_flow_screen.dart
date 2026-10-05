@@ -1,3 +1,5 @@
+// architecture-allow-large-file: NFC flow state and platform-channel timing
+// remain together to preserve the native request lifecycle.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -12,8 +14,7 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/money_display.dart';
-import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
-import 'package:kerosene/core/utils/snackbar_helper.dart';
+import 'package:kerosene/features/movement/kernel/intent/nfc_payment_request_codec.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
@@ -77,6 +78,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   bool _sessionActive = false;
   bool _writeCompleted = false;
   String _nfcStatus = 'Preparando a solicitação NFC';
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -84,7 +86,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     _pulseController = AnimationController(
       vsync: this,
       duration: KeroseneMotion.ceremonial,
-    )..repeat();
+    );
     _detectedMethod = _methodForRail(widget.paymentRail);
     unawaited(_ensureNfcCompatible());
   }
@@ -106,10 +108,17 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
         await (widget.supportsNfc ?? keroseneDeviceSupportsNfc)();
     if (!mounted) return;
     if (!compatible) {
-      Navigator.of(context).maybePop();
+      setState(() {
+        _checkingCompatibility = false;
+        _hasError = true;
+        _nfcStatus = context.tr.nfcUnavailableDevice;
+      });
       return;
     }
-    setState(() => _checkingCompatibility = false);
+    setState(() {
+      _checkingCompatibility = false;
+      _hasError = false;
+    });
     unawaited(_startNfcWriteSession());
   }
 
@@ -218,7 +227,9 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     _completedAt = DateTime.now();
     HapticFeedback.mediumImpact();
     _setStage(ReceiveNfcStage.found);
-    _timers.add(Timer(KeroseneMotion.calm, () {
+    _pulseController.stop();
+    _timers.add(Timer(
+        KeroseneMotion.duration(context, KeroseneMotion.statusChange), () {
       _setStage(ReceiveNfcStage.success);
     }));
   }
@@ -229,11 +240,11 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     }
     _sessionActive = false;
     if (!mounted) return;
-    setState(() => _nfcStatus = message);
-    SnackbarHelper.showError(message);
-    _timers.add(Timer(KeroseneMotion.ceremonial, () {
-      if (mounted) Navigator.of(context).maybePop();
-    }));
+    _pulseController.stop();
+    setState(() {
+      _nfcStatus = message;
+      _hasError = true;
+    });
   }
 
   ReceiveNfcMethod _resolveDetectedMethod(ReceiveNfcMethod method) {
@@ -286,6 +297,36 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_hasError) {
+      return ReceiveFlowScreenShell(
+        onBack: () => Navigator.of(context).maybePop(),
+        title: context.tr.nfcScannerTitle,
+        child: Center(
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(KeroseneIcons.warning,
+                      size: 40, color: Theme.of(context).colorScheme.error),
+                  const SizedBox(height: 20),
+                  Semantics(
+                      liveRegion: true,
+                      child: Text(_nfcStatus, textAlign: TextAlign.center)),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                      onPressed: () {
+                        setState(() {
+                          _hasError = false;
+                          _checkingCompatibility = true;
+                        });
+                        unawaited(_ensureNfcCompatible());
+                      },
+                      child: Text(context.tr.tryAgain)),
+                  TextButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      child: Text(context.tr.cancel)),
+                ]))),
+      );
+    }
     if (_checkingCompatibility) {
       return const Center(child: TorLoadingDots());
     }

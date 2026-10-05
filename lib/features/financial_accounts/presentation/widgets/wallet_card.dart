@@ -7,9 +7,8 @@ import 'package:kerosene/core/utils/safe_display_text.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 
-import 'package:kerosene/shared/widgets/brushed_metal_container.dart';
-
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 const _bitcoinGlyph = '₿';
 const _bitcoinNetworkLabel = 'BITCOIN';
@@ -43,53 +42,7 @@ class WalletCard extends StatefulWidget {
   }
 }
 
-class _WalletCardState extends State<WalletCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _rotationController;
-
-  @override
-  void initState() {
-    super.initState();
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: KeroseneMotion.walletLoop,
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncRotationState();
-  }
-
-  @override
-  void didUpdateWidget(covariant WalletCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isSelected != oldWidget.isSelected) {
-      _syncRotationState();
-    }
-  }
-
-  bool get _shouldRotate =>
-      widget.isSelected &&
-      TickerMode.valuesOf(context).enabled &&
-      !MediaQuery.disableAnimationsOf(context);
-
-  void _syncRotationState() {
-    if (_shouldRotate) {
-      _rotationController.repeat();
-    } else {
-      _rotationController.stop();
-      _rotationController.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _rotationController.dispose();
-    super.dispose();
-  }
-
+class _WalletCardState extends State<WalletCard> {
   void _showCardMenu(BuildContext context) {
     if (widget.onMenuAction == null) return;
 
@@ -161,8 +114,7 @@ class _WalletCardState extends State<WalletCard>
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width * 0.85;
     final height = width / 1.65;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
+    final surface = HomeSurfaceTheme.of(context);
     final shineY = widget.tilt * -1.5;
 
     return Container(
@@ -175,66 +127,37 @@ class _WalletCardState extends State<WalletCard>
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Positioned.fill(
-              child: RepaintBoundary(
-                child: AnimatedBuilder(
-                  animation: _rotationController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      painter: _NeonGlowPainter(
-                        color: primaryColor,
-                        rotation: _shouldRotate ? _rotationController.value : 0,
-                        intensity: widget.isSelected ? 1.0 : 0.4,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
             Container(
               width: width,
               height: height,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppSpacing.md),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.2),
-                    blurRadius: widget.isSelected ? 24 : 14,
-                    offset: Offset(0, 8 + (widget.tilt * 10)),
-                  ),
-                ],
+                color: surface.card,
+                borderRadius:
+                    BorderRadius.circular(HomeSurfaceTokens.radiusCard),
                 border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.2),
-                  width: 1.5,
+                  color: widget.isSelected
+                      ? surface.textPrimary.withValues(alpha: 0.62)
+                      : surface.panelBorder,
+                  width: widget.isSelected ? 1.25 : 1,
                 ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSpacing.md - 1.5),
+                borderRadius:
+                    BorderRadius.circular(HomeSurfaceTokens.radiusCard - 1),
                 child: Stack(
                   children: [
-                    // ── Raw Metal Shader (sem filtros acima) ──
+                    // A quiet carbon surface keeps wallet selection aligned
+                    // with the rest of the OLED financial surfaces.
                     Positioned.fill(
-                      child: BrushedMetalContainer(
-                        width: width,
-                        height: height,
-                        // Ambient metal time only when this card is selected.
-                        animate: widget.isSelected,
-                        baseColor: Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withValues(alpha: 0.85),
-                        borderRadius: AppSpacing.md,
-                      ),
+                      child: ColoredBox(color: surface.card),
                     ),
 
                     Positioned(
                       right: AppSpacing.lg,
                       bottom: AppSpacing.lg,
                       child: Icon(KeroseneIcons.lightning,
-                          color: primaryColor.withValues(alpha: 0.4), size: 40),
+                          color: surface.textMuted.withValues(alpha: 0.45),
+                          size: 32),
                     ),
 
                     // ── Shine on selection ──
@@ -284,38 +207,27 @@ class _WalletCardState extends State<WalletCard>
                                 padding: EdgeInsets.symmetric(
                                     horizontal: AppSpacing.sm, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.1)),
+                                  color: surface.surfaceDim,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border:
+                                      Border.all(color: surface.surfaceBorder),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(_bitcoinGlyph,
                                         style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                            color: HomeSurfaceTokens.amber,
                                             fontSize: 18,
-                                            fontWeight: FontWeight.bold)),
+                                            fontWeight: AppTypography.w590)),
                                     SizedBox(width: 4),
                                     Text(_bitcoinNetworkLabel,
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelSmall!
                                             .copyWith(
-                                                fontWeight: FontWeight.w900,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.5))),
+                                                fontWeight: AppTypography.w510,
+                                                color: surface.textMuted)),
                                   ],
                                 ),
                               ),
@@ -326,12 +238,11 @@ class _WalletCardState extends State<WalletCard>
                             children: [
                               Text(
                                 widget.wallet.name.toUpperCase(),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium!
-                                    .copyWith(
-                                        letterSpacing: 1,
-                                        fontWeight: FontWeight.w900),
+                                style: AppTypography.h3Small.copyWith(
+                                  color: surface.textPrimary,
+                                  letterSpacing: -0.2,
+                                  fontWeight: AppTypography.w510,
+                                ),
                               ),
                               SizedBox(height: 4),
                               Row(
@@ -340,17 +251,10 @@ class _WalletCardState extends State<WalletCard>
                                     child: Text(
                                       widget
                                           ._shortAddress(widget.wallet.address),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall!
-                                          .copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.5),
-                                            fontFamily: AppTypography
-                                                .financialFontFamily,
-                                          ),
+                                      style: AppTypography.financial(
+                                        fontSize: 12,
+                                        color: surface.textMuted,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -362,15 +266,9 @@ class _WalletCardState extends State<WalletCard>
                                       widget.onAddressCopied?.call();
                                     },
                                     icon: Icon(KeroseneIcons.copy,
-                                        size: 14,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface),
+                                        size: 14, color: surface.textSecondary),
                                     style: IconButton.styleFrom(
-                                      backgroundColor: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.1),
+                                      backgroundColor: surface.surfaceDim,
                                       padding: const EdgeInsets.all(8),
                                     ),
                                   ),
@@ -400,66 +298,5 @@ class GradientTranslation extends GradientTransform {
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
     return Matrix4.translationValues(
         offset.dx * bounds.width, offset.dy * bounds.height, 0.0);
-  }
-}
-
-class _NeonGlowPainter extends CustomPainter {
-  final Color color;
-  final double rotation;
-  final double intensity;
-
-  _NeonGlowPainter(
-      {required this.color, required this.rotation, this.intensity = 1.0});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final RRect rRect =
-        RRect.fromRectAndRadius(rect, const Radius.circular(24));
-
-    // Soft aura without MaskFilter.blur (avoids saveLayer / blur GPU pass).
-    canvas.drawRRect(
-      rRect,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7.0
-        ..color = color.withValues(alpha: 0.12 * intensity)
-        ..isAntiAlias = true,
-    );
-    canvas.drawRRect(
-      rRect,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.0
-        ..color = color.withValues(alpha: 0.28 * intensity)
-        ..isAntiAlias = true,
-    );
-
-    final beamPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0
-      ..strokeCap = StrokeCap.round
-      ..isAntiAlias = true;
-
-    final Gradient beamGradient = SweepGradient(
-      center: Alignment.center,
-      colors: [
-        color.withValues(alpha: 0.0),
-        color.withValues(alpha: 0.8 * intensity),
-        color.withValues(alpha: 0.0)
-      ],
-      stops: const [0.4, 0.5, 0.6],
-      transform: GradientRotation(rotation * 2 * 3.14159),
-    );
-
-    beamPaint.shader = beamGradient.createShader(rect);
-    canvas.drawRRect(rRect, beamPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _NeonGlowPainter oldDelegate) {
-    return oldDelegate.color != color ||
-        oldDelegate.rotation != rotation ||
-        oldDelegate.intensity != intensity;
   }
 }

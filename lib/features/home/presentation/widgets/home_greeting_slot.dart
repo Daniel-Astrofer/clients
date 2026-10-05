@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -48,8 +49,9 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     }
     notifier.setPlaying(
       hideActions: p.hideActionsWhilePlaying,
-      pushDownBalancePx:
-          p.pushDownBalanceWhilePlaying ? p.pushDownBalancePx : 0,
+      pushDownBalancePx: p.pushDownBalanceWhilePlaying
+          ? p.pushDownBalancePx
+          : 0,
       compressLayout: p.compressLayoutWhilePlaying,
     );
   }
@@ -87,36 +89,39 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
         ? current.durationMs
         : greeting.rotation.intervalMs;
 
-    _advanceTimer = Timer(Duration(milliseconds: dwell.clamp(1000, 20000)), () {
-      if (!mounted) return;
-      final latest = ref.read(homeSurfaceProvider).header.greeting;
-      final msgs = latest.activeMessages;
-      if (msgs.isEmpty) {
-        setState(() => _finishedOnce = true);
-        _publishPlayback(greeting: latest, playing: false);
-        return;
-      }
-
-      if (once) {
-        if (_index >= msgs.length - 1) {
-          setState(() {
-            _finishedOnce = true;
-            _index = 0;
-          });
-          if (latest.presentation.restoreActionsAfterPlay) {
-            _publishPlayback(greeting: latest, playing: false);
-          }
+    _advanceTimer = Timer(
+      KeroseneMotion.fromMilliseconds(dwell.clamp(1000, 20000).toInt()),
+      () {
+        if (!mounted) return;
+        final latest = ref.read(homeSurfaceProvider).header.greeting;
+        final msgs = latest.activeMessages;
+        if (msgs.isEmpty) {
+          setState(() => _finishedOnce = true);
+          _publishPlayback(greeting: latest, playing: false);
           return;
         }
-        setState(() => _index += 1);
-        _scheduleAdvance(latest, once: true);
-        return;
-      }
 
-      // LOOP
-      setState(() => _index = (_index + 1) % msgs.length);
-      _scheduleAdvance(latest, once: false);
-    });
+        if (once) {
+          if (_index >= msgs.length - 1) {
+            setState(() {
+              _finishedOnce = true;
+              _index = 0;
+            });
+            if (latest.presentation.restoreActionsAfterPlay) {
+              _publishPlayback(greeting: latest, playing: false);
+            }
+            return;
+          }
+          setState(() => _index += 1);
+          _scheduleAdvance(latest, once: true);
+          return;
+        }
+
+        // LOOP
+        setState(() => _index = (_index + 1) % msgs.length);
+        _scheduleAdvance(latest, once: false);
+      },
+    );
   }
 
   @override
@@ -128,7 +133,8 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     _syncSession(greeting);
 
     final active = greeting.activeMessages;
-    final playing = !_finishedOnce &&
+    final playing =
+        !_finishedOnce &&
         active.isNotEmpty &&
         (greeting.mode == HomeGreetingMode.ephemeral ||
             greeting.mode == HomeGreetingMode.ticker ||
@@ -136,8 +142,9 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
             greeting.isEphemeralOnce);
 
     final showMarket = playing && active.isNotEmpty;
-    final message =
-        showMarket ? active[_index.clamp(0, active.length - 1)] : null;
+    final message = showMarket
+        ? active[_index.clamp(0, active.length - 1)]
+        : null;
     final text = showMarket
         ? message!.resolveText(widget.userName)
         : _localizedTimeOfDay(context, widget.userName, greeting.fallback);
@@ -157,9 +164,9 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     );
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 320),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
+      duration: KeroseneMotion.homeGreeting,
+      switchInCurve: KeroseneMotion.standard,
+      switchOutCurve: KeroseneMotion.exit,
       child: Text(
         text,
         key: ValueKey(text),

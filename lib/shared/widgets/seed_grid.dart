@@ -120,9 +120,7 @@ class _SeedGridState extends State<SeedGrid> {
             length.toString(),
             style: TextStyle(
               fontFamily: AppTypography.bodyFontFamily,
-              color: isSelected
-                  ? Colors.white
-                  : KeroseneBrandTokens.textMuted,
+              color: isSelected ? Colors.white : KeroseneBrandTokens.textMuted,
               fontSize: 13,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),

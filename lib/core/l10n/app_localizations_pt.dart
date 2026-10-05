@@ -8677,6 +8677,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeChartRetry => 'Toque para tentar novamente';
 
   @override
+  String get homeChartNoDataForPeriod => 'Sem dados para este período';
+
+  @override
   String get homeChartCustomPeriod => 'Período customizado';
 
   @override
@@ -8688,7 +8691,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeChartApply => 'Aplicar';
 
   @override
-  String get homeChartCustom => 'Custom';
+  String get homeChartCustom => 'Personalizado';
 
   @override
   String get onboardingJourneyTitle => 'Jornada de Ativação';
@@ -9678,4 +9681,122 @@ class AppLocalizationsPt extends AppLocalizations {
       String amount, String moeda, String rede, String status) {
     return 'Transferência de $amount $moeda via $rede está $status.';
   }
+
+  @override
+  String get balanceSyncing => 'Sincronizando...';
+
+  @override
+  String get transactionNoMovement => 'Nenhuma movimentação';
+
+  @override
+  String get transactionViewAll => 'Ver todas';
+
+  @override
+  String get walletSelected => 'Selecionada';
+
+  @override
+  String get loadingTimeout => 'Tempo excedido';
+
+  @override
+  String offlineLastSync(String time) {
+    return 'Offline — Última sincronização: $time';
+  }
+
+  @override
+  String get offlineReconnectHint =>
+      'Verifique sua conexão com a internet.\nTentando reconectar automaticamente...';
+
+  @override
+  String get notificationNotNow => 'Agora não';
+
+  @override
+  String get financialHeaderSyncing => 'Sincronizando...';
+
+  @override
+  String get coldWalletSuccessWarning =>
+      'Importante: sem a seed neste aparelho, o envio cold não funciona. Guarde a frase e restaure-a antes de tentar gastar.';
+
+  @override
+  String get sendAction => 'Enviar';
+
+  @override
+  String get walletSetupNewVault => 'Novo cofre';
+
+  @override
+  String get financialHubAddWallet => 'Adicionar outra carteira';
+
+  @override
+  String get financialHubCurrentBalance => 'Saldo Atual';
+
+  @override
+  String get financialAccountsCreateColdWalletButton => 'Criar Cold Wallet';
+
+  @override
+  String get accountDetailsTechnicalTitle => 'Detalhes técnicos';
+
+  @override
+  String get accountDetailsTechnicalBody =>
+      'Material público de derivação, chaves e identificadores.';
+
+  @override
+  String get closeAction => 'Fechar';
+
+  @override
+  String get walletManageAccountTitle => 'Gerenciar conta';
+
+  @override
+  String get walletManageAccountBody =>
+      'Configurações e dados reativos à custódia.';
+
+  @override
+  String get walletManageWalletName => 'Nome da carteira';
+
+  @override
+  String get walletManageAccountStatus => 'Situação da conta';
+
+  @override
+  String get walletManagePublicMaterial => 'Material público';
+
+  @override
+  String get statementPartialPeriodNotice =>
+      'Histórico parcial — o período selecionado pode exceder o que está carregado no dispositivo.';
+
+  @override
+  String get statementLargestShare => 'Maior fatia';
+
+  @override
+  String get sendSpeedTitle => 'Velocidade do envio';
+
+  @override
+  String get sendMethodTitle => 'Como deseja enviar?';
+
+  @override
+  String get sendMethodSubtitle =>
+      'Escolha o método de transferência compatível com este recebedor.';
+
+  @override
+  String get recommendedLabel => 'Recomendado';
+
+  @override
+  String get sendFixedAmountNotice =>
+      'O valor do pagamento está fixo. Você só pode ajustar a velocidade e as taxas.';
+
+  @override
+  String get securityTotpDescription =>
+      'Configure e valide o código TOTP usado para proteger acessos e transações sensíveis.';
+
+  @override
+  String get securityDevicesDescription =>
+      'Chaves do dispositivo vinculadas à sua conta. Use este aparelho para assinar transferências. Bloqueie ou revogue acessos que não reconhece.';
+
+  @override
+  String get securityDevicesUpdateKey => 'Atualize a chave deste aparelho';
+
+  @override
+  String get securityDevicesLegacyKeyNotice =>
+      'Detectamos uma chave legada neste dispositivo. Transferências e login biométrico agora usam a Chave do dispositivo. Toque abaixo para configurar.';
+
+  @override
+  String get transactionAuthEncryptedTitle =>
+      'Conexão criptografada ponto a ponto';
 }

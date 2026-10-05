@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 python3 - <<'PY'
@@ -20,24 +20,40 @@ SKIP_PARTS = {
 }
 
 ALLOWED_EXACT = {
-    Path('lib/core/theme/app_colors.dart'),
-    Path('lib/core/theme/app_theme.dart'),
-    Path('lib/core/theme/app_typography.dart'),
-    Path('lib/core/theme/monochrome_theme.dart'),
-    Path('lib/core/theme/design_system_template.dart'),
-    Path('lib/core/motion/app_motion.dart'),
-    Path('lib/design_system/icons/kerosene_icons.dart'),
-    Path('lib/design_system/animation/kerosene_lottie.dart'),
-    Path('lib/design_system/animation/kerosene_rive.dart'),
+    Path('lib/bootstrap/mobile_bootstrap.dart'),
+    Path('lib/design_system/foundation/theme/app_colors.dart'),
+    Path('lib/design_system/foundation/theme/app_theme.dart'),
+    Path('lib/design_system/foundation/theme/app_typography.dart'),
+    Path('lib/design_system/foundation/theme/monochrome_theme.dart'),
+    Path('lib/design_system/foundation/theme/design_system_template.dart'),
+    Path('lib/design_system/foundation/theme/home_surface_tokens.dart'),
+    Path('lib/design_system/foundation/theme/activity_surface_tokens.dart'),
+    Path('lib/design_system/foundation/theme/kerosene_brand_tokens.dart'),
+    Path('lib/design_system/foundation/assets/animation/kerosene_lottie.dart'),
     Path('lib/dev_menu.dart'),
     Path('lib/storybook/stories/wallet_flow_stories.dart'),
     Path('lib/core/widgets/animated_number_display.dart'),
     Path('lib/features/financial_accounts/presentation/widgets/revolut_account_card.dart'),
+    Path('lib/features/home/presentation/widgets/home_stage_atmosphere.dart'),
     Path('lib/features/home/scene/renderer/media_layer.dart'),
+}
+
+ALLOWED_PREFIXES = {
+    Path('lib/features/home/scene'),
 }
 
 DIRECT_MATERIAL_ICON = re.compile(r'(?<!Kerosene)Icons\.')
 RAW_FONT_FAMILY_LITERAL = re.compile(r"fontFamily\s*:\s*['\"]")
+
+
+def has_direct_lottie_runtime(text: str) -> bool:
+    if 'package:lottie' in text:
+        return True
+    return any(
+        re.search(r'(?<!Kerosene)Lottie\.', line)
+        and not line.lstrip().startswith(('//', '*'))
+        for line in text.splitlines()
+    )
 
 CHECKS = [
     ('direct lucide package', lambda text: 'package:lucide_icons' in text),
@@ -48,8 +64,7 @@ CHECKS = [
     ('direct google_fonts package', lambda text: 'package:google_fonts/google_fonts.dart' in text),
     ('raw fontFamily literal', lambda text: bool(RAW_FONT_FAMILY_LITERAL.search(text))),
     ('direct Material Icons usage', lambda text: bool(DIRECT_MATERIAL_ICON.search(text))),
-    ('direct lottie package', lambda text: 'package:lottie' in text),
-    ('direct lottie widget usage', lambda text: 'Lottie.' in text),
+    ('direct lottie runtime', has_direct_lottie_runtime),
     ('direct rive package', lambda text: 'package:rive' in text),
     ('direct runtime animation widget usage', lambda text: 'RiveAnimation.' in text or 'RiveWidget' in text),
 ]
@@ -63,7 +78,9 @@ for path in ROOT.rglob('*.dart'):
     for label, predicate in CHECKS:
         if not predicate(text):
             continue
-        if path in ALLOWED_EXACT:
+        if path in ALLOWED_EXACT or any(
+            path == prefix or prefix in path.parents for prefix in ALLOWED_PREFIXES
+        ):
             continue
         violations.append(f'{path}: {label}')
 

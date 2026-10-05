@@ -33,7 +33,6 @@ class TorBootstrapTarget {
   final int targetPort;
 }
 
-@visibleForTesting
 TorBootstrapTarget resolveTorBootstrapTarget(String rawUrl) {
   final apiUrl = rawUrl.trim();
   final uri = Uri.parse(apiUrl);

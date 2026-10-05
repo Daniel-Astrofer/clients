@@ -3222,14 +3222,22 @@
   "settingsSecurityLedgerDiagLoading": "Loading counters…",
   "settingsSecurityLedgerDiagUnavailable": "Unavailable",
   "settingsSecurityBlockCaptures": "Block screenshots on statement",
-  "homeChartUnavailable": "Market unavailable",
-  "homeChartRetry": "Tap to try again",
-  "homeChartCustomPeriod": "Custom period",
-  "homeChartLastNDays": "Last {days} days",
-  "homeChartApply": "Apply",
-  "homeChartCustom": "Custom",
+  "homeChartUnavailable": "Mercado no disponible",
+  "homeChartRetry": "Toca para intentarlo de nuevo",
+  "homeChartNoDataForPeriod": "No hay datos para este período",
+  "homeChartCustomPeriod": "Período personalizado",
+  "homeChartLastNDays": "Últimos {days} días",
+  "@homeChartLastNDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeChartApply": "Aplicar",
+  "homeChartCustom": "Personalizado",
   "onboardingJourneyTitle": "Jornada de activación",
-  "onboardingProgressCount": "{completed} of 3 completed",
+  "onboardingProgressCount": "{completed} de 3 completados",
   "onboardingCreateCustodialWallet": "Crear cartera custodial",
   "onboardingMakeDeposit": "Realizar un depósito",
   "onboardingInternalTransfer": "Transferencia interna",
@@ -3762,6 +3770,48 @@
         "type": "String"
       },
       "status": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceSyncing": "Sincronizando...",
+  "transactionNoMovement": "Sin movimientos",
+  "transactionViewAll": "Ver todas",
+  "walletSelected": "Seleccionada",
+  "loadingTimeout": "Tiempo agotado",
+  "offlineLastSync": "Sin conexión — Última sincronización: {time}",
+  "offlineReconnectHint": "Comprueba tu conexión a internet.\nIntentando reconectar automáticamente...",
+  "notificationNotNow": "Ahora no",
+  "financialHeaderSyncing": "Sincronizando...",
+  "coldWalletSuccessWarning": "Importante: sin la semilla en este dispositivo, el envío en frío no funcionará. Guarda la frase y restáurala antes de intentar gastar.",
+  "sendAction": "Enviar",
+  "walletSetupNewVault": "Nueva bóveda",
+  "financialHubAddWallet": "Añadir otra billetera",
+  "financialHubCurrentBalance": "Saldo actual",
+  "financialAccountsCreateColdWalletButton": "Crear Cold Wallet",
+  "accountDetailsTechnicalTitle": "Detalles técnicos",
+  "accountDetailsTechnicalBody": "Material público de derivación, claves e identificadores.",
+  "closeAction": "Cerrar",
+  "walletManageAccountTitle": "Gestionar cuenta",
+  "walletManageAccountBody": "Configuración y datos reactivos a la custodia.",
+  "walletManageWalletName": "Nombre de la billetera",
+  "walletManageAccountStatus": "Estado de la cuenta",
+  "walletManagePublicMaterial": "Material público",
+  "statementPartialPeriodNotice": "Historial parcial — el período seleccionado puede superar lo cargado en el dispositivo.",
+  "statementLargestShare": "Mayor participación",
+  "sendSpeedTitle": "Velocidad del envío",
+  "sendMethodTitle": "¿Cómo deseas enviar?",
+  "sendMethodSubtitle": "Elige el método de transferencia compatible con este destinatario.",
+  "recommendedLabel": "Recomendado",
+  "sendFixedAmountNotice": "El importe del pago está fijo. Solo puedes ajustar la velocidad y las comisiones.",
+  "securityTotpDescription": "Configura y valida el código TOTP usado para proteger accesos y transacciones sensibles.",
+  "securityDevicesDescription": "Claves del dispositivo vinculadas a tu cuenta. Usa este dispositivo para firmar transferencias. Bloquea o revoca accesos que no reconozcas.",
+  "securityDevicesUpdateKey": "Actualiza la clave de este dispositivo",
+  "securityDevicesLegacyKeyNotice": "Detectamos una clave heredada en este dispositivo. Las transferencias y el inicio de sesión biométrico ahora usan la clave del dispositivo. Toca abajo para configurarla.",
+  "transactionAuthEncryptedTitle": "Conexión cifrada de extremo a extremo",
+  "@offlineLastSync": {
+    "placeholders": {
+      "time": {
         "type": "String"
       }
     }

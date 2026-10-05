@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 class InternalRecentAvatar extends StatelessWidget {
   final String title;
@@ -24,7 +23,8 @@ class InternalRecentAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: Theme.of(context).colorScheme.surface,
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
         ),
       ),
       child: Center(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
@@ -18,7 +18,7 @@ class KeroseneLoadingState extends StatefulWidget {
   final String? message;
   final Duration timeout;
   final VoidCallback? onTimeout;
-  final _KeroseneLoadingVariant variant;
+  final KeroseneLoadingVariant variant;
 
   /// Full-screen branded loader. Use for first launch / screen-level loading.
   const KeroseneLoadingState.fullScreen({
@@ -26,7 +26,7 @@ class KeroseneLoadingState extends StatefulWidget {
     this.message,
     this.timeout = KeroseneMotion.loadingTimeout,
     this.onTimeout,
-  }) : variant = _KeroseneLoadingVariant.fullScreen;
+  }) : variant = KeroseneLoadingVariant.fullScreen;
 
   /// Compact inline loader. Use for section-level loading within a screen.
   const KeroseneLoadingState.inline({
@@ -34,7 +34,7 @@ class KeroseneLoadingState extends StatefulWidget {
     this.message,
     this.timeout = KeroseneMotion.loadingRetryMedium,
     this.onTimeout,
-  }) : variant = _KeroseneLoadingVariant.inline;
+  }) : variant = KeroseneLoadingVariant.inline;
 
   /// Minimal indicator. Use when data is refreshing in background.
   const KeroseneLoadingState.subtle({
@@ -42,13 +42,13 @@ class KeroseneLoadingState extends StatefulWidget {
     this.message,
     this.timeout = KeroseneMotion.loadingRetryLong,
     this.onTimeout,
-  }) : variant = _KeroseneLoadingVariant.subtle;
+  }) : variant = KeroseneLoadingVariant.subtle;
 
   @override
   State<KeroseneLoadingState> createState() => _KeroseneLoadingStateState();
 }
 
-enum _KeroseneLoadingVariant { fullScreen, inline, subtle }
+enum KeroseneLoadingVariant { fullScreen, inline, subtle }
 
 class _KeroseneLoadingStateState extends State<KeroseneLoadingState> {
   bool _showRetry = false;
@@ -69,24 +69,24 @@ class _KeroseneLoadingStateState extends State<KeroseneLoadingState> {
     final palette = KeroseneBrandTheme.of(context);
 
     return switch (widget.variant) {
-      _KeroseneLoadingVariant.fullScreen => _FullScreenLoader(
-          message: widget.message,
-          showRetry: _showRetry,
-          onRetry: widget.onTimeout,
-          palette: palette,
-        ),
-      _KeroseneLoadingVariant.inline => _InlineLoader(
-          message: widget.message,
-          showRetry: _showRetry,
-          onRetry: widget.onTimeout,
-          palette: palette,
-        ),
-      _KeroseneLoadingVariant.subtle => _SubtleLoader(
-          message: widget.message,
-          showRetry: _showRetry,
-          onRetry: widget.onTimeout,
-          palette: palette,
-        ),
+      KeroseneLoadingVariant.fullScreen => _FullScreenLoader(
+        message: widget.message,
+        showRetry: _showRetry,
+        onRetry: widget.onTimeout,
+        palette: palette,
+      ),
+      KeroseneLoadingVariant.inline => _InlineLoader(
+        message: widget.message,
+        showRetry: _showRetry,
+        onRetry: widget.onTimeout,
+        palette: palette,
+      ),
+      KeroseneLoadingVariant.subtle => _SubtleLoader(
+        message: widget.message,
+        showRetry: _showRetry,
+        onRetry: widget.onTimeout,
+        palette: palette,
+      ),
     };
   }
 }
@@ -133,7 +133,7 @@ class _FullScreenLoader extends StatelessWidget {
             ],
           ] else ...[
             Text(
-              'Tempo excedido',
+              context.tr.loadingTimeout,
               style: AppTypography.inter(
                 fontSize: 15,
                 color: palette.textPrimary,
@@ -141,10 +141,7 @@ class _FullScreenLoader extends StatelessWidget {
             ),
             SizedBox(height: AppSpacing.base),
             if (onRetry != null)
-              TextButton(
-                onPressed: onRetry,
-                child: Text('Tentar novamente'),
-              ),
+              TextButton(onPressed: onRetry, child: Text(context.tr.tryAgain)),
           ],
         ],
       ),
@@ -193,10 +190,7 @@ class _InlineLoader extends StatelessWidget {
                 ),
               ],
             ] else if (onRetry != null)
-              TextButton(
-                onPressed: onRetry,
-                child: Text('Tentar novamente'),
-              ),
+              TextButton(onPressed: onRetry, child: Text(context.tr.tryAgain)),
           ],
         ),
       ),
@@ -232,7 +226,7 @@ class _SubtleLoader extends StatelessWidget {
             height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 1.5,
-              valueColor: AlwaysStoppedAnimation(palette.textTertiary),
+              valueColor: AlwaysStoppedAnimation(palette.textMuted),
             ),
           ),
           if (message != null) ...[
@@ -241,7 +235,7 @@ class _SubtleLoader extends StatelessWidget {
               message!,
               style: AppTypography.inter(
                 fontSize: 12,
-                color: palette.textTertiary,
+                color: palette.textMuted,
               ),
             ),
           ],

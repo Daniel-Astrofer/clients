@@ -114,7 +114,8 @@ class AmountInputPad extends StatelessWidget {
     );
   }
 
-  Widget _buildActionKey(BuildContext context, IconData icon, VoidCallback onTap) {
+  Widget _buildActionKey(
+      BuildContext context, IconData icon, VoidCallback onTap) {
     final ink = Theme.of(context).colorScheme.onSurface;
     return Expanded(
       child: Padding(

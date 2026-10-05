@@ -3428,6 +3428,7 @@
   "settingsSecurityBlockCaptures": "Block screenshots on statement",
   "homeChartUnavailable": "Market unavailable",
   "homeChartRetry": "Tap to try again",
+  "homeChartNoDataForPeriod": "No data for this period",
   "homeChartCustomPeriod": "Custom period",
   "homeChartLastNDays": "Last {days} days",
   "@homeChartLastNDays": {
@@ -4001,6 +4002,48 @@
         "type": "String"
       },
       "status": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceSyncing": "Syncing...",
+  "transactionNoMovement": "No activity",
+  "transactionViewAll": "View all",
+  "walletSelected": "Selected",
+  "loadingTimeout": "Timed out",
+  "offlineLastSync": "Offline — Last synchronization: {time}",
+  "offlineReconnectHint": "Check your internet connection.\nTrying to reconnect automatically...",
+  "notificationNotNow": "Not now",
+  "financialHeaderSyncing": "Syncing...",
+  "coldWalletSuccessWarning": "Important: without the seed on this device, cold sending will not work. Keep the phrase safe and restore it before trying to spend.",
+  "sendAction": "Send",
+  "walletSetupNewVault": "New vault",
+  "financialHubAddWallet": "Add another wallet",
+  "financialHubCurrentBalance": "Current Balance",
+  "financialAccountsCreateColdWalletButton": "Create Cold Wallet",
+  "accountDetailsTechnicalTitle": "Technical details",
+  "accountDetailsTechnicalBody": "Public derivation material, keys, and identifiers.",
+  "closeAction": "Close",
+  "walletManageAccountTitle": "Manage account",
+  "walletManageAccountBody": "Custody-reactive settings and data.",
+  "walletManageWalletName": "Wallet name",
+  "walletManageAccountStatus": "Account status",
+  "walletManagePublicMaterial": "Public material",
+  "statementPartialPeriodNotice": "Partial history — the selected period may exceed what is loaded on the device.",
+  "statementLargestShare": "Largest share",
+  "sendSpeedTitle": "Send speed",
+  "sendMethodTitle": "How would you like to send?",
+  "sendMethodSubtitle": "Choose the transfer method compatible with this recipient.",
+  "recommendedLabel": "Recommended",
+  "sendFixedAmountNotice": "The payment amount is fixed. You can only adjust speed and fees.",
+  "securityTotpDescription": "Configure and validate the TOTP code used to protect sensitive access and transactions.",
+  "securityDevicesDescription": "Device keys linked to your account. Use this device to sign transfers. Block or revoke access you do not recognize.",
+  "securityDevicesUpdateKey": "Update this device key",
+  "securityDevicesLegacyKeyNotice": "We detected a legacy key on this device. Transfers and biometric login now use the Device Key. Tap below to configure it.",
+  "transactionAuthEncryptedTitle": "End-to-end encrypted connection",
+  "@offlineLastSync": {
+    "placeholders": {
+      "time": {
         "type": "String"
       }
     }

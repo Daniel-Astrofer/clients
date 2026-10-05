@@ -9,11 +9,11 @@ void main() {
     expect(KeroseneMotion.frameBudget.inMicroseconds, 8333);
     expect(kKerosenePageTransitionDuration, KeroseneMotion.pageIn);
     expect(kKerosenePageReverseTransitionDuration, KeroseneMotion.pageOut);
-    expect(
-        kKerosenePageTransitionDuration.inMilliseconds, lessThanOrEqualTo(140));
+    expect(kKerosenePageTransitionDuration.inMilliseconds,
+        inInclusiveRange(220, 300));
     expect(
       kKerosenePageReverseTransitionDuration.inMilliseconds,
-      lessThanOrEqualTo(100),
+      inInclusiveRange(180, 260),
     );
   });
 

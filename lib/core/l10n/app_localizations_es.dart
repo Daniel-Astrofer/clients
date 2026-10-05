@@ -8681,31 +8681,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSecurityBlockCaptures => 'Block screenshots on statement';
 
   @override
-  String get homeChartUnavailable => 'Market unavailable';
+  String get homeChartUnavailable => 'Mercado no disponible';
 
   @override
-  String get homeChartRetry => 'Tap to try again';
+  String get homeChartRetry => 'Toca para intentarlo de nuevo';
 
   @override
-  String get homeChartCustomPeriod => 'Custom period';
+  String get homeChartNoDataForPeriod => 'No hay datos para este período';
+
+  @override
+  String get homeChartCustomPeriod => 'Período personalizado';
 
   @override
   String homeChartLastNDays(int days) {
-    return 'Last $days days';
+    return 'Últimos $days días';
   }
 
   @override
-  String get homeChartApply => 'Apply';
+  String get homeChartApply => 'Aplicar';
 
   @override
-  String get homeChartCustom => 'Custom';
+  String get homeChartCustom => 'Personalizado';
 
   @override
   String get onboardingJourneyTitle => 'Jornada de activación';
 
   @override
   String onboardingProgressCount(int completed) {
-    return '$completed of 3 completed';
+    return '$completed de 3 completados';
   }
 
   @override
@@ -9682,4 +9685,123 @@ class AppLocalizationsEs extends AppLocalizations {
       String amount, String moeda, String rede, String status) {
     return 'Transferencia de $amount $moeda a través de $rede está $status.';
   }
+
+  @override
+  String get balanceSyncing => 'Sincronizando...';
+
+  @override
+  String get transactionNoMovement => 'Sin movimientos';
+
+  @override
+  String get transactionViewAll => 'Ver todas';
+
+  @override
+  String get walletSelected => 'Seleccionada';
+
+  @override
+  String get loadingTimeout => 'Tiempo agotado';
+
+  @override
+  String offlineLastSync(String time) {
+    return 'Sin conexión — Última sincronización: $time';
+  }
+
+  @override
+  String get offlineReconnectHint =>
+      'Comprueba tu conexión a internet.\nIntentando reconectar automáticamente...';
+
+  @override
+  String get notificationNotNow => 'Ahora no';
+
+  @override
+  String get financialHeaderSyncing => 'Sincronizando...';
+
+  @override
+  String get coldWalletSuccessWarning =>
+      'Importante: sin la semilla en este dispositivo, el envío en frío no funcionará. Guarda la frase y restáurala antes de intentar gastar.';
+
+  @override
+  String get sendAction => 'Enviar';
+
+  @override
+  String get walletSetupNewVault => 'Nueva bóveda';
+
+  @override
+  String get financialHubAddWallet => 'Añadir otra billetera';
+
+  @override
+  String get financialHubCurrentBalance => 'Saldo actual';
+
+  @override
+  String get financialAccountsCreateColdWalletButton => 'Crear Cold Wallet';
+
+  @override
+  String get accountDetailsTechnicalTitle => 'Detalles técnicos';
+
+  @override
+  String get accountDetailsTechnicalBody =>
+      'Material público de derivación, claves e identificadores.';
+
+  @override
+  String get closeAction => 'Cerrar';
+
+  @override
+  String get walletManageAccountTitle => 'Gestionar cuenta';
+
+  @override
+  String get walletManageAccountBody =>
+      'Configuración y datos reactivos a la custodia.';
+
+  @override
+  String get walletManageWalletName => 'Nombre de la billetera';
+
+  @override
+  String get walletManageAccountStatus => 'Estado de la cuenta';
+
+  @override
+  String get walletManagePublicMaterial => 'Material público';
+
+  @override
+  String get statementPartialPeriodNotice =>
+      'Historial parcial — el período seleccionado puede superar lo cargado en el dispositivo.';
+
+  @override
+  String get statementLargestShare => 'Mayor participación';
+
+  @override
+  String get sendSpeedTitle => 'Velocidad del envío';
+
+  @override
+  String get sendMethodTitle => '¿Cómo deseas enviar?';
+
+  @override
+  String get sendMethodSubtitle =>
+      'Elige el método de transferencia compatible con este destinatario.';
+
+  @override
+  String get recommendedLabel => 'Recomendado';
+
+  @override
+  String get sendFixedAmountNotice =>
+      'El importe del pago está fijo. Solo puedes ajustar la velocidad y las comisiones.';
+
+  @override
+  String get securityTotpDescription =>
+      'Configura y valida el código TOTP usado para proteger accesos y transacciones sensibles.';
+
+  @override
+  String get securityDevicesDescription =>
+      'Claves del dispositivo vinculadas a tu cuenta. Usa este dispositivo para firmar transferencias. Bloquea o revoca accesos que no reconozcas.';
+
+  @override
+  String get securityDevicesUpdateKey =>
+      'Actualiza la clave de este dispositivo';
+
+  @override
+  String get securityDevicesLegacyKeyNotice =>
+      'Detectamos una clave heredada en este dispositivo. Las transferencias y el inicio de sesión biométrico ahora usan la clave del dispositivo. Toca abajo para configurarla.';
+
+  @override
+  String get transactionAuthEncryptedTitle =>
+      'Conexión cifrada de extremo a extremo';
 }

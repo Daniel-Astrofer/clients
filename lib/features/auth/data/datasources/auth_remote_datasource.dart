@@ -1,5 +1,8 @@
+// architecture-allow-large-file: authentication endpoint mapping and legacy
+// response compatibility remain together to preserve the external API.
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:crypto/crypto.dart' as crypto;
 
@@ -360,6 +363,8 @@ String _solvePoWTask(String challenge) {
 
 // ─── Implementation ───────────────────────────────────────────────────────────
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+  // Core can provision/repair the primary wallet during onboarding or login.
+  static const _walletProvisioningTimeout = Duration(seconds: 210);
   final ApiClient apiClient;
 
   AuthRemoteDataSourceImpl(this.apiClient);
@@ -677,6 +682,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         AppConfig.authPasskeyOnboardingFinish,
         queryParameters: {'sessionId': sessionId},
         data: credential,
+        // Core allows 180s for distributed wallet provisioning over Tor.
+        // This POST consumes a passkey challenge: never replay it automatically.
+        options: Options(receiveTimeout: _walletProvisioningTimeout),
       );
       return LoginResult.fromResponseData(response.data);
     } catch (e) {
@@ -711,6 +719,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final response = await apiClient.post(
         AppConfig.authPasskeyVerify,
+        options: Options(receiveTimeout: _walletProvisioningTimeout),
         data: {
           'username': username,
           'signature': credential['signature'],
@@ -832,6 +841,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         AppConfig.authDeviceKeyOnboardingFinish,
         queryParameters: {'sessionId': sessionId},
         data: credential,
+        options: Options(receiveTimeout: _walletProvisioningTimeout),
       );
       return LoginResult.fromResponseData(response.data);
     } catch (e) {
@@ -867,6 +877,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final response = await apiClient.post(
         AppConfig.authDeviceKeyVerify,
+        options: Options(receiveTimeout: _walletProvisioningTimeout),
         data: {
           'username': credential['username'],
           'credentialId': credential['credentialId'],

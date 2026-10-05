@@ -5,6 +5,21 @@ import 'package:flutter/material.dart';
 /// Domain mapping (`TxVisualVariant` → these colors) stays in the movement
 /// feature; this file is the visual source of truth.
 abstract final class ActivitySurfaceTokens {
+  // Shared statement chrome.
+  static const inkPrimary = Color(0xFF000000);
+  static const inkSecondary = Color(0xFF4B4F57);
+  static const inkTertiary = Color(0xFF6E737C);
+  static const inkOnDark = Color(0xFFF2F2F3);
+  static const surfaceInternal = Color(0xFFF4F4F5);
+  static const borderInternal = Color(0xFFD8DADF);
+  static const surfaceOnchain = Color(0xFFF6F1EA);
+  static const borderOnchain = Color(0xFFD8D0C6);
+  static const surfaceLightning = Color(0xFFF3F2EE);
+  static const borderLightning = Color(0xFFD5D2C9);
+  static const surfaceDivider = Color(0x290F0F10);
+  static const iconWell = Color(0xFF141416);
+  static const iconWellBorder = Color(0xFF2A2A2E);
+
   // Internal (slate / cool grey — in slightly cooler, out slightly warmer)
   static const surfaceInternalIn = Color(0xFFE8EEF5);
   static const borderInternalIn = Color(0xFFB7C5D6);

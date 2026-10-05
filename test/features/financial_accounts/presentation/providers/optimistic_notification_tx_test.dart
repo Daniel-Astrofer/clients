@@ -4,7 +4,8 @@ import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 void main() {
-  test('optimisticTransactionFromNotification builds inbound row from meta', () {
+  test('optimisticTransactionFromNotification builds inbound row from meta',
+      () {
     final notification = SessionNotificationItem(
       id: 'n1',
       title: 'Depósito',

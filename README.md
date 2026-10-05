@@ -1,14 +1,18 @@
+<!--
+status: active
+audience: internal
+owner: clients
+source_of_truth: clients pubspec.yaml and source tree
+last_reviewed: 2026-09-03
+-->
+
 # Kerosene Clients
 
-Flutter clients and shared client-side packages for Kerosene.
+Flutter applications and client-side presentation assets. Start at the
+[documentation](../../kerosene-global-docs/services/clients/docs/quickstart/README.md) and [quickstart](../../kerosene-global-docs/services/clients/docs/quickstart/QUICKSTART.md).
 
-This repository contains consumer and business surfaces, the design system,
-API clients, protocol serialization and quorum/receipt verification. Android,
-Windows, Linux and Web remain together because they share a toolchain and
-change as one client product family.
+Run `flutter analyze` and `flutter test` for the shared client verification.
 
-Extracted from `Daniel-Astrofer/Kerosene` with frontend history preserved.
+## Documentação global
 
-`flutter analyze` and the full test suite are staged off in the first CI
-snapshot because `Kerosene/main` contains an existing analysis baseline. They
-must be re-enabled after the frontend recovery changes are merged and imported.
+Arquitetura transversal, regras de negócio compartilhadas e infraestrutura/operação global estão no repositório externo [kerosene-global-docs](../../kerosene-global-docs/README.md). A documentação inline de implementação permanece junto ao código neste repositório.

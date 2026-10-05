@@ -12,11 +12,15 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+// Deferred prefixes are consumed through loadLibrary tear-offs below.
+// ignore: unused_import
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     deferred as home
     hide HomeSurfaceThemeContext;
+// ignore: unused_import
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
+// ignore: unused_import
 import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'
     deferred as receive;
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
@@ -54,14 +58,18 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     // Preload home + send/receive while dots are up so first taps never load mid-slide.
     unawaited(_preloadHomeLibrary());
-    unawaited(loadDeferredLibrary(
-      send_money.loadLibrary,
-      key: DeferredLibraryKeys.sendMoney,
-    ));
-    unawaited(loadDeferredLibrary(
-      receive.loadLibrary,
-      key: DeferredLibraryKeys.receive,
-    ));
+    unawaited(
+      loadDeferredLibrary(
+        send_money.loadLibrary,
+        key: DeferredLibraryKeys.sendMoney,
+      ),
+    );
+    unawaited(
+      loadDeferredLibrary(
+        receive.loadLibrary,
+        key: DeferredLibraryKeys.receive,
+      ),
+    );
 
     _timeoutTimer = Timer(KeroseneMotion.loadingTimeout, () {
       if (mounted && !_hasError && !_isNavigating) {
@@ -143,8 +151,8 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
     }
 
     final delay = _sessionReadyRetryAttempt < 8
-        ? const Duration(milliseconds: 250)
-        : const Duration(milliseconds: 750);
+        ? KeroseneMotion.homeLoadingCompact
+        : KeroseneMotion.homeLoadingFull;
     _sessionReadyRetryAttempt += 1;
     _sessionReadyRetryTimer = Timer(delay, () {
       if (!mounted) return;
@@ -189,8 +197,9 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     final walletState = ref.read(walletProvider);
     final authState = ref.read(authControllerProvider);
-    final authenticatedUserId =
-        authState is AuthAuthenticated ? authState.user.id : null;
+    final authenticatedUserId = authState is AuthAuthenticated
+        ? authState.user.id
+        : null;
 
     if (walletState is WalletLoaded && !_hasError && _homeLibraryReady) {
       if (walletState.wallets.isEmpty &&

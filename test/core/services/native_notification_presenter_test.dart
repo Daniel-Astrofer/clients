@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/core/services/native_notification_presenter.dart';
+import 'package:kerosene/app/notifications/native_notification_presenter.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 
 void main() {

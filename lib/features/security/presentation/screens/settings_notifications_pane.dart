@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/services/background_service.dart';
-import 'package:kerosene/core/services/notification_service.dart';
+import 'package:kerosene/app/notifications/notification_service.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/notifications/domain/entities/device_token.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
@@ -267,7 +266,11 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.10)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.42),
@@ -287,9 +290,15 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.06),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.10),
                       ),
                     ),
                     child: Icon(
@@ -344,7 +353,8 @@ class _BackgroundAlertsConsentDialog extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onSurfaceVariant,
                   textStyle: AppTypography.bodySmall.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

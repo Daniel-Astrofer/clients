@@ -1,6 +1,8 @@
+import 'package:kerosene/core/navigation/app_navigation.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
@@ -8,12 +10,11 @@ import 'package:kerosene/features/auth/controller/auth_controller.dart'
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     show ledgerRepositoryProvider;
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
-import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 
 class NotificationNavigation {
   static Future<void> openFromContext(
@@ -31,9 +32,11 @@ class NotificationNavigation {
 
     // Transaction notifications → exclusive detail screen (not legacy dialog).
     if (_isTransaction(notification)) {
-      final tx =
-          await _resolveTransactionFromNotification(context, notification);
-      if (!navigator.mounted) return;
+      final tx = await _resolveTransactionFromNotification(
+        context,
+        notification,
+      );
+      if (!navigator.mounted || !context.mounted) return;
       if (tx != null) {
         await TransactionDetailScreen.open(navigator.context, tx);
         return;
@@ -42,7 +45,7 @@ class NotificationNavigation {
       final route = notification.deeplink?.trim();
       if (route != null && route.isNotEmpty) {
         try {
-          await navigator.pushNamed(route);
+          await AppNavigation.push(context, route);
         } catch (error) {
           debugPrint('Could not open notification deeplink "$route": $error');
         }
@@ -56,7 +59,8 @@ class NotificationNavigation {
     }
 
     if (_shouldShowProfessionalDialog(notification)) {
-      final shouldOpenRoute = await showDialog<bool>(
+      final shouldOpenRoute =
+          await showDialog<bool>(
             context: context,
             barrierColor: Colors.black.withValues(alpha: 0.68),
             builder: (_) => _ProfessionalNotificationDialog(
@@ -66,13 +70,13 @@ class NotificationNavigation {
           ) ??
           false;
 
-      if (!shouldOpenRoute || !navigator.mounted) {
+      if (!shouldOpenRoute || !navigator.mounted || !context.mounted) {
         return;
       }
     }
 
     try {
-      await navigator.pushNamed(route);
+      await AppNavigation.push(context, route);
     } catch (error) {
       debugPrint('Could not open notification deeplink "$route": $error');
     }
@@ -83,7 +87,8 @@ class NotificationNavigation {
     SessionNotificationItem notification,
   ) async {
     final entityId = notification.entityId?.trim() ?? '';
-    final metaId = _firstMetadataValue(notification, const [
+    final metaId =
+        _firstMetadataValue(notification, const [
           'transactionId',
           'txId',
           'txid',
@@ -118,10 +123,9 @@ class NotificationNavigation {
           final scope = container.read(sessionStorageScopeProvider);
           if (scope != null && scope.trim().isNotEmpty) {
             final store = container.read(localTransactionHistoryStoreProvider);
-            final merged = await LocalLedgerSync(store).hydrateAndMerge(
-              sessionScope: scope,
-              remote: [remote],
-            );
+            final merged = await LocalLedgerSync(
+              store,
+            ).hydrateAndMerge(sessionScope: scope, remote: [remote]);
             container.read(lastTransactionHistoryProvider.notifier).set(merged);
             container.invalidate(transactionHistoryProvider);
           }
@@ -211,8 +215,9 @@ class NotificationNavigation {
       notification.entityType ?? '',
       notification.title,
       notification.body,
-      ...notification.metadata.entries
-          .map((entry) => '${entry.key}:${entry.value}'),
+      ...notification.metadata.entries.map(
+        (entry) => '${entry.key}:${entry.value}',
+      ),
     ].join(' ').toLowerCase();
 
     return haystack.contains('cold_wallet') ||
@@ -268,7 +273,11 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.42),
@@ -291,7 +300,9 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [
                         spec.accent.withValues(alpha: 0.22),
-                        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.035),
+                        Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.035),
                       ],
                     ),
                   ),
@@ -318,7 +329,9 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                             Text(
                               spec.eyebrow,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.62),
                                 letterSpacing: 0.8,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -326,7 +339,9 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                             const SizedBox(height: 6),
                             Text(
                               NotificationTranslator.resolveTitle(
-                                  context, notification),
+                                context,
+                                notification,
+                              ),
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.w800,
@@ -347,9 +362,13 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                     children: [
                       Text(
                         NotificationTranslator.resolveBody(
-                            context, notification),
+                          context,
+                          notification,
+                        ),
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.76),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.76),
                           height: 1.42,
                         ),
                       ),
@@ -358,8 +377,10 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                         ...spec.rows.map(
                           (row) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child:
-                                _DetailRow(label: row.label, value: row.value),
+                            child: _DetailRow(
+                              label: row.label,
+                              value: row.value,
+                            ),
                           ),
                         ),
                       ],
@@ -369,16 +390,22 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.055),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.055),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.08),
                             ),
                           ),
                           child: Text(
                             spec.note!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.68),
                               height: 1.35,
                             ),
                           ),
@@ -395,14 +422,15 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                         child: TextButton(
                           onPressed: () => Navigator.of(context).pop(false),
                           style: TextButton.styleFrom(
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.72),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Text('Agora não'),
+                          child: Text(context.tr.notificationNotNow),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -410,10 +438,12 @@ class _ProfessionalNotificationDialog extends StatelessWidget {
                         child: FilledButton(
                           onPressed: () => Navigator.of(context).pop(true),
                           style: FilledButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.onSurface,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.surface,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -438,7 +468,7 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
-  _DetailRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -451,7 +481,9 @@ class _DetailRow extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.46),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.46),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -462,7 +494,9 @@ class _DetailRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.88),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -539,68 +573,120 @@ class _DialogSpec {
   }
 
   static List<_DialogRow> _transactionRows(
-      SessionNotificationItem notification) {
+    SessionNotificationItem notification,
+  ) {
     return _compactRows([
-      _rowFromKeys(
-          notification, 'Valor', const ['amountBtc', 'amount', 'btcAmount']),
-      _rowFromKeys(notification, 'Carteira',
-          const ['walletName', 'wallet', 'accountName']),
-      _rowFromKeys(
-          notification, 'Origem', const ['sender', 'from', 'payerName']),
-      _rowFromKeys(
-          notification, 'Destino', const ['receiver', 'to', 'payeeName']),
+      _rowFromKeys(notification, 'Valor', const [
+        'amountBtc',
+        'amount',
+        'btcAmount',
+      ]),
+      _rowFromKeys(notification, 'Carteira', const [
+        'walletName',
+        'wallet',
+        'accountName',
+      ]),
+      _rowFromKeys(notification, 'Origem', const [
+        'sender',
+        'from',
+        'payerName',
+      ]),
+      _rowFromKeys(notification, 'Destino', const [
+        'receiver',
+        'to',
+        'payeeName',
+      ]),
       _entityRow(notification),
     ]);
   }
 
   static List<_DialogRow> _paymentLinkRows(
-      SessionNotificationItem notification) {
+    SessionNotificationItem notification,
+  ) {
     return _compactRows([
-      _rowFromKeys(
-          notification, 'Valor', const ['amountBtc', 'amount', 'btcAmount']),
-      _rowFromKeys(
-          notification, 'Pagador', const ['payerName', 'payer', 'sender']),
-      _rowFromKeys(notification, 'Carteira',
-          const ['walletName', 'wallet', 'accountName']),
-      _rowFromKeys(notification, 'Link',
-          const ['paymentLinkId', 'paymentRequestId', 'linkId']),
+      _rowFromKeys(notification, 'Valor', const [
+        'amountBtc',
+        'amount',
+        'btcAmount',
+      ]),
+      _rowFromKeys(notification, 'Pagador', const [
+        'payerName',
+        'payer',
+        'sender',
+      ]),
+      _rowFromKeys(notification, 'Carteira', const [
+        'walletName',
+        'wallet',
+        'accountName',
+      ]),
+      _rowFromKeys(notification, 'Link', const [
+        'paymentLinkId',
+        'paymentRequestId',
+        'linkId',
+      ]),
       _entityRow(notification),
     ]);
   }
 
   static List<_DialogRow> _securityRows(SessionNotificationItem notification) {
     return _compactRows([
-      _rowFromKeys(notification, 'Dispositivo',
-          const ['deviceName', 'device', 'userAgent']),
-      _rowFromKeys(notification, 'Local',
-          const ['location', 'city', 'region', 'country']),
-      _rowFromKeys(
-          notification, 'IP', const ['ip', 'ipAddress', 'remoteAddress']),
+      _rowFromKeys(notification, 'Dispositivo', const [
+        'deviceName',
+        'device',
+        'userAgent',
+      ]),
+      _rowFromKeys(notification, 'Local', const [
+        'location',
+        'city',
+        'region',
+        'country',
+      ]),
+      _rowFromKeys(notification, 'IP', const [
+        'ip',
+        'ipAddress',
+        'remoteAddress',
+      ]),
       _rowFromKeys(notification, 'Horário', const ['occurredAt', 'createdAt']),
     ]);
   }
 
   static List<_DialogRow> _marketRows(SessionNotificationItem notification) {
     return _compactRows([
-      _rowFromKeys(notification, 'Preço',
-          const ['priceUsd', 'btcPriceUsd', 'lastPriceUsd']),
-      _rowFromKeys(notification, '24h',
-          const ['dailyChangePercent', 'change24hPercent', 'changePercent24h']),
+      _rowFromKeys(notification, 'Preço', const [
+        'priceUsd',
+        'btcPriceUsd',
+        'lastPriceUsd',
+      ]),
+      _rowFromKeys(notification, '24h', const [
+        'dailyChangePercent',
+        'change24hPercent',
+        'changePercent24h',
+      ]),
       _rowFromKeys(notification, 'Faixa', const ['thresholdPercent']),
       _rowFromKeys(notification, 'Fonte', const ['source']),
     ]);
   }
 
   static List<_DialogRow> _coldWalletRows(
-      SessionNotificationItem notification) {
+    SessionNotificationItem notification,
+  ) {
     return _compactRows([
-      _rowFromKeys(notification, 'Carteira',
-          const ['walletName', 'wallet', 'accountName']),
-      _rowFromKeys(notification, 'Modo',
-          const ['walletMode', 'walletKind', 'custody', 'type']),
+      _rowFromKeys(notification, 'Carteira', const [
+        'walletName',
+        'wallet',
+        'accountName',
+      ]),
+      _rowFromKeys(notification, 'Modo', const [
+        'walletMode',
+        'walletKind',
+        'custody',
+        'type',
+      ]),
       _rowFromKeys(notification, 'Rede', const ['network', 'bitcoinNetwork']),
-      _rowFromKeys(notification, 'Material',
-          const ['publicMaterialType', 'descriptorType']),
+      _rowFromKeys(notification, 'Material', const [
+        'publicMaterialType',
+        'descriptorType',
+      ]),
       _entityRow(notification),
     ]);
   }
@@ -629,8 +715,10 @@ class _DialogSpec {
     String label,
     List<String> keys,
   ) {
-    final value =
-        NotificationNavigation._firstMetadataValue(notification, keys);
+    final value = NotificationNavigation._firstMetadataValue(
+      notification,
+      keys,
+    );
     if (value == null) return null;
     return _DialogRow(label, _formatValue(label, value));
   }
@@ -645,12 +733,15 @@ class _DialogSpec {
 
   static List<_DialogRow> _compactRows(List<_DialogRow?> rows) {
     final seen = <String>{};
-    return rows.whereType<_DialogRow>().where((row) {
-      final key = '${row.label}:${row.value}';
-      if (seen.contains(key)) return false;
-      seen.add(key);
-      return true;
-    }).toList(growable: false);
+    return rows
+        .whereType<_DialogRow>()
+        .where((row) {
+          final key = '${row.label}:${row.value}';
+          if (seen.contains(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .toList(growable: false);
   }
 
   static String _formatValue(String label, String raw) {

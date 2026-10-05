@@ -174,7 +174,8 @@ class SettingsDisplayPane extends ConsumerWidget {
                         subtitle: Text(
                           zone,
                           style: AppTypography.inter(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),

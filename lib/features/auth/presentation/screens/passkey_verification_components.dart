@@ -121,7 +121,7 @@ class PasskeyAuthView extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: AppTypography.newsreader(
+            style: AppTypography.inter(
               color: _authWhite,
               fontSize: titleSize,
               fontWeight: FontWeight.w500,
@@ -294,7 +294,7 @@ class PasskeyIssueView extends StatelessWidget {
               es: 'Falló la Autenticación',
             ),
             textAlign: TextAlign.center,
-            style: AppTypography.newsreader(
+            style: AppTypography.inter(
               color: _authWhite.withValues(alpha: 0.96),
               fontSize: titleSize,
               fontWeight: FontWeight.w500,
@@ -463,7 +463,7 @@ class TotpFallbackView extends StatelessWidget {
               es: 'Código de Seguridad',
             ),
             textAlign: TextAlign.center,
-            style: AppTypography.newsreader(
+            style: AppTypography.inter(
               color: _authWhite,
               fontSize: titleSize,
               fontWeight: FontWeight.w500,
@@ -678,7 +678,7 @@ class KeypadButton extends StatelessWidget {
                   ? Icon(icon, color: _authMuted, size: 22)
                   : Text(
                       value ?? '',
-                      style: AppTypography.newsreader(
+                      style: AppTypography.inter(
                         color: _authWhite,
                         fontSize: isShort ? 25 : 29,
                         fontWeight: FontWeight.w500,

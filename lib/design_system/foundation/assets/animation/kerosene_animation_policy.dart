@@ -24,6 +24,10 @@ class KeroseneAnimationPolicy {
 
   static KeroseneAnimationRole roleFor(KeroseneAnimationAsset asset) {
     switch (asset) {
+      case KeroseneAnimationAsset.brandMark:
+        return KeroseneAnimationRole.loading;
+      case KeroseneAnimationAsset.brandLogo:
+        return KeroseneAnimationRole.passiveIllustration;
       case KeroseneAnimationAsset.passkeyAuth:
       case KeroseneAnimationAsset.nfcReceive:
       case KeroseneAnimationAsset.transactionStatus:

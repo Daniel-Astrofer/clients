@@ -149,7 +149,9 @@ void main() {
     double relativeLuminance(Color c) {
       double srgbToLinear(double v) {
         final s = v;
-        return s <= 0.03928 ? s / 12.92 : math.pow((s + 0.055) / 1.055, 2.4).toDouble();
+        return s <= 0.03928
+            ? s / 12.92
+            : math.pow((s + 0.055) / 1.055, 2.4).toDouble();
       }
 
       return 0.2126 * srgbToLinear(c.r / 255.0) +
@@ -181,7 +183,8 @@ void main() {
         expect(
           ratio,
           greaterThan(1.0),
-          reason: 'Surface ${i}→${i + 1} has zero contrast — colors are identical',
+          reason:
+              'Surface $i→${i + 1} has zero contrast — colors are identical',
         );
       }
     });

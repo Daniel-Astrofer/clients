@@ -112,7 +112,7 @@ void main() {
       expect(patched.feed.heightToken, HomeFeedHeightToken.expanded);
     });
 
-    test('HOME_UI_GREETING enqueues ticker message', () {
+    test('HOME_UI_GREETING enqueues a one-shot ephemeral message', () {
       final base = HomeSurface.localDefaults();
       final next = applyHomeUiEvent(
         base,
@@ -128,7 +128,10 @@ void main() {
         }),
       );
 
-      expect(next.header.greeting.mode, HomeGreetingMode.ticker);
+      expect(next.header.greeting.mode, HomeGreetingMode.ephemeral);
+      expect(next.header.greeting.rotation.loop, isFalse);
+      expect(next.header.greeting.presentation.playPolicy,
+          HomeGreetingPlayPolicy.once);
       expect(next.header.greeting.activeMessages, hasLength(1));
       expect(
         next.header.greeting.activeMessages.first.resolveText('João'),

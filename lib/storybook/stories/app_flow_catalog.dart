@@ -211,7 +211,7 @@ const storybookFlowItems = [
     section: 'Receber',
     title: 'Request pago',
     routeName: '/receive/requests/paid',
-    icon: KeroseneIcons.success2,
+    icon: KeroseneIcons.success,
     surface: FlowSurface.mobile,
   ),
   FlowItem(

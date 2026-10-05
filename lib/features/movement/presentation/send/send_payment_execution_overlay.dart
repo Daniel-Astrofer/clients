@@ -1,24 +1,19 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/constants/localized_copy.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/core/providers/shader_provider.dart';
-import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 
-/// Full-screen GLSL shader execution animation overlay for payments and
-/// destination validations.
-///
-/// Blurs the underlying screen, displays a loading state with bottom-anchored
-/// GPU GLSL shader glow, and smoothly springs the shader to the top upon
-/// confirmation while displaying success status with haptic feedback.
-class SendPaymentExecutionOverlay extends ConsumerStatefulWidget {
+/// One execution per presentation. Results remain visible until acknowledged.
+/// Dismissing a failure returns to review without replaying the operation.
+class SendPaymentExecutionOverlay extends StatefulWidget {
   final Future<bool> Function() onExecute;
   final String loadingMessage;
   final String successMessage;
   final String errorMessage;
+  // Kept for caller compatibility. Completion is now acknowledged by the user.
   final Duration successDelay;
 
   const SendPaymentExecutionOverlay({
@@ -27,7 +22,7 @@ class SendPaymentExecutionOverlay extends ConsumerStatefulWidget {
     this.loadingMessage = 'Validando...',
     this.successMessage = 'Confirmada',
     this.errorMessage = 'Não foi possível processar',
-    this.successDelay = const Duration(milliseconds: 1600),
+    this.successDelay = Duration.zero,
   });
 
   static Future<bool?> show(
@@ -36,298 +31,170 @@ class SendPaymentExecutionOverlay extends ConsumerStatefulWidget {
     String loadingMessage = 'Validando...',
     String successMessage = 'Confirmada',
     String errorMessage = 'Não foi possível processar',
-    Duration successDelay = const Duration(milliseconds: 1600),
+    Duration successDelay = Duration.zero,
   }) {
     return showGeneralDialog<bool>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.transparent,
-      transitionDuration: KeroseneMotion.slow,
-      pageBuilder: (context, anim1, anim2) => FadeTransition(
-        opacity: CurvedAnimation(parent: anim1, curve: KeroseneMotion.standard),
-        child: SendPaymentExecutionOverlay(
-          onExecute: onExecute,
-          loadingMessage: loadingMessage,
-          successMessage: successMessage,
-          errorMessage: errorMessage,
-          successDelay: successDelay,
-        ),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.4),
+      transitionDuration:
+          KeroseneMotion.duration(context, KeroseneMotion.short),
+      transitionBuilder: (_, animation, __, child) =>
+          FadeTransition(opacity: animation, child: child),
+      pageBuilder: (_, __, ___) => SendPaymentExecutionOverlay(
+        onExecute: onExecute,
+        loadingMessage: loadingMessage,
+        successMessage: successMessage,
+        errorMessage: errorMessage,
+        successDelay: successDelay,
       ),
     );
   }
 
   @override
-  ConsumerState<SendPaymentExecutionOverlay> createState() =>
-      _SendPaymentExecutionOverlayState();
+  State<SendPaymentExecutionOverlay> createState() => _ExecutionState();
 }
 
-class _SendPaymentExecutionOverlayState
-    extends ConsumerState<SendPaymentExecutionOverlay>
-    with SingleTickerProviderStateMixin {
-  bool _isSuccess = false;
-  bool _isError = false;
-  String? _displayMessage;
-
-  late final Ticker _ticker;
-  double _timeSec = 0;
-  Duration? _lastTick;
-  ui.FragmentShader? _shader;
+class _ExecutionState extends State<SendPaymentExecutionOverlay> {
+  bool? _result;
+  bool _uncertain = false;
 
   @override
   void initState() {
     super.initState();
-    _displayMessage = widget.loadingMessage;
-    _ticker = createTicker(_onTick)..start();
-    HapticFeedback.mediumImpact();
-    _runExecution();
+    _execute();
   }
 
-  @override
-  void dispose() {
-    _ticker.dispose();
-    _shader?.dispose();
-    super.dispose();
-  }
-
-  void _onTick(Duration elapsed) {
-    if (_lastTick == null) {
-      _lastTick = elapsed;
-      return;
-    }
-    final dt = (elapsed - _lastTick!).inMicroseconds / 1e6;
-    _lastTick = elapsed;
-    _timeSec += dt;
-    if (mounted) setState(() {});
-  }
-
-  void _bindShader(ui.FragmentProgram program) {
-    if (_shader != null) return;
-    _shader = program.fragmentShader();
-  }
-
-  Future<void> _runExecution() async {
+  Future<void> _execute() async {
     try {
-      final success = await widget.onExecute();
+      final result = await widget.onExecute();
       if (!mounted) return;
-
-      if (success) {
-        HapticFeedback.lightImpact();
-        setState(() {
-          _isSuccess = true;
-          _displayMessage = widget.successMessage;
-        });
-        await Future<void>.delayed(widget.successDelay);
-        if (mounted) Navigator.of(context).pop(true);
-      } else {
-        HapticFeedback.vibrate();
-        setState(() {
-          _isError = true;
-          _displayMessage = widget.errorMessage;
-        });
-        await Future<void>.delayed(const Duration(milliseconds: 1800));
-        if (mounted) Navigator.of(context).pop(false);
-      }
+      setState(() => _result = result);
+      if (result) HapticFeedback.lightImpact();
     } catch (_) {
       if (!mounted) return;
-      HapticFeedback.vibrate();
       setState(() {
-        _isError = true;
-        _displayMessage = 'Erro ao processar.';
+        _result = false;
+        _uncertain = true;
       });
-      await Future<void>.delayed(const Duration(milliseconds: 1800));
-      if (mounted) Navigator.of(context).pop(false);
     }
+  }
+
+  void _retry() {
+    if (_result == null) return;
+    setState(() {
+      _result = null;
+      _uncertain = false;
+    });
+    _execute();
   }
 
   @override
   Widget build(BuildContext context) {
-    final programAsync = ref.watch(geminiGlowShaderProvider);
-    final program = programAsync.asData?.value;
-    if (program != null) {
-      _bindShader(program);
-    }
-
-    final surfaceColor = Theme.of(context).scaffoldBackgroundColor;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
+    final scheme = Theme.of(context).colorScheme;
+    final busy = _result == null;
+    final title = busy
+        ? widget.loadingMessage
+        : _result!
+            ? widget.successMessage
+            : widget.errorMessage;
     return PopScope(
       canPop: false,
-      child: Material(
-        color: Colors.transparent,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background blur and dark atmosphere
-            BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-              child: ColoredBox(
-                color: surfaceColor.withValues(alpha: 0.78),
+      child: Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        backgroundColor: scheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AnimatedSwitcher(
+                duration: KeroseneMotion.duration(
+                    context, KeroseneMotion.statusChange),
+                child: busy
+                    ? SizedBox(
+                        key: const ValueKey('payment-processing'),
+                        height: 40,
+                        child: Center(
+                            child: KeroseneMotion.reduceMotion(context)
+                                ? Icon(KeroseneIcons.pending,
+                                    color: scheme.onSurface)
+                                : const SizedBox.square(
+                                    dimension: 24,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))),
+                      )
+                    : Icon(
+                        _result!
+                            ? KeroseneIcons.success
+                            : KeroseneIcons.warning,
+                        key: ValueKey(_result),
+                        size: 36,
+                        color: _result! ? scheme.onSurface : scheme.error),
               ),
-            ),
-
-            // GLSL Shader Glow - Springing from bottom to top on confirmation
-            AnimatedAlign(
-              duration: const Duration(milliseconds: 850),
-              curve: _isSuccess ? KeroseneMotion.spring : KeroseneMotion.standard,
-              alignment:
-                  _isSuccess ? Alignment.topCenter : Alignment.bottomCenter,
-              child: SizedBox(
-                height: 420,
-                width: double.infinity,
-                child: _shader == null
-                    ? const SizedBox.shrink()
-                    : RepaintBoundary(
-                        child: CustomPaint(
-                          painter: _ExecutionShaderPainter(
-                            shader: _shader!,
-                            timeSec: _timeSec,
-                            intensity: _isSuccess ? 0.65 : 0.45,
-                            primary: const Color(0xFF4D7EFF),
-                            secondary: _isSuccess
-                                ? const Color(0xFF37E28E) // Mint/Green on success
-                                : const Color(0xFF9B7BFF),
-                          ),
-                        ),
-                      ),
+              const SizedBox(height: 20),
+              Semantics(
+                liveRegion: true,
+                child: Text(title,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.h3Small
+                        .copyWith(color: scheme.onSurface)),
               ),
-            ),
-
-            // Center status content
-            Center(
-              child: AnimatedSwitcher(
-                duration: KeroseneMotion.medium,
-                switchInCurve: KeroseneMotion.entrance,
-                switchOutCurve: KeroseneMotion.exit,
-                child: _buildStatusContent(onSurface),
-              ),
-            ),
-          ],
+              if (_result == false) ...[
+                const SizedBox(height: 12),
+                Text(
+                  (_uncertain
+                          ? const LocalizedCopy(
+                              en:
+                                  'The result could not be confirmed. Check your activity before trying again.',
+                              pt:
+                                  'Não foi possível confirmar o resultado. Confira sua atividade antes de tentar novamente.',
+                              es:
+                                  'No se pudo confirmar el resultado. Revisa tu actividad antes de intentarlo de nuevo.')
+                          : const LocalizedCopy(
+                              en: 'Your payment details are saved in the review.',
+                              pt: 'Os dados do pagamento foram mantidos na revisão.',
+                              es: 'Los datos del pago se mantienen en la revisión.'))
+                      .resolve(context),
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+              if (!busy) ...[
+                const SizedBox(height: 24),
+                if (_result == false) ...[
+                  AppButton(
+                    label: const LocalizedCopy(
+                      en: 'Try again',
+                      pt: 'Tentar novamente',
+                      es: 'Intentar de nuevo',
+                    ).resolve(context),
+                    variant: AppButtonVariant.secondary,
+                    onPressed: _retry,
+                    expand: true,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                AppButton(
+                  label: (_result!
+                          ? const LocalizedCopy(
+                              en: 'Done', pt: 'Concluir', es: 'Finalizar')
+                          : const LocalizedCopy(
+                              en: 'Back to review',
+                              pt: 'Voltar à revisão',
+                              es: 'Volver a la revisión'))
+                      .resolve(context),
+                  onPressed: () => Navigator.of(context).pop(_result),
+                  expand: true,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Widget _buildStatusContent(Color onSurface) {
-    if (_isSuccess) {
-      return Row(
-        key: const ValueKey('success_state'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.check_circle,
-            color: onSurface,
-            size: 24,
-          ),
-          const SizedBox(width: 14),
-          Text(
-            _displayMessage ?? widget.successMessage,
-            style: HomeTypography.heroTitle(
-              color: onSurface,
-              fontSize: 22,
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (_isError) {
-      return Row(
-        key: const ValueKey('error_state'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.error,
-            size: 24,
-          ),
-          const SizedBox(width: 14),
-          Text(
-            _displayMessage ?? widget.errorMessage,
-            style: HomeTypography.heroTitle(
-              color: Theme.of(context).colorScheme.error,
-              fontSize: 22,
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      key: const ValueKey('loading_state'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.2,
-            color: onSurface,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Text(
-          _displayMessage ?? widget.loadingMessage,
-          style: HomeTypography.heroTitle(
-            color: onSurface.withValues(alpha: 0.92),
-            fontSize: 22,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ExecutionShaderPainter extends CustomPainter {
-  final ui.FragmentShader shader;
-  final double timeSec;
-  final double intensity;
-  final Color primary;
-  final Color secondary;
-
-  const _ExecutionShaderPainter({
-    required this.shader,
-    required this.timeSec,
-    required this.intensity,
-    required this.primary,
-    required this.secondary,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-
-    shader.setFloat(0, size.width);
-    shader.setFloat(1, size.height);
-    shader.setFloat(2, timeSec);
-    shader.setFloat(3, 0.0);
-    shader.setFloat(4, intensity);
-    shader.setFloat(5, 0.45);
-    shader.setFloat(6, 0.25);
-    shader.setFloat(7, primary.r);
-    shader.setFloat(8, primary.g);
-    shader.setFloat(9, primary.b);
-    shader.setFloat(10, primary.a);
-    shader.setFloat(11, secondary.r);
-    shader.setFloat(12, secondary.g);
-    shader.setFloat(13, secondary.b);
-    shader.setFloat(14, secondary.a);
-    shader.setFloat(15, 0.0);
-    shader.setFloat(16, size.height);
-
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..isAntiAlias = true
-        ..shader = shader,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ExecutionShaderPainter oldDelegate) {
-    return oldDelegate.timeSec != timeSec ||
-        oldDelegate.intensity != intensity ||
-        oldDelegate.primary != primary ||
-        oldDelegate.secondary != secondary ||
-        oldDelegate.shader != shader;
   }
 }

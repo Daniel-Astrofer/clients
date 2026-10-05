@@ -4,6 +4,7 @@ import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 /// Binary calculator state for amount entry (Revolut-style expression + RHS).
 class AmountCalculatorState {
@@ -26,10 +27,7 @@ class AmountCalculatorState {
   });
 
   /// Soft expression shown above the main amount, e.g. `100 +`.
-  String? expressionLabel({
-    required Currency currency,
-    Locale? locale,
-  }) {
+  String? expressionLabel({required Currency currency, Locale? locale}) {
     final left = lhs;
     final operator = op;
     if (left == null || operator == null) return null;
@@ -174,10 +172,7 @@ class AmountCalculator {
 class AmountCalculatorToolbar extends StatelessWidget {
   final ValueChanged<String> onOperator;
 
-  const AmountCalculatorToolbar({
-    super.key,
-    required this.onOperator,
-  });
+  const AmountCalculatorToolbar({super.key, required this.onOperator});
 
   static const _ops = ['+', '−', '×', '÷', '='];
 
@@ -235,14 +230,14 @@ class _CalcOpPillState extends State<_CalcOpPill>
     super.initState();
     _press = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 90),
-      reverseDuration: const Duration(milliseconds: 140),
+      duration: KeroseneMotion.inputPress,
+      reverseDuration: KeroseneMotion.inputPressReverse,
     );
     _scale = Tween<double>(begin: 1, end: _pressScale).animate(
       CurvedAnimation(
         parent: _press,
-        curve: Curves.easeInCubic,
-        reverseCurve: Curves.easeOutCubic,
+        curve: KeroseneMotion.exit,
+        reverseCurve: KeroseneMotion.standard,
       ),
     );
   }
@@ -266,7 +261,9 @@ class _CalcOpPillState extends State<_CalcOpPill>
     return ScaleTransition(
       scale: _scale,
       child: Material(
-        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+        color: (Theme.of(context).brightness == Brightness.dark
+            ? AppColors.hexFF141517
+            : AppColors.calculatorLightSurface),
         borderRadius: BorderRadius.circular(999),
         child: InkWell(
           borderRadius: BorderRadius.circular(999),

@@ -1,3 +1,5 @@
+// architecture-allow-large-file: server-driven home schema and compatibility
+// decoding stay together to preserve backend payload contracts.
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 

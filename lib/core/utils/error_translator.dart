@@ -106,6 +106,8 @@ class ErrorTranslator {
         return l10n.errPasskeyDeviceNotLinked;
       case 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS':
       case 'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS':
+        return safeExtractedMessage ??
+            'Configure biometria ou um bloqueio de tela neste dispositivo para usar a chave do dispositivo.';
       case 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED':
       case 'ERR_AUTH_DEVICE_KEY_ENROLL_BLOCKED':
       case 'ERR_AUTH_DEVICE_KEY_STORAGE_UNAVAILABLE':
@@ -131,9 +133,7 @@ class ErrorTranslator {
       case 'AUTH_016':
       case 'ERR_AUTH_PASSKEY_REPLAY':
       case 'ERR_AUTH_DEVICE_CRED_REPLAY':
-        // Counter desync / clone signal — not "link a new passkey".
-        return safeExtractedMessage ??
-            'Possível conflito de segurança na chave deste dispositivo. Tente novamente.';
+        return safeExtractedMessage ?? l10n.errPasskeyRejected;
       case 'AUTH_025':
       case 'ERR_AUTH_DEVICE_CRED_REPLAY_LOCKED':
         return safeExtractedMessage ??
@@ -144,7 +144,7 @@ class ErrorTranslator {
         return l10n.errPasskeyDeviceNotLinked;
       case 'AUTH_018':
       case 'ERR_AUTH_APP_PIN_NOT_CONFIGURED':
-        return 'Este dispositivo ainda não tem PIN de entrada. Configure um PIN para continuar.';
+        return l10n.appEntryPinUnavailableMessage;
       case 'AUTH_019':
       case 'ERR_AUTH_APP_PIN_INVALID':
         // Entry PIN only — never use login "invalid credentials" copy here.
@@ -246,11 +246,11 @@ class ErrorTranslator {
         return safeExtractedMessage ?? l10n.errUnexpected;
       case 'SYS_500':
       case 'ERR_INTERNAL_SERVER':
-        return l10n.errInternalServer;
+        return safeExtractedMessage ?? l10n.errInternalServer;
       case 'HYDRA_001':
       case 'VAULT_001':
       case 'KRS_099':
-        return l10n.errInternalServer;
+        return safeExtractedMessage ?? l10n.errInternalServer;
 
       // Payment rail errors
       case 'LIGHTNING_INSUFFICIENT_LIQUIDITY':
@@ -345,6 +345,13 @@ class ErrorTranslator {
         lower.contains('unexpected character')) {
       return l10n.errCommFailure;
     }
+    if (safeExtractedMessage != null &&
+        safeExtractedMessage.isNotEmpty &&
+        (safeExtractedMessage.contains(' ') ||
+            safeExtractedMessage.length < 40)) {
+      return safeExtractedMessage;
+    }
+
     if (lower.contains('bitcoin core rpc') ||
         lower.contains('depósito on-chain') ||
         lower.contains('deposito on-chain') ||
@@ -355,12 +362,6 @@ class ErrorTranslator {
     if (lower.contains('invalid address') ||
         lower.contains('bitcoin address')) {
       return l10n.errInvalidBtcAddress;
-    }
-
-    if (safeExtractedMessage != null &&
-        (safeExtractedMessage.contains(' ') ||
-            safeExtractedMessage.length < 40)) {
-      return safeExtractedMessage;
     }
 
     final cleaned = codeOrMessage

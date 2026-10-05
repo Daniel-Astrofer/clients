@@ -333,11 +333,16 @@ class _RiveLoadedViewState extends State<_RiveLoadedView> {
     try {
       // Backend sends logical state names; Flutter fires SM inputs.
       final sm = widget.controller.stateMachine;
+      // The current .riv assets expose legacy state-machine inputs rather
+      // than view-model properties. Keep this adapter until the assets are
+      // re-exported with Data Binding metadata.
+      // ignore: deprecated_member_use
       final trigger = sm.trigger(name);
       if (trigger != null) {
         trigger.fire();
         return;
       }
+      // ignore: deprecated_member_use
       final flag = sm.boolean(name);
       if (flag != null) {
         flag.value = true;

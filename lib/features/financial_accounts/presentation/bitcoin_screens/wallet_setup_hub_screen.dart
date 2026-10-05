@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 
 import 'cold_wallet_creation_screen.dart';
 import 'cold_wallet_success_screen.dart';
@@ -31,7 +30,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back,
+            KeroseneIcons.arrowBack,
             color: Theme.of(context).colorScheme.onSurface,
           ),
           onPressed: () => Navigator.of(context).pop(),
@@ -45,7 +44,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
             children: [
               SizedBox(height: 12),
               Text(
-                'Novo cofre',
+                context.tr.walletSetupNewVault,
                 style: AppTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 28,
@@ -55,7 +54,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Rede do app: $networkLabel · path ${appColdWalletDerivationPath}',
+                'Rede do app: $networkLabel · path $appColdWalletDerivationPath',
                 style: AppTypography.inter(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
@@ -74,28 +73,28 @@ class WalletSetupHubScreen extends ConsumerWidget {
                     _HubCard(
                       title: context.tr.walletSetupCreateOnDevice,
                       subtitle: context.tr.walletSetupGenerateBip39,
-                      icon: PhosphorIcons.key(PhosphorIconsStyle.regular),
+                      icon: KeroseneIcons.key,
                       enabled: true,
                       onTap: () => _createOnDevice(context),
                     ),
                     _HubCard(
                       title: context.tr.walletSetupImportSeed,
                       subtitle: context.tr.walletSetupImportSeedHint,
-                      icon: PhosphorIcons.scroll(PhosphorIconsStyle.regular),
+                      icon: KeroseneIcons.document,
                       enabled: true,
                       onTap: () => _importSeed(context, ref),
                     ),
                     _HubCard(
                       title: context.tr.walletSetupWatchOnly,
                       subtitle: context.tr.walletSetupXpubSoon,
-                      icon: PhosphorIcons.eye(PhosphorIconsStyle.regular),
+                      icon: KeroseneIcons.visibility,
                       enabled: false,
                       onTap: () {},
                     ),
                     _HubCard(
                       title: context.tr.walletSetupMultisig,
                       subtitle: context.tr.walletSetupSoon,
-                      icon: PhosphorIcons.vault(PhosphorIconsStyle.regular),
+                      icon: KeroseneIcons.coldWallet,
                       enabled: false,
                       onTap: () {},
                     ),
@@ -112,9 +111,7 @@ class WalletSetupHubScreen extends ConsumerWidget {
   Future<void> _createOnDevice(BuildContext context) async {
     HapticFeedback.selectionClick();
     final outcome = await Navigator.of(context).push<ColdWalletFlowOutcome>(
-      MaterialPageRoute(
-        builder: (_) => const ColdWalletCreationScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const ColdWalletCreationScreen()),
     );
     if (!context.mounted || outcome == null) return;
     await _finishFromOutcome(context, outcome);
@@ -123,16 +120,15 @@ class WalletSetupHubScreen extends ConsumerWidget {
   Future<void> _importSeed(BuildContext context, WidgetRef ref) async {
     HapticFeedback.selectionClick();
     final importResult = await Navigator.of(context).push<SeedImportResult>(
-      MaterialPageRoute(
-        builder: (_) => const SeedWordEntryScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const SeedWordEntryScreen()),
     );
     if (importResult == null || importResult.mnemonic.trim().isEmpty) {
       return;
     }
     if (!context.mounted) return;
 
-    final label = await _askImportLabel(context) ?? 'Carteira importada';
+    final label = await _askImportLabel(context);
+    if (!context.mounted || label == null) return;
     if (!context.mounted) return;
 
     AppNotice.show(
@@ -144,8 +140,9 @@ class WalletSetupHubScreen extends ConsumerWidget {
 
     try {
       final useCase = RegisterColdWalletUseCase(
-        importColdWallet:
-            ref.read(bitcoinAccountsProvider.notifier).importColdWallet,
+        importColdWallet: ref
+            .read(bitcoinAccountsProvider.notifier)
+            .importColdWallet,
       );
       // Do not pass app BIP84 path — Electrum seeds need m/0' (auto-detected).
       final result = await useCase.registerFromMnemonic(
@@ -158,10 +155,8 @@ class WalletSetupHubScreen extends ConsumerWidget {
       if (!context.mounted) return;
       final outcome = await Navigator.of(context).push<ColdWalletFlowOutcome>(
         MaterialPageRoute(
-          builder: (_) => ColdWalletSuccessScreen(
-            result: result,
-            walletLabel: label,
-          ),
+          builder: (_) =>
+              ColdWalletSuccessScreen(result: result, walletLabel: label),
         ),
       );
       if (!context.mounted || outcome == null) return;
@@ -213,11 +208,14 @@ class WalletSetupHubScreen extends ConsumerWidget {
           content: TextField(
             controller: controller,
             autofocus: true,
-            style: AppTypography.inter(color: Theme.of(context).colorScheme.onSurface),
+            style: AppTypography.inter(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             decoration: InputDecoration(
               hintText: context.tr.walletSetupNameExample,
-              hintStyle:
-                  AppTypography.inter(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              hintStyle: AppTypography.inter(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           actions: [
@@ -259,7 +257,9 @@ class _HubCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = enabled
         ? Theme.of(context).colorScheme.onSurface
-        : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
+        : Theme.of(
+            context,
+          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
     return Material(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(20),
@@ -285,7 +285,9 @@ class _HubCard extends StatelessWidget {
               Text(
                 subtitle,
                 style: AppTypography.inter(
-                  color: enabled ? Theme.of(context).colorScheme.onSurfaceVariant : fg,
+                  color: enabled
+                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                      : fg,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),

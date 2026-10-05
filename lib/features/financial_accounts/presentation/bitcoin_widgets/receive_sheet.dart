@@ -3,7 +3,6 @@
 import 'package:kerosene/core/errors/exceptions.dart';
 
 import '../bitcoin_accounts_dependencies.dart';
-import '../bitcoin_accounts_screen.dart';
 import 'bottom_sheets.dart';
 
 class ReceiveSheet extends ConsumerStatefulWidget {

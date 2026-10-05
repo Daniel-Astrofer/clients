@@ -5,9 +5,9 @@ import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
-import 'package:kerosene/features/movement/data/transaction_party_display.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_party_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_visual_tokens.dart';
 
 /// ARB-backed labels for list/detail transaction presentation.

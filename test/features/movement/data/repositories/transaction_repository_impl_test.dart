@@ -202,7 +202,7 @@ void main() {
         amount: 0.0001,
       );
 
-      expect(payload['memo'], 'saque para carteira externa');
+      expect(payload['memo'], 'Envio on-chain');
     });
 
     test('builds an internal transfer for a destination wallet UUID', () {

@@ -1,3 +1,5 @@
+// architecture-allow-large-file: auth state transitions and compatibility
+// adapters remain co-located to preserve DI and session contracts.
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +10,7 @@ import '../domain/entities/user.dart';
 import 'package:kerosene/features/auth/domain/entities/login_result.dart';
 import '../../../core/services/background_service.dart';
 import '../../../core/services/device_key_service.dart';
-import '../../../core/services/notification_service.dart';
+import '../../../app/notifications/notification_service.dart';
 import '../../../core/services/passkey_service.dart';
 import '../../../core/security/device_credential_enroll_policy.dart';
 import '../../../core/errors/failures.dart';

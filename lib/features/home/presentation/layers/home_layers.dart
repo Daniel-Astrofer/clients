@@ -53,12 +53,10 @@ class HomeAuroraLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenH = MediaQuery.sizeOf(context).height;
-    // Covers status bar + balance theater.
+    // Follow the header's content scale, not the device's aspect ratio.
     final bandHeight =
-        (screenH * HomeMotion.auroraBandFraction).clamp(280.0, 720.0);
-    final veilHeight =
-        (screenH * HomeMotion.veilHeightFraction).clamp(72.0, 180.0);
+        HomeMotion.auroraBandHeight + MediaQuery.paddingOf(context).top;
+    const veilHeight = HomeMotion.veilHeight;
 
     final shaderHeight = topExtension + bandHeight;
     final veilTop = shaderHeight - veilHeight * 0.65;
@@ -127,7 +125,6 @@ class HomeScrollLayer extends ConsumerStatefulWidget {
 }
 
 class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
-  String? _firstUseActionPanelUserId;
   int _lastOverscrollPublishMs = 0;
 
   @override
@@ -135,7 +132,7 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
     final responsive = context.responsive;
     final contentMaxWidth = responsive.appColumnMaxWidth;
     final pageHorizontalPadding = responsive.isTinyPhone
-        ? homeSize(18)
+        ? homeSize(20)
         : responsive.isCompact
             ? homeSize(24)
             : responsive.isWide
@@ -148,26 +145,11 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
 
     // Single coarse flag provider — shell structure only.
     final flags = ref.watch(homeShellFlagsProvider);
-    final gapAfterHeader = homeSize(flags.sectionGapAfterHeader);
-    final gapBeforeFeed = homeSize(flags.sectionGapBeforeFeed);
+    final gapAfterHeader = homeSize(flags.sectionGapAfterHeader.clamp(24, 32));
+    final gapBeforeFeed = homeSize(flags.sectionGapBeforeFeed.clamp(24, 32));
 
-    final userId = flags.authenticatedUserId;
-    if (userId == null) {
-      _firstUseActionPanelUserId = null;
-    } else if (flags.isReadyActionsVariant &&
-        flags.hasLoadedHistory &&
-        !flags.hasTransactions &&
-        _firstUseActionPanelUserId != userId) {
-      // Arm once without setState storm — field is read below after assign.
-      _firstUseActionPanelUserId = userId;
-    }
-
-    final showFirstUseReadyPanel = userId != null &&
-        flags.isReadyActionsVariant &&
-        !flags.hasTransactions &&
-        _firstUseActionPanelUserId == userId;
-    final showPrimaryActionPanel =
-        !flags.isReadyActionsVariant || showFirstUseReadyPanel;
+    // Existing wallets already have Receive/Send above; do not repeat that CTA.
+    final showPrimaryActionPanel = !flags.hasWallet;
     final userName = _resolveUserNameFromFlags(context, flags);
 
     return RepaintBoundary(
@@ -194,9 +176,8 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             if (shouldPublish &&
                 (delta > 2.0 || (overscroll == 0 && currentOverscroll != 0))) {
               _lastOverscrollPublishMs = now;
-              final quantized = overscroll <= 1
-                  ? 0.0
-                  : (overscroll / 3.0).round() * 3.0;
+              final quantized =
+                  overscroll <= 1 ? 0.0 : (overscroll / 3.0).round() * 3.0;
               Future.microtask(() {
                 if (mounted) {
                   ref.read(homeOverscrollProvider.notifier).state = quantized;
@@ -256,7 +237,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
                 showPrimaryActionPanel: showPrimaryActionPanel,
                 hasWallet: flags.hasWallet,
                 hasBalance: flags.hasBalance,
-                hasTransactions: flags.hasTransactions,
               ),
             ],
           ],
@@ -276,7 +256,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
     required bool showPrimaryActionPanel,
     required bool hasWallet,
     required bool hasBalance,
-    required bool hasTransactions,
   }) {
     Widget pad(Widget child) {
       return ColoredBox(
@@ -315,7 +294,6 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
                 showPrimaryActionPanel: showPrimaryActionPanel,
                 hasWallet: hasWallet,
                 hasBalance: hasBalance,
-                hasTransactions: hasTransactions,
                 onOpenCreateWallet: widget.onCreateWallet,
                 onOpenDeposit: widget.onOpenDeposit,
                 onOpenSend: widget.onOpenSendFromFeed,
@@ -381,37 +359,43 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
             children: [
               RepaintBoundary(child: HomeOnboardingProgressCard()),
               SizedBox(height: gapAfterHeader),
-              const HomeMarketLayer(),
               if (setupNotice != null) ...[
-                SizedBox(height: gapAfterHeader),
                 setupNotice,
+                SizedBox(height: gapAfterHeader),
               ],
-              SizedBox(height: gapBeforeFeed),
-              const HomeEducationLayer(),
-              SizedBox(height: homeSize(AppSpacing.md)),
-              SizedBox(height: homeSize(AppSpacing.xl)),
-              HomeFundsLayer(onViewStatement: widget.onOpenStatement),
-              SizedBox(height: homeSize(AppSpacing.xl)),
+              // Personal activity stays ahead of market information on mobile.
               HomeSectionHeader(
                 title: homeRecentActivitiesTitle(context),
-                onAction: widget.onOpenStatement,
-                actionLabel: homeSeeYourStatementLabel(context),
-                actionTrailingChevron: true,
-                actionTooltip: context.tr.statementScreenTitle,
               ),
               SizedBox(height: homeSize(AppSpacing.md)),
-              if (hasTransactions) ...[
-                RepaintBoundary(child: HomeActivityFilterChips()),
-                SizedBox(height: homeSize(AppSpacing.md)),
-              ],
             ],
           ),
         ),
       ),
       // ── TRANSACTIONS layer (virtualized, own watches) ──────────────────
-      HomeTransactionsLayer(
-        onCreateWallet: widget.onCreateWallet,
-        onDepositWallet: widget.onDepositWallet,
+      SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: pageHorizontalPadding),
+        sliver: HomeTransactionsLayer(
+          onCreateWallet: widget.onCreateWallet,
+          onDepositWallet: widget.onDepositWallet,
+          onOpenStatement: widget.onOpenStatement,
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: pad(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: gapBeforeFeed),
+              const HomeMarketLayer(),
+              SizedBox(height: gapBeforeFeed),
+              const HomeEducationLayer(),
+              SizedBox(height: gapBeforeFeed),
+              HomeFundsLayer(onViewStatement: widget.onOpenStatement),
+              SizedBox(height: gapBeforeFeed),
+            ],
+          ),
+        ),
       ),
       SliverFillRemaining(
         hasScrollBody: false,
@@ -540,11 +524,13 @@ class HomeFundsLayer extends ConsumerWidget {
 class HomeTransactionsLayer extends StatelessWidget {
   final VoidCallback onCreateWallet;
   final ValueChanged<Wallet> onDepositWallet;
+  final VoidCallback? onOpenStatement;
 
   const HomeTransactionsLayer({
     super.key,
     required this.onCreateWallet,
     required this.onDepositWallet,
+    this.onOpenStatement,
   });
 
   @override
@@ -553,6 +539,7 @@ class HomeTransactionsLayer extends StatelessWidget {
       asSliver: true,
       onCreateWallet: onCreateWallet,
       onDepositWallet: onDepositWallet,
+      onOpenStatement: onOpenStatement,
     );
   }
 }
@@ -565,9 +552,7 @@ class HomeFeedTopVeil extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = Theme.of(context).scaffoldBackgroundColor;
     return SizedBox(
-      height:
-          (MediaQuery.sizeOf(context).height * HomeMotion.veilHeightFraction)
-              .clamp(72.0, 180.0),
+      height: HomeMotion.veilHeight,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -595,7 +580,6 @@ class HomeWideFeedBody extends ConsumerWidget {
   final bool showPrimaryActionPanel;
   final bool hasWallet;
   final bool hasBalance;
-  final bool hasTransactions;
   final VoidCallback onOpenCreateWallet;
   final VoidCallback onOpenDeposit;
   final VoidCallback onOpenSend;
@@ -609,7 +593,6 @@ class HomeWideFeedBody extends ConsumerWidget {
     required this.showPrimaryActionPanel,
     required this.hasWallet,
     required this.hasBalance,
-    required this.hasTransactions,
     required this.onOpenCreateWallet,
     required this.onOpenDeposit,
     required this.onOpenSend,
@@ -649,42 +632,35 @@ class HomeWideFeedBody extends ConsumerWidget {
           )
         : null;
 
-    final left = Column(
+    final secondary = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        RepaintBoundary(child: HomeOnboardingProgressCard()),
-        SizedBox(height: gapAfterHeader),
-        const HomeMarketLayer(),
-        if (setup != null) ...[
-          SizedBox(height: gapAfterHeader),
-          setup,
-        ],
-        SizedBox(height: gapBeforeFeed),
         const HomeEducationLayer(),
         SizedBox(height: homeSize(AppSpacing.xl)),
         HomeFundsLayer(onViewStatement: onOpenStatement),
       ],
     );
 
-    final right = Column(
+    final primary = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const HomeOnboardingProgressCard(),
+        SizedBox(height: gapAfterHeader),
+        if (setup != null) ...[
+          setup,
+          SizedBox(height: gapAfterHeader),
+        ],
+        const HomeMarketLayer(),
+        SizedBox(height: gapBeforeFeed),
         HomeSectionHeader(
           title: homeRecentActivitiesTitle(context),
-          onAction: onOpenStatement,
-          actionLabel: homeSeeYourStatementLabel(context),
-          actionTrailingChevron: true,
-          actionTooltip: context.tr.statementScreenTitle,
         ),
         SizedBox(height: homeSize(AppSpacing.md)),
-        if (hasTransactions) ...[
-          RepaintBoundary(child: HomeActivityFilterChips()),
-          SizedBox(height: homeSize(AppSpacing.md)),
-        ],
         HomeTransactionsList(
           asSliver: false,
           onCreateWallet: onOpenCreateWallet,
           onDepositWallet: onDepositWallet,
+          onOpenStatement: onOpenStatement,
         ),
       ],
     );
@@ -692,9 +668,9 @@ class HomeWideFeedBody extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 5, child: left),
+        Expanded(flex: 5, child: primary),
         SizedBox(width: homeSize(AppSpacing.xl)),
-        Expanded(flex: 4, child: right),
+        Expanded(flex: 4, child: secondary),
       ],
     );
   }

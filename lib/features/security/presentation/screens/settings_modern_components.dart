@@ -21,7 +21,7 @@ class SettingsGlassPanel extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: KeroseneBrandTokens.border),
       ),
       child: child,
@@ -66,7 +66,10 @@ class SettingsAnimatedIcon extends StatelessWidget {
               border: Border.all(
                 color: Color.lerp(
                       KeroseneBrandTokens.border,
-                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+                      Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.12),
                       value,
                     ) ??
                     KeroseneBrandTokens.border,
@@ -127,7 +130,8 @@ class SettingsIconButtonFrame extends StatelessWidget {
               color: Theme.of(context).colorScheme.surface,
               border: Border.all(color: KeroseneBrandTokens.border),
             ),
-            child: Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 20),
+            child: Icon(icon,
+                color: Theme.of(context).colorScheme.onSurface, size: 20),
           ),
         ),
       ),
@@ -184,18 +188,18 @@ class SettingsPaneScaffold extends StatelessWidget {
                       eyebrow.toUpperCase(),
                       style: AppTypography.inter(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.65,
+                        fontSize: 12,
+                        fontWeight: AppTypography.w590,
+                        letterSpacing: 0.6,
                       ),
                     ),
                     SizedBox(height: AppSpacing.xs),
                     Text(
                       title,
-                      style: AppTypography.newsreader(
+                      style: AppTypography.inter(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 30,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: AppTypography.w590,
                         height: 1.15,
                         letterSpacing: 0,
                       ),
@@ -261,7 +265,7 @@ class SettingsInfoItem {
 class _InfoCard extends StatelessWidget {
   final SettingsInfoItem item;
 
-  _InfoCard({required this.item});
+  const _InfoCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -317,8 +321,9 @@ class SettingsActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        destructive ? Theme.of(context).colorScheme.error : KeroseneBrandTokens.brand;
+    final accent = destructive
+        ? Theme.of(context).colorScheme.error
+        : KeroseneBrandTokens.brand;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(24),
@@ -332,7 +337,7 @@ class SettingsActionTile extends StatelessWidget {
           padding: EdgeInsets.all(AppSpacing.base),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: accent.withValues(alpha: 0.24)),
           ),
           child: Row(
@@ -347,7 +352,7 @@ class SettingsActionTile extends StatelessWidget {
                       title,
                       style: AppTypography.bodyMedium.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: AppTypography.w590,
                       ),
                     ),
                     SizedBox(height: AppSpacing.xs),
@@ -395,7 +400,7 @@ class SettingsPreferenceSwitch extends StatelessWidget {
       padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: KeroseneBrandTokens.border),
       ),
       child: Row(
@@ -415,7 +420,7 @@ class SettingsPreferenceSwitch extends StatelessWidget {
                   title,
                   style: AppTypography.bodyMedium.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: AppTypography.w590,
                   ),
                 ),
                 SizedBox(height: AppSpacing.xs),
@@ -434,7 +439,8 @@ class SettingsPreferenceSwitch extends StatelessWidget {
             activeThumbColor: KeroseneBrandTokens.brand,
             activeTrackColor: KeroseneBrandTokens.brand.withValues(alpha: 0.24),
             inactiveThumbColor: Theme.of(context).colorScheme.onSurfaceVariant,
-            inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+            inactiveTrackColor:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
           ),
         ],
       ),
@@ -472,7 +478,8 @@ class SettingsStatusRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
+          Icon(icon,
+              color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
           SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -557,8 +564,8 @@ class SettingsChoiceGroup<T> extends StatelessWidget {
       children: [
         Text(
           title,
-          style:
-              AppTypography.h3.copyWith(color: Theme.of(context).colorScheme.onSurface),
+          style: AppTypography.h3
+              .copyWith(color: Theme.of(context).colorScheme.onSurface),
         ),
         const SizedBox(height: AppSpacing.md),
         for (final option in values)
@@ -604,12 +611,19 @@ class _ChoiceTile extends StatelessWidget {
           duration: KeroseneMotion.short,
           padding: EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color:
-                selected ? AppColors.hexFF2C2C2E : Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
+            color: selected
+                ? Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.08)
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
-                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10)
+                  ? Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.10)
                   : KeroseneBrandTokens.border,
             ),
           ),
@@ -631,7 +645,7 @@ class _ChoiceTile extends StatelessWidget {
                       title,
                       style: AppTypography.bodyMedium.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: AppTypography.w590,
                       ),
                     ),
                     SizedBox(height: AppSpacing.xs),
@@ -695,7 +709,7 @@ class SettingsEmptyPanel extends StatelessWidget {
       padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: KeroseneBrandTokens.border),
       ),
       child: Row(
@@ -711,7 +725,7 @@ class SettingsEmptyPanel extends StatelessWidget {
                   title,
                   style: AppTypography.bodyMedium.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: AppTypography.w590,
                   ),
                 ),
                 SizedBox(height: AppSpacing.xs),

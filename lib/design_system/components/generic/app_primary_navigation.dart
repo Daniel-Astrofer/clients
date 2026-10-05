@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -54,6 +56,20 @@ class AppPrimaryNavigationBar {
     AppPrimaryDestination destination, {
     bool triggerFeedback = true,
   }) {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      final current = router.routeInformationProvider.value.uri.path;
+      if (current == destination.routeName) return;
+      if (triggerFeedback) HapticFeedback.selectionClick();
+      if (destination == AppPrimaryDestination.home) {
+        router.go('/home');
+      } else if (current == '/home') {
+        router.push(destination.routeName);
+      } else {
+        router.pushReplacement(destination.routeName);
+      }
+      return;
+    }
     final navigator = Navigator.of(context);
     final currentRouteName = ModalRoute.of(context)?.settings.name;
     final targetRouteName = destination.routeName;
@@ -90,14 +106,7 @@ class AppPrimaryNavigationBar {
 
   static void backOrHome(BuildContext context) {
     HapticFeedback.selectionClick();
-
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
-      navigator.maybePop();
-      return;
-    }
-
-    navigator.pushReplacementNamed(AppPrimaryDestination.home.routeName);
+    AppNavigation.backOrHome(context);
   }
 
   static bool _isPrimaryRouteName(String? routeName) {

@@ -7,9 +7,9 @@ import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.da
 
 /// Design tokens for financial send/receive wizards ([ThemeExtension]).
 ///
-/// Linear-inspired:
-/// - Outlined pill CTA (9999px radius, 1px border, no fill)
-/// - 4px input radius, 8px card radius
+/// Shared mobile financial chrome:
+/// - Filled pill primary action, outlined secondary action
+/// - 16px input radius, 20px card radius
 /// - No drop shadows — 1px hairline borders for separation
 /// - 4px spacing base
 class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
@@ -100,13 +100,15 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       feedbackError: KeroseneBrandTokens.error,
       feedbackSuccess: KeroseneBrandTokens.success,
       feedbackWarning: KeroseneBrandTokens.warning,
-      ctaBackground: Colors.transparent,
-      ctaForeground: KeroseneBrandTheme.dark.textPrimary,
+      ctaBackground: KeroseneBrandTheme.dark.textPrimary,
+      ctaForeground: KeroseneBrandTheme.dark.background,
       ctaDisabledBackground: Colors.transparent,
-      ctaDisabledForeground:
-          KeroseneBrandTheme.dark.textMuted.withValues(alpha: 0.64),
-      inputFocusRing:
-          KeroseneBrandTheme.dark.textPrimary.withValues(alpha: 0.28),
+      ctaDisabledForeground: KeroseneBrandTheme.dark.textMuted.withValues(
+        alpha: 0.64,
+      ),
+      inputFocusRing: KeroseneBrandTheme.dark.textPrimary.withValues(
+        alpha: 0.28,
+      ),
       cardShadow: const [], // Linear: no drop shadows
       spaceXs: AppSpacing.xs,
       spaceSm: AppSpacing.sm,
@@ -117,9 +119,9 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       minTouch: AppSpacing.minTouch,
       ctaHeight: AppSpacing.xxxl,
       radiusPill: 9999,
-      radiusInput: 4,
-      radiusCard: 8,
-      radiusPanel: 8,
+      radiusInput: 16,
+      radiusCard: 20,
+      radiusPanel: 20,
       pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
       thumbDockPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl2,
@@ -139,7 +141,7 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       surfaceHigh: HomeSurfaceTheme.light.card,
       surfaceRaised: HomeSurfaceTheme.light.card,
       border: HomeSurfaceTheme.light.panelBorder,
-      borderStrong: const Color(0xFFC5C8C3),
+      borderStrong: AppColors.sendFlowLightBorderStrong,
       textPrimary: brand.textPrimary,
       textSecondary: brand.textSecondary,
       textMuted: brand.textMuted,
@@ -162,9 +164,9 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       minTouch: AppSpacing.minTouch,
       ctaHeight: AppSpacing.xxxl,
       radiusPill: 9999,
-      radiusInput: 4,
-      radiusCard: 8,
-      radiusPanel: 8,
+      radiusInput: 16,
+      radiusCard: 20,
+      radiusPanel: 20,
       pagePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
       thumbDockPadding: const EdgeInsets.fromLTRB(
         AppSpacing.xl2,
@@ -191,12 +193,12 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
 
   /// Hero amount (quantia / revisão).
   TextStyle amountHero({Color? color}) => AppTypography.financial(
-        fontSize: 56,
-        fontWeight: FontWeight.w700,
-        height: 1.05,
-        letterSpacing: -1.2,
-        color: color ?? textPrimary,
-      );
+    fontSize: 56,
+    fontWeight: FontWeight.w700,
+    height: 1.05,
+    letterSpacing: -1.2,
+    color: color ?? textPrimary,
+  );
 
   /// Secondary monetary line (fiat reference, fee rows).
   TextStyle amountBody({Color? color, bool emphasize = false}) =>
@@ -209,28 +211,28 @@ class SendFlowTheme extends ThemeExtension<SendFlowTheme> {
       );
 
   TextStyle titleCard({Color? color}) => AppTypography.inter(
-        fontSize: 22,
-        fontWeight: AppTypography.w510,
-        height: 1.22,
-        letterSpacing: -0.264,
-        color: color ?? textPrimary,
-      );
+    fontSize: 22,
+    fontWeight: AppTypography.w510,
+    height: 1.22,
+    letterSpacing: -0.264,
+    color: color ?? textPrimary,
+  );
 
   TextStyle bodyReading({Color? color}) => AppTypography.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        height: 1.6,
-        letterSpacing: -0.16,
-        color: color ?? textSecondary,
-      );
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.6,
+    letterSpacing: -0.16,
+    color: color ?? textSecondary,
+  );
 
   TextStyle ctaLabel({Color? color}) => AppTypography.inter(
-        fontSize: 14,
-        fontWeight: AppTypography.w510,
-        height: 1.2,
-        letterSpacing: -0.14,
-        color: color ?? ctaForeground,
-      );
+    fontSize: 14,
+    fontWeight: AppTypography.w510,
+    height: 1.2,
+    letterSpacing: -0.14,
+    color: color ?? ctaForeground,
+  );
 
   @override
   SendFlowTheme copyWith({

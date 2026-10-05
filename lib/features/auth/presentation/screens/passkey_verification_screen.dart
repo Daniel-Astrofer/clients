@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/security/domain/entities/passkey_action_required.dart';
@@ -18,8 +17,6 @@ import '../../controller/auth_controller.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import 'login_screen.dart';
 import 'passkey_verification_components.dart';
-
-const Color _authBlack = AppColors.hexFF000000;
 
 enum _PasskeyPhase { connecting, sending, prompt, totp, success, issue }
 
@@ -66,7 +63,7 @@ class _PasskeyVerificationScreenState
     _pulseController = AnimationController(
       vsync: this,
       duration: KeroseneMotion.passkeyPulse,
-    )..repeat();
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startPasskeySequence();
     });
@@ -95,20 +92,6 @@ class _PasskeyVerificationScreenState
       });
     }
 
-    final step1 = await _waitForScene(KeroseneMotion.passkeyScene);
-    if (!step1 || !mounted) {
-      _isRunningSequence = false;
-      return;
-    }
-
-    setState(() => _phase = _PasskeyPhase.sending);
-
-    final step2 = await _waitForScene(KeroseneMotion.passkeySceneCompact);
-    if (!step2 || !mounted) {
-      _isRunningSequence = false;
-      return;
-    }
-
     setState(() => _phase = _PasskeyPhase.prompt);
 
     _isRunningSequence = false;
@@ -117,17 +100,6 @@ class _PasskeyVerificationScreenState
           .read(authControllerProvider.notifier)
           .loginWithPasskey(widget.username.trim()),
     );
-  }
-
-  Future<bool> _waitForScene(Duration duration) {
-    _cancelSequenceWait();
-    final completer = Completer<bool>();
-    _sequenceCompleter = completer;
-    _sequenceTimer = Timer(duration, () {
-      _sequenceTimer = null;
-      if (!completer.isCompleted) completer.complete(true);
-    });
-    return completer.future;
   }
 
   void _openInlineTotpChallenge(AuthRequiresLoginTotp challenge) {
@@ -385,8 +357,6 @@ class _PasskeyVerificationScreenState
         return;
       }
 
-      final navigator = Navigator.of(context);
-
       if (next is AuthAuthenticated) {
         _cancelSequenceWait();
         _isRunningSequence = false;
@@ -398,7 +368,6 @@ class _PasskeyVerificationScreenState
             _phase = _PasskeyPhase.success;
           });
         }
-        await Future<void>.delayed(KeroseneMotion.calm);
         if (!context.mounted) {
           return;
         }
@@ -467,17 +436,18 @@ class _PasskeyVerificationScreenState
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: (Theme.of(context).brightness == Brightness.light
-            ? SystemUiOverlayStyle.dark
-            : SystemUiOverlayStyle.light)
-            .copyWith(
+              ? SystemUiOverlayStyle.dark
+              : SystemUiOverlayStyle.light)
+          .copyWith(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: _authBlack,
-        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light
+        systemNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
+        systemNavigationBarIconBrightness:
+            Theme.of(context).brightness == Brightness.light
                 ? Brightness.dark
                 : Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: _authBlack,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {

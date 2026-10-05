@@ -1,3 +1,5 @@
+import 'package:kerosene/core/constants/localized_copy.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +13,7 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
@@ -22,13 +24,12 @@ import 'bitcoin_accounts_internal_sections.dart';
 import 'bitcoin_accounts_advanced_sections.dart';
 import 'bitcoin_screens/internal_account_creation_screen.dart';
 
-import 'bitcoin_accounts_screen.dart';
+import 'bitcoin_accounts_wallet_support.dart';
 
 class _BitcoinAccountsDetailsCopy {
   const _BitcoinAccountsDetailsCopy._();
 
   static const renameWallet = 'Trocar nome';
-  static const filter = 'Filtrar';
 }
 
 class ReceiveMaterialDetails extends StatelessWidget {
@@ -522,6 +523,29 @@ class FocusedAccountHistory extends ConsumerStatefulWidget {
 
 class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
   final Set<String> _expandedTransactionIds = <String>{};
+  ActivityFilter _filter = ActivityFilter.all;
+  bool _showAll = false;
+
+  @override
+  void didUpdateWidget(covariant FocusedAccountHistory oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.account.id != widget.account.id) {
+      _filter = ActivityFilter.all;
+      _showAll = false;
+      _expandedTransactionIds.clear();
+    }
+  }
+
+  String _filterLabel(ActivityFilter filter) => switch (filter) {
+        ActivityFilter.incoming =>
+          const LocalizedCopy(en: 'Incoming', pt: 'Entradas', es: 'Entradas')
+              .resolve(context),
+        ActivityFilter.outgoing =>
+          const LocalizedCopy(en: 'Outgoing', pt: 'Saídas', es: 'Salidas')
+              .resolve(context),
+        _ => const LocalizedCopy(en: 'All', pt: 'Todas', es: 'Todas')
+            .resolve(context),
+      };
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -561,9 +585,9 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
       padding: const EdgeInsets.only(left: 4.0, top: 12.0),
       child: Text(
         label,
-        style: AppTypography.display.copyWith(
-          color: colors.text,
-          fontSize: 26,
+        style: AppTypography.bodyMedium.copyWith(
+          color: colors.mutedText,
+          fontSize: 14,
         ),
       ),
     );
@@ -583,28 +607,42 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
             Expanded(
               child: Text(
                 context.tr.primaryNavHistory,
-                style: AppTypography.newsreader(
+                style: AppTypography.inter(
                   color: colors.text,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 0,
                 ),
               ),
             ),
-            Icon(
-              KeroseneIcons.moveHorizontal,
-              color: colors.mutedText,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _BitcoinAccountsDetailsCopy.filter.toUpperCase(),
-              style: AppTypography.inter(
-                color: colors.mutedText,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.4,
-              ),
+            PopupMenuButton<ActivityFilter>(
+              tooltip: const LocalizedCopy(
+                      en: 'Filter activity',
+                      pt: 'Filtrar atividade',
+                      es: 'Filtrar actividad')
+                  .resolve(context),
+              initialValue: _filter,
+              onSelected: (value) => setState(() {
+                _filter = value;
+                _showAll = false;
+              }),
+              itemBuilder: (_) => [
+                for (final filter in [
+                  ActivityFilter.all,
+                  ActivityFilter.incoming,
+                  ActivityFilter.outgoing
+                ])
+                  PopupMenuItem(
+                      value: filter, child: Text(_filterLabel(filter))),
+              ],
+              child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(KeroseneIcons.moveHorizontal,
+                        size: 18, color: colors.mutedText),
+                    const SizedBox(width: 8),
+                    Text(_filterLabel(_filter)),
+                  ])),
             ),
           ],
         ),
@@ -633,11 +671,17 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
                 );
               }
             }
-            final rows = transactionsForAccount(
+            final matching = transactionsForAccount(
               account: widget.account,
               transactions: history,
               requests: requests,
-            ).take(8).toList(growable: false);
+            )
+                .where((tx) => TransactionFilterEngine.matchesActivity(
+                    tx, _filter,
+                    accounts: [widget.account]))
+                .toList(growable: false);
+            final rows =
+                _showAll ? matching : matching.take(8).toList(growable: false);
 
             if (rows.isEmpty) {
               return BareHistoryMessage(
@@ -647,54 +691,70 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
               );
             }
 
-            return StatementTransactionScrollStack(
-              itemCount: rows.length,
-              itemGap: 12,
-              itemBuilder: (context, index) {
-                final tx = rows[index];
+            return Column(children: [
+              StatementTransactionScrollStack(
+                itemCount: rows.length,
+                itemGap: 12,
+                itemBuilder: (context, index) {
+                  final tx = rows[index];
 
-                Widget? dateHeader;
-                if (index == 0) {
-                  dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-                } else {
-                  final previousTx = rows[index - 1];
-                  if (!_isSameDay(
-                      tx.timestamp.toLocal(), previousTx.timestamp.toLocal())) {
+                  Widget? dateHeader;
+                  if (index == 0) {
                     dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+                  } else {
+                    final previousTx = rows[index - 1];
+                    if (!_isSameDay(tx.timestamp.toLocal(),
+                        previousTx.timestamp.toLocal())) {
+                      dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+                    }
                   }
-                }
 
-                final expanded = _expandedTransactionIds.contains(tx.id);
-                final tile = StatementTransactionCard(
-                  transaction: tx,
-                  expanded: expanded,
-                  mode: StatementTransactionCardMode.stacked,
-                  onTap: () {
-                    setState(() {
-                      if (expanded) {
-                        _expandedTransactionIds.remove(tx.id);
-                      } else {
-                        _expandedTransactionIds.add(tx.id);
-                      }
-                    });
-                  },
-                );
-
-                if (dateHeader != null) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (index > 0) const SizedBox(height: 16),
-                      dateHeader,
-                      const SizedBox(height: 8),
-                      tile,
-                    ],
+                  final expanded = _expandedTransactionIds.contains(tx.id);
+                  final tile = StatementTransactionCard(
+                    transaction: tx,
+                    expanded: expanded,
+                    mode: StatementTransactionCardMode.stacked,
+                    onTap: () {
+                      setState(() {
+                        if (expanded) {
+                          _expandedTransactionIds.remove(tx.id);
+                        } else {
+                          _expandedTransactionIds.add(tx.id);
+                        }
+                      });
+                    },
                   );
-                }
-                return tile;
-              },
-            );
+
+                  if (dateHeader != null) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (index > 0) const SizedBox(height: 16),
+                        dateHeader,
+                        const SizedBox(height: 8),
+                        tile,
+                      ],
+                    );
+                  }
+                  return tile;
+                },
+              ),
+              if (matching.length > 8)
+                TextButton(
+                  onPressed: () => setState(() => _showAll = !_showAll),
+                  child: Text((_showAll
+                          ? const LocalizedCopy(
+                              en: 'Show less',
+                              pt: 'Mostrar menos',
+                              es: 'Mostrar menos')
+                          : const LocalizedCopy(
+                              en: 'See all transactions',
+                              pt: 'Ver todas as transações',
+                              es: 'Ver todas las transacciones'))
+                      .resolve(context)),
+                ),
+            ]);
           },
         ),
       ],

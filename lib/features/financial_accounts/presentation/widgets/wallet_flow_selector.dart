@@ -181,13 +181,6 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
 
   Widget _buildWalletGrid(BuildContext context, WalletLoaded walletState) {
     final wallets = walletState.wallets.toList();
-    if (wallets.length == 3) {
-      final insuredIndex = wallets.indexWhere((w) => w.isInternalCustody);
-      if (insuredIndex != -1 && insuredIndex != 1) {
-        final insuredWallet = wallets.removeAt(insuredIndex);
-        wallets.insert(1, insuredWallet);
-      }
-    }
     final selectedWallet = _resolveSelectedWallet(
       walletState.copyWith(wallets: wallets),
     );
@@ -205,7 +198,6 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
         final compact = width < 380 || height < 720 || wallets.length >= 3;
-        final isSideBySide = wallets.length > 1 && wallets.length <= 3;
         final isSingle = wallets.length <= 1;
 
         Widget itemBuilder(Wallet wallet,
@@ -218,12 +210,13 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
             onSelect: _select,
             onConfirmed: _continueWith,
           );
-          return AnimatedContainer(
-            key: ValueKey('wallet-flow-tile-${wallet.id}'),
-            duration: const Duration(milliseconds: 320),
-            curve: Curves.easeOutCubic,
-            width: isRow ? null : width,
-            child: fill ? SizedBox.expand(child: tile) : tile,
+          final tileWidth = isRow ? null : width * (selected ? 1 : 0.965);
+          return Center(
+            child: SizedBox(
+              key: ValueKey('wallet-flow-tile-${wallet.id}'),
+              width: tileWidth,
+              child: fill ? SizedBox.expand(child: tile) : tile,
+            ),
           );
         }
 
@@ -235,17 +228,28 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
           );
         }
 
-        if (isSideBySide) {
-          return SizedBox.expand(
-            child: Row(
-              children: [
-                for (var index = 0; index < wallets.length; index++) ...[
-                  Expanded(
-                    flex: _sameWallet(wallets[index], selectedWallet) ? 5 : 4,
-                    child: itemBuilder(wallets[index], fill: true, isRow: true),
-                  ),
+        if (wallets.length <= 3) {
+          return SizedBox(
+            width: width,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 84, 0, 28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var index = 0; index < wallets.length; index++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index == wallets.length - 1 ? 0 : 14,
+                      ),
+                      child: itemBuilder(
+                        wallets[index],
+                        fill: false,
+                        isRow: false,
+                      ),
+                    ),
                 ],
-              ],
+              ),
             ),
           );
         }

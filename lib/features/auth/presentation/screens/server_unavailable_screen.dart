@@ -6,9 +6,9 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 
@@ -35,7 +35,8 @@ class _ServerAvailabilityGateState
 
     // During cold session bootstrap the shell shows the K logo. Do not replace
     // it with "server unavailable" for transient offline/Tor-up probes.
-    if (authState is AuthInitial || authState is AuthLoading) {
+    if (authState is AuthInitial ||
+        (authState is AuthLoading && !_showingUnavailableScreen)) {
       _showingUnavailableScreen = false;
       return widget.child;
     }
@@ -80,64 +81,81 @@ class ServerUnavailableScreen extends ConsumerWidget {
     const title = 'Conexão indisponível';
 
     return Scaffold(
-      backgroundColor: AppColors.hexFF000000,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 360),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    KeroseneIcons.serverUnavailable,
-                    size: 76,
-                    color: AppColors.hexFFFFFFFF,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: KeroseneBrandTokens.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.07),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Icon(
+                            KeroseneIcons.serverUnavailable,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl2),
+                      Text(
+                        title,
+                        style: AppTypography.inter(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w500,
+                          height: 1.08,
+                          letterSpacing: 0,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        message,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.45,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.xl2),
+                      AuthPrimaryCta(
+                        label: context.tr.tryAgain,
+                        onPressed:
+                            isLoading ? null : () => _retry(context, ref),
+                        isLoading: isLoading,
+                        height: 54,
+                        borderRadius: BorderRadius.circular(999),
+                        backgroundColor:
+                            Theme.of(context).colorScheme.onSurface,
+                        foregroundColor: Theme.of(context).colorScheme.surface,
+                        textStyle: AppTypography.buttonText.copyWith(
+                          fontSize: 15,
+                          fontWeight: AppTypography.w590,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    title,
-                    style: AppTypography.newsreader(
-                      color: AppColors.hexFFFFFFFF,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w500,
-                      height: 1.08,
-                      letterSpacing: 0,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      color: AppColors.hexFFA1A1AA,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      height: 1.45,
-                      letterSpacing: 0,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  AuthPrimaryCta(
-                    label: context.tr.tryAgain,
-                    onPressed: isLoading ? null : () => _retry(context, ref),
-                    isLoading: isLoading,
-                    height: 48,
-                    borderRadius: BorderRadius.circular(4),
-                    backgroundColor: AppColors.hexFFFFFFFF,
-                    foregroundColor: AppColors.hexFF000000,
-                    textStyle: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 1,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

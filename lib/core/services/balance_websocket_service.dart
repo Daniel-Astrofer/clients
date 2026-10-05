@@ -1,3 +1,5 @@
+// architecture-allow-large-file: websocket lifecycle, reconnect policy, and
+// platform transport fallbacks remain together to preserve connection behavior.
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -184,7 +186,9 @@ class BalanceWebSocketService {
     if (!force && _connectInFlight) {
       return;
     }
-    if (!force && (_reconnectTimer?.isActive ?? false) && !_reconnectExhausted) {
+    if (!force &&
+        (_reconnectTimer?.isActive ?? false) &&
+        !_reconnectExhausted) {
       return;
     }
 

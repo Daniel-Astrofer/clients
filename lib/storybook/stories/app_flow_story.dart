@@ -32,6 +32,7 @@ import 'package:kerosene/features/web/shell/admin_shell.dart';
 import 'package:kerosene/features/web/theme/admin_theme.dart';
 
 import '../storybook_mocks.dart';
+import 'app_flow_catalog.dart';
 import 'receive_stories.dart';
 
 Story appFlowStory() {
@@ -191,9 +192,9 @@ class _FlowNavigation extends StatelessWidget {
         border: Border(
           right: compact
               ? BorderSide.none
-              : const BorderSide(color: KeroseneBrandTokens.border),
+              : BorderSide(color: KeroseneBrandTokens.border),
           bottom: compact
-              ? const BorderSide(color: KeroseneBrandTokens.border)
+              ? BorderSide(color: KeroseneBrandTokens.border)
               : BorderSide.none,
         ),
       ),
@@ -203,17 +204,16 @@ class _FlowNavigation extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
             child: TextField(
               onChanged: onQueryChanged,
-              style: const TextStyle(
+              style: TextStyle(
                   color: KeroseneBrandTokens.textPrimary, fontSize: 13),
               decoration: InputDecoration(
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   KeroseneIcons.search,
                   color: KeroseneBrandTokens.textMuted,
                   size: 18,
                 ),
                 hintText: 'Buscar tela',
-                hintStyle:
-                    const TextStyle(color: KeroseneBrandTokens.textMuted),
+                hintStyle: TextStyle(color: KeroseneBrandTokens.textMuted),
                 filled: true,
                 fillColor: KeroseneBrandTokens.surfaceHigh,
                 isDense: true,
@@ -222,24 +222,24 @@ class _FlowNavigation extends StatelessWidget {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide:
-                      const BorderSide(color: KeroseneBrandTokens.borderStrong),
+                      BorderSide(color: KeroseneBrandTokens.borderStrong),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide:
-                      const BorderSide(color: KeroseneBrandTokens.borderStrong),
+                      BorderSide(color: KeroseneBrandTokens.borderStrong),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide:
-                      const BorderSide(color: KeroseneBrandTokens.textPrimary),
+                      BorderSide(color: KeroseneBrandTokens.textPrimary),
                 ),
               ),
             ),
           ),
           Expanded(
             child: query.trim().isNotEmpty && items.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'Nenhuma tela encontrada',
                       style: TextStyle(color: KeroseneBrandTokens.textMuted),
@@ -286,7 +286,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           color: KeroseneBrandTokens.textMuted,
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -358,7 +358,7 @@ class _FlowNavigationTile extends StatelessWidget {
                     item.routeName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: KeroseneBrandTokens.textMuted,
                       fontSize: 11,
                     ),
@@ -395,7 +395,7 @@ class _FlowHeader extends StatelessWidget {
     return Container(
       height: 78,
       padding: const EdgeInsets.symmetric(horizontal: 22),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: KeroseneBrandTokens.backgroundSoft,
         border: Border(bottom: BorderSide(color: KeroseneBrandTokens.border)),
       ),
@@ -422,7 +422,7 @@ class _FlowHeader extends StatelessWidget {
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: KeroseneBrandTokens.textPrimary,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -433,7 +433,7 @@ class _FlowHeader extends StatelessWidget {
                   '${item.section} · ${item.routeName} · ${selectedIndex + 1}/$total',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: KeroseneBrandTokens.textMuted,
                     fontSize: 12,
                   ),
@@ -571,7 +571,6 @@ Map<String, WidgetBuilder> _routeBuilders() {
     '/home_loading': (_) => const HomeLoadingScreen(),
     '/home': (_) => const HomeScreen(),
     '/settings': (_) => const SettingsScreen(showPrimaryNavigation: true),
-    '/accounts': (_) => const BitcoinAccountsScreen(),
     '/accounts': (_) => const BitcoinAccountsScreen(),
     '/activity': (_) => const TransactionStatementScreen(),
     '/notifications': (_) => const NotificationCenterScreen(),
@@ -757,20 +756,20 @@ class _UnknownRoutePane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(KeroseneIcons.error,
+              Icon(KeroseneIcons.error,
                   color: KeroseneBrandTokens.textSecondary),
               const SizedBox(height: 12),
               Text(
                 routeName.isEmpty ? 'Rota sem nome' : routeName,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: KeroseneBrandTokens.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Rota ainda não registrada no fluxo Storybook.',
                 textAlign: TextAlign.center,
                 style: TextStyle(

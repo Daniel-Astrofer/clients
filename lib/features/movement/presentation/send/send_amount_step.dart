@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/design_system/components/financial/amount_calculator_toolbar.dart';
 import 'package:kerosene/design_system/components/financial/amount_entry_surface.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_chrome.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
-import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
+import 'package:kerosene/app/widgets/wallet_expand_chip.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
-import 'package:kerosene/features/movement/data/fee_tier_selection.dart';
+import 'package:kerosene/features/movement/domain/fee_tier_selection.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 
@@ -124,16 +126,12 @@ class _SendAmountStepState extends State<SendAmountStep> {
                 btcBrl: widget.btcBrl,
                 appLocale: appLocale,
               )
-            : '≈ ${MoneyDisplay.formatCompact(
-                amount: amountBtc,
-                currency: Currency.btc,
-                maxDecimalPlaces: 8,
-                appLocale: appLocale,
-              )}';
+            : '≈ ${MoneyDisplay.formatCompact(amount: amountBtc, currency: Currency.btc, maxDecimalPlaces: 8, appLocale: appLocale)}';
         final totalDebitedBtc = widget.destination.isExternal
             ? widget.feeQuote.totalDebitedBtc
             : amountBtc;
-        final insufficientBalance = widget.wallet != null &&
+        final insufficientBalance =
+            widget.wallet != null &&
             amountBtc > 0 &&
             !widget.feeQuote.isLoading &&
             widget.feeQuote.networkFeeCertainty !=
@@ -141,7 +139,8 @@ class _SendAmountStepState extends State<SendAmountStep> {
             totalDebitedBtc > widget.wallet!.balance + 0.000000009;
         final quoteExpired =
             widget.destination.isOnChain && widget.feeQuote.isQuoteExpired;
-        final canContinue = amountBtc > 0 &&
+        final canContinue =
+            amountBtc > 0 &&
             !widget.isLoading &&
             !quoteExpired &&
             (!widget.destination.isOnChain ||
@@ -180,15 +179,17 @@ class _SendAmountStepState extends State<SendAmountStep> {
           configuration: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (chip != null) ...[
-                chip,
-                const SizedBox(height: 16),
-              ],
-              _TransparencyHierarchyPanel(
-                destination: widget.destination,
-                feeQuote: widget.feeQuote,
-                feeTier: widget.feeTier,
-                onFeeTierChanged: widget.onFeeTierChanged,
+              if (chip != null) ...[chip, const SizedBox(height: 16)],
+              AnimatedSize(
+                duration: KeroseneMotion.sendAmount,
+                curve: KeroseneMotion.standard,
+                alignment: Alignment.topCenter,
+                child: _TransparencyHierarchyPanel(
+                  destination: widget.destination,
+                  feeQuote: widget.feeQuote,
+                  feeTier: widget.feeTier,
+                  onFeeTierChanged: widget.onFeeTierChanged,
+                ),
               ),
             ],
           ),
@@ -217,14 +218,15 @@ class _SendAmountStepState extends State<SendAmountStep> {
           onQuickAction: amountLocked || widget.wallet == null
               ? null
               : (key) => _applyQuickPercent(
-                    key: key,
-                    amountBtcAvailable: widget.wallet!.balance,
-                    feeBtc: widget.destination.isExternal &&
-                            widget.feeQuote.networkFeeCertainty ==
-                                NetworkFeeCertainty.known
-                        ? widget.feeQuote.networkFeeBtc
-                        : 0,
-                  ),
+                  key: key,
+                  amountBtcAvailable: widget.wallet!.balance,
+                  feeBtc:
+                      widget.destination.isExternal &&
+                          widget.feeQuote.networkFeeCertainty ==
+                              NetworkFeeCertainty.known
+                      ? widget.feeQuote.networkFeeBtc
+                      : 0,
+                ),
           bottomAccessory: amountLocked
               ? null
               : AmountCalculatorToolbar(onOperator: _onCalculatorOp),
@@ -251,8 +253,10 @@ class _SendAmountStepState extends State<SendAmountStep> {
     if (fraction <= 0) return;
 
     // Leave room for network fee on external sends when using 100%.
-    final spendable =
-        (amountBtcAvailable - feeBtc).clamp(0.0, amountBtcAvailable);
+    final spendable = (amountBtcAvailable - feeBtc).clamp(
+      0.0,
+      amountBtcAvailable,
+    );
     final targetBtc = spendable * fraction;
     if (targetBtc <= 0) {
       _onAmountTextChanged('0');
@@ -286,17 +290,11 @@ class _FeeTierBar extends StatelessWidget {
   final NetworkFeeTier selected;
   final ValueChanged<NetworkFeeTier> onSelected;
 
-  const _FeeTierBar({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _FeeTierBar({required this.selected, required this.onSelected});
 
   @override
   Widget build(BuildContext context) {
-    return SendFeeTierBar(
-      selected: selected,
-      onSelected: onSelected,
-    );
+    return SendFeeTierBar(selected: selected, onSelected: onSelected);
   }
 }
 
@@ -323,8 +321,9 @@ class SendFeeTierBar extends StatelessWidget {
               SizedBox(width: tokens.spaceSm),
             Expanded(
               child: Material(
-                color:
-                    selected == tier ? Theme.of(context).colorScheme.onSurface : SendFlowTheme.of(context).surfaceHigh,
+                color: selected == tier
+                    ? Theme.of(context).colorScheme.onSurface
+                    : SendFlowTheme.of(context).surfaceHigh,
                 borderRadius: tokens.inputBorderRadius,
                 child: InkWell(
                   onTap: () {
@@ -343,7 +342,7 @@ class SendFeeTierBar extends StatelessWidget {
                               ? tokens.background
                               : Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: AppTypography.w510,
                         ),
                       ),
                     ),
@@ -375,7 +374,8 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!feeQuote.hasAmount) return SizedBox.shrink();
     final tokens = SendFlowTheme.of(context);
-    final showPlatformFee = destination.isExternal &&
+    final showPlatformFee =
+        destination.isExternal &&
         (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
     final showNetworkFee = destination.isExternal;
     final showFeeCard = showPlatformFee || showNetworkFee;
@@ -393,7 +393,7 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Velocidade do envio',
+                context.tr.sendSpeedTitle,
                 style: AppTypography.inter(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -405,18 +405,17 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                 message: 'Taxas menores demoram um pouco mais para confirmar.',
                 triggerMode: TooltipTriggerMode.tap,
                 child: Icon(
-                  Icons.help_outline,
+                  KeroseneIcons.help,
                   size: 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                 ),
               ),
             ],
           ),
           SizedBox(height: tokens.spaceMd - 4),
-          _FeeTierBar(
-            selected: feeTier,
-            onSelected: onFeeTierChanged!,
-          ),
+          _FeeTierBar(selected: feeTier, onSelected: onFeeTierChanged!),
           if (showFeeCard) SizedBox(height: tokens.spaceLg),
         ],
         if (showFeeCard)
@@ -445,11 +444,13 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                         : 'Taxa da rede',
                     amountBtc: feeQuote.networkFeeBtc,
                     textColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                    isLoading: feeQuote.isLoading ||
+                    isLoading:
+                        feeQuote.isLoading ||
                         (destination.isOnChain &&
                             feeQuote.networkFeeCertainty ==
                                 NetworkFeeCertainty.loading),
-                    pendingLabel: destination.isLightning &&
+                    pendingLabel:
+                        destination.isLightning &&
                             feeQuote.networkFeeCertainty ==
                                 NetworkFeeCertainty.unknownUntilPay
                         ? 'Definida na hora'
@@ -458,7 +459,10 @@ class _TransparencyHierarchyPanel extends StatelessWidget {
                 ],
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: tokens.spaceMd - 4),
-                  child: Divider(color: Theme.of(context).dividerColor, height: 1),
+                  child: Divider(
+                    color: Theme.of(context).dividerColor,
+                    height: 1,
+                  ),
                 ),
                 _AnimatedBreakdownRow(
                   label: 'Sai da sua conta',
@@ -494,10 +498,7 @@ class _AnimatedBreakdownRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = SendFlowTheme.of(context);
-    final valueStyle = tokens.amountBody(
-      color: textColor,
-      emphasize: isTotal,
-    );
+    final valueStyle = tokens.amountBody(color: textColor, emphasize: isTotal);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -525,8 +526,8 @@ class _AnimatedBreakdownRow extends StatelessWidget {
           Text(pendingLabel!, style: valueStyle)
         else
           TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
+            duration: KeroseneMotion.sendAmountExpanded,
+            curve: KeroseneMotion.standard,
             tween: Tween<double>(begin: amountBtc, end: amountBtc),
             builder: (context, value, child) {
               return RepaintBoundary(

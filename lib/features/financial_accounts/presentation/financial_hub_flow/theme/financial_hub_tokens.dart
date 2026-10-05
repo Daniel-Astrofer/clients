@@ -117,7 +117,8 @@ class FinancialHubTokens {
   static Color get textPrimary => KeroseneBrandTokens.textPrimary;
   static Color get textMuted => KeroseneBrandTokens.textMuted;
   static Color get accentGold => KeroseneBrandTokens.brand;
+
   /// Dark island for circular actions (icons stay light on this fill).
-  static const Color circularButtonBg = Color(0xFF1E1E2C);
+  static const Color circularButtonBg = AppColors.financialHubActionSurface;
   static const Color circularButtonIcon = AppColors.hexFFFFFFFF;
 }

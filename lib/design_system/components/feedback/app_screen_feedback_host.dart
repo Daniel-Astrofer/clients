@@ -88,7 +88,7 @@ class _ScreenFeedbackPanel extends StatelessWidget {
                           style: AppTypography.bodyMedium.copyWith(
                             color: KeroseneBrandTokens.textPrimary,
                             fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: AppTypography.w510,
                             height: 1.16,
                             letterSpacing: 0,
                             decoration: TextDecoration.none,

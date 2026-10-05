@@ -175,7 +175,7 @@ enum _ProcessingState { submitting, pending, success, failed }
 
 class _SendEntryMock extends StatelessWidget {
   final String recipient;
-  const _SendEntryMock({super.key, this.recipient = ''});
+  const _SendEntryMock({this.recipient = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +201,7 @@ class _SendEntryMock extends StatelessWidget {
 
 class _AmountEntryMock extends StatelessWidget {
   final bool hasInsufficientBalance;
-  const _AmountEntryMock({super.key, this.hasInsufficientBalance = false});
+  const _AmountEntryMock({this.hasInsufficientBalance = false});
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +212,8 @@ class _AmountEntryMock extends StatelessWidget {
           children: [
             const Text('0,00', style: TextStyle(fontSize: 48)),
             if (hasInsufficientBalance)
-              const Text('Saldo insuficiente', style: TextStyle(color: Colors.red)),
+              const Text('Saldo insuficiente',
+                  style: TextStyle(color: Colors.red)),
           ],
         ),
       ),
@@ -224,7 +225,6 @@ class _ReviewMock extends StatelessWidget {
   final bool isFeeRecalculating;
   final bool showDuplicateWarning;
   const _ReviewMock({
-    super.key,
     this.isFeeRecalculating = false,
     this.showDuplicateWarning = false,
   });
@@ -239,12 +239,14 @@ class _ReviewMock extends StatelessWidget {
             const Text('0.001 BTC', style: TextStyle(fontSize: 32)),
             const Text('bc1q...xyz', style: TextStyle(fontSize: 15)),
             if (isFeeRecalculating)
-              const Text('Recalculando taxa...', style: TextStyle(fontSize: 13)),
+              const Text('Recalculando taxa...',
+                  style: TextStyle(fontSize: 13)),
             if (showDuplicateWarning)
               const Text('Voce enviou para este endereco recentemente.',
                   style: TextStyle(color: Colors.amber)),
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: () {}, child: const Text('Enviar 0.001 BTC')),
+            ElevatedButton(
+                onPressed: () {}, child: const Text('Enviar 0.001 BTC')),
           ],
         ),
       ),
@@ -254,7 +256,7 @@ class _ReviewMock extends StatelessWidget {
 
 class _ProcessingMock extends StatelessWidget {
   final _ProcessingState state;
-  const _ProcessingMock({super.key, required this.state});
+  const _ProcessingMock({required this.state});
 
   @override
   Widget build(BuildContext context) {

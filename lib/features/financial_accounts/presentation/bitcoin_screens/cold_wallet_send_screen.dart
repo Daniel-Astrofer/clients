@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -15,7 +14,7 @@ import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 import 'package:kerosene/features/movement/presentation/send/send_security_profile_resolver.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_amount_surface.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';

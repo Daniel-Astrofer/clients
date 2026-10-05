@@ -4,6 +4,7 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_chrome.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
+import 'package:kerosene/shared/widgets/bouncing_button_wrapper.dart';
 
 /// The top navigation bar for the internal Send Money flow.
 ///
@@ -205,29 +206,24 @@ class InternalQuickAction extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: textColor),
-              ),
-              child: Tooltip(
-                message: tooltip,
-                child: Center(
-                  child: iconWidget ??
-                      Icon(
-                        icon,
-                        size: 24,
-                        color: textColor,
-                      ),
-                ),
+        BouncingButton(
+          onTap: onTap,
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: textColor),
+            ),
+            child: Tooltip(
+              message: tooltip,
+              child: Center(
+                child: iconWidget ??
+                    Icon(
+                      icon,
+                      size: 24,
+                      color: textColor,
+                    ),
               ),
             ),
           ),

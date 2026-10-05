@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/activity_surface_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_visual_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 
 /// Transaction color system.
 ///
@@ -13,20 +16,10 @@ import 'package:kerosene/features/movement/presentation/activity/transaction_vis
 ///   product + lifecycle) — not only white/orange/yellow.
 /// - Status accents delegate to [KeroseneBrandTokens.success/warning/error].
 /// - Light card surface colors are local (specific to activity statement cards).
-enum TransactionCardSurface {
-  internal,
-  onchain,
-  lightning,
-}
+enum TransactionCardSurface { internal, onchain, lightning }
 
 /// Semantic lifecycle of a movement (maps from [TransactionStatus]).
-enum TransactionStatusTone {
-  confirmed,
-  confirming,
-  pending,
-  cancelled,
-  failed,
-}
+enum TransactionStatusTone { confirmed, confirming, pending, cancelled, failed }
 
 /// Single source of truth for transaction UI colors.
 ///
@@ -38,10 +31,10 @@ enum TransactionStatusTone {
 abstract final class TransactionPalette {
   // ── Ink on light card surfaces ──────────────────────────────────────────
   /// Titles and amounts.
-  static const Color inkPrimary = Color(0xFF000000);
-  static const Color inkSecondary = Color(0xFF4B4F57);
-  static const Color inkTertiary = Color(0xFF6E737C);
-  static const Color inkOnDark = Color(0xFFF2F2F3);
+  static const Color inkPrimary = ActivitySurfaceTokens.inkPrimary;
+  static const Color inkSecondary = ActivitySurfaceTokens.inkSecondary;
+  static const Color inkTertiary = ActivitySurfaceTokens.inkTertiary;
+  static const Color inkOnDark = ActivitySurfaceTokens.inkOnDark;
 
   // ── Status (delegates to brand tokens) ───────────────────────────────────
   static Color get statusConfirmed => KeroseneBrandTokens.success;
@@ -59,7 +52,7 @@ abstract final class TransactionPalette {
       KeroseneBrandTokens.error.withValues(alpha: 0.85);
   static Color get statusCancelled =>
       KeroseneBrandTokens.error.withValues(alpha: 0.7);
-  static const Color statusTrack = Color(0xFF9AA0A8);
+  static const Color statusTrack = AppColors.activityStatusTrack;
 
   // ── Amounts: always black ────────────────────────────────────────────────
   static const Color amountCredit = inkPrimary;
@@ -68,18 +61,21 @@ abstract final class TransactionPalette {
 
   // ── Light card surface paper ─────────────────────────────────────────────
   /// Neutral paper.
-  static const Color surfaceInternal = Color(0xFFF4F4F5);
-  static const Color borderInternal = Color(0xFFD8DADF);
+  static const Color surfaceInternal = ActivitySurfaceTokens.surfaceInternal;
+  static const Color borderInternal = ActivitySurfaceTokens.borderInternal;
+
   /// On-chain — quiet warm paper.
-  static const Color surfaceOnchain = Color(0xFFF6F1EA);
-  static const Color borderOnchain = Color(0xFFD8D0C6);
+  static const Color surfaceOnchain = ActivitySurfaceTokens.surfaceOnchain;
+  static const Color borderOnchain = ActivitySurfaceTokens.borderOnchain;
+
   /// Lightning — quiet neutral paper.
-  static const Color surfaceLightning = Color(0xFFF3F2EE);
-  static const Color borderLightning = Color(0xFFD5D2C9);
-  static const Color surfaceDivider = Color(0x290F0F10);
+  static const Color surfaceLightning = ActivitySurfaceTokens.surfaceLightning;
+  static const Color borderLightning = ActivitySurfaceTokens.borderLightning;
+  static const Color surfaceDivider = ActivitySurfaceTokens.surfaceDivider;
+
   /// Icon disc.
-  static const Color iconWell = Color(0xFF141416);
-  static const Color iconWellBorder = Color(0xFF2A2A2E);
+  static const Color iconWell = ActivitySurfaceTokens.iconWell;
+  static const Color iconWellBorder = ActivitySurfaceTokens.iconWellBorder;
 
   // ── Resolvers ────────────────────────────────────────────────────────────
 
@@ -210,6 +206,31 @@ class TransactionCardColors {
       statusStrong: TransactionPalette.statusStrong(tone),
       statusSoft: TransactionPalette.statusSoft(tone),
       statusTrack: TransactionPalette.statusTrack,
+      surface: surface,
+      tone: tone,
+    );
+  }
+
+  /// Adapts a compact Home row to the current Home surface contract.
+  ///
+  /// Full statement cards retain their paper treatment for scanability, but
+  /// the Home feed must read as one OLED surface instead of a cream card
+  /// inserted into the dark balance scene.
+  TransactionCardColors forHomeSurface(HomeSurfaceTheme homeSurface) {
+    return TransactionCardColors(
+      background: homeSurface.card,
+      border: homeSurface.surfaceBorder,
+      title: homeSurface.textPrimary,
+      subtitle: homeSurface.textSecondary,
+      meta: homeSurface.textMuted,
+      amount: homeSurface.textPrimary,
+      divider: homeSurface.surfaceBorder,
+      iconWell: homeSurface.surfaceDim,
+      iconWellBorder: homeSurface.surfaceBorder,
+      icon: homeSurface.textPrimary,
+      statusStrong: statusStrong,
+      statusSoft: statusSoft,
+      statusTrack: homeSurface.textMuted,
       surface: surface,
       tone: tone,
     );

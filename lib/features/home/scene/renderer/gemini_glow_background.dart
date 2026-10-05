@@ -12,7 +12,7 @@ import 'package:kerosene/features/home/scene/models/home_scene.dart';
 import 'package:kerosene/features/home/scene/providers/aurora_interaction_provider.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
-/// GPU Gemini edge-glow — ambient aurora behind the home header.
+/// GPU diffuse edge halo behind the home header.
 ///
 /// Mounted once in the balance sliver. A static upper extension keeps deep
 /// pull-to-refresh areas continuous without per-frame position adjustments.
@@ -37,14 +37,14 @@ class _SceneGeminiGlowBackgroundState
   // Visual (smoothed) state — only these feed the shader.
   Color _primary = const Color(0xFF4D7EFF);
   Color _secondary = const Color(0xFF9B7BFF);
-  double _intensity = 0.42;
+  double _intensity = 0.24;
   double _theater = 0;
   double _surge = 0;
 
-  // Targets — updated by providers, never snapped into the shader.
+  // Targets ease into the shader unless reduced motion requests a static state.
   Color _primaryTarget = const Color(0xFF4D7EFF);
   Color _secondaryTarget = const Color(0xFF9B7BFF);
-  double _intensityTarget = 0.42;
+  double _intensityTarget = 0.24;
   double _theaterTarget = 0;
 
   String _lastSceneId = '';
@@ -55,6 +55,7 @@ class _SceneGeminiGlowBackgroundState
   double _seconds = 0;
   Duration? _lastTick;
   bool _ticking = false;
+  bool _reduceMotion = false;
 
   ui.FragmentShader? _shader;
 
@@ -82,9 +83,9 @@ class _SceneGeminiGlowBackgroundState
 
   void _ensureTicking() {
     if (!mounted) return;
-    final reduce = KeroseneMotion.reduceMotion(context);
+    _reduceMotion = KeroseneMotion.reduceMotion(context);
     final enabled = TickerMode.valuesOf(context).enabled;
-    final want = !reduce && enabled;
+    final want = !_reduceMotion && enabled;
     if (want && !_ticking) {
       _lastTick = null;
       _ticker.start();
@@ -94,6 +95,15 @@ class _SceneGeminiGlowBackgroundState
       _ticking = false;
       _lastTick = null;
     }
+    if (_reduceMotion) _settleVisualState();
+  }
+
+  void _settleVisualState() {
+    _primary = _primaryTarget;
+    _secondary = _secondaryTarget;
+    _intensity = _intensityTarget;
+    _theater = _theaterTarget;
+    _surge = 0;
   }
 
   Color _lerpColor(Color a, Color b, double t) {
@@ -107,8 +117,7 @@ class _SceneGeminiGlowBackgroundState
     final dt = ((elapsed - last).inMicroseconds / 1e6).clamp(0.0, 1 / 30);
     if (dt <= 0) return;
 
-    final timeScale =
-        (1.0 - 0.28 * _theater.clamp(0.0, 1.0)).clamp(0.42, 1.0);
+    final timeScale = (1.0 - 0.28 * _theater.clamp(0.0, 1.0)).clamp(0.42, 1.0);
     _seconds += dt * timeScale;
 
     final risingTheater = _theaterTarget > _theater;
@@ -157,13 +166,12 @@ class _SceneGeminiGlowBackgroundState
     if (theaterPiece) {
       _primaryTarget = bg.primary ?? _primaryTarget;
       _secondaryTarget = bg.secondary ?? const Color(0xFF6B8CFF);
-      // Same ceiling as resting wash — tint via uTheater, not raw intensity.
-      _intensityTarget =
-          (bg.intensity.clamp(0.30, 0.48) * 0.95).clamp(0.30, 0.52);
+      // Scene content changes the tint without making the halo brighter.
+      _intensityTarget = (bg.intensity * 0.64).clamp(0.20, 0.30);
       // Partial theater channel: color shift without neon takeover.
       _theaterTarget = 0.42;
     } else {
-      // Resting / wallet wash — keep field alive, dim theater channel.
+      // Resting / wallet halo uses the ledger's semantic accent.
       try {
         final view = ref.read(homeLedgerBalanceViewProvider);
         final wash = restingWashAccentFor(view);
@@ -177,16 +185,14 @@ class _SceneGeminiGlowBackgroundState
           _primaryTarget = wash;
           _secondaryTarget = restingWashSecondaryFor(view);
         } else {
-          _secondaryTarget = bg.secondary ??
-              (Color.lerp(_primaryTarget, const Color(0xFF9B7BFF), 0.4) ??
-                  const Color(0xFF9B7BFF));
+          _secondaryTarget = bg.secondary ?? restingWashSecondaryFor(view);
         }
       } catch (_) {
         _primaryTarget = bg.primary ?? const Color(0xFF4D7EFF);
         _secondaryTarget = bg.secondary ?? const Color(0xFF9B7BFF);
       }
       final base = bg.isActive ? bg.intensity : 0.36;
-      _intensityTarget = (base * 0.95).clamp(0.32, 0.58);
+      _intensityTarget = (base * 0.64).clamp(0.20, 0.30);
       _theaterTarget = 0.0;
     }
 
@@ -194,9 +200,11 @@ class _SceneGeminiGlowBackgroundState
     final wasTheater = _lastActive;
     if (theaterPiece &&
         (!wasTheater || (id.isNotEmpty && id != _lastSceneId))) {
-      // Soft enter bloom — avoid stacked surge + pull strobe on receive green.
-      _surge = (_surge * 0.25 + 0.32).clamp(0.0, 0.45);
-      ref.read(homeAuroraInteractionProvider).pulseFromScene(strength: 0.4);
+      // A small lift acknowledges new content without a flash.
+      if (!_reduceMotion) {
+        _surge = (_surge * 0.25 + 0.12).clamp(0.0, 0.18);
+        ref.read(homeAuroraInteractionProvider).pulseFromScene(strength: 0.4);
+      }
     } else if (wasTheater && !theaterPiece) {
       // Exit handled by theaterTarget→0 lerp; tiny residual glow.
       _surge = (_surge * 0.35).clamp(0.0, 0.2);
@@ -214,14 +222,15 @@ class _SceneGeminiGlowBackgroundState
   Widget build(BuildContext context) {
     ref.listen<HomeScene>(homeSceneProvider, (_, next) {
       _applySceneTargets(next);
+      if (_reduceMotion) setState(_settleVisualState);
     });
 
     ref.listen(homeLedgerBalanceViewProvider, (prev, next) {
       if (prev == next) return;
       final scene = ref.read(homeSceneProvider);
       // Scene notifier retints resting aurora; we only add a soft pulse.
-      if (!scene.hasForegroundContent) {
-        _surge = (_surge * 0.25 + 0.45).clamp(0.0, 0.8);
+      if (!scene.hasForegroundContent && !_reduceMotion) {
+        _surge = (_surge * 0.25 + 0.10).clamp(0.0, 0.16);
       }
     });
 
@@ -229,6 +238,7 @@ class _SceneGeminiGlowBackgroundState
     if (!_seeded) {
       _seeded = true;
       _applySceneTargets(ref.read(homeSceneProvider));
+      _settleVisualState();
     }
 
     final programAsync = ref.watch(geminiGlowShaderProvider);
@@ -245,7 +255,7 @@ class _SceneGeminiGlowBackgroundState
       child: RepaintBoundary(
         child: CustomPaint(
           isComplex: true,
-          willChange: true,
+          willChange: _ticking,
           painter: _GeminiGlowShaderPainter(
             shader: shader,
             timeSec: _seconds,

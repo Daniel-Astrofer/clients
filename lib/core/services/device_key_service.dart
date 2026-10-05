@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:cryptography/cryptography.dart';
@@ -11,6 +11,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../constants/app_copy.dart';
 import '../security/device_credential_capabilities.dart';
+import '../security/financial_payment_challenge.dart';
 import '../security/kerosene_secure_prefix.dart';
 import '../telemetry/device_credential_telemetry.dart';
 import '../utils/device_helper.dart';
@@ -50,13 +51,17 @@ class DeviceKeyService {
     FlutterSecureStorage? secureStorage,
     LocalAuthentication? localAuthentication,
     Ed25519? algorithm,
+    DateTime Function()? clock,
+    Future<String> Function()? deviceInstallId,
   })  : _secureStorage = secureStorage ??
             const FlutterSecureStorage(
               lOptions: LinuxOptions(),
               wOptions: WindowsOptions(),
             ),
         _localAuthentication = localAuthentication ?? LocalAuthentication(),
-        _algorithm = algorithm ?? Ed25519();
+        _algorithm = algorithm ?? Ed25519(),
+        _clock = clock ?? DateTime.now,
+        _deviceInstallId = deviceInstallId ?? _currentDeviceInstallId;
 
   DeviceKeyService._internal() : this();
 
@@ -71,6 +76,12 @@ class DeviceKeyService {
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuthentication;
   final Ed25519 _algorithm;
+  final DateTime Function() _clock;
+  final Future<String> Function() _deviceInstallId;
+  Future<void> _counterOperations = Future<void>.value();
+
+  static Future<String> _currentDeviceInstallId() async =>
+      (await DeviceHelper.getDeviceMetadata()).deviceInstallId;
 
   IOSOptions _iosOptions() =>
       const IOSOptions(accessibility: KeychainAccessibility.first_unlock);
@@ -237,6 +248,67 @@ class DeviceKeyService {
     };
   }
 
+  /// Real Ed25519 financial proof. Never enrolls or fetches a login challenge.
+  /// Counter is persisted before returning a proof, even if submission fails.
+  Future<Map<String, dynamic>> authenticateFinancial({
+    required FinancialPaymentChallenge challenge,
+    required String username,
+  }) async {
+    final normalizedUsername = _normalizeUsername(username);
+    try {
+      challenge.validateForSigning(username: normalizedUsername, now: _clock());
+      final credentialId = await _readActiveCredentialId(normalizedUsername);
+      if (credentialId == null || credentialId.isEmpty) {
+        throw const DeviceKeyException(
+          'ERR_AUTH_DEVICE_KEY_NOT_REGISTERED',
+          'Configure a chave deste dispositivo em Segurança antes de pagar.',
+        );
+      }
+      final seed = await _readPrivateKeySeed(
+        username: normalizedUsername,
+        credentialId: credentialId,
+      );
+      if (seed == null || seed.length != 32) {
+        throw const DeviceKeyException(
+          'ERR_AUTH_DEVICE_KEY_NOT_REGISTERED',
+          'A chave deste dispositivo não está disponível neste aparelho.',
+        );
+      }
+      final installId = await _deviceInstallId();
+      final counter = await _nextCounter(
+        username: normalizedUsername,
+        credentialId: credentialId,
+        financial: true,
+      );
+      final payload = _canonicalJson(challenge.signedPayloadValues(
+        credentialId: credentialId,
+        deviceInstallId: installId,
+        counter: counter,
+        signedAtEpochSeconds: _clock().millisecondsSinceEpoch ~/ 1000,
+      ));
+      final signature = await _signPayload(payload, privateKeySeed: seed);
+      // User-presence UI may outlive the short-lived challenge.
+      challenge.validateForSigning(username: normalizedUsername, now: _clock());
+      await DeviceCredentialTelemetry.recordAssertion(
+        kind: 'FINANCIAL_DEVICE_KEY',
+        outcome: 'signed',
+      );
+      return {
+        'version': 1,
+        'type': 'FINANCIAL_DEVICE_KEY',
+        'credentialId': credentialId,
+        'deviceInstallId': installId,
+        'signedPayload': payload,
+        'signature': signature,
+      };
+    } on FormatException {
+      throw const DeviceKeyException(
+        'ERR_KFE_PAYMENT_CHALLENGE_INVALID',
+        'A autorização financeira é inválida ou expirou. Tente novamente.',
+      );
+    }
+  }
+
   Future<bool> hasRegisteredDeviceKey(String username) async {
     final credentialId =
         await _readActiveCredentialId(_normalizeUsername(username));
@@ -379,19 +451,38 @@ class DeviceKeyService {
   Future<int> _nextCounter({
     required String username,
     required String credentialId,
+    bool financial = false,
   }) async {
-    final key = _storageKey(_counterKey, username, credentialId);
-    final currentRaw = await _readStorageValue(key);
-    final next = (int.tryParse(currentRaw ?? '') ?? 0) + 1;
-    await _secureStorage.write(
-      key: key,
-      value: next.toString(),
-      iOptions: _iosOptions(),
-      aOptions: _androidOptions(),
-      lOptions: _linuxOptions(),
-      wOptions: _windowsOptions(),
-    );
-    return next;
+    final previous = _counterOperations;
+    final completed = Completer<void>();
+    _counterOperations = completed.future;
+    await previous;
+    try {
+      final key = _storageKey(_counterKey, username, credentialId);
+      final currentRaw = await _readStorageValue(key);
+      final current = currentRaw == null ? 0 : int.tryParse(currentRaw);
+      if (financial &&
+          (current == null ||
+              current < 0 ||
+              current >= FinancialPaymentChallenge.maxSafeInteger)) {
+        throw const DeviceKeyException(
+          'ERR_AUTH_DEVICE_KEY_COUNTER_INVALID',
+          'Reconfigure a chave deste dispositivo em Segurança.',
+        );
+      }
+      final next = (current ?? 0) + 1;
+      await _secureStorage.write(
+        key: key,
+        value: next.toString(),
+        iOptions: _iosOptions(),
+        aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
+      );
+      return next;
+    } finally {
+      completed.complete();
+    }
   }
 
   /// Reads from the namespaced store first, then migrates legacy values.

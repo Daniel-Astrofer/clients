@@ -1,177 +1,115 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
+import 'package:kerosene/features/movement/kernel/intent/nfc_payment_request_codec.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager_ndef/nfc_manager_ndef.dart';
 
+enum _NfcReadState { preparing, scanning, read, unavailable, invalid }
+
 class NfcScanDialog extends StatefulWidget {
   const NfcScanDialog({super.key});
-
   @override
   State<NfcScanDialog> createState() => _NfcScanDialogState();
 }
 
 class _NfcScanDialogState extends State<NfcScanDialog> {
-  String _status = '';
-  bool _isScanning = false;
+  _NfcReadState _state = _NfcReadState.preparing;
+  bool _sessionActive = false;
 
   @override
   void initState() {
     super.initState();
-    _startNfcSession();
+    _start();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_status.isEmpty) {
-      _status = context.tr.nfcReadyToScan;
-    }
+  Future<void> _stop() async {
+    if (!_sessionActive) return;
+    _sessionActive = false;
+    try {
+      await NfcManager.instance.stopSession();
+    } catch (_) {}
   }
 
-  String? _payloadFromTag(NfcTag tag) {
-    final ndef = Ndef.from(tag);
-    if (ndef == null) return null;
-
-    final message = ndef.cachedMessage;
-    if (message == null) return null;
-
-    return NfcPaymentRequestCodec.decodeMessage(message);
-  }
-
-  void _startNfcSession() async {
-    bool isAvailable = await NfcManager.instance.checkAvailability() ==
-        NfcAvailability.enabled;
-    if (!isAvailable) {
-      if (mounted) {
-        setState(() {
-          _status = context.tr.nfcUnavailableDevice;
-        });
+  Future<void> _start() async {
+    if (_sessionActive) return;
+    try {
+      final availability = await NfcManager.instance.checkAvailability();
+      if (!mounted) return;
+      if (availability != NfcAvailability.enabled) {
+        setState(() => _state = _NfcReadState.unavailable);
+        return;
       }
-      return;
-    }
-
-    setState(() {
-      _isScanning = true;
-      _status = context.tr.nfcHoldNearTag;
-    });
-
-    NfcManager.instance.startSession(
-      pollingOptions: {
-        NfcPollingOption.iso14443,
-        NfcPollingOption.iso15693,
-        NfcPollingOption.iso18092,
-      },
-      onDiscovered: (NfcTag tag) async {
-        String? paymentRequestString = _payloadFromTag(tag);
-        if (paymentRequestString == null && Ndef.from(tag) != null) {
+      setState(() => _state = _NfcReadState.scanning);
+      _sessionActive = true;
+      await NfcManager.instance.startSession(
+        pollingOptions: {
+          NfcPollingOption.iso14443,
+          NfcPollingOption.iso15693,
+          NfcPollingOption.iso18092
+        },
+        onDiscovered: (tag) async {
+          String? payload;
           try {
-            final ndef = Ndef.from(tag)!;
-            final message = await ndef.read();
+            final ndef = Ndef.from(tag);
+            final message = ndef?.cachedMessage ?? await ndef?.read();
             if (message != null) {
-              paymentRequestString =
-                  NfcPaymentRequestCodec.decodeMessage(message);
+              payload = NfcPaymentRequestCodec.decodeMessage(message);
             }
           } catch (_) {}
-        }
-
-        if (!mounted) return;
-        setState(() {
-          _isScanning = false;
-          _status = paymentRequestString != null
-              ? context.tr.nfcPaymentRequestRead
-              : context.tr.nfcTagDetected;
-        });
-
-        await NfcManager.instance.stopSession();
-
-        Future.delayed(KeroseneMotion.calm, () {
-          if (mounted) {
-            Navigator.of(context).pop(paymentRequestString);
+          await _stop();
+          if (!mounted) return;
+          if (payload == null || payload.trim().isEmpty) {
+            setState(() => _state = _NfcReadState.invalid);
+          } else {
+            setState(() => _state = _NfcReadState.read);
+            Navigator.of(context).pop(payload);
           }
-        });
-      },
-    );
+        },
+      );
+    } catch (_) {
+      await _stop();
+      if (mounted) setState(() => _state = _NfcReadState.unavailable);
+    }
   }
 
   @override
   void dispose() {
-    NfcManager.instance.stopSession();
+    unawaited(_stop());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.all(20),
-      child: Container(
-        padding: EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: KeroseneBrandTokens.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: KeroseneBrandTokens.border),
-          boxShadow: [
-            BoxShadow(
-              color: KeroseneBrandTokens.info.withValues(alpha: 0.1),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.tr.nfcScannerTitle,
-              style: TextStyle(
-                color: KeroseneBrandTokens.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 32),
-            Container(
-              height: 150,
-              width: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.05),
-              ),
-              child: _isScanning
-                  ? const Icon(KeroseneIcons.nfc,
-                      size: 80, color: KeroseneBrandTokens.info)
-                  : const Icon(
-                      KeroseneIcons.success,
-                      size: 80,
-                      color: KeroseneBrandTokens.success,
-                    ),
-            ),
-            SizedBox(height: 32),
-            Text(
-              _status,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: KeroseneBrandTokens.textSecondary,
-                fontSize: 16,
-              ),
-            ),
-            SizedBox(height: 24),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                context.tr.cancel,
-                style: TextStyle(
-                    color: KeroseneBrandTokens.textMuted),
-              ),
-            ),
-          ],
-        ),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    final error =
+        _state == _NfcReadState.unavailable || _state == _NfcReadState.invalid;
+    final message = switch (_state) {
+      _NfcReadState.preparing => context.tr.nfcReadyToScan,
+      _NfcReadState.scanning => context.tr.nfcHoldNearTag,
+      _NfcReadState.read => context.tr.nfcPaymentRequestRead,
+      _NfcReadState.unavailable => context.tr.nfcUnavailableDevice,
+      _NfcReadState.invalid => context.tr.nfcTagDetected,
+    };
+    return AlertDialog(
+      title: Text(context.tr.nfcScannerTitle),
+      content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(error ? KeroseneIcons.warning : KeroseneIcons.nfc,
+            size: 48, color: error ? scheme.error : scheme.onSurface),
+        const SizedBox(height: 24),
+        Semantics(
+            liveRegion: true,
+            child: Text(message, textAlign: TextAlign.center)),
+      ])),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr.cancel)),
+        if (error)
+          TextButton(onPressed: _start, child: Text(context.tr.tryAgain)),
+      ],
     );
   }
 }

@@ -1,3 +1,7 @@
+// architecture-allow-large-file: statement orchestration preserves export,
+// pagination, and navigation contracts during staged extraction.
+import 'package:kerosene/core/constants/localized_copy.dart';
+import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,7 +11,6 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
 import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
@@ -22,17 +25,17 @@ import 'package:kerosene/core/security/financial_secure_scope.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/movement/data/activity_archive_store.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/app/storage/activity_archive_store.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/providers/statement_insights_provider.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
-import 'package:kerosene/features/movement/data/statement_csv_export.dart';
-import 'package:kerosene/features/movement/data/statement_pdf_export.dart';
-import 'package:kerosene/features/movement/data/transaction_address_display.dart';
-import 'package:kerosene/features/movement/data/transaction_party_display.dart';
+import 'package:kerosene/features/movement/presentation/activity/statement_csv_export.dart';
+import 'package:kerosene/features/movement/presentation/activity/statement_pdf_export.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_address_display.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_party_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_statement_insights.dart';
 import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
@@ -93,6 +96,7 @@ class _TransactionStatementScreenState
   _StatementFilter _selectedFilter = _StatementFilter.all;
   String? _expandedTransactionId;
   String _query = '';
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -133,7 +137,7 @@ class _TransactionStatementScreenState
       navigator.pop();
       return;
     }
-    navigator.pushReplacementNamed('/home');
+    AppNavigation.replace(context, '/home');
   }
 
   void _selectTab(_StatementTab tab) {
@@ -166,19 +170,15 @@ class _TransactionStatementScreenState
         AppPrimaryNavigationBar.scaffoldBottomClearance(context);
     final maxWidth = context.responsive.appColumnMaxWidth;
 
-    if (historyValue == null && historyAsync.isLoading) {
-      return const Center(child: TorLoadingDots());
-    }
-
     return FinancialSecureScope(
       child: Scaffold(
-      backgroundColor: _StatementColors.background(context),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: KeroseneAppColumn(
-              maxWidth: maxWidth,
-              child: CustomScrollView(
+        backgroundColor: _StatementColors.background(context),
+        body: Stack(
+          children: [
+            SafeArea(
+              child: KeroseneAppColumn(
+                maxWidth: maxWidth,
+                child: CustomScrollView(
                   controller: _scrollController,
                   physics: const BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics(),
@@ -213,13 +213,16 @@ class _TransactionStatementScreenState
                         ),
                       ),
                     ),
+                    if (_exporting)
+                      const SliverToBoxAdapter(
+                          child: LinearProgressIndicator(minHeight: 2)),
                     historyAsync.when(
                       loading: () {
                         // Keep last projection visible while Tor refresh runs.
                         if (lastHistory.isEmpty) {
                           return const SliverFillRemaining(
                             hasScrollBody: false,
-                            child: SizedBox.shrink(),
+                            child: Center(child: TorLoadingDots()),
                           );
                         }
                         final filtered = _filteredTransactions(lastHistory);
@@ -257,16 +260,28 @@ class _TransactionStatementScreenState
                           ),
                         );
                       },
-                      error: (error, _) => SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _StatementMessage(
-                          icon: KeroseneIcons.warning,
-                          title: context.tr.financialStatementLoadErrorTitle,
-                          message: ErrorTranslator.translate(
-                            context.tr,
-                            error.toString(),
-                          ),
-                        ),
+                      error: (error, _) => SliverPadding(
+                        padding: EdgeInsets.fromLTRB(AppSpacing.xl2,
+                            AppSpacing.xl2, AppSpacing.xl2, bottomPadding),
+                        sliver: SliverToBoxAdapter(
+                            child: Column(children: [
+                          Text(context.tr.financialStatementLoadErrorTitle,
+                              textAlign: TextAlign.center),
+                          TextButton(
+                              onPressed: _refreshData,
+                              child: Text(context.tr.tryAgain)),
+                          if (lastHistory.isNotEmpty)
+                            _StatementListSurface(
+                              queryController: _searchController,
+                              selectedFilter: _selectedFilter,
+                              onFilterSelected: _selectFilter,
+                              allTransactions: lastHistory,
+                              transactions: _filteredTransactions(lastHistory),
+                              expandedTransactionId: _expandedTransactionId,
+                              onTransactionTap: _toggleTransaction,
+                              onClearFilters: _clearFilters,
+                            ),
+                        ])),
                       ),
                       data: (transactions) {
                         final projected = mergeTransactionHistoryProjection(
@@ -312,115 +327,101 @@ class _TransactionStatementScreenState
                     ),
                   ],
                 ),
+              ),
             ),
-          ),
-          AppPrimaryNavigationBar.overlay(
-            currentDestination: AppPrimaryDestination.history,
-          ),
-        ],
+            AppPrimaryNavigationBar.overlay(
+              currentDestination: AppPrimaryDestination.history,
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
   Future<void> _exportCsv(List<Transaction> transactions) async {
-    HapticFeedback.selectionClick();
+    if (_exporting) return;
     if (transactions.isEmpty) {
-      if (!mounted) return;
-      AppNotice.showInfo(
-        context,
-        title: context.tr.statementExportNothingTitle,
-        message: context.tr.statementEmptyOnDevice,
-      );
+      AppNotice.showInfo(context,
+          title: context.tr.statementExportNothingTitle,
+          message: context.tr.statementEmptyOnDevice);
       return;
     }
-
+    final filtered = _filteredTransactions(transactions);
+    var includeAll = false;
     final format = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: _StatementColors.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        final tr = ctx.tr;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  tr.statementExportTitle,
-                  style: HomeTypography.sectionHeader(
-                    color: _StatementColors.textPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  tr.statementExportLongAddressesNote,
-                  style: AppTypography.inter(
-                    color: _StatementColors.textMuted(context),
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: Icon(KeroseneIcons.download,
-                      color: _StatementColors.textPrimary(context)),
-                  title: Text(
-                    'CSV',
-                    style: TextStyle(color: _StatementColors.textPrimary(context)),
-                  ),
-                  subtitle: Text(
-                    tr.statementExportCsvSubtitle,
-                    style: TextStyle(color: _StatementColors.textMuted(context)),
-                  ),
-                  onTap: () => Navigator.of(ctx).pop('csv'),
-                ),
-                ListTile(
-                  leading: Icon(KeroseneIcons.receipt,
-                      color: _StatementColors.textPrimary(context)),
-                  title: Text(
-                    'PDF',
-                    style: TextStyle(color: _StatementColors.textPrimary(context)),
-                  ),
-                  subtitle: Text(
-                    tr.statementExportShareLimit,
-                    style: TextStyle(color: _StatementColors.textMuted(context)),
-                  ),
-                  onTap: () => Navigator.of(ctx).pop('pdf'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+          builder: (context, setSheetState) => SafeArea(
+                child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(context.tr.statementExportTitle,
+                              style: Theme.of(context).textTheme.titleLarge),
+                          const SizedBox(height: 12),
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(const LocalizedCopy(
+                                    en: 'Include all transactions',
+                                    pt: 'Incluir todas as transações',
+                                    es: 'Incluir todas las transacciones')
+                                .resolve(context)),
+                            subtitle: Text(includeAll
+                                ? '${transactions.length} · ${const LocalizedCopy(en: 'All activity', pt: 'Toda a atividade', es: 'Toda la actividad').resolve(context)}'
+                                : '${filtered.length} · ${const LocalizedCopy(en: 'Current selection', pt: 'Seleção atual', es: 'Selección actual').resolve(context)}'),
+                            value: includeAll,
+                            onChanged: (value) => setSheetState(
+                                () => includeAll = value ?? false),
+                          ),
+                          Text(context.tr.statementExportLongAddressesNote,
+                              style: Theme.of(context).textTheme.bodySmall),
+                          const SizedBox(height: 12),
+                          for (final format in ['CSV', 'PDF'])
+                            ListTile(
+                              leading: Icon(KeroseneIcons.download),
+                              title: Text(format),
+                              enabled: includeAll || filtered.isNotEmpty,
+                              onTap: () => Navigator.of(sheetContext)
+                                  .pop(format.toLowerCase()),
+                            ),
+                        ])),
+              )),
     );
     if (format == null || !mounted) return;
-
-    final result = format == 'pdf'
-        ? await exportStatementPdf(transactions)
-        : await exportStatementCsv(transactions);
-    if (!mounted) return;
-    final tr = context.tr;
-    AppNotice.showInfo(
-      context,
-      title: result.shared
-          ? tr.statementExportSharedTitle
-          : (format == 'csv'
-              ? tr.statementExportCsvCopiedTitle
-              : tr.statementExportGenericTitle),
-      message: result.shared
-          ? tr.statementExportSharedMessage(
-              result.rowCount,
-              format.toUpperCase(),
-            )
-          : format == 'csv'
-              ? tr.statementExportCsvCopiedMessage(result.rowCount)
-              : tr.statementExportPdfFailed,
-    );
+    setState(() => _exporting = true);
+    try {
+      final selected = includeAll ? transactions : filtered;
+      final result = format == 'pdf'
+          ? await exportStatementPdf(selected)
+          : await exportStatementCsv(selected);
+      if (!mounted) return;
+      final tr = context.tr;
+      AppNotice.showInfo(
+        context,
+        title: result.shared
+            ? tr.statementExportSharedTitle
+            : (format == 'csv'
+                ? tr.statementExportCsvCopiedTitle
+                : tr.statementExportGenericTitle),
+        message: result.shared
+            ? tr.statementExportSharedMessage(
+                result.rowCount, format.toUpperCase())
+            : (format == 'csv'
+                ? tr.statementExportCsvCopiedMessage(result.rowCount)
+                : tr.statementExportPdfFailed),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppNotice.showError(context,
+          title: context.tr.statementExportGenericTitle,
+          message: ErrorTranslator.translate(context.tr, error.toString()));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   void _clearFilters() {
@@ -436,9 +437,8 @@ class _TransactionStatementScreenState
     final wallets = ref.read(walletProvider);
     final walletList =
         wallets is WalletLoaded ? wallets.wallets : const <Wallet>[];
-    final accounts =
-        ref.read(bitcoinAccountsProvider).asData?.value ??
-            const <BitcoinAccount>[];
+    final accounts = ref.read(bitcoinAccountsProvider).asData?.value ??
+        const <BitcoinAccount>[];
     final archivedIds = ref.watch(activityArchiveProvider);
     final byActivity = TransactionFilterEngine.apply(
       source: transactions,
@@ -597,7 +597,8 @@ class _StatementTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? _StatementColors.surfaceHigh(context) : Colors.transparent,
+      color:
+          selected ? _StatementColors.surfaceHigh(context) : Colors.transparent,
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
@@ -762,7 +763,8 @@ class _StatementFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? _StatementColors.surfaceHigh(context) : Colors.transparent,
+      color:
+          selected ? _StatementColors.surfaceHigh(context) : Colors.transparent,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -920,7 +922,8 @@ class _RoundIconButton extends StatelessWidget {
       dimension: 48,
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(icon, color: _StatementColors.textPrimary(context), size: 20),
+        icon:
+            Icon(icon, color: _StatementColors.textPrimary(context), size: 20),
         style: IconButton.styleFrom(
           backgroundColor: _StatementColors.surface(context),
           shape: const CircleBorder(),
@@ -983,17 +986,23 @@ class _StatementMessage extends StatelessWidget {
 }
 
 class _StatementColors {
-  static Color background(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
-  static Color surface(BuildContext context) => Theme.of(context).colorScheme.surface;
+  static Color background(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+  static Color surface(BuildContext context) =>
+      Theme.of(context).colorScheme.surface;
   static Color surfaceHigh(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
           ? KeroseneBrandTheme.dark.surface
           : KeroseneBrandTheme.light.surface;
   static Color border(BuildContext context) => Theme.of(context).dividerColor;
-  static Color borderHigh(BuildContext context) => Theme.of(context).dividerColor;
-  static Color textPrimary(BuildContext context) => Theme.of(context).colorScheme.onSurface;
-  static Color textSecondary(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
-  static Color textMuted(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
+  static Color borderHigh(BuildContext context) =>
+      Theme.of(context).dividerColor;
+  static Color textPrimary(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface;
+  static Color textSecondary(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurfaceVariant;
+  static Color textMuted(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurfaceVariant;
 }
 
 String _filterLabel(BuildContext context, _StatementFilter filter) {
@@ -1016,5 +1025,3 @@ String _dateGroupLabel(BuildContext context, DateTime day) {
   // Locale-aware date header (replaces hardcoded PT months).
   return AppDateTime.formatDate(context, day);
 }
-
-

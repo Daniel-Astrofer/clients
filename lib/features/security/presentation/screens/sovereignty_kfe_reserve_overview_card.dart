@@ -31,7 +31,8 @@ Widget buildKfeReserveOverviewCard({
       return Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: liquidityColor.withValues(alpha: 0.18),
@@ -80,7 +81,10 @@ Widget buildKfeReserveOverviewCard({
                           es: 'Lectura en vivo de reservas on-chain, liquidez Lightning y fondos reservados por salidas aún pendientes.',
                         ),
                         style: AppTypography.bodySmall.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.70),
                         ),
                       ),
                     ],
@@ -114,7 +118,10 @@ Widget buildKfeReserveOverviewCard({
             Text(
               liquiditySummary,
               style: AppTypography.bodySmall.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.70),
                 height: 1.5,
               ),
             ),
@@ -239,7 +246,9 @@ Widget buildKfeReserveOverviewCard({
               },
             ),
             SizedBox(height: 18),
-            Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
+            Divider(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                height: 1),
             const SizedBox(height: 16),
             KfeReserveDetailRow(
               label: copy(

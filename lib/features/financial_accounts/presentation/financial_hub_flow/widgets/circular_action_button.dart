@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/components/buttons/bouncing_button.dart';
 import '../theme/financial_hub_tokens.dart';
 
@@ -30,7 +29,6 @@ class CircularActionButton extends StatelessWidget {
 
     return BouncingButton(
       onTap: () {
-        HapticFeedback.selectionClick();
         onTap();
       },
       child: Column(

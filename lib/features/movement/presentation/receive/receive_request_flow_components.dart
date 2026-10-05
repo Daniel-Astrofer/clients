@@ -10,7 +10,7 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
 SendFlowTheme _receiveTokens() => SendFlowTheme.forVariant(
-      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+    ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
 
 Color get _receiveBackground => _receiveTokens().background;
 Color get _receiveSurface => _receiveTokens().surface;

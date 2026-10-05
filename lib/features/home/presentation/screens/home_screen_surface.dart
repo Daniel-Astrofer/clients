@@ -3,6 +3,8 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
+
 import 'home_screen_dependencies.dart';
 
 /// Pure OLED black body. Top accent color is owned solely by
@@ -36,7 +38,7 @@ class HomeEntryTransitionState extends State<HomeEntryTransition>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: KeroseneMotion.slow,
+      duration: HomeMotion.entrance,
     )..forward();
     final curve = CurvedAnimation(
       parent: _controller,
@@ -57,7 +59,7 @@ class HomeEntryTransitionState extends State<HomeEntryTransition>
 
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (KeroseneMotion.reduceMotion(context)) {
       return widget.child;
     }
 
@@ -88,8 +90,9 @@ class HomeGlassPanel extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = EdgeInsets.zero,
-    this.borderRadius =
-        const BorderRadius.all(Radius.circular(HomeRadius.card)),
+    this.borderRadius = const BorderRadius.all(
+      Radius.circular(HomeRadius.card),
+    ),
     this.backgroundColor,
   });
 
@@ -102,16 +105,23 @@ class HomeGlassPanel extends StatelessWidget {
     final content = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        color: resolvedBg,
+        // Keep the OLED surface quiet while giving every home panel a
+        // tangible top-to-bottom material finish. This is deliberately a
+        // token-only gradient so dark and light themes remain counterparts.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            surface.panelTop.withValues(alpha: 0.98),
+            Color.lerp(surface.panelBottom, resolvedBg, 0.55)!,
+          ],
+        ),
         border: Border.all(color: resolvedBorder),
       ),
       child: Padding(padding: padding, child: child),
     );
 
-    final clipped = ClipRRect(
-      borderRadius: borderRadius,
-      child: content,
-    );
+    final clipped = ClipRRect(borderRadius: borderRadius, child: content);
 
     return RepaintBoundary(child: clipped);
   }
@@ -125,9 +135,7 @@ class HomeLoadingContent extends StatelessWidget {
     final height = MediaQuery.sizeOf(context).height;
     return SizedBox(
       height: height * 0.72,
-      child: Center(
-        child: TorLoadingDots(travel: 5),
-      ),
+      child: Center(child: TorLoadingDots(travel: 5)),
     );
   }
 }
@@ -141,8 +149,9 @@ class HomeSkeletonBox extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    this.borderRadius =
-        const BorderRadius.all(Radius.circular(HomeRadius.small)),
+    this.borderRadius = const BorderRadius.all(
+      Radius.circular(HomeRadius.small),
+    ),
   });
 
   @override
@@ -186,7 +195,6 @@ class HomeHeaderIconButton extends StatelessWidget {
             label: semanticLabel,
             child: InkResponse(
               onTap: () {
-                HapticFeedback.lightImpact();
                 onTap();
               },
               radius: homeSize(24),
@@ -197,7 +205,9 @@ class HomeHeaderIconButton extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: homeSize(24),
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.9),
                   ),
                 ),
               ),
@@ -215,7 +225,9 @@ class HomeHeaderIconButton extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: homeAmberColor,
                 border: Border.all(
-                    color: Theme.of(context).dividerColor, width: 1.5),
+                  color: Theme.of(context).dividerColor,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -239,88 +251,16 @@ class HomeBalanceActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final borderRadius = BorderRadius.circular(homeSize(16));
-    final labelStyle = theme.textTheme.labelLarge?.copyWith(
-      color: Theme.of(context).colorScheme.onSurface,
-      fontSize: homeFontSize(15),
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0,
-    );
-
-    final Widget panel;
-    if (primary) {
-      // Receber: solid white chrome with live glyph cutouts — text/icon expose
-      // exactly whatever is scrolling behind the button (aurora / stage glow).
-      panel = ClipRRect(
-        borderRadius: borderRadius,
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          height: homeSize(52),
-          width: double.infinity,
-          child: CustomPaint(
-            painter: _ReceiveLiveGlassCutoutPainter(
-              icon: icon,
-              label: label,
-              iconSize: homeSize(20),
-              gap: homeSize(8),
-              fontSize: homeFontSize(15),
-              fontWeight: FontWeight.w600,
-              fontFamily: labelStyle?.fontFamily,
-              fontFamilyFallback: labelStyle?.fontFamilyFallback,
-            ),
-            child: const SizedBox.expand(),
-          ),
-        ),
-      );
-    } else {
-      final surface = HomeSurfaceTheme.of(context);
-      final content = Container(
-        constraints: BoxConstraints(minHeight: homeSize(52)),
-        padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
-        decoration: BoxDecoration(
-          color: surface.surfaceDim,
-          borderRadius: borderRadius,
-          border: Border.all(
-            color: surface.surfaceBorder,
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: homeSize(20), color: Theme.of(context).colorScheme.onSurface),
-            SizedBox(width: homeSize(8)),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: labelStyle,
-              ),
-            ),
-          ],
-        ),
-      );
-      panel = ClipRRect(
-        borderRadius: borderRadius,
-        clipBehavior: Clip.hardEdge,
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            Positioned.fill(
-              child: CustomPaint(painter: _ActionGlassGlowPainter(context)),
-            ),
-            content,
-          ],
-        ),
-      );
-    }
-
-    return BouncingButtonWrapper(
-      onTap: onTap,
-      child: RepaintBoundary(child: panel),
+    return SizedBox(
+      height: homeSize(54),
+      child: AppButton(
+        label: label,
+        onPressed: onTap,
+        variant:
+            primary ? AppButtonVariant.primary : AppButtonVariant.secondary,
+        icon: Icon(icon, size: homeSize(20)),
+        expand: true,
+      ),
     );
   }
 }
@@ -440,7 +380,9 @@ class _ActionGlassGlowPainter extends CustomPainter {
             radius,
             [
               Theme.of(context).colorScheme.onSurface.withValues(alpha: peak),
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: peak * 0.35),
+              Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: peak * 0.35),
               Theme.of(context).colorScheme.onSurface.withValues(alpha: 0),
             ],
             const [0.0, 0.45, 1.0],
@@ -497,12 +439,13 @@ class HomePaginationDots extends StatelessWidget {
 
   Widget _buildDot(BuildContext context, int index, bool isPill) {
     final active = index == activeIndex;
-    final accent = accents != null && index < accents!.length ? accents![index] : null;
+    final accent =
+        accents != null && index < accents!.length ? accents![index] : null;
 
     final dot = isPill
         ? AnimatedContainer(
             duration: HomeMotion.short,
-            curve: Curves.easeOutCubic,
+            curve: KeroseneMotion.standard,
             width: active ? homeSize(18) : homeSize(7),
             height: homeSize(7),
             decoration: BoxDecoration(
@@ -510,19 +453,23 @@ class HomePaginationDots extends StatelessWidget {
               color: active
                   ? (accent?.withValues(alpha: 0.95) ??
                       Theme.of(context).colorScheme.onSurface)
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
+                  : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.18),
             ),
           )
         : AnimatedContainer(
             duration: HomeMotion.short,
-            curve: Curves.easeOutCubic,
+            curve: KeroseneMotion.standard,
             width: homeSize(6),
             height: homeSize(6),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: active
                   ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  : Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           );
 
@@ -566,11 +513,15 @@ class HomeSetupNotice extends StatelessWidget {
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
           top: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.1),
             width: 0.5,
           ),
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.1),
             width: 0.5,
           ),
         ),
@@ -583,7 +534,9 @@ class HomeSetupNotice extends StatelessWidget {
             child: Icon(
               icon,
               size: homeSize(24),
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.9),
             ),
           ),
           SizedBox(width: homeSize(14)),
@@ -605,7 +558,9 @@ class HomeSetupNotice extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.62),
                     fontSize: homeFontSize(12),
                     height: 1.35,
                     letterSpacing: 0,
@@ -637,7 +592,9 @@ class HomeSetupNotice extends StatelessWidget {
             child: Icon(
               KeroseneIcons.chevronRight,
               size: homeSize(18),
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],

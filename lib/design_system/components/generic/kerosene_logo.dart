@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:kerosene/design_system/foundation/assets/animation/kerosene_animation_asset.dart';
+import 'package:kerosene/design_system/foundation/assets/animation/kerosene_lottie.dart';
 
 class KeroseneLogo extends StatelessWidget {
-  static const assetPath = 'assets/logo/kerosene-logo-white.json';
-
   final double size;
   final bool showText;
+
   /// When null, uses [ColorScheme.onSurface] so light/dark scaffolds stay visible.
   final Color? color;
   final FilterQuality filterQuality;
@@ -21,21 +21,14 @@ class KeroseneLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolved = color ?? Theme.of(context).colorScheme.onSurface;
-    return ColorFiltered(
+    return KeroseneLottie.asset(
+      asset: KeroseneAnimationAsset.brandLogo,
+      width: size,
+      height: size,
       colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(resolved)),
-      child: Lottie.asset(
-        assetPath,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        repeat: true,
-        frameBuilder: (context, child, composition) {
-          if (composition == null) {
-            return SizedBox(width: size, height: size);
-          }
-          return child;
-        },
-      ),
+      // A logo is an entrance accent, not a permanent ticker. A finite
+      // animation keeps screens settleable and avoids background GPU work.
+      repeat: false,
     );
   }
 

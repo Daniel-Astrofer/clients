@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/features/home/domain/entities/home_stage.dart';
+import 'package:kerosene/features/home/domain/entities/home_surface.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 import 'package:kerosene/features/home/scene/models/home_scene_mapper.dart';
@@ -100,7 +103,8 @@ void main() {
     );
 
     expect(
-      () => container.read(homeSurfaceProvider.notifier).presentLocalStage(stage),
+      () =>
+          container.read(homeSurfaceProvider.notifier).presentLocalStage(stage),
       returnsNormally,
     );
 
@@ -159,4 +163,54 @@ void main() {
     expect(find.text('Recebido'), findsOneWidget);
     expect(find.textContaining('Transferência recebida'), findsOneWidget);
   });
+
+  testWidgets('resting header renders only configured chrome actions',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          homeSurfaceProvider.overrideWith(
+            () => _FixedHomeSurfaceNotifier(
+              HomeSurface.localDefaults().copyWith(
+                restingHeader: const HomeRestingHeader(
+                  balanceVisibility: false,
+                  notifications: true,
+                  settings: false,
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
+            backgroundColor: Colors.black,
+            body: HomeSceneHost(userName: 'Daniel'),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byIcon(KeroseneIcons.notifications), findsOneWidget);
+    expect(find.byIcon(KeroseneIcons.settings), findsNothing);
+    expect(find.byIcon(KeroseneIcons.eye), findsNothing);
+    expect(find.byIcon(KeroseneIcons.eyeOff), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+class _FixedHomeSurfaceNotifier extends HomeSurfaceNotifier {
+  _FixedHomeSurfaceNotifier(this.initial);
+
+  final HomeSurface initial;
+
+  @override
+  HomeSurface build() => initial;
 }

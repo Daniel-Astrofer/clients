@@ -140,6 +140,55 @@ void main() {
     });
   });
 
+  group('Home header action configuration', () {
+    test('resting header round-trips placement and visibility', () {
+      for (final placement in HomeStageActionsPlacement.values) {
+        final original = HomeRestingHeader(
+          actionsPlacement: placement,
+          balanceVisibility: false,
+          notifications: true,
+          settings: false,
+        );
+        final restored = HomeRestingHeader.fromJson(original.toJson());
+
+        final expectedPlacement = placement == HomeStageActionsPlacement.unknown
+            ? HomeStageActionsPlacement.belowStage
+            : placement;
+        expect(restored.actionsPlacement, expectedPlacement);
+        expect(restored.balanceVisibility, isFalse);
+        expect(restored.notifications, isTrue);
+        expect(restored.settings, isFalse);
+      }
+    });
+
+    test('stage action policy resolves hidden and video cases', () {
+      const video = HomeStageMedia(type: HomeStageMediaType.video);
+      const image = HomeStageMedia(type: HomeStageMediaType.image);
+
+      expect(
+        const HomeStageActionsLayout(
+          placement: HomeStageActionsPlacement.overlayEnd,
+          policy: HomeStageActionsPolicy.hideForVideo,
+        ).resolvePlacement(video),
+        HomeStageActionsPlacement.hidden,
+      );
+      expect(
+        const HomeStageActionsLayout(
+          placement: HomeStageActionsPlacement.overlayEnd,
+          policy: HomeStageActionsPolicy.hideForVideo,
+        ).resolvePlacement(image),
+        HomeStageActionsPlacement.overlayEnd,
+      );
+      expect(
+        const HomeStageActionsLayout(
+          placement: HomeStageActionsPlacement.trailing,
+          policy: HomeStageActionsPolicy.forceHidden,
+        ).resolvePlacement(image),
+        HomeStageActionsPlacement.hidden,
+      );
+    });
+  });
+
   group('HomeUiEvent scene types', () {
     test('parses HOME_UI_SCENE', () {
       final event = HomeUiEvent.fromJson({

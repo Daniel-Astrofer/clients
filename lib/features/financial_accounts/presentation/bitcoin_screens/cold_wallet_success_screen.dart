@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -40,8 +41,9 @@ class ColdWalletSuccessScreen extends StatelessWidget {
     final seedNote = seedOk
         ? 'A semente ficou só neste aparelho. A Kerosene só observa saldo on-chain.'
         : 'A semente NÃO foi salva neste aparelho. Você vê o saldo, mas não pode gastar daqui até restaurar a seed.';
-    final iconColor =
-        seedOk ? KeroseneBrandTokens.success : KeroseneBrandTokens.warning;
+    final iconColor = seedOk
+        ? KeroseneBrandTokens.success
+        : KeroseneBrandTokens.warning;
     final icon = seedOk ? KeroseneIcons.success : KeroseneIcons.warning;
 
     return Scaffold(
@@ -82,12 +84,13 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                     color: KeroseneBrandTokens.warning.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color:
-                          KeroseneBrandTokens.warning.withValues(alpha: 0.35),
+                      color: KeroseneBrandTokens.warning.withValues(
+                        alpha: 0.35,
+                      ),
                     ),
                   ),
                   child: Text(
-                    'Importante: sem a seed neste aparelho, o envio cold não funciona. Guarde a frase e restaure-a antes de tentar gastar.',
+                    context.tr.coldWalletSuccessWarning,
                     textAlign: TextAlign.center,
                     style: AppTypography.inter(
                       color: Theme.of(context).colorScheme.onSurface,
@@ -114,7 +117,7 @@ class ColdWalletSuccessScreen extends StatelessWidget {
                   onPressed: () => _finish(context, openSend: true),
                   icon: const Icon(KeroseneIcons.send, size: 18),
                   label: Text(
-                    'Enviar',
+                    context.tr.sendAction,
                     style: AppTypography.inter(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,

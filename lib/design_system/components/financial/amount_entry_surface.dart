@@ -1,3 +1,6 @@
+// architecture-allow-large-file: financial input state and rendering are kept
+// together to preserve the public surface API and keyboard behavior.
+import 'dart:async';
 import 'dart:ui' show FontFeature, lerpDouble;
 
 import 'package:flutter/material.dart';
@@ -126,7 +129,8 @@ class TransactionValueEntrySurface extends StatelessWidget {
     final editable = useSystemKeyboard && onAmountTextChanged != null;
     final keypadVisible = !editable && showKeypad && onKeyTap != null;
     final currencyTapEnabled = editable || showKeypad;
-    final heroTitle = !inlineHeroTitle &&
+    final heroTitle =
+        !inlineHeroTitle &&
         titleTopInsetFraction != null &&
         title != null &&
         title!.trim().isNotEmpty;
@@ -188,14 +192,19 @@ class TransactionValueEntrySurface extends StatelessWidget {
                   ),
                   if (heroTitle)
                     SizedBox(
-                      height: MediaQuery.sizeOf(context).height *
+                      height:
+                          MediaQuery.sizeOf(context).height *
                           titleTopInsetFraction!,
                       width: double.infinity,
                       child: Align(
                         alignment: Alignment.bottomLeft,
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.xl2, 0, AppSpacing.xl2, 8),
+                            AppSpacing.xl2,
+                            0,
+                            AppSpacing.xl2,
+                            8,
+                          ),
                           child: Text(
                             title!,
                             style: titleStyle ?? AppTypography.h1,
@@ -406,7 +415,8 @@ class _InlineHeroLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).height < 640;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 40;
-    final availableHeight = MediaQuery.sizeOf(context).height -
+    final availableHeight =
+        MediaQuery.sizeOf(context).height -
         MediaQuery.viewInsetsOf(context).bottom -
         MediaQuery.paddingOf(context).top;
     final tight = availableHeight < 520;
@@ -458,10 +468,7 @@ class _InlineHeroLayout extends StatelessWidget {
         ),
         if (quickActions.isNotEmpty && (keypadVisible || editable)) ...[
           SizedBox(height: compact ? 10 : 14),
-          _QuickActions(
-            actions: quickActions,
-            onTap: onQuickAction,
-          ),
+          _QuickActions(actions: quickActions, onTap: onQuickAction),
         ],
         if (availableLabel != null || feeLabel != null || hasWarning) ...[
           const SizedBox(height: 16),
@@ -516,10 +523,7 @@ class _InlineHeroLayout extends StatelessWidget {
           ),
         ),
         if (keypadVisible)
-          _Keypad(
-            onKeyTap: onKeyTap!,
-            compact: compact || tight,
-          ),
+          _Keypad(onKeyTap: onKeyTap!, compact: compact || tight),
         if (showAccessory) bottomAccessory!,
         _CtaBar(
           label: ctaLabel,
@@ -538,11 +542,7 @@ class _Header extends StatelessWidget {
   final String? title;
   final String? subtitle;
 
-  const _Header({
-    required this.onBack,
-    this.title,
-    this.subtitle,
-  });
+  const _Header({required this.onBack, this.title, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -617,7 +617,8 @@ class _InlineTitleHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = titleStyle ?? AppTypography.h1.copyWith(color: _C.text);
-    final subStyle = subtitleStyle ??
+    final subStyle =
+        subtitleStyle ??
         AppTypography.inter(
           color: _C.muted,
           fontSize: 12,
@@ -629,12 +630,9 @@ class _InlineTitleHeader extends StatelessWidget {
 
     Widget titleBlock({required TextAlign align}) {
       return AnimatedSwitcher(
-        duration: KeroseneMotion.duration(
-          context,
-          const Duration(milliseconds: 200),
-        ),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
+        duration: KeroseneMotion.duration(context, KeroseneMotion.inputTitle),
+        switchInCurve: KeroseneMotion.standard,
+        switchOutCurve: KeroseneMotion.exit,
         transitionBuilder: (child, animation) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -691,10 +689,7 @@ class _InlineTitleHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 56),
               child: titleBlock(align: TextAlign.center),
             ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: back,
-            ),
+            Align(alignment: Alignment.centerLeft, child: back),
           ],
         ),
       ),
@@ -722,14 +717,14 @@ class _BackArrowButtonState extends State<_BackArrowButton>
     super.initState();
     _press = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 90),
-      reverseDuration: const Duration(milliseconds: 140),
+      duration: KeroseneMotion.inputPress,
+      reverseDuration: KeroseneMotion.inputPressReverse,
     );
     _scale = Tween<double>(begin: 1, end: 0.9).animate(
       CurvedAnimation(
         parent: _press,
-        curve: Curves.easeInCubic,
-        reverseCurve: Curves.easeOutCubic,
+        curve: KeroseneMotion.exit,
+        reverseCurve: KeroseneMotion.standard,
       ),
     );
   }
@@ -825,11 +820,7 @@ class _CurrencyChip extends StatelessWidget {
             ),
             if (onTap != null) ...[
               const SizedBox(width: 4),
-              Icon(
-                KeroseneIcons.chevronDown,
-                size: 16,
-                color: _C.muted,
-              ),
+              Icon(KeroseneIcons.chevronDown, size: 16, color: _C.muted),
             ],
           ],
         ),
@@ -877,9 +868,9 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
   late final FocusNode _focus;
   late final AnimationController _countUp;
   late final AnimationController _expression;
-  late final AnimationController _cursorBlink;
 
   bool _syncing = false;
+
   /// Last value we pushed upstream — avoids fighting the TextField/IME.
   String _lastEmitted = '0';
   double _countFrom = 0;
@@ -900,12 +891,8 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     _expression = AnimationController.unbounded(vsync: this)..value = 0;
     _countUp = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: KeroseneMotion.inputCountUp,
     );
-    _cursorBlink = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 530),
-    )..repeat(reverse: true);
     _countUp.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
         setState(() => _counting = false);
@@ -964,9 +951,7 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
         _countTo = MoneyDisplay.parseEditableInput(next);
         _counting = true;
         _countUp.forward(from: 0);
-      } else if (grew &&
-          !_counting &&
-          !KeroseneMotion.reduceMotion(context)) {
+      } else if (grew && !_counting && !KeroseneMotion.reduceMotion(context)) {
         HapticFeedback.selectionClick();
       }
       _syncing = true;
@@ -1041,12 +1026,15 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     final nextStr = chars.join();
     if (nextStr == activeStr) return;
 
-    final prevDigits =
-        active.where((g) => !_isAmountSep(g.char)).toList(growable: false);
-    final prevSeps =
-        active.where((g) => _isAmountSep(g.char)).toList(growable: false);
-    final nextDigitChars =
-        chars.where((c) => !_isAmountSep(c)).toList(growable: false);
+    final prevDigits = active
+        .where((g) => !_isAmountSep(g.char))
+        .toList(growable: false);
+    final prevSeps = active
+        .where((g) => _isAmountSep(g.char))
+        .toList(growable: false);
+    final nextDigitChars = chars
+        .where((c) => !_isAmountSep(c))
+        .toList(growable: false);
     final nextSepCount = chars.length - nextDigitChars.length;
 
     final sharedDigits = prevDigits.length < nextDigitChars.length
@@ -1102,7 +1090,9 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
         nextSepGlyphs.add(
           _AmountGlyph(
             id: prevSeps[i].id,
-            char: chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
+            char: chars
+                .where((c) => _isAmountSep(c))
+                .toList(growable: false)[i],
             enter: false,
             expandWidth: false,
             exiting: false,
@@ -1112,7 +1102,9 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
         nextSepGlyphs.add(
           _AmountGlyph(
             id: _nextGlyphId++,
-            char: chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
+            char: chars
+                .where((c) => _isAmountSep(c))
+                .toList(growable: false)[i],
             enter: true,
             expandWidth: true,
             exiting: false,
@@ -1164,7 +1156,6 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     _focus.dispose();
     _countUp.dispose();
     _expression.dispose();
-    _cursorBlink.dispose();
     super.dispose();
   }
 
@@ -1216,10 +1207,7 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
       HapticFeedback.selectionClick();
     }
 
-    _syncGlyphs(
-      nextDisplay,
-      animate: !KeroseneMotion.reduceMotion(context),
-    );
+    _syncGlyphs(nextDisplay, animate: !KeroseneMotion.reduceMotion(context));
     widget.onChanged(sanitized);
     setState(() {});
   }
@@ -1277,12 +1265,13 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     final symbolStyle = style.copyWith(
       color: _C.muted,
       fontSize: baseSize * 0.72,
-      fontWeight:
-          widget.currency == Currency.btc ? FontWeight.w300 : style.fontWeight,
+      fontWeight: widget.currency == Currency.btc
+          ? FontWeight.w300
+          : style.fontWeight,
     );
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_countUp, _expression, _cursorBlink]),
+      animation: Listenable.merge([_countUp, _expression]),
       builder: (context, _) {
         final display = _counting
             ? _formatCount(
@@ -1326,18 +1315,15 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
                     ],
                   ),
             const SizedBox(width: 3),
-            FadeTransition(
-              opacity: _cursorBlink,
-              child: Baseline(
-                baseline: baseSize * 0.92,
-                baselineType: TextBaseline.alphabetic,
-                child: Container(
-                  width: 2.5,
-                  height: baseSize * 0.92,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(1.5),
-                  ),
+            Baseline(
+              baseline: baseSize * 0.92,
+              baselineType: TextBaseline.alphabetic,
+              child: Container(
+                width: 2.5,
+                height: baseSize * 0.92,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(1.5),
                 ),
               ),
             ),
@@ -1389,14 +1375,12 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
                   clipBehavior: Clip.none,
                   children: [
                     IgnorePointer(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: amountRow,
-                      ),
+                      child: FittedBox(fit: BoxFit.scaleDown, child: amountRow),
                     ),
                     // Full-bleed invisible editor — never inside Transform.
                     Positioned.fill(
                       child: TextField(
+                        key: const ValueKey('movement-amount-input'),
                         controller: _controller,
                         focusNode: _focus,
                         autofocus: true,
@@ -1420,9 +1404,7 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
                         smartQuotesType: SmartQuotesType.disabled,
                         decoration: _bareInputDecoration,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9.,]'),
-                          ),
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                         ],
                         onChanged: _onChanged,
                         onTap: () {
@@ -1448,6 +1430,7 @@ class _AmountGlyph {
   final int id;
   final String char;
   final bool enter;
+
   /// Layout width animates with the glyph (insert → grow, delete → shrink).
   final bool expandWidth;
   final bool exiting;
@@ -1492,11 +1475,8 @@ class _RevolutDigitState extends State<_RevolutDigit>
   @override
   void initState() {
     super.initState();
-    _t = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    _appear = CurvedAnimation(parent: _t, curve: Curves.easeOutCubic);
+    _t = AnimationController(vsync: this, duration: KeroseneMotion.inputDigit);
+    _appear = CurvedAnimation(parent: _t, curve: KeroseneMotion.standard);
     if (widget.exiting) {
       _t.value = 1;
       _runExit();
@@ -1586,9 +1566,9 @@ class _AmountHero extends StatefulWidget {
 class _AmountHeroState extends State<_AmountHero>
     with TickerProviderStateMixin {
   static const _pulseScale = 0.985;
-  static const _digitIn = Duration(milliseconds: 160);
-  static const _settle = Duration(milliseconds: 220);
-  static const _shakeMs = Duration(milliseconds: 280);
+  static const _digitIn = KeroseneMotion.inputHeroDigit;
+  static const _settle = KeroseneMotion.inputHeroSettle;
+  static const _shakeMs = KeroseneMotion.inputHeroShake;
 
   late final AnimationController _cursor;
   late final AnimationController _pulse;
@@ -1602,33 +1582,41 @@ class _AmountHeroState extends State<_AmountHero>
     super.initState();
     _cursor = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: KeroseneMotion.inputCursor,
     );
     _pulse = AnimationController(vsync: this, duration: _digitIn);
     _shake = AnimationController(vsync: this, duration: _shakeMs);
 
     _scale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: _pulseScale)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween(
+          begin: 1.0,
+          end: _pulseScale,
+        ).chain(CurveTween(curve: KeroseneMotion.standard)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: _pulseScale, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween(
+          begin: _pulseScale,
+          end: 1.0,
+        ).chain(CurveTween(curve: KeroseneMotion.standard)),
         weight: 60,
       ),
     ]).animate(_pulse);
 
     _opacity = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.72)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.72,
+        ).chain(CurveTween(curve: KeroseneMotion.standard)),
         weight: 35,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 0.72, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween(
+          begin: 0.72,
+          end: 1.0,
+        ).chain(CurveTween(curve: KeroseneMotion.standard)),
         weight: 65,
       ),
     ]).animate(_pulse);
@@ -1639,7 +1627,7 @@ class _AmountHeroState extends State<_AmountHero>
       TweenSequenceItem(tween: Tween(begin: 2.0, end: -2.0), weight: 30),
       TweenSequenceItem(tween: Tween(begin: -2.0, end: 1.0), weight: 25),
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 25),
-    ]).animate(CurvedAnimation(parent: _shake, curve: Curves.easeOutCubic));
+    ]).animate(CurvedAnimation(parent: _shake, curve: KeroseneMotion.standard));
 
     if (widget.showCursor) {
       _cursor.repeat(reverse: true);
@@ -1709,10 +1697,7 @@ class _AmountHeroState extends State<_AmountHero>
     if (display.isEmpty) return (prefix: '', tail: '');
     final chars = display.characters;
     if (chars.length <= 1) return (prefix: '', tail: display);
-    return (
-      prefix: chars.skipLast(1).toString(),
-      tail: chars.last,
-    );
+    return (prefix: chars.skipLast(1).toString(), tail: chars.last);
   }
 
   @override
@@ -1727,8 +1712,10 @@ class _AmountHeroState extends State<_AmountHero>
     final reduce = _reduceMotion(context);
     final style = _amountStyle(color);
     final parts = _splitDisplay(display);
-    final digitDuration =
-        KeroseneMotion.duration(context, const Duration(milliseconds: 231));
+    final digitDuration = KeroseneMotion.duration(
+      context,
+      KeroseneMotion.inputAmountMorph,
+    );
 
     Widget amountRow;
     if (reduce) {
@@ -1738,28 +1725,23 @@ class _AmountHeroState extends State<_AmountHero>
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (parts.prefix.isNotEmpty)
-            Text(
-              parts.prefix,
-              style: style,
-            ),
+          if (parts.prefix.isNotEmpty) Text(parts.prefix, style: style),
           AnimatedSwitcher(
             duration: digitDuration,
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            layoutBuilder: (current, _) =>
-                current ?? const SizedBox.shrink(),
+            switchInCurve: KeroseneMotion.standard,
+            switchOutCurve: KeroseneMotion.exit,
+            layoutBuilder: (current, _) => current ?? const SizedBox.shrink(),
             transitionBuilder: (child, animation) {
               final fade = CurvedAnimation(
                 parent: animation,
-                curve: Curves.easeOutCubic,
+                curve: KeroseneMotion.standard,
               );
-                  final scale = Tween<double>(begin: 0.80, end: 1).animate(
-                    CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.elasticOut,
-                    ),
-                  );
+              final scale = Tween<double>(begin: 0.80, end: 1).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: KeroseneMotion.spring,
+                ),
+              );
               return FadeTransition(
                 opacity: fade,
                 child: ScaleTransition(scale: scale, child: child),
@@ -1818,11 +1800,7 @@ class _AmountHeroState extends State<_AmountHero>
     );
 
     if (reduce) {
-      return Semantics(
-        liveRegion: true,
-        label: display,
-        child: content,
-      );
+      return Semantics(liveRegion: true, label: display, child: content);
     }
 
     return Semantics(
@@ -1869,7 +1847,7 @@ class _ConversionLineState extends State<_ConversionLine>
     super.initState();
     _swapSpin = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: KeroseneMotion.inputSwap,
     );
   }
 
@@ -1893,7 +1871,7 @@ class _ConversionLineState extends State<_ConversionLine>
     final reduce = KeroseneMotion.reduceMotion(context);
     final duration = KeroseneMotion.duration(
       context,
-      const Duration(milliseconds: 220),
+      KeroseneMotion.inputHeroSettle,
     );
 
     final label = Text(
@@ -1921,8 +1899,8 @@ class _ConversionLineState extends State<_ConversionLine>
                 ? label
                 : AnimatedSwitcher(
                     duration: duration,
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
+                    switchInCurve: KeroseneMotion.standard,
+                    switchOutCurve: KeroseneMotion.exit,
                     child: label,
                   ),
           ),
@@ -1932,7 +1910,7 @@ class _ConversionLineState extends State<_ConversionLine>
               turns: Tween<double>(begin: 0, end: 0.5).animate(
                 CurvedAnimation(
                   parent: _swapSpin,
-                  curve: Curves.easeOutCubic,
+                  curve: KeroseneMotion.standard,
                 ),
               ),
               child: Icon(
@@ -1957,11 +1935,7 @@ class _ContextPanel extends StatelessWidget {
   final String? feeLabel;
   final String? warningLabel;
 
-  const _ContextPanel({
-    this.availableLabel,
-    this.feeLabel,
-    this.warningLabel,
-  });
+  const _ContextPanel({this.availableLabel, this.feeLabel, this.warningLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -1970,15 +1944,14 @@ class _ContextPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (availableLabel != null)
-          _ContextLine(
-            label: _availableLabel(context),
-            value: availableLabel!,
-          ),
+          _ContextLine(label: _availableLabel(context), value: availableLabel!),
         if (availableLabel != null && feeLabel != null)
           const SizedBox(height: 8),
         if (feeLabel != null)
           _ContextLine(
-              label: context.tr.sendReviewNetworkFee, value: feeLabel!),
+            label: context.tr.sendReviewNetworkFee,
+            value: feeLabel!,
+          ),
         if (warningLabel != null && warningLabel!.trim().isNotEmpty) ...[
           if (availableLabel != null || feeLabel != null)
             const SizedBox(height: 10),
@@ -2068,8 +2041,10 @@ class _QuickActions extends StatelessWidget {
                       onTap!(action.key);
                     },
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 child: Text(
                   action.label,
                   style: AppTypography.inter(
@@ -2154,14 +2129,14 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
     super.initState();
     _press = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 90),
-      reverseDuration: const Duration(milliseconds: 120),
+      duration: KeroseneMotion.inputPress,
+      reverseDuration: KeroseneMotion.inputPressReverseFast,
     );
     _scale = Tween<double>(begin: 1.0, end: _pressScale).animate(
       CurvedAnimation(
         parent: _press,
-        curve: Curves.easeInCubic,
-        reverseCurve: Curves.easeOutCubic,
+        curve: KeroseneMotion.exit,
+        reverseCurve: KeroseneMotion.standard,
       ),
     );
   }
@@ -2191,8 +2166,12 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
         child: InkWell(
           onTap: _handleTap,
           borderRadius: BorderRadius.circular(16),
-          splashColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          highlightColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
+          splashColor: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.08),
+          highlightColor: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.04),
           child: ScaleTransition(
             scale: _scale,
             child: SizedBox(
@@ -2262,18 +2241,18 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
     super.initState();
     _spinController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: KeroseneMotion.inputSpin,
     );
     _press = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 90),
-      reverseDuration: const Duration(milliseconds: 160),
+      duration: KeroseneMotion.inputPress,
+      reverseDuration: KeroseneMotion.inputPressReverseSoft,
     );
     _pressScale = Tween<double>(begin: 1, end: 0.97).animate(
       CurvedAnimation(
         parent: _press,
-        curve: Curves.easeInCubic,
-        reverseCurve: Curves.easeOutCubic,
+        curve: KeroseneMotion.exit,
+        reverseCurve: KeroseneMotion.standard,
       ),
     );
     if (widget.isBusy) {
@@ -2301,10 +2280,14 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
   Future<void> _onTap() async {
     if (!widget.enabled || widget.isBusy) return;
     if (!KeroseneMotion.reduceMotion(context)) {
-      await _press.forward(from: 0);
-      if (mounted) await _press.reverse();
+      unawaited(_animatePress());
     }
     widget.onCta();
+  }
+
+  Future<void> _animatePress() async {
+    await _press.forward(from: 0);
+    if (mounted) await _press.reverse();
   }
 
   @override
@@ -2316,82 +2299,92 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
       color: widget.enabled ? _C.bg : _C.muted,
     );
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl2,
-        widget.compact ? 2 : AppSpacing.xs,
-        AppSpacing.xl2,
-        widget.compact ? 8 : AppSpacing.base,
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxWidth = constraints.maxWidth;
-          final height = widget.compact
-              ? 48.0
-              : (AppSpacing.xxxl > AppSpacing.minTouch
-                  ? 54.0
-                  : AppSpacing.minTouch.toDouble());
-          return ScaleTransition(
-            scale: _pressScale,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOutCubic,
-              width: widget.isBusy ? height : maxWidth,
-              height: height,
-              decoration: BoxDecoration(
-                color: widget.enabled || widget.isBusy ? _C.text : _C.chip,
-                borderRadius: BorderRadius.circular(
-                  widget.isBusy ? height / 2 : 999,
-                ),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
+    return Semantics(
+      key: const ValueKey('transaction-value-entry-cta'),
+      button: true,
+      enabled: widget.enabled && !widget.isBusy,
+      label: widget.label,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl2,
+          widget.compact ? 2 : AppSpacing.xs,
+          AppSpacing.xl2,
+          widget.compact ? 8 : AppSpacing.base,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth;
+            final height = widget.compact
+                ? 48.0
+                : (AppSpacing.xxxl > AppSpacing.minTouch
+                      ? 54.0
+                      : AppSpacing.minTouch.toDouble());
+            return ScaleTransition(
+              scale: _pressScale,
+              child: AnimatedContainer(
+                duration: KeroseneMotion.inputCta,
+                curve: KeroseneMotion.standardInOut,
+                width: widget.isBusy ? height : maxWidth,
+                height: height,
+                decoration: BoxDecoration(
+                  color: widget.enabled || widget.isBusy ? _C.text : _C.chip,
                   borderRadius: BorderRadius.circular(
                     widget.isBusy ? height / 2 : 999,
                   ),
-                  onTap: widget.enabled && !widget.isBusy ? _onTap : null,
-                  child: Center(
-                    child: widget.isBusy
-                        ? RepaintBoundary(
-                            child: AnimatedBuilder(
-                              animation: _spinController,
-                              builder: (context, child) {
-                                return Transform.rotate(
-                                  angle: _spinController.value *
-                                      2 *
-                                      3.141592653589793,
-                                  child: Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: _C.bg.withValues(alpha: 0.2),
-                                        width: 2,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: const ValueKey(
+                      'transaction-value-entry-cta-hit-target',
+                    ),
+                    borderRadius: BorderRadius.circular(
+                      widget.isBusy ? height / 2 : 999,
+                    ),
+                    onTap: widget.enabled && !widget.isBusy ? _onTap : null,
+                    child: Center(
+                      child: widget.isBusy
+                          ? RepaintBoundary(
+                              child: AnimatedBuilder(
+                                animation: _spinController,
+                                builder: (context, child) {
+                                  return Transform.rotate(
+                                    angle:
+                                        _spinController.value *
+                                        2 *
+                                        3.141592653589793,
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: _C.bg.withValues(alpha: 0.2),
+                                          width: 2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      borderRadius: BorderRadius.circular(12),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: _C.bg,
+                                      ),
                                     ),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: _C.bg,
-                                    ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
+                            )
+                          : Text(
+                              _softCtaLabel(widget.label),
+                              style: textStyle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          )
-                        : Text(
-                            _softCtaLabel(widget.label),
-                            style: textStyle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -2404,5 +2397,5 @@ class _C {
   static Color get text => KeroseneBrandTokens.textPrimary;
   static Color get muted => KeroseneBrandTokens.textMuted;
   static Color get chip => KeroseneBrandTokens.surfaceElevated;
-  static const warning = Color(0xFFFFB020);
+  static const warning = KeroseneBrandTokens.warning;
 }

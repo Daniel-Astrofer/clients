@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
@@ -25,11 +28,7 @@ class KeroseneOfflineBanner extends StatelessWidget {
   final String? lastSyncTime;
   final VoidCallback? onRetry;
 
-  const KeroseneOfflineBanner({
-    super.key,
-    this.lastSyncTime,
-    this.onRetry,
-  });
+  const KeroseneOfflineBanner({super.key, this.lastSyncTime, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -41,12 +40,12 @@ class KeroseneOfflineBanner extends StatelessWidget {
         vertical: AppSpacing.xs,
         horizontal: AppSpacing.base,
       ),
-      color: AppColors.hexFF23252A, // Smoke surface
+      color: AppColors.hexFF0B0F12, // Smoke surface
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.cloud_off,
+            KeroseneIcons.cloudOff,
             size: 14,
             color: KeroseneBrandTokens.warning,
             semanticLabel: 'Offline',
@@ -55,8 +54,8 @@ class KeroseneOfflineBanner extends StatelessWidget {
           Expanded(
             child: Text(
               lastSyncTime != null
-                  ? 'Offline — Ultima sincronizacao: $lastSyncTime'
-                  : 'Sem conexao',
+                  ? context.tr.offlineLastSync(lastSyncTime!)
+                  : context.tr.offlineTitle,
               style: AppTypography.inter(
                 fontSize: 12,
                 color: palette.textSecondary,
@@ -68,7 +67,7 @@ class KeroseneOfflineBanner extends StatelessWidget {
             GestureDetector(
               onTap: onRetry,
               child: Text(
-                'Tentar',
+                context.tr.retry,
                 style: AppTypography.inter(
                   fontSize: 12,
                   color: palette.textPrimary,
@@ -124,14 +123,14 @@ class _KeroseneOfflineFullScreenState extends State<KeroseneOfflineFullScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.cloud_off,
+              KeroseneIcons.cloudOff,
               size: 48,
-              color: palette.textTertiary,
+              color: palette.textMuted,
               semanticLabel: 'Sem conexao',
             ),
             SizedBox(height: AppSpacing.base),
             Text(
-              'Sem conexao',
+              context.tr.offlineTitle,
               style: AppTypography.inter(
                 fontSize: 15,
                 color: palette.textPrimary,
@@ -140,8 +139,7 @@ class _KeroseneOfflineFullScreenState extends State<KeroseneOfflineFullScreen> {
             ),
             SizedBox(height: AppSpacing.sm),
             Text(
-              'Verifique sua conexao com a internet.\n'
-              'Tentando reconectar automaticamente...',
+              context.tr.offlineReconnectHint,
               style: AppTypography.inter(
                 fontSize: 13,
                 color: palette.textSecondary,
@@ -152,7 +150,7 @@ class _KeroseneOfflineFullScreenState extends State<KeroseneOfflineFullScreen> {
             if (widget.onRetry != null)
               TextButton(
                 onPressed: widget.onRetry,
-                child: Text('Tentar agora'),
+                child: Text(context.tr.offlineTryNow),
               ),
           ],
         ),

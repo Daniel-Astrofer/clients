@@ -66,10 +66,8 @@ class _AuthColors {
     );
   }
 
-  BorderRadius get radiusMedium =>
-      isLight ? BorderRadius.circular(16) : BorderRadius.circular(12);
-  BorderRadius get radiusButton =>
-      isLight ? BorderRadius.circular(16) : BorderRadius.circular(999);
+  BorderRadius get radiusMedium => BorderRadius.circular(16);
+  BorderRadius get radiusButton => BorderRadius.circular(999);
 }
 
 class WelcomeScreen extends ConsumerStatefulWidget {

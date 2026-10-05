@@ -38,8 +38,13 @@ class AppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveOnPressed = loading ? null : onPressed;
 
+    final labelText = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
     final child = AnimatedSwitcher(
-      duration: KeroseneMotion.fast,
+      duration: KeroseneMotion.duration(context, KeroseneMotion.fast),
       child: loading
           ? const CupertinoActivityIndicator(
               key: ValueKey('loading'),
@@ -54,7 +59,7 @@ class AppButton extends StatelessWidget {
                   icon!,
                   const SizedBox(width: AppSpacing.sm),
                 ],
-                Text(label),
+                if (expand) Flexible(child: labelText) else labelText,
               ],
             ),
     );

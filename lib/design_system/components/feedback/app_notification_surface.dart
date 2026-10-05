@@ -286,7 +286,8 @@ class _NotificationActionButton extends StatelessWidget {
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        foregroundColor: KeroseneBrandTokens.textInverse.withValues(alpha: 0.92),
+        foregroundColor:
+            KeroseneBrandTokens.textInverse.withValues(alpha: 0.92),
         backgroundColor: AppNotificationStyle.buttonColor,
         shape: const RoundedRectangleBorder(),
         textStyle: AppTypography.bodySmall.copyWith(

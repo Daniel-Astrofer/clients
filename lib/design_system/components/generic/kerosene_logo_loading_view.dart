@@ -3,10 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/design_system/foundation/assets/animation/kerosene_animation_asset.dart';
+import 'package:kerosene/design_system/foundation/assets/animation/kerosene_lottie.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
-import 'package:lottie/lottie.dart';
-
-const String keroseneKLogoLottieAssetPath = 'assets/logo/kerosene-k-logo.json';
 
 class KeroseneLogoLoadingView extends StatefulWidget {
   final String status;
@@ -138,10 +137,7 @@ class KeroseneLogoLoadingMark extends StatelessWidget {
                             ),
                           ),
                         ),
-                      _KeroseneLoadingGlyph(
-                        size: logoSize,
-                        color: markColor,
-                      ),
+                      _KeroseneLoadingGlyph(size: logoSize, color: markColor),
                     ],
                   ),
                 ),
@@ -175,28 +171,16 @@ class _KeroseneLoadingGlyph extends StatelessWidget {
   final double size;
   final Color color;
 
-  const _KeroseneLoadingGlyph({
-    required this.size,
-    required this.color,
-  });
+  const _KeroseneLoadingGlyph({required this.size, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return ColorFiltered(
+    return KeroseneLottie.asset(
+      asset: KeroseneAnimationAsset.brandMark,
+      width: size,
+      height: size,
+      repeat: true,
       colorFilter: ColorFilter.matrix(_luminanceMaskMatrix(color)),
-      child: Lottie.asset(
-        keroseneKLogoLottieAssetPath,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        repeat: true,
-        frameBuilder: (context, child, composition) {
-          if (composition == null) {
-            return SizedBox(width: size, height: size);
-          }
-          return child;
-        },
-      ),
     );
   }
 

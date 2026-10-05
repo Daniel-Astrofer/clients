@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 
@@ -66,8 +67,10 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
       if (widget.valueLength == 0) {
         _textController.clear();
       } else if (widget.valueLength < _textController.text.length) {
-        _textController.text =
-            _textController.text.substring(0, widget.valueLength);
+        _textController.text = _textController.text.substring(
+          0,
+          widget.valueLength,
+        );
       }
       _isUpdatingController = false;
     }
@@ -117,6 +120,11 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
     }
   }
 
+  void _confirm() {
+    if (!widget.enabled || widget.busy) return;
+    widget.onConfirm?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -161,6 +169,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                         decimal: false,
                         signed: false,
                       ),
+                      textInputAction: TextInputAction.done,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       obscureText: true,
                       showCursor: false,
@@ -171,6 +180,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                       ),
                       style: const TextStyle(color: Colors.transparent),
                       onChanged: _handleTextChanged,
+                      onSubmitted: (_) => _confirm(),
                     ),
                   ),
                 ),
@@ -180,7 +190,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                     left: 8,
                     child: IconButton(
                       icon: Icon(
-                        Icons.arrow_back,
+                        KeroseneIcons.arrowBack,
                         color: monoTextColor,
                         size: 28,
                       ),
@@ -198,13 +208,15 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                           final maxDotWidth = dotSize * 1.5;
                           final spacing = dotSize * 0.25;
                           final padding = dotSize * 0.8;
-                          final requiredWidth = widget.maxLength * maxDotWidth +
+                          final requiredWidth =
+                              widget.maxLength * maxDotWidth +
                               (widget.maxLength - 1) * spacing +
                               padding +
                               4.0;
                           if (requiredWidth > availableWidth) {
                             // Solves the equation: availableWidth = dotSize * (maxLength * 1.75 + 0.55) + 4.0
-                            dotSize = (availableWidth - 4.0) /
+                            dotSize =
+                                (availableWidth - 4.0) /
                                 (widget.maxLength * 1.75 + 0.55);
                             if (dotSize < 16) dotSize = 16;
                           }
@@ -258,6 +270,22 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                                         ),
                                 ),
                               ),
+                              const SizedBox(height: 12),
+                              if (widget.onConfirm != null)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton(
+                                    onPressed: widget.enabled && !widget.busy
+                                        ? _confirm
+                                        : null,
+                                    child: Text(
+                                      widget.confirmLabel ??
+                                          MaterialLocalizations.of(
+                                            context,
+                                          ).okButtonLabel,
+                                    ),
+                                  ),
+                                ),
                               const SizedBox(height: 60),
                             ],
                           );
@@ -354,7 +382,7 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
     super.initState();
     _rotationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: KeroseneMotion.pinSuccess,
     );
   }
 
@@ -373,7 +401,8 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
   }
 
   void _syncSpin() {
-    final allow = widget.busy &&
+    final allow =
+        widget.busy &&
         TickerMode.valuesOf(context).enabled &&
         !(MediaQuery.maybeOf(context)?.disableAnimations ?? false);
     if (allow) {
@@ -393,18 +422,20 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
 
   @override
   Widget build(BuildContext context) {
-    final allowSpin = widget.busy &&
+    final allowSpin =
+        widget.busy &&
         TickerMode.valuesOf(context).enabled &&
         !(MediaQuery.maybeOf(context)?.disableAnimations ?? false);
 
     if (!allowSpin) {
       return AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
+        duration: KeroseneMotion.pinTransition,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color:
-                widget.hasError ? Colors.red.shade800 : monoBorderStrongColor,
+            color: widget.hasError
+                ? Colors.red.shade800
+                : monoBorderStrongColor,
             width: 2,
           ),
         ),
@@ -420,12 +451,14 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
           painter: SpinningBorderPainter(
             animationValue: _rotationController.value,
             color1: Theme.of(context).colorScheme.onSurface,
-            color2: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+            color2: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.15),
             borderRadius: 999,
             strokeWidth: 2,
           ),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
+            duration: KeroseneMotion.pinTransition,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: Colors.transparent, width: 2),
@@ -464,11 +497,7 @@ class SpinningBorderPainter extends CustomPainter {
     final gradient = SweepGradient(
       center: Alignment.center,
       transform: GradientRotation(animationValue * 2 * 3.141592653589793),
-      colors: [
-        color1,
-        color2,
-        color1,
-      ],
+      colors: [color1, color2, color1],
       stops: const [0.0, 0.5, 1.0],
     );
 

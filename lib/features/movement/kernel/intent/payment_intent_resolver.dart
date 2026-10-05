@@ -275,15 +275,16 @@ class PaymentIntentResolver {
         .where((o) => anySourceCanExecute(o.rail, sources))
         .toList(growable: false);
 
-    // Prefer rails the current source can execute. If none match but another
-    // available custody can, keep those options so the wallet step can switch.
+    // Use the current source only to choose the default rail. Keep every rail
+    // executable by any available source so the wallet step can switch between
+    // accounts instead of hiding a valid source behind the first selection.
     final compatibleWithSource = options
         .where((o) => sourceCanExecute(o.rail, source))
         .toList(growable: false);
-    final selectable =
+    final defaultOptions =
         compatibleWithSource.isNotEmpty ? compatibleWithSource : options;
 
-    if (selectable.isEmpty) {
+    if (options.isEmpty) {
       final message = _noIntersectMessage(
         capabilities: capabilities,
         destHadRails: destOptions.isNotEmpty,
@@ -310,12 +311,12 @@ class PaymentIntentResolver {
     PaymentRail selected = userSelectedRail ??
         _pickDefaultRail(
           preferred: preferred,
-          options: selectable,
+          options: defaultOptions,
         );
 
     // User may pick a rail that is not available — clamp.
-    if (!selectable.any((o) => o.rail == selected)) {
-      selected = selectable.first.rail;
+    if (!options.any((o) => o.rail == selected)) {
+      selected = defaultOptions.first.rail;
     }
 
     // Cold executes L1 as coldOnchain rail for locking/signing path.
@@ -323,7 +324,7 @@ class PaymentIntentResolver {
       selected = PaymentRail.coldOnchain;
     }
 
-    final marked = selectable
+    final marked = options
         .map(
           (o) => RailOption(
             rail: o.rail,

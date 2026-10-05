@@ -239,13 +239,13 @@ class _NotificationBannerCard extends ConsumerWidget {
     final titleStyle = AppTypography.bodyMedium.copyWith(
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: compact ? 14 : 15,
-      fontWeight: FontWeight.w800,
+      fontWeight: AppTypography.w590,
       height: 1.18,
       letterSpacing: 0,
       decoration: TextDecoration.none,
     );
     final bodyStyle = AppTypography.bodySmall.copyWith(
-      color: AppColors.hexFFC4C4C4,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
       fontSize: compact ? 12 : 13,
       height: 1.34,
       fontWeight: FontWeight.w400,
@@ -268,18 +268,11 @@ class _NotificationBannerCard extends ConsumerWidget {
           },
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.hexFF050505,
-              borderRadius: BorderRadius.circular(16),
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.hexFF1F2937.withValues(alpha: 0.50),
+                color: Theme.of(context).colorScheme.outlineVariant,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.42),
-                  blurRadius: 26,
-                  offset: const Offset(0, 18),
-                ),
-              ],
             ),
             child: Stack(
               children: [
@@ -345,10 +338,12 @@ class _NotificationBannerCard extends ConsumerWidget {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: AppTypography.caption.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurface
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
                                               .withValues(alpha: 0.42),
                                           fontSize: 11,
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: AppTypography.w590,
                                           height: 1,
                                           letterSpacing: 0,
                                           decoration: TextDecoration.none,
@@ -383,8 +378,14 @@ class _NotificationBannerCard extends ConsumerWidget {
                           .read(notificationBannerProvider.notifier)
                           .dismiss(),
                       icon: const Icon(KeroseneIcons.close),
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
-                      hoverColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.48),
+                      hoverColor: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.08),
                       iconSize: 18,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints.tightFor(
@@ -458,7 +459,11 @@ class _BannerActionPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10)),
+        border: Border.all(
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -470,9 +475,12 @@ class _BannerActionPill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.caption.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.86),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.86),
                 fontSize: 10.5,
-                fontWeight: FontWeight.w800,
+                fontWeight: AppTypography.w590,
                 height: 1,
                 letterSpacing: 0,
                 decoration: TextDecoration.none,
@@ -483,7 +491,8 @@ class _BannerActionPill extends StatelessWidget {
           Icon(
             KeroseneIcons.chevronRight,
             size: 13,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.66),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.66),
           ),
         ],
       ),

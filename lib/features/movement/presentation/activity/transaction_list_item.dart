@@ -9,7 +9,8 @@ import 'package:kerosene/core/utils/safe_display_text.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_presentation.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_visuals.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/design_system/foundation/interaction/kerosene_pressable.dart';
 
 class TransactionListItem extends ConsumerWidget {
   final Transaction transaction;
@@ -58,11 +59,11 @@ class TransactionListItem extends ConsumerWidget {
       ],
     );
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => TransactionDetailScreen.open(context, transaction),
-        borderRadius: BorderRadius.circular(20),
+    return KerosenePressable(
+      onPressed: () => TransactionDetailScreen.open(context, transaction),
+      borderRadius: BorderRadius.circular(20),
+      child: Material(
+        color: Colors.transparent,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: Container(

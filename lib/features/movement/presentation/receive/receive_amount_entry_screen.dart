@@ -8,7 +8,7 @@ import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/design_system/components/financial/amount_calculator_toolbar.dart';
 import 'package:kerosene/design_system/components/financial/amount_entry_surface.dart';
-import 'package:kerosene/design_system/components/financial/wallet_expand_chip.dart';
+import 'package:kerosene/app/widgets/wallet_expand_chip.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     show walletProvider;

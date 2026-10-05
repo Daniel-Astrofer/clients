@@ -313,9 +313,9 @@ class _ReceiveFlowHeader extends StatelessWidget {
                 Text(
                   title,
                   style: HomeTypography.heroTitle(
-                        color: receiveFlowTextColor,
-                        fontSize: titleSize,
-                      ).copyWith(height: 1.02),
+                    color: receiveFlowTextColor,
+                    fontSize: titleSize,
+                  ).copyWith(height: 1.02),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -409,7 +409,7 @@ class ReceiveFlowPanel extends StatelessWidget {
 class ReceiveFlowSectionLabel extends StatelessWidget {
   final String text;
 
-  ReceiveFlowSectionLabel(this.text, {super.key});
+  const ReceiveFlowSectionLabel(this.text, {super.key});
 
   @override
   Widget build(BuildContext context) {

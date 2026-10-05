@@ -6,7 +6,7 @@ import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/features/security/presentation/widgets/transaction_auth_gate.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/kernel/capability/movement_capability.dart';
@@ -15,7 +15,6 @@ import 'package:kerosene/features/movement/kernel/execution/send_rail_handlers.d
 import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
 import 'package:kerosene/features/movement/kernel/presentation/movement_registry.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_execution_overlay.dart';
-import 'package:kerosene/core/utils/bitcoin_network.dart';
 
 export 'package:kerosene/features/movement/presentation/send/send_rail_executors.dart';
 

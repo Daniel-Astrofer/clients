@@ -146,13 +146,13 @@ void main() {
       expect(contract.resolvedEnter(true), Duration.zero);
     });
 
-    test('resolvedEnter accelerates brand on reduceMotion', () {
+    test('resolvedEnter removes brand movement on reduceMotion', () {
       const contract = MotionContract(
         enter: Duration(milliseconds: 2600),
         curve: Curves.easeOutExpo,
         category: KeroseneMotionCategory.brand,
       );
-      expect(contract.resolvedEnter(true), const Duration(milliseconds: 1300));
+      expect(contract.resolvedEnter(true), Duration.zero);
     });
   });
 
@@ -171,9 +171,9 @@ void main() {
       );
     });
 
-    test('brand neither removed nor collapsed on reduceMotion', () {
+    test('brand collapses on reduceMotion', () {
       expect(KeroseneMotionCategory.brand.removeOnReduceMotion, isFalse);
-      expect(KeroseneMotionCategory.brand.collapseOnReduceMotion, isFalse);
+      expect(KeroseneMotionCategory.brand.collapseOnReduceMotion, isTrue);
     });
 
     test('every category has a non-empty label', () {
