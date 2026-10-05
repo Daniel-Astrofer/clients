@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
+import 'package:kerosene/features/movement/kernel/intent/nfc_payment_request_codec.dart';
 import 'package:nfc_manager/ndef_record.dart';
 
 void main() {

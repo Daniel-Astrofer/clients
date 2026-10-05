@@ -3,14 +3,18 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
-Color _recentDestinationPanelColor(BuildContext context) => Theme.of(context).colorScheme.surface;
-Color _recentDestinationBorderColor(BuildContext context) => Theme.of(context).dividerColor;
-Color _recentDestinationTextColor(BuildContext context) => Theme.of(context).colorScheme.onSurface;
-Color _recentDestinationMutedTextColor(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
-Color _recentDestinationFaintTextColor(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
+Color _recentDestinationPanelColor(BuildContext context) =>
+    Theme.of(context).colorScheme.surface;
+Color _recentDestinationBorderColor(BuildContext context) =>
+    Theme.of(context).dividerColor;
+Color _recentDestinationTextColor(BuildContext context) =>
+    Theme.of(context).colorScheme.onSurface;
+Color _recentDestinationMutedTextColor(BuildContext context) =>
+    Theme.of(context).colorScheme.onSurfaceVariant;
+Color _recentDestinationFaintTextColor(BuildContext context) =>
+    Theme.of(context).colorScheme.onSurfaceVariant;
 
 class RecentTransactionDestinationsSection extends StatelessWidget {
   final List<RecentTransactionDestination> destinations;
@@ -176,11 +180,14 @@ class _RecentDestinationRow extends StatelessWidget {
                             subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: _recentDestinationMutedTextColor(context),
-                                      fontWeight: FontWeight.w400,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color:
+                                      _recentDestinationMutedTextColor(context),
+                                  fontWeight: FontWeight.w400,
+                                ),
                           ),
                         ],
                       ),

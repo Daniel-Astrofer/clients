@@ -1,5 +1,5 @@
 import 'package:kerosene/core/utils/bitcoin_network.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 
 /// BIP84 account path for software cold wallets (native segwit).
 ///

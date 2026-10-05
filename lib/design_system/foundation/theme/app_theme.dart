@@ -11,21 +11,18 @@ import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 
-/// Kerosene — Borders and Radii (Linear-inspired)
-/// - Inputs: 4px
-/// - Cards: 8px
-/// - Buttons/nav: 9999px (pill)
-/// - No drop shadows — elevation via 1px hairline borders
+/// Shared geometry: compact elements 8, controls 16, surfaces 20.
+/// Pill geometry is reserved for chips and segmented navigation.
 class AppRadius {
-  static final BorderRadius small = BorderRadius.circular(4);
-  static final BorderRadius medium = BorderRadius.circular(4);
-  static final BorderRadius large = BorderRadius.circular(8);
+  static final BorderRadius small = BorderRadius.circular(8);
+  static final BorderRadius medium = BorderRadius.circular(16);
+  static final BorderRadius large = BorderRadius.circular(20);
 
   /// Text fields / compact controls.
-  static final BorderRadius input = BorderRadius.circular(4);
+  static final BorderRadius input = BorderRadius.circular(16);
 
   /// Information cards / panels.
-  static final BorderRadius card = BorderRadius.circular(8);
+  static final BorderRadius card = BorderRadius.circular(20);
 
   /// Primary CTAs (pill).
   static final BorderRadius pill = BorderRadius.circular(9999);
@@ -157,10 +154,8 @@ class AppTheme {
     final onSurface = isLight ? const Color(0xFF181A17) : AppColors.snow;
     final onSurfaceVariant =
         isLight ? const Color(0xFF62675F) : AppColors.fogText;
-    final hintColor =
-        isLight ? const Color(0xFF8B9087) : AppColors.pewterText;
-    final labelColor =
-        isLight ? const Color(0xFF5F645B) : AppColors.fogText;
+    final hintColor = isLight ? const Color(0xFF8B9087) : AppColors.pewterText;
+    final labelColor = isLight ? const Color(0xFF5F645B) : AppColors.fogText;
     final baseTextTheme =
         isLight ? ThemeData.light().textTheme : ThemeData.dark().textTheme;
 
@@ -207,8 +202,7 @@ class AppTheme {
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            isLight ? Brightness.dark : Brightness.light,
+        statusBarIconBrightness: isLight ? Brightness.dark : Brightness.light,
         statusBarBrightness: isLight ? Brightness.light : Brightness.dark,
         systemNavigationBarColor: palette.background,
         systemNavigationBarIconBrightness:

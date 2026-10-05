@@ -20,7 +20,7 @@ class AppCard extends StatelessWidget {
     final card = DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: AppRadius.medium,
+        borderRadius: AppRadius.card,
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Padding(
@@ -36,7 +36,7 @@ class AppCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: AppRadius.medium,
+        borderRadius: AppRadius.card,
         onTap: onTap,
         child: card,
       ),

@@ -106,7 +106,7 @@ void main() {
       ),
     );
 
-    expect(find.text('0.02000000'), findsOneWidget);
+    expect(find.text('0.02'), findsOneWidget);
     expect(find.byKey(const ValueKey('transaction-keypad-1')), findsNothing);
     expect(find.byKey(const ValueKey('transaction-keypad-.')), findsNothing);
   });

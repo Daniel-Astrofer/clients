@@ -6,10 +6,9 @@ import 'package:bip39/bip39.dart' as bip39;
 import 'package:kerosene/core/security/secure_screen_guard.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/register_cold_wallet_use_case.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 
 import '../bitcoin_accounts_dependencies.dart';
-import '../bitcoin_accounts_screen.dart';
 import '../bitcoin_widgets/bottom_sheets.dart';
 import 'cold_wallet_success_screen.dart';
 import 'internal_account_creation_screen.dart';
@@ -346,12 +345,23 @@ class ColdWalletCreationScreenState
                     constraints: BoxConstraints(
                       maxWidth: responsive.mobileContentMaxWidth,
                     ),
-                    child: switch (step) {
-                      ColdWalletStep.purpose => const SizedBox.shrink(),
-                      ColdWalletStep.prepare => buildPrepare(),
-                      ColdWalletStep.backup => buildBackup(),
-                      ColdWalletStep.verify => buildVerify(),
-                    },
+                    child: TweenAnimationBuilder<double>(
+                      key: ValueKey(step),
+                      tween: Tween(
+                          begin:
+                              KeroseneMotion.reduceMotion(context) ? 1.0 : 0.0,
+                          end: 1.0),
+                      duration: KeroseneMotion.duration(
+                          context, KeroseneMotion.statusChange),
+                      builder: (_, opacity, child) =>
+                          Opacity(opacity: opacity, child: child),
+                      child: switch (step) {
+                        ColdWalletStep.purpose => const SizedBox.shrink(),
+                        ColdWalletStep.prepare => buildPrepare(),
+                        ColdWalletStep.backup => buildBackup(),
+                        ColdWalletStep.verify => buildVerify(),
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -374,7 +384,7 @@ class ColdWalletCreationScreenState
     const title = 'Nomeie sua carteira fria';
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       backgroundColor: colors.isLight ? colors.background : Colors.black,
       body: SafeArea(
         child: Column(

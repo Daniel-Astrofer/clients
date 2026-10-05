@@ -118,7 +118,10 @@ Widget buildKfeReserveSnapshotCard({
                       es: 'Lectura financiera auditada de pasivo, fondos on-chain, liquidez Lightning y ganancia segregada.',
                     ),
                     style: AppTypography.bodySmall.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.70),
                     ),
                   ),
                 ],
@@ -149,7 +152,8 @@ Widget buildKfeReserveSnapshotCard({
         Text(
           summary,
           style: AppTypography.bodySmall.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
             height: 1.5,
           ),
         ),
@@ -264,9 +268,11 @@ Widget buildKfeReserveSnapshotCard({
             );
           },
         ),
-          SizedBox(height: 16),
-          Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
-          const SizedBox(height: 16),
+        SizedBox(height: 16),
+        Divider(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            height: 1),
+        const SizedBox(height: 16),
         KfeReserveDetailRow(
           label: copy(
             pt: 'Carteiras frias acompanhadas',

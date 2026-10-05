@@ -79,7 +79,12 @@ class RegisterColdWalletUseCase {
     bool storeSeed = true,
     bool allowInvalidChecksum = false,
   }) async {
-    final electrum = ElectrumSeedUtils.detect(mnemonic);
+    final parsedBip39 = Bip39MnemonicUtils.parse(
+      mnemonic,
+      allowInvalidChecksum: allowInvalidChecksum,
+    );
+    final electrum =
+        parsedBip39.isValid ? null : ElectrumSeedUtils.detect(mnemonic);
     final String words;
     final String? path;
     final ColdWalletSeedKind kind;
@@ -90,18 +95,14 @@ class RegisterColdWalletUseCase {
       path = electrum.accountDerivationPath;
       kind = ColdWalletSeedKind.electrum;
     } else {
-      final parsed = Bip39MnemonicUtils.parse(
-        mnemonic,
-        allowInvalidChecksum: allowInvalidChecksum,
-      );
-      if (!parsed.isValid) {
+      if (!parsedBip39.isValid) {
         throw ArgumentError.value(
           mnemonic,
           'mnemonic',
-          parsed.message ?? 'Invalid BIP39 mnemonic.',
+          parsedBip39.message ?? 'Invalid BIP39 mnemonic.',
         );
       }
-      words = parsed.phrase;
+      words = parsedBip39.phrase;
       path = derivationPath ?? appColdWalletDerivationPath;
       kind = ColdWalletSeedKind.bip39;
     }

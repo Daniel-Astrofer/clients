@@ -81,7 +81,6 @@ void main() {
     });
 
     testWidgets('RepaintBoundary prevents parent rebuilds', (tester) async {
-      var parentBuilds = 0;
       var childBuilds = 0;
 
       await tester.pumpWidget(
@@ -89,7 +88,6 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) {
-                parentBuilds++;
                 return Column(
                   children: [
                     const Text('Parent content'),
@@ -109,7 +107,6 @@ void main() {
         ),
       );
 
-      final initialParent = parentBuilds;
       final initialChild = childBuilds;
 
       // Trigger setState equivalent — pump frames

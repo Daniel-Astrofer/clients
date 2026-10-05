@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 
 /// Shared [GlobalKey] so PIN → home bootstrap reuses the same dots [State]
 /// (animation keeps running across the handoff without a second static loader).
@@ -37,7 +38,7 @@ class _TorLoadingDotsState extends State<TorLoadingDots>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: KeroseneMotion.torLoadingDots,
     )..repeat();
   }
 
@@ -135,11 +136,7 @@ class _Dot extends StatelessWidget {
   final double left;
   final Color color;
 
-  const _Dot({
-    required this.size,
-    required this.left,
-    required this.color,
-  });
+  const _Dot({required this.size, required this.left, required this.color});
 
   @override
   Widget build(BuildContext context) {

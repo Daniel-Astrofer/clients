@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
-import 'package:kerosene/features/movement/data/entities/payment_link.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_palette.dart';
 
@@ -118,7 +118,7 @@ class ActivityGlyph extends StatelessWidget {
     this.wellColor = TransactionPalette.iconWell,
     this.wellBorder = TransactionPalette.iconWellBorder,
     this.iconColor = AppColors.hexFFF2F2F3,
-    this.badgeWellColor = const Color(0xFF2A2A2E),
+    this.badgeWellColor = AppColors.activityIconWell,
     this.badgeIconColor = AppColors.hexFFF2F2F3,
     this.pipWellColor,
     this.pipIconColor,

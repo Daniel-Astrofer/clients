@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -73,23 +74,39 @@ class KerosenePaymentReview extends StatelessWidget {
           if (warningMessage != null)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+              padding: EdgeInsets.symmetric(
+                  vertical: AppSpacing.sm, horizontal: AppSpacing.md),
               margin: EdgeInsets.only(bottom: AppSpacing.base),
               decoration: BoxDecoration(
                 color: KeroseneBrandTokens.warning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: KeroseneBrandTokens.warning.withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: KeroseneBrandTokens.warning.withValues(alpha: 0.3)),
               ),
-              child: Text(warningMessage!, style: AppTypography.inter(fontSize: 13, color: KeroseneBrandTokens.warning)),
+              child: Text(warningMessage!,
+                  style: AppTypography.inter(
+                      fontSize: 13, color: KeroseneBrandTokens.warning)),
             ),
 
           // Amount hero
           Semantics(label: 'Enviar $currency $amount'),
-          Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-            Text(currency, style: AppTypography.playfairDisplay(fontSize: 18, color: palette.textSecondary, fontWeight: AppTypography.w510)),
-            SizedBox(width: AppSpacing.xs),
-            Text(amount, style: AppTypography.playfairDisplay(fontSize: 32, color: palette.textPrimary, fontWeight: AppTypography.w590)),
-          ]),
+          Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(currency,
+                    style: AppTypography.playfairDisplay(
+                        fontSize: 18,
+                        color: palette.textSecondary,
+                        fontWeight: AppTypography.w510)),
+                SizedBox(width: AppSpacing.xs),
+                Text(amount,
+                    style: AppTypography.playfairDisplay(
+                        fontSize: 32,
+                        color: palette.textPrimary,
+                        fontWeight: AppTypography.w590)),
+              ]),
 
           SizedBox(height: AppSpacing.module),
 
@@ -99,13 +116,21 @@ class KerosenePaymentReview extends StatelessWidget {
             padding: EdgeInsets.all(AppSpacing.base),
             child: Column(
               children: [
-                _ReviewRow(label: 'Para', value: recipient, onEdit: onEditRecipient, palette: palette),
+                _ReviewRow(
+                    label: 'Para',
+                    value: recipient,
+                    onEdit: onEditRecipient,
+                    palette: palette),
                 SizedBox(height: AppSpacing.sm),
                 _ReviewRow(label: 'De', value: sourceWallet, palette: palette),
                 if (fee != null) ...[
                   SizedBox(height: AppSpacing.sm),
                   if (isFeeRecalculating)
-                    _ReviewRow(label: 'Taxa', value: 'Recalculando...', palette: palette, isLoading: true)
+                    _ReviewRow(
+                        label: 'Taxa',
+                        value: 'Recalculando...',
+                        palette: palette,
+                        isLoading: true)
                   else
                     _ReviewRow(label: 'Taxa', value: fee!, palette: palette),
                 ],
@@ -113,7 +138,11 @@ class KerosenePaymentReview extends StatelessWidget {
                   SizedBox(height: AppSpacing.sm),
                   Divider(color: AppColors.smokeSurface, height: 1),
                   SizedBox(height: AppSpacing.sm),
-                  _ReviewRow(label: 'Total', value: total!, palette: palette, isBold: true),
+                  _ReviewRow(
+                      label: 'Total',
+                      value: total!,
+                      palette: palette,
+                      isBold: true),
                 ],
               ],
             ),
@@ -130,7 +159,10 @@ class KerosenePaymentReview extends StatelessWidget {
 
           if (onEditAmount != null) ...[
             SizedBox(height: AppSpacing.sm),
-            AppButton(label: 'Editar valor', onPressed: onEditAmount, variant: AppButtonVariant.ghost),
+            AppButton(
+                label: 'Editar valor',
+                onPressed: onEditAmount,
+                variant: AppButtonVariant.ghost),
           ],
         ],
       ),
@@ -146,21 +178,46 @@ class _ReviewRow extends StatelessWidget {
   final bool isBold;
   final bool isLoading;
 
-  const _ReviewRow({required this.label, required this.value, this.onEdit, required this.palette, this.isBold = false, this.isLoading = false});
+  const _ReviewRow(
+      {required this.label,
+      required this.value,
+      this.onEdit,
+      required this.palette,
+      this.isBold = false,
+      this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(label, style: AppTypography.inter(fontSize: 13, color: palette.textDisabled)),
+        Text(label,
+            style:
+                AppTypography.inter(fontSize: 13, color: palette.textDisabled)),
         Spacer(),
         if (isLoading)
-          SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(palette.textDisabled)))
+          SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  valueColor: AlwaysStoppedAnimation(palette.textDisabled)))
         else
-          Flexible(child: Text(value, style: AppTypography.inter(fontSize: 13, color: isBold ? palette.textPrimary : palette.textSecondary, fontWeight: isBold ? AppTypography.w590 : AppTypography.w400), textAlign: TextAlign.right, overflow: TextOverflow.ellipsis)),
+          Flexible(
+              child: Text(value,
+                  style: AppTypography.inter(
+                      fontSize: 13,
+                      color:
+                          isBold ? palette.textPrimary : palette.textSecondary,
+                      fontWeight:
+                          isBold ? AppTypography.w590 : AppTypography.w400),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis)),
         if (onEdit != null) ...[
           SizedBox(width: AppSpacing.sm),
-          GestureDetector(onTap: onEdit, child: Icon(Icons.edit, size: 14, color: palette.textDisabled)),
+          GestureDetector(
+              onTap: onEdit,
+              child: Icon(KeroseneIcons.edit,
+                  size: 14, color: palette.textDisabled)),
         ],
       ],
     );

@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
 
@@ -50,23 +52,15 @@ class WalletBalanceCard extends ConsumerWidget {
     final chartPct = _chartPercentage(wallet);
     final chartSize = responsive.isTinyPhone ? 132.0 : 160.0;
     final innerSize = chartSize * 0.625;
+    final surface = HomeSurfaceTheme.of(context);
+    final progress = KeroseneBrandTokens.bitcoin;
 
     return Container(
       padding: EdgeInsets.all(responsive.isTinyPhone ? 18 : 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.hexFF1A1F3A, AppColors.hexFF0F1229],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.hexFF7B61FF.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: surface.card,
+        borderRadius: BorderRadius.circular(HomeSurfaceTokens.radiusCard),
+        border: Border.all(color: surface.panelBorder),
       ),
       child: Column(
         children: [
@@ -78,13 +72,17 @@ class WalletBalanceCard extends ConsumerWidget {
               children: [
                 CustomPaint(
                   size: Size(chartSize, chartSize),
-                  painter: BalanceChartPainter(percentage: chartPct),
+                  painter: BalanceChartPainter(
+                    percentage: chartPct,
+                    progressColor: progress,
+                    trackColor: surface.surfaceDim,
+                  ),
                 ),
                 Container(
                   width: innerSize,
                   height: innerSize,
                   decoration: BoxDecoration(
-                    color: AppColors.hexFF0F1229,
+                    color: surface.background,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -103,10 +101,10 @@ class WalletBalanceCard extends ConsumerWidget {
           Text(
             balanceLabel,
             style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: surface.textSecondary,
               fontSize: 14,
+              fontFamily: AppTypography.bodyFontFamily,
+              fontWeight: AppTypography.w510,
             ),
           ),
           const SizedBox(height: 4),
@@ -117,10 +115,9 @@ class WalletBalanceCard extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.38),
+              color: surface.textMuted,
               fontSize: 12,
+              fontFamily: AppTypography.monoFontFamily,
             ),
           ),
           const SizedBox(height: 12),
@@ -133,9 +130,11 @@ class WalletBalanceCard extends ConsumerWidget {
               child: Text(
                 balanceValueLabel,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: surface.textPrimary,
                   fontSize: responsive.isTinyPhone ? 30 : 36,
-                  fontWeight: FontWeight.bold,
+                  fontFamily: AppTypography.bodyFontFamily,
+                  fontWeight: AppTypography.w590,
+                  letterSpacing: -0.6,
                 ),
               ),
             ),
@@ -145,10 +144,9 @@ class WalletBalanceCard extends ConsumerWidget {
           Text(
             portfolioLabel,
             style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.54),
+              color: surface.textSecondary,
               fontSize: 14,
+              fontFamily: AppTypography.bodyFontFamily,
             ),
           ),
           // Cold-only short hint (not dual-ledger). Custodial/internal: no extra dialog.
@@ -161,11 +159,9 @@ class WalletBalanceCard extends ConsumerWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.42),
+                color: surface.textMuted,
                 fontSize: 12,
+                fontFamily: AppTypography.bodyFontFamily,
               ),
             ),
           ],
@@ -192,29 +188,33 @@ class WalletBalanceCard extends ConsumerWidget {
 /// Painter para o gráfico circular de balanço
 class BalanceChartPainter extends CustomPainter {
   final double percentage;
+  final Color progressColor;
+  final Color trackColor;
 
-  BalanceChartPainter({required this.percentage});
+  BalanceChartPainter({
+    required this.percentage,
+    required this.progressColor,
+    required this.trackColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Background circle (cinza)
     final bgPaint = Paint()
-      ..color = AppColors.hexFF1A1F3A
+      ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius - 6, bgPaint);
 
-    // Progress arc (gradiente)
     final rect = Rect.fromCircle(center: center, radius: radius - 6);
     final gradient = SweepGradient(
       startAngle: -math.pi / 2,
       endAngle: -math.pi / 2 + (2 * math.pi * percentage),
-      colors: const [AppColors.hexFF7B61FF, AppColors.hexFF00D4FF],
+      colors: [progressColor.withValues(alpha: 0.55), progressColor],
     );
 
     final progressPaint = Paint()
@@ -234,6 +234,8 @@ class BalanceChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(BalanceChartPainter oldDelegate) {
-    return oldDelegate.percentage != percentage;
+    return oldDelegate.percentage != percentage ||
+        oldDelegate.progressColor != progressColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }

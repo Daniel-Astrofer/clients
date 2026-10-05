@@ -202,7 +202,10 @@ class SettingsNavigationTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: selected
-                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10)
+                    ? Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.10)
                     : Colors.transparent,
               ),
             ),
@@ -257,9 +260,10 @@ class SettingsNavigationTile extends StatelessWidget {
                 ),
                 Icon(
                   KeroseneIcons.chevronRight,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                    alpha: selected ? 1.0 : 0.45,
-                  ),
+                  color:
+                      Theme.of(context).colorScheme.onSurfaceVariant.withValues(
+                            alpha: selected ? 1.0 : 0.45,
+                          ),
                   size: 18,
                 ),
               ],

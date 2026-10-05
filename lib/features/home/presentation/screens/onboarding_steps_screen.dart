@@ -1,3 +1,4 @@
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
@@ -31,8 +32,10 @@ class OnboardingStepsScreen extends ConsumerWidget {
           children: [
             // Custom top app bar
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 children: [
                   IconButton(
@@ -40,8 +43,11 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       HapticFeedback.selectionClick();
                       Navigator.maybePop(context);
                     },
-                    icon: Icon(KeroseneIcons.back,
-                        color: Theme.of(context).colorScheme.onSurface, size: 22),
+                    icon: Icon(
+                      KeroseneIcons.back,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      size: 22,
+                    ),
                     style: IconButton.styleFrom(
                       minimumSize: const Size.square(40),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -60,100 +66,132 @@ class OnboardingStepsScreen extends ConsumerWidget {
                     constraints: context.responsive.appColumnConstraints,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          context.tr.onboardingJourneyTitle.toUpperCase(),
-                          style: AppTypography.caption.copyWith(
-                            color: monoMutedTextColor,
-                            letterSpacing: 1.8,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          isDone
-                              ? 'Excelente! Sua conta está 100% ativa.'
-                              : 'Complete as etapas essenciais abaixo para habilitar todas as funções da plataforma.',
-                          style: HomeTypography.heroTitle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        // Mini progress info
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: completed / 3.0,
-                                  minHeight: 5,
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    isDone
-                                        ? AppColors.hexFF4ADE80
-                                        : Theme.of(context).colorScheme.onSurface,
+                      children:
+                          [
+                                Text(
+                                  context.tr.onboardingJourneyTitle
+                                      .toUpperCase(),
+                                  style: AppTypography.caption.copyWith(
+                                    color: monoMutedTextColor,
+                                    letterSpacing: 1.8,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                                SizedBox(height: 12),
+                                Text(
+                                  isDone
+                                      ? 'Seus primeiros passos foram concluídos.'
+                                      : 'Conheça os principais recursos da sua conta no seu ritmo.',
+                                  style: HomeTypography.heroTitle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                // Mini progress info
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: LinearProgressIndicator(
+                                          value: completed / 3.0,
+                                          minHeight: 5,
+                                          backgroundColor: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.08),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                isDone
+                                                    ? AppColors.hexFF4ADE80
+                                                    : Theme.of(
+                                                        context,
+                                                      ).colorScheme.onSurface,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 14),
+                                    Text(
+                                      '$completed de 3 concluídos',
+                                      style: TextStyle(
+                                        color: monoMutedTextColor,
+                                        fontFamily: AppTypography.fontFamily,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 38),
+                                _buildStepItem(
+                                  context: context,
+                                  index: 1,
+                                  title: context
+                                      .tr
+                                      .onboardingCreateCustodialWallet,
+                                  description:
+                                      'Crie uma carteira Kerosene oficial para habilitar saldos.',
+                                  isCompleted: progress.hasCustodialWallet,
+                                  onTapAction: () {
+                                    Navigator.pop(context);
+                                    AppPrimaryNavigationBar.navigateTo(
+                                      context,
+                                      AppPrimaryDestination.card,
+                                    );
+                                  },
+                                ),
+                                _buildStepItem(
+                                  context: context,
+                                  index: 2,
+                                  title: context.tr.onboardingMakeDeposit,
+                                  description:
+                                      'Adicione saldo Bitcoin à sua carteira recém-criada.',
+                                  isCompleted: progress.hasDeposit,
+                                  enabled: progress.hasCustodialWallet,
+                                  onTapAction: () {
+                                    Navigator.pop(context);
+                                    context.go('/receive');
+                                  },
+                                ),
+                                _buildStepItem(
+                                  context: context,
+                                  index: 3,
+                                  title: context.tr.onboardingInternalTransfer,
+                                  description:
+                                      'Faça uma transferência instantânea sem taxas dentro da rede.',
+                                  isCompleted: progress.hasInternalTransfer,
+                                  enabled: progress.hasDeposit,
+                                  onTapAction: () {
+                                    Navigator.pop(context);
+                                    context.go('/send-money');
+                                  },
+                                ),
+                              ]
+                              .animate(
+                                interval: KeroseneMotion.duration(
+                                  context,
+                                  KeroseneMotion.onboardingStagger,
+                                ),
+                              )
+                              .fade(
+                                duration: KeroseneMotion.duration(
+                                  context,
+                                  KeroseneMotion.statusChange,
+                                ),
+                              )
+                              .slideY(
+                                begin: KeroseneMotion.reduceMotion(context)
+                                    ? 0
+                                    : 0.02,
+                                end: 0,
+                                duration: KeroseneMotion.duration(
+                                  context,
+                                  KeroseneMotion.statusChange,
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 14),
-                            Text(
-                              '$completed de 3 concluídos',
-                              style: TextStyle(
-                                color: monoMutedTextColor,
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 38),
-                        _buildStepItem(
-                          context: context,
-                          index: 1,
-                          title: context.tr.onboardingCreateCustodialWallet,
-                          description:
-                              'Crie uma carteira Kerosene oficial para habilitar saldos.',
-                          isCompleted: progress.hasCustodialWallet,
-                          onTapAction: () {
-                            Navigator.pop(context);
-                            AppPrimaryNavigationBar.navigateTo(
-                                context, AppPrimaryDestination.card);
-                          },
-                        ),
-                        _buildStepItem(
-                          context: context,
-                          index: 2,
-                          title: context.tr.onboardingMakeDeposit,
-                          description:
-                              'Adicione saldo Bitcoin à sua carteira recém-criada.',
-                          isCompleted: progress.hasDeposit,
-                          enabled: progress.hasCustodialWallet,
-                          onTapAction: () {
-                            Navigator.pop(context);
-                            context.go('/receive');
-                          },
-                        ),
-                        _buildStepItem(
-                          context: context,
-                          index: 3,
-                          title: context.tr.onboardingInternalTransfer,
-                          description:
-                              'Faça uma transferência instantânea sem taxas dentro da rede.',
-                          isCompleted: progress.hasInternalTransfer,
-                          enabled: progress.hasDeposit,
-                          onTapAction: () {
-                            Navigator.pop(context);
-                            context.go('/send-money');
-                          },
-                        ),
-                      ]
-                          .animate(interval: 80.ms)
-                          .fade(duration: 250.ms)
-                          .slideY(begin: 0.04, end: 0),
                     ),
                   ),
                 ),
@@ -177,8 +215,8 @@ class OnboardingStepsScreen extends ConsumerWidget {
     final statusColor = isCompleted
         ? AppColors.hexFF4ADE80
         : enabled
-            ? Theme.of(context).colorScheme.onSurface
-            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24);
+        ? Theme.of(context).colorScheme.onSurface
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -205,8 +243,9 @@ class OnboardingStepsScreen extends ConsumerWidget {
                     color: statusColor,
                     width: isCompleted ? 0 : 1.5,
                   ),
-                  color:
-                      isCompleted ? AppColors.hexFF4ADE80 : Colors.transparent,
+                  color: isCompleted
+                      ? AppColors.hexFF4ADE80
+                      : Colors.transparent,
                 ),
                 child: isCompleted
                     ? Icon(
@@ -235,7 +274,9 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       style: TextStyle(
                         color: enabled
                             ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.35),
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -245,8 +286,12 @@ class OnboardingStepsScreen extends ConsumerWidget {
                       description,
                       style: TextStyle(
                         color: enabled
-                            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24),
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.55)
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.24),
                         fontSize: 12.5,
                         fontWeight: FontWeight.w400,
                         height: 1.35,
@@ -262,7 +307,9 @@ class OnboardingStepsScreen extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.06),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -276,7 +323,9 @@ class OnboardingStepsScreen extends ConsumerWidget {
                 SizedBox(width: 8),
                 Icon(
                   KeroseneIcons.security,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.16),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.16),
                   size: 16,
                 ),
               ],

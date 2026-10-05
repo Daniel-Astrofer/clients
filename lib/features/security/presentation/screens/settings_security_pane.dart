@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/providers/privacy_preferences_provider.dart';
-import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
@@ -161,11 +160,15 @@ class SettingsSecurityPane extends ConsumerWidget {
           loading: () => SettingsLoadingPanel(
             label: context.tr.settingsSecurityLoading,
           ),
-          error: (_, __) => SettingsEmptyPanel(
-            icon: KeroseneIcons.warning,
-            title: context.tr.settingsSecurityLoadErrorTitle,
-            body: context.tr.settingsSecurityLoadErrorBody,
-          ),
+          error: (_, __) => Column(children: [
+            SettingsEmptyPanel(
+                icon: KeroseneIcons.warning,
+                title: context.tr.settingsSecurityLoadErrorTitle,
+                body: context.tr.settingsSecurityLoadErrorBody),
+            TextButton(
+                onPressed: () => ref.invalidate(accountSecurityProfileProvider),
+                child: Text(context.tr.tryAgain)),
+          ]),
         ),
         const SizedBox(height: AppSpacing.xxl),
         const _LocalLedgerWipeSection(),
@@ -242,7 +245,10 @@ class _LocalLedgerWipeSection extends ConsumerWidget {
           subtitle: context.tr.settingsSecurityWipeLedgerSubtitle,
           onTap: () => _confirmAndWipe(context, ref),
         ),
-        const _LedgerTelemetryRow(),
+        ExpansionTile(
+          title: Text(context.tr.settingsSecurityLedgerDiagTitle),
+          children: const [_LedgerTelemetryRow()],
+        ),
       ],
     );
   }
@@ -362,7 +368,9 @@ class _SecurityAdvancedContent extends StatelessWidget {
               subtitle: registeredPasskey
                   ? context.tr.settingsSecurityBiometricsOn
                   : context.tr.settingsSecurityBiometricsOff,
-              trailing: SettingsReadonlySwitch(value: registeredPasskey),
+              trailing: Icon(registeredPasskey
+                  ? KeroseneIcons.verified
+                  : KeroseneIcons.next),
               onTap: onRegisterPasskey,
             ),
             SettingsSectionRow(

@@ -19,7 +19,8 @@ class KeroseneBrandTokens {
 
   static Color get surface => KeroseneBrandTheme.current.surface;
   static Color get surfaceHigh => KeroseneBrandTheme.current.surfaceHigh;
-  static Color get surfaceElevated => KeroseneBrandTheme.current.surfaceElevated;
+  static Color get surfaceElevated =>
+      KeroseneBrandTheme.current.surfaceElevated;
   static Color get surfaceMuted => KeroseneBrandTheme.current.surfaceMuted;
 
   static Color get border => KeroseneBrandTheme.current.border;

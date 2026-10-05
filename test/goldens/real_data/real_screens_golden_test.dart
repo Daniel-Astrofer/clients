@@ -7,7 +7,6 @@ import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart';
-import 'package:kerosene/storybook/storybook_mocks.dart';
 
 import 'real_golden_harness.dart';
 

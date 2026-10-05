@@ -1,3 +1,4 @@
+import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,8 +48,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final responsive = context.responsive;
-    final horizontalPadding =
-        responsive.isTinyPhone ? AppSpacing.lg : responsive.horizontalPadding;
+    final horizontalPadding = responsive.isTinyPhone
+        ? AppSpacing.lg
+        : responsive.horizontalPadding;
     final bottomPadding = widget.showPrimaryNavigation
         ? AppPrimaryNavigationBar.scaffoldBottomClearance(context)
         : viewPadding.bottom + AppSpacing.xxl;
@@ -105,15 +107,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Route<void> _settingsPaneRoute(SettingsPane pane) {
     return PageRouteBuilder<void>(
+      transitionDuration: KeroseneMotion.duration(
+        context,
+        KeroseneMotion.pageIn,
+      ),
+      reverseTransitionDuration: KeroseneMotion.duration(
+        context,
+        KeroseneMotion.pageOut,
+      ),
       pageBuilder: (_, __, ___) => _SettingsPaneDetailScreen(
         pane: pane,
         showPrimaryNavigation: widget.showPrimaryNavigation,
       ),
-      transitionsBuilder: (_, animation, __, child) {
+      transitionsBuilder: (context, animation, __, child) {
+        if (KeroseneMotion.reduceMotion(context)) return child;
         final curved = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
+          curve: KeroseneMotion.standard,
+          reverseCurve: KeroseneMotion.exit,
         );
         return FadeTransition(
           opacity: curved,
@@ -135,7 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (navigator.canPop()) {
       navigator.pop();
     } else {
-      navigator.pushReplacementNamed('/home');
+      AppNavigation.replace(context, '/home');
     }
   }
 }
@@ -153,8 +164,9 @@ class _SettingsPaneDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewPadding = MediaQuery.viewPaddingOf(context);
     final responsive = context.responsive;
-    final horizontalPadding =
-        responsive.isTinyPhone ? AppSpacing.lg : responsive.horizontalPadding;
+    final horizontalPadding = responsive.isTinyPhone
+        ? AppSpacing.lg
+        : responsive.horizontalPadding;
     final bottomPadding = showPrimaryNavigation
         ? AppPrimaryNavigationBar.scaffoldBottomClearance(context)
         : viewPadding.bottom + AppSpacing.xxl;

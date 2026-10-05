@@ -13,6 +13,7 @@ class KeroseneIcons {
   static const IconData home = PhosphorIconsRegular.squaresFour;
   static const IconData homeFill = PhosphorIconsFill.squaresFour;
   static const IconData wallet = PhosphorIconsRegular.wallet;
+  static const IconData walletOutlined = wallet;
   static const IconData walletFill = PhosphorIconsFill.wallet;
   static const IconData history = PhosphorIconsRegular.receipt;
   static const IconData historyFill = PhosphorIconsFill.receipt;
@@ -118,8 +119,20 @@ class KeroseneIcons {
   static const IconData login = PhosphorIconsRegular.signIn;
   static const IconData eye = PhosphorIconsRegular.eye;
   static const IconData eyeOff = PhosphorIconsRegular.eyeSlash;
+  static const IconData arrowDropDown = chevronDown;
+  static const IconData chevronUp = PhosphorIconsRegular.caretUp;
+  static const IconData expandLess = chevronUp;
+  static const IconData expandMore = chevronDown;
+  static const IconData arrowBack = back;
+  static const IconData keyboardArrowUp = chevronUp;
+  static const IconData keyboardArrowDown = chevronDown;
+  static const IconData closeRounded = close;
+  static const IconData checkRounded = check;
 
   static const IconData refresh = PhosphorIconsRegular.arrowsClockwise;
+  static const IconData photoLibrary = PhosphorIconsRegular.images;
+  static const IconData playCircle = PhosphorIconsRegular.playCircle;
+  static const IconData videoCameraOff = PhosphorIconsRegular.videoCameraSlash;
   static const IconData trash = PhosphorIconsRegular.trash;
   static const IconData calendar = PhosphorIconsRegular.calendar;
   static const IconData externalLink = PhosphorIconsRegular.arrowSquareOut;

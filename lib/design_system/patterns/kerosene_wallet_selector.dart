@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -35,10 +36,16 @@ class KeroseneWalletSelector extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ...wallets.map((wallet) => _WalletRow(option: wallet, onTap: () => onSelect?.call(wallet))),
+        ...wallets.map(
+          (wallet) =>
+              _WalletRow(option: wallet, onTap: () => onSelect?.call(wallet)),
+        ),
         if (onCreateWallet != null) ...[
           SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: onCreateWallet, child: Text('+ Criar carteira')),
+          TextButton(
+            onPressed: onCreateWallet,
+            child: Text('+ ${context.tr.createWalletAction}'),
+          ),
         ],
       ],
     );
@@ -76,27 +83,63 @@ class _WalletRow extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.all(AppSpacing.base),
           decoration: BoxDecoration(
-            color: option.isSelected ? AppColors.graphiteSurface : AppColors.carbonSurface,
+            color: option.isSelected
+                ? AppColors.graphiteSurface
+                : AppColors.carbonSurface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: option.isSelected ? palette.border : AppColors.smokeSurface,
+              color: option.isSelected
+                  ? palette.border
+                  : AppColors.smokeSurface,
               width: 1,
             ),
           ),
           child: Row(
             children: [
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(option.name, style: AppTypography.inter(fontSize: 15, color: palette.textPrimary, fontWeight: AppTypography.w510)),
-                  SizedBox(height: 2),
-                  Text(option.custody, style: AppTypography.inter(fontSize: 12, color: palette.textDisabled)),
-                ]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      option.name,
+                      style: AppTypography.inter(
+                        fontSize: 15,
+                        color: palette.textPrimary,
+                        fontWeight: AppTypography.w510,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      option.custody,
+                      style: AppTypography.inter(
+                        fontSize: 12,
+                        color: palette.textDisabled,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(option.balance, style: AppTypography.inter(fontSize: 15, color: palette.textPrimary, fontWeight: AppTypography.w590)),
-                if (option.isSelected)
-                  Text('Selecionada', style: AppTypography.inter(fontSize: 11, color: KeroseneBrandTokens.brand)),
-              ]),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    option.balance,
+                    style: AppTypography.inter(
+                      fontSize: 15,
+                      color: palette.textPrimary,
+                      fontWeight: AppTypography.w590,
+                    ),
+                  ),
+                  if (option.isSelected)
+                    Text(
+                      context.tr.walletSelected,
+                      style: AppTypography.inter(
+                        fontSize: 11,
+                        color: KeroseneBrandTokens.brand,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

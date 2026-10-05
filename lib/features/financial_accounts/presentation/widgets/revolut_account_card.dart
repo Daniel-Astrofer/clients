@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_widgets/bottom_sheets.dart';
@@ -207,9 +206,7 @@ class _RevolutAccountCardPagerState extends State<RevolutAccountCardPager> {
               _flippedIds.contains(accounts[_pageIndex.clamp(0, _maxIndex)].id)
                   ? 'Toque para voltar'
                   : 'Toque no cartão para ver detalhes',
-              style: FinancialHubTokens.caption(
-                color: colors.mutedText,
-              ),
+              style: FinancialHubTokens.caption(color: colors.mutedText),
             ),
           ],
         );
@@ -242,8 +239,8 @@ class _FlippableAccountCard extends StatefulWidget {
 class _FlippableAccountCardState extends State<_FlippableAccountCard>
     with SingleTickerProviderStateMixin {
   /// Snappy, even acceleration/deceleration — no slow start or hard stop.
-  static const Duration _flipDuration = Duration(milliseconds: 280);
-  static const Curve _flipCurve = Curves.easeInOutCubic;
+  static const Duration _flipDuration = KeroseneMotion.revolutFlip;
+  static const Curve _flipCurve = KeroseneMotion.standardInOut;
 
   late final AnimationController _controller;
   late final Animation<double> _flip;
@@ -413,7 +410,9 @@ class _CardShell extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.hexFF000000.withValues(alpha: isFocused ? 0.48 : 0.30),
+            color: AppColors.hexFF000000.withValues(
+              alpha: isFocused ? 0.48 : 0.30,
+            ),
             blurRadius: isFocused ? 20 : 12,
             offset: const Offset(0, 10),
           ),
@@ -505,11 +504,7 @@ class _RevolutEdgeBorderPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          borderTop,
-          borderTop.withValues(alpha: 0.18),
-          borderBottom,
-        ],
+        colors: [borderTop, borderTop.withValues(alpha: 0.18), borderBottom],
         stops: const [0.0, 0.5, 1.0],
       ).createShader(Offset.zero & size);
 
@@ -541,8 +536,9 @@ class _CardFront extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final owner =
-        userDisplayName.trim().isEmpty ? 'Usuário' : userDisplayName.trim();
+    final owner = userDisplayName.trim().isEmpty
+        ? 'Usuário'
+        : userDisplayName.trim();
     final custody = custodyFrontLabel(account);
     final addressLine = formatOnchainAddressGroups(
       resolveReceiveAddress(account, receiveRequest),
@@ -551,8 +547,8 @@ class _CardFront extends StatelessWidget {
     final balanceCaption = account.isWatchOnly
         ? 'NA REDE'
         : account.isCustodialOnchain
-            ? 'DISPONÍVEL'
-            : 'DISPONÍVEL';
+        ? 'DISPONÍVEL'
+        : 'DISPONÍVEL';
     final heldLabel = !account.isWatchOnly && account.heldSats > 0
         ? 'Retido: ${formatSats(account.heldSats)}'
         : null;
@@ -585,9 +581,7 @@ class _CardFront extends StatelessWidget {
                   custody,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: FinancialHubTokens.caption(
-                    color: palette.inkMuted,
-                  ),
+                  style: FinancialHubTokens.caption(color: palette.inkMuted),
                 ),
               ],
             ),
@@ -728,10 +722,7 @@ class _CardBack extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 22),
-          Container(
-            height: 44,
-            color: AppColors.hexFF080808,
-          ),
+          Container(height: 44, color: AppColors.hexFF080808),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
@@ -741,9 +732,7 @@ class _CardBack extends StatelessWidget {
                 Expanded(
                   child: Text(
                     kKeroseneBrandLabel,
-                    style: FinancialHubTokens.caption(
-                      color: palette.inkMuted,
-                    ),
+                    style: FinancialHubTokens.caption(color: palette.inkMuted),
                   ),
                 ),
                 _CvvBadge(code: code),

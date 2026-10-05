@@ -3224,10 +3224,18 @@
   "settingsSecurityBlockCaptures": "Bloquear capturas no extrato",
   "homeChartUnavailable": "Mercado indisponível",
   "homeChartRetry": "Toque para tentar novamente",
+  "homeChartNoDataForPeriod": "Sem dados para este período",
   "homeChartCustomPeriod": "Período customizado",
   "homeChartLastNDays": "Últimos {days} dias",
+  "@homeChartLastNDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "homeChartApply": "Aplicar",
-  "homeChartCustom": "Custom",
+  "homeChartCustom": "Personalizado",
   "onboardingJourneyTitle": "Jornada de Ativação",
   "onboardingProgressCount": "{completed} de 3 concluídos",
   "onboardingCreateCustodialWallet": "Criar Carteira Custodial",
@@ -3762,6 +3770,48 @@
         "type": "String"
       },
       "status": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceSyncing": "Sincronizando...",
+  "transactionNoMovement": "Nenhuma movimentação",
+  "transactionViewAll": "Ver todas",
+  "walletSelected": "Selecionada",
+  "loadingTimeout": "Tempo excedido",
+  "offlineLastSync": "Offline — Última sincronização: {time}",
+  "offlineReconnectHint": "Verifique sua conexão com a internet.\nTentando reconectar automaticamente...",
+  "notificationNotNow": "Agora não",
+  "financialHeaderSyncing": "Sincronizando...",
+  "coldWalletSuccessWarning": "Importante: sem a seed neste aparelho, o envio cold não funciona. Guarde a frase e restaure-a antes de tentar gastar.",
+  "sendAction": "Enviar",
+  "walletSetupNewVault": "Novo cofre",
+  "financialHubAddWallet": "Adicionar outra carteira",
+  "financialHubCurrentBalance": "Saldo Atual",
+  "financialAccountsCreateColdWalletButton": "Criar Cold Wallet",
+  "accountDetailsTechnicalTitle": "Detalhes técnicos",
+  "accountDetailsTechnicalBody": "Material público de derivação, chaves e identificadores.",
+  "closeAction": "Fechar",
+  "walletManageAccountTitle": "Gerenciar conta",
+  "walletManageAccountBody": "Configurações e dados reativos à custódia.",
+  "walletManageWalletName": "Nome da carteira",
+  "walletManageAccountStatus": "Situação da conta",
+  "walletManagePublicMaterial": "Material público",
+  "statementPartialPeriodNotice": "Histórico parcial — o período selecionado pode exceder o que está carregado no dispositivo.",
+  "statementLargestShare": "Maior fatia",
+  "sendSpeedTitle": "Velocidade do envio",
+  "sendMethodTitle": "Como deseja enviar?",
+  "sendMethodSubtitle": "Escolha o método de transferência compatível com este recebedor.",
+  "recommendedLabel": "Recomendado",
+  "sendFixedAmountNotice": "O valor do pagamento está fixo. Você só pode ajustar a velocidade e as taxas.",
+  "securityTotpDescription": "Configure e valide o código TOTP usado para proteger acessos e transações sensíveis.",
+  "securityDevicesDescription": "Chaves do dispositivo vinculadas à sua conta. Use este aparelho para assinar transferências. Bloqueie ou revogue acessos que não reconhece.",
+  "securityDevicesUpdateKey": "Atualize a chave deste aparelho",
+  "securityDevicesLegacyKeyNotice": "Detectamos uma chave legada neste dispositivo. Transferências e login biométrico agora usam a Chave do dispositivo. Toque abaixo para configurar.",
+  "transactionAuthEncryptedTitle": "Conexão criptografada ponto a ponto",
+  "@offlineLastSync": {
+    "placeholders": {
+      "time": {
         "type": "String"
       }
     }

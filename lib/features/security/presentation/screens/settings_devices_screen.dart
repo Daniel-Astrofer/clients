@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/core/services/passkey_service.dart';
@@ -30,8 +29,9 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _probeLegacyMigration());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _probeLegacyMigration(),
+    );
   }
 
   Future<void> _probeLegacyMigration() async {
@@ -41,10 +41,12 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
       return;
     }
     final username = auth.user.username;
-    final hasDeviceKey =
-        await DeviceKeyService.instance.hasRegisteredDeviceKey(username);
-    final hasShaped =
-        await PasskeyService.instance.hasRegisteredPasskey(username: username);
+    final hasDeviceKey = await DeviceKeyService.instance.hasRegisteredDeviceKey(
+      username,
+    );
+    final hasShaped = await PasskeyService.instance.hasRegisteredPasskey(
+      username: username,
+    );
     if (!mounted) return;
     setState(() => _needsLegacyMigration = hasShaped && !hasDeviceKey);
   }
@@ -59,7 +61,9 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: Theme.of(context).colorScheme.onSurface,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest,
           onRefresh: () async {
             ref.invalidate(accountSecurityProfileProvider);
             await ref.read(accountSecurityProfileProvider.future);
@@ -102,9 +106,11 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                           ),
                           SizedBox(height: AppSpacing.md),
                           Text(
-                            'Chaves do dispositivo vinculadas à sua conta. Use este aparelho para assinar transferências. Bloqueie ou revogue acessos que não reconhece.',
+                            context.tr.securityDevicesDescription,
                             style: AppTypography.inter(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
                               height: 1.55,
@@ -116,10 +122,14 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                             Container(
                               padding: EdgeInsets.all(AppSpacing.lg),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
                                       .withValues(alpha: 0.35),
                                 ),
                               ),
@@ -127,20 +137,22 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
-                                    'Atualize a chave deste aparelho',
+                                    context.tr.securityDevicesUpdateKey,
                                     style: AppTypography.inter(
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   SizedBox(height: AppSpacing.sm),
                                   Text(
-                                    'Detectamos uma chave legada neste install. '
-                                    'Transferências e login biométrico agora usam a '
-                                    'Chave do dispositivo. Toque abaixo para configurar.',
+                                    context.tr.securityDevicesLegacyKeyNotice,
                                     style: AppTypography.inter(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                       fontSize: 14,
                                       height: 1.45,
                                     ),
@@ -172,7 +184,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     if (result.isSuccess) {
                                       AppNotice.showInfo(
                                         context,
-                                        title: context.tr
+                                        title: context
+                                            .tr
                                             .settingsDevicesPasskeyRegistered,
                                         message:
                                             'Chave do dispositivo vinculada. A lista foi atualizada.',
@@ -188,7 +201,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                       AppNotice.showError(
                                         context,
                                         title: context
-                                            .tr.settingsDevicesRegisterFail,
+                                            .tr
+                                            .settingsDevicesRegisterFail,
                                         message: ErrorTranslator.translate(
                                           context.tr,
                                           result.message,
@@ -201,11 +215,12 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     context.tr.settingsDevicesRegisterPasskey,
                                   ),
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface,
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.surface,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                    foregroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
                                     minimumSize: const Size.fromHeight(48),
                                   ),
                                 ),
@@ -215,7 +230,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 48),
                               child: Center(
                                 child: CircularProgressIndicator(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.54),
                                 ),
                               ),
                             ),
@@ -227,7 +243,9 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                   Text(
                                     context.tr.settingsDevicesLoadError,
                                     style: AppTypography.inter(
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -239,7 +257,9 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                       error.toString(),
                                     ),
                                     style: AppTypography.inter(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                       fontSize: 14,
                                       height: 1.4,
                                     ),
@@ -249,8 +269,9 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                     onPressed: () => ref.invalidate(
                                       accountSecurityProfileProvider,
                                     ),
-                                    child:
-                                        Text(context.tr.settingsDevicesRetry),
+                                    child: Text(
+                                      context.tr.settingsDevicesRetry,
+                                    ),
                                   ),
                                 ],
                               ),

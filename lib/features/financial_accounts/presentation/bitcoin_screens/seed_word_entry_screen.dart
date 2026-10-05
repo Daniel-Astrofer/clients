@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/security/secure_screen_guard.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -54,7 +56,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
     SecureScreenGuard.enter();
     _totalWords = widget.initialTotalWords == 24 ? 24 : 12;
     _wordController.addListener(_onTextChanged);
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(KeroseneMotion.seedReveal, () {
       if (mounted) _focusNode.requestFocus();
     });
   }
@@ -100,8 +102,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
 
     setState(() {
       _suggestions = matches;
-      _inlineError =
-          matches.isEmpty ? 'Palavra fora da lista BIP39 inglesa' : null;
+      _inlineError = matches.isEmpty
+          ? 'Palavra fora da lista BIP39 inglesa'
+          : null;
     });
   }
 
@@ -208,8 +211,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
       return;
     }
     final words = parsed.words;
-    final count =
-        words.length == 24 ? 24 : (words.length == 12 ? 12 : words.length);
+    final count = words.length == 24
+        ? 24
+        : (words.length == 12 ? 12 : words.length);
     HapticFeedback.mediumImpact();
     setState(() {
       _totalWords = count;
@@ -289,8 +293,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(parsed.message ?? context.tr.seedInvalid),
-          backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 8),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: KeroseneMotion.seedValidationTimeout,
         ),
       );
       return;
@@ -309,16 +313,20 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        _totalWords == 0 ? 0.0 : _selectedWords.length / _totalWords;
+    final progress = _totalWords == 0
+        ? 0.0
+        : _selectedWords.length / _totalWords;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(
+            KeroseneIcons.arrowBack,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -331,23 +339,26 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
             },
             child: Text(
               _pasteMode ? 'Palavra a palavra' : 'Colar frase',
-              style: AppTypography.bodySmall.copyWith(color: Colors.white70),
+              style: AppTypography.bodySmall.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           IconButton(
             icon: Icon(
-              _obscureWords ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white,
+              _obscureWords
+                  ? KeroseneIcons.visibilityOff
+                  : KeroseneIcons.visibility,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () {
               setState(() => _obscureWords = !_obscureWords);
             },
-          )
+          ),
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: ListView(
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -356,7 +367,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                 child: LinearProgressIndicator(
                   value: progress.clamp(0.0, 1.0),
                   backgroundColor: Colors.transparent,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.onSurface,
+                  ),
                   minHeight: 3,
                 ),
               ),
@@ -388,9 +401,11 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                 _pasteMode
                     ? 'Cole a semente BIP39'
                     : _complete
-                        ? 'Semente pronta'
-                        : 'Palavra $_currentWordIndex / $_totalWords',
-                style: AppTypography.display.copyWith(color: Colors.white),
+                    ? 'Semente pronta'
+                    : 'Palavra $_currentWordIndex / $_totalWords',
+                style: AppTypography.h2.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -400,11 +415,11 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
               child: Text(
                 _pasteMode
                     ? 'Cole as 12 ou 24 palavras (inglês BIP39). '
-                        'A passphrase opcional é outro campo — não misture.'
+                          'A passphrase opcional é outro campo — não misture.'
                     : 'Lista inglesa BIP39. Ordem importa (checksum). '
-                        'Passphrase/25ª palavra é opcional e vem depois.',
+                          'Passphrase/25ª palavra é opcional e vem depois.',
                 style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white54,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.35,
                 ),
                 textAlign: TextAlign.center,
@@ -423,32 +438,42 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         autocorrect: false,
                         enableSuggestions: false,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           height: 1.4,
                         ),
                         decoration: InputDecoration(
                           hintText:
                               'ex.: abandon ability able about above absent …',
                           hintStyle: AppTypography.bodySmall.copyWith(
-                            color: Colors.white30,
+                            color: Theme.of(context).colorScheme.outline,
                           ),
                           filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.06),
+                          fillColor: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.06),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.15),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.15),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white54),
+                            borderSide: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ),
@@ -457,7 +482,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         Text(
                           _inlineError!,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.redAccent,
+                            color: Theme.of(context).colorScheme.error,
                             height: 1.35,
                           ),
                           textAlign: TextAlign.center,
@@ -468,7 +493,8 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         TextButton(
                           onPressed: () {
                             final tokens = Bip39MnemonicUtils.tokenize(
-                                _pasteController.text);
+                              _pasteController.text,
+                            );
                             if (tokens.isEmpty) return;
                             tokens[tokens.length - 1] = _suggestedLastWord!;
                             _pasteController.text = tokens.join(' ');
@@ -477,7 +503,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           child: Text(
                             'Corrigir última palavra para “$_suggestedLastWord”',
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.lightGreenAccent,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -488,7 +514,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           child: Text(
                             context.tr.seedImportAnyway,
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.orangeAccent,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -499,8 +527,12 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () => _applyPaste(),
@@ -525,7 +557,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                     smartQuotesType: SmartQuotesType.disabled,
                     textAlign: TextAlign.center,
                     style: AppTypography.financial(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 40,
                       fontWeight: FontWeight.w600,
                     ),
@@ -542,8 +574,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           _suggestions.first == tokens.first) {
                         // Only auto-accept when the typed token is the full word.
                         _confirmWord(_suggestions.first);
-                      } else if (_suggestions
-                          .contains(tokens.isEmpty ? '' : tokens.first)) {
+                      } else if (_suggestions.contains(
+                        tokens.isEmpty ? '' : tokens.first,
+                      )) {
                         _confirmWord(tokens.first);
                       } else {
                         setState(() {
@@ -568,7 +601,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                               ? 'Ocultar passphrase BIP39'
                               : 'Adicionar passphrase BIP39 (opcional)',
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white70,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -579,20 +614,24 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           autocorrect: false,
                           enableSuggestions: false,
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           decoration: InputDecoration(
                             hintText: context.tr.seedPassphrase25th,
                             hintStyle: AppTypography.bodySmall.copyWith(
-                              color: Colors.white38,
+                              color: Theme.of(context).colorScheme.outline,
                             ),
                             enabledBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.2),
                               ),
                             ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                             ),
                           ),
                         ),
@@ -601,7 +640,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         Text(
                           _statusInfo!,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.lightGreenAccent,
+                            color: Theme.of(context).colorScheme.primary,
                             height: 1.35,
                           ),
                           textAlign: TextAlign.center,
@@ -612,7 +651,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         Text(
                           _inlineError!,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.redAccent,
+                            color: Theme.of(context).colorScheme.error,
                             height: 1.35,
                           ),
                           textAlign: TextAlign.center,
@@ -624,7 +663,7 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           child: Text(
                             'Usar última palavra “$_suggestedLastWord” (checksum OK)',
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.lightGreenAccent,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -634,7 +673,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                           child: Text(
                             context.tr.seedImportLiteralInvalidChecksum,
                             style: AppTypography.bodySmall.copyWith(
-                              color: Colors.orangeAccent,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -645,8 +686,12 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           onPressed: () => _finish(),
@@ -664,55 +709,61 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                   child: Text(
                     _inlineError!,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.redAccent,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: _complete
                     ? const SizedBox.shrink()
                     : _suggestions.isEmpty && _wordController.text.isNotEmpty
-                        ? Center(
-                            child: Text(
-                              _inlineError ?? 'Palavra inválida',
-                              style: const TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 16,
+                    ? Center(
+                        child: Text(
+                          _inlineError ?? 'Palavra inválida',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 16,
+                          ),
+                        ),
+                      )
+                    : Wrap(
+                        spacing: 12,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: _suggestions.map((word) {
+                          return GestureDetector(
+                            onTap: () => _confirmWord(word),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                word,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
-                          )
-                        : Wrap(
-                            spacing: 12,
-                            runSpacing: 16,
-                            alignment: WrapAlignment.center,
-                            children: _suggestions.map((word) {
-                              return GestureDetector(
-                                onTap: () => _confirmWord(word),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 14,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(30),
-                                    border: Border.all(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    word,
-                                    style: AppTypography.bodyMedium.copyWith(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
+                          );
+                        }).toList(),
+                      ),
               ),
               if (_selectedWords.isNotEmpty)
                 Container(
@@ -722,7 +773,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                     color: Colors.transparent,
                     border: Border(
                       top: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.1),
                       ),
                     ),
                   ),
@@ -735,7 +788,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                         child: Text(
                           context.tr.seedUndoPrevious,
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white54,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -754,7 +809,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                               color: Colors.transparent,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.15),
                               ),
                             ),
                             child: Text(
@@ -762,7 +819,9 @@ class _SeedWordEntryScreenState extends State<SeedWordEntryScreen> {
                                   ? '${index + 1}.***'
                                   : '${index + 1}.${_selectedWords[index]}',
                               style: AppTypography.bodySmall.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.8),
                               ),
                             ),
                           );
@@ -799,17 +858,20 @@ class _WordCountChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color:
-                selected ? Colors.white : Colors.white.withValues(alpha: 0.25),
+            color: selected
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.25),
           ),
           color: selected
-              ? Colors.white.withValues(alpha: 0.12)
+              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12)
               : Colors.transparent,
         ),
         child: Text(
           label,
           style: AppTypography.bodySmall.copyWith(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
           ),
         ),

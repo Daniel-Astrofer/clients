@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -83,7 +85,7 @@ mixin FinancialSurfaceMixin<T extends ConsumerStatefulWidget>
     // Release after the unmount frame so we never notify defunct elements
     // mid-finalizeTree (hot restart / rapid route changes).
     if (held && gate != null) {
-      Future<void>(() {
+      Future<void>.microtask(() {
         try {
           gate.release();
         } catch (_) {}

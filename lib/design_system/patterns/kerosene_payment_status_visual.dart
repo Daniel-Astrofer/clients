@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
@@ -44,19 +45,31 @@ class KerosenePaymentStatusVisual extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Status icon
-        Icon(status.icon, size: 48, color: status.color, semanticLabel: status.semanticLabel),
+        Icon(status.icon,
+            size: 48, color: status.color, semanticLabel: status.semanticLabel),
         SizedBox(height: AppSpacing.base),
 
         // Amount
         if (amount != null)
-          Text(amount!, style: AppTypography.playfairDisplay(fontSize: 32, color: palette.textPrimary, fontWeight: AppTypography.w590)),
+          Text(amount!,
+              style: AppTypography.playfairDisplay(
+                  fontSize: 32,
+                  color: palette.textPrimary,
+                  fontWeight: AppTypography.w590)),
         SizedBox(height: AppSpacing.sm),
 
         // Status label
-        Text(status.label, style: AppTypography.inter(fontSize: 15, color: palette.textPrimary, fontWeight: AppTypography.w510)),
+        Text(status.label,
+            style: AppTypography.inter(
+                fontSize: 15,
+                color: palette.textPrimary,
+                fontWeight: AppTypography.w510)),
         if (message != null) ...[
           SizedBox(height: AppSpacing.xs),
-          Text(message!, style: AppTypography.inter(fontSize: 13, color: palette.textSecondary), textAlign: TextAlign.center),
+          Text(message!,
+              style: AppTypography.inter(
+                  fontSize: 13, color: palette.textSecondary),
+              textAlign: TextAlign.center),
         ],
 
         // Actions
@@ -64,10 +77,15 @@ class KerosenePaymentStatusVisual extends StatelessWidget {
           SizedBox(height: AppSpacing.module),
           Row(mainAxisSize: MainAxisSize.min, children: [
             if (onSecondaryAction != null)
-              TextButton(onPressed: onSecondaryAction, child: Text(secondaryActionLabel ?? 'Fechar')),
-            if (onSecondaryAction != null && onDetailAction != null) SizedBox(width: AppSpacing.base),
+              TextButton(
+                  onPressed: onSecondaryAction,
+                  child: Text(secondaryActionLabel ?? 'Fechar')),
+            if (onSecondaryAction != null && onDetailAction != null)
+              SizedBox(width: AppSpacing.base),
             if (onDetailAction != null)
-              TextButton(onPressed: onDetailAction, child: Text(detailActionLabel ?? 'Ver detalhes')),
+              TextButton(
+                  onPressed: onDetailAction,
+                  child: Text(detailActionLabel ?? 'Ver detalhes')),
           ]),
         ],
       ],
@@ -82,10 +100,10 @@ enum KerosenePaymentStatus {
   failed;
 
   IconData get icon => switch (this) {
-        KerosenePaymentStatus.submitting => Icons.sync,
-        KerosenePaymentStatus.pending => Icons.schedule,
-        KerosenePaymentStatus.success => Icons.check_circle,
-        KerosenePaymentStatus.failed => Icons.error,
+        KerosenePaymentStatus.submitting => KeroseneIcons.sync,
+        KerosenePaymentStatus.pending => KeroseneIcons.schedule,
+        KerosenePaymentStatus.success => KeroseneIcons.success,
+        KerosenePaymentStatus.failed => KeroseneIcons.error,
       };
 
   Color get color => switch (this) {

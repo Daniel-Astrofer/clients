@@ -250,7 +250,9 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                                   _body(context),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                     fontSize: math.min(
                                         16, math.max(13, width * 0.038)),
                                     height: 1.45,
@@ -283,7 +285,9 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                                   _retryHint(context),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
                                         .withValues(alpha: 0.78),
                                     fontSize: 12,
                                     height: 1.35,

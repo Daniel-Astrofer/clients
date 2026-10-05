@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/app/network/api_client_provider.dart';
 import 'package:kerosene/core/config/app_config.dart';
 import 'package:kerosene/core/performance/frame_coalescer.dart';
@@ -19,8 +20,9 @@ import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
 
 /// Live home surface state (HTTP snapshot + WebSocket patches).
-final homeSurfaceProvider =
-    NotifierProvider<HomeSurfaceNotifier, HomeSurface>(HomeSurfaceNotifier.new);
+final homeSurfaceProvider = NotifierProvider<HomeSurfaceNotifier, HomeSurface>(
+  HomeSurfaceNotifier.new,
+);
 
 class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   int _loadGeneration = 0;
@@ -34,7 +36,7 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   @override
   HomeSurface build() {
     _theaterCoalescer = FrameCoalescer<HomeUiEvent>(
-      interval: const Duration(milliseconds: 16),
+      interval: KeroseneMotion.frameInterval,
       onFlush: _applyEventNow,
     );
     ref.onDispose(_theaterCoalescer.dispose);
@@ -46,8 +48,10 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
         state = HomeSurface.localDefaults();
       }
     });
-    ref.listen<HomeLedgerBalanceView>(homeLedgerBalanceViewProvider,
-        (prev, next) {
+    ref.listen<HomeLedgerBalanceView>(homeLedgerBalanceViewProvider, (
+      prev,
+      next,
+    ) {
       if (prev != next) {
         unawaitedRefresh();
       }
@@ -116,7 +120,8 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
       final payload = _extractSurfacePayload(response.data);
       if (payload == null) {
         debugPrint(
-            '[homeSurface] unexpected payload type: ${response.data.runtimeType}');
+          '[homeSurface] unexpected payload type: ${response.data.runtimeType}',
+        );
         return;
       }
       var surface = HomeSurface.fromJson(payload);
@@ -282,9 +287,7 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
     state = state.withStage(stage);
     // [homeSceneProvider] listen clears overrides for local-* and maps stage →
     // scene. Do not ref.read(homeScene…) here (circular dependency).
-    debugPrint(
-      '[homeSurface] local stage=${stage.id} kind=${stage.kind.name}',
-    );
+    debugPrint('[homeSurface] local stage=${stage.id} kind=${stage.kind.name}');
   }
 
   /// Persist + notify backend that this stage edition was received/read.
@@ -327,12 +330,11 @@ class HomeSurfaceNotifier extends Notifier<HomeSurface> {
           'status': 'READ',
         },
       );
-      debugPrint(
-        '[homeSurface] ack stage=${stage.id} fp=$fingerprint',
-      );
+      debugPrint('[homeSurface] ack stage=${stage.id} fp=$fingerprint');
     } catch (e, st) {
       debugPrint(
-          '[homeSurface] ack failed (will retry via local cache): $e\n$st');
+        '[homeSurface] ack failed (will retry via local cache): $e\n$st',
+      );
     }
   }
 

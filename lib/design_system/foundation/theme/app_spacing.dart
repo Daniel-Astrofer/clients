@@ -20,7 +20,7 @@ class AppSpacing {
   static const double xxxl = 56.0;
 
   /// Extra wide spacing (Linear scale)
-  static const double _4xl = 80.0;
+  static const double extraWide = 80.0;
 
   /// Minimum touch target (Material / thumb ergonomics).
   static const double minTouch = 48.0;
@@ -35,5 +35,5 @@ class AppSpacing {
   static const double spacing32 = module;
   static const double spacing48 = section;
   static const double spacing56 = xxxl;
-  static const double spacing80 = _4xl;
+  static const double spacing80 = extraWide;
 }

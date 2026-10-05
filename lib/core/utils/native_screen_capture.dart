@@ -1,11 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kerosene/core/debug/device_screen_gallery_export.dart';
-import 'package:kerosene/core/debug/device_ui_snapshot.dart';
+import 'package:kerosene/app/debug/device_screen_gallery_export.dart';
+import 'package:kerosene/app/debug/device_ui_snapshot.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 /// Debug overlay: **DADOS** exports session JSON **and** PNG screenshots.
 class ScreenCaptureConfig {
@@ -18,13 +18,12 @@ class ScreenCaptureConfig {
   static const bool _flagExplicit = bool.hasEnvironment('SCREEN_CAPTURE_UI');
 
   static bool get enabled {
-    if (_flagExplicit) return _flagOn;
-    if (kIsWeb) return false;
-    if (!kDebugMode) return false;
-    return Platform.isLinux ||
-        Platform.isMacOS ||
-        Platform.isWindows ||
-        Platform.isAndroid;
+    // Keep the capture control opt-in so normal debug builds do not add a
+    // floating button to the product UI. Use
+    // --dart-define=SCREEN_CAPTURE_UI=true when the gallery tool is needed.
+    if (!_flagExplicit) return false;
+    if (kIsWeb || !kDebugMode) return false;
+    return _flagOn;
   }
 
   static void logStatus() {
@@ -40,11 +39,7 @@ class ScreenCaptureHost extends StatelessWidget {
   final Widget child;
   final bool? enabled;
 
-  const ScreenCaptureHost({
-    super.key,
-    required this.child,
-    this.enabled,
-  });
+  const ScreenCaptureHost({super.key, required this.child, this.enabled});
 
   @override
   Widget build(BuildContext context) {
@@ -122,9 +117,7 @@ class _DadosButtonState extends ConsumerState<_DadosButton> {
         messenger?.showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 12),
-            content: Text(
-              'PNG falhou ($e). JSON salvo:\n${files.first.path}',
-            ),
+            content: Text('PNG falhou ($e). JSON salvo:\n${files.first.path}'),
           ),
         );
       } catch (e2) {
@@ -148,7 +141,7 @@ class _DadosButtonState extends ConsumerState<_DadosButton> {
   Widget build(BuildContext context) {
     return Material(
       elevation: 12,
-      color: _busy ? const Color(0xFF555555) : const Color(0xFF0A84FF),
+      color: _busy ? AppColors.captureBusy : AppColors.captureAction,
       borderRadius: BorderRadius.circular(28),
       child: InkWell(
         onTap: _busy ? null : _run,
@@ -168,8 +161,11 @@ class _DadosButtonState extends ConsumerState<_DadosButton> {
                   ),
                 )
               else
-                const Icon(Icons.photo_library_outlined,
-                    color: Colors.white, size: 20),
+                const Icon(
+                  KeroseneIcons.photoLibrary,
+                  color: Colors.white,
+                  size: 20,
+                ),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

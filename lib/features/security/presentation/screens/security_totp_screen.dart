@@ -64,10 +64,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
           AppNotice.showError(
             context,
             title: context.tr.securityTotpFailureTitle,
-            message: ErrorTranslator.translate(
-              context.tr,
-              failure.toString(),
-            ),
+            message: ErrorTranslator.translate(context.tr, failure.toString()),
           );
         },
         (setup) {
@@ -101,10 +98,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
           AppNotice.showError(
             context,
             title: context.tr.securityTotpFailureTitle,
-            message: ErrorTranslator.translate(
-              context.tr,
-              failure.toString(),
-            ),
+            message: ErrorTranslator.translate(context.tr, failure.toString()),
           );
         },
         (status) {
@@ -136,10 +130,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
           AppNotice.showError(
             context,
             title: context.tr.securityTotpDisableFailedTitle,
-            message: ErrorTranslator.translate(
-              context.tr,
-              failure.toString(),
-            ),
+            message: ErrorTranslator.translate(context.tr, failure.toString()),
           );
         },
         (_) {
@@ -161,6 +152,25 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
   }
 
   Future<void> _regenerateBackupCodes() async {
+    if (_busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.tr.securityBackupCodesTitle),
+        content: Text(context.tr.securityBackupCodesBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.tr.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.tr.securityRegenerateCodesAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     await _run(() async {
       final repo = ref.read(authRepositoryProvider);
       final result = await repo.regenerateBackupCodes();
@@ -169,10 +179,7 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
           AppNotice.showError(
             context,
             title: context.tr.securityBackupRegenerateFailedTitle,
-            message: ErrorTranslator.translate(
-              context.tr,
-              failure.toString(),
-            ),
+            message: ErrorTranslator.translate(context.tr, failure.toString()),
           );
         },
         (status) {
@@ -220,18 +227,18 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
                 Text(
                   context.tr.securityBackupCodesTitle.toUpperCase(),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: monoMutedTextColor,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.8,
-                      ),
+                    color: monoMutedTextColor,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.8,
+                  ),
                 ),
                 SizedBox(height: AppSpacing.sm),
                 Text(
                   context.tr.securityBackupCodesBody,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: monoMutedTextColor,
-                        height: 1.45,
-                      ),
+                    color: monoMutedTextColor,
+                    height: 1.45,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Wrap(
@@ -311,8 +318,8 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
                       onAction: _busy
                           ? null
                           : security.totpEnabled
-                              ? _disableTotp
-                              : _beginTotpSetup,
+                          ? _disableTotp
+                          : _beginTotpSetup,
                     ),
                   const SizedBox(height: AppSpacing.md),
                   backupCodesAsync.when(
@@ -325,11 +332,12 @@ class _SecurityTotpScreenState extends ConsumerState<SecurityTotpScreen> {
                           : context.tr.securityBackupCodesLockedSubtitle,
                       actionLabel: security.totpEnabled
                           ? context.tr.securityRegenerateCodesAction
-                              .toUpperCase()
+                                .toUpperCase()
                           : context.tr.securityWaitingTotpAction.toUpperCase(),
                       disabled: !security.totpEnabled || _busy,
-                      onAction:
-                          security.totpEnabled ? _regenerateBackupCodes : null,
+                      onAction: security.totpEnabled
+                          ? _regenerateBackupCodes
+                          : null,
                       trailing: _latestGeneratedCodes.isNotEmpty
                           ? TextButton(
                               onPressed: () =>
@@ -398,17 +406,17 @@ class _TotpScreenHeader extends StatelessWidget {
               Text(
                 context.tr.twoFactorAuth,
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: monoTextColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: monoTextColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               SizedBox(height: 4),
               Text(
-                'Configure e valide o código TOTP usado para proteger acessos e transações sensíveis.',
+                context.tr.securityTotpDescription,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: monoMutedTextColor,
-                      height: 1.4,
-                    ),
+                  color: monoMutedTextColor,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -452,9 +460,9 @@ class _TotpOverviewCard extends StatelessWidget {
                 Text(
                   totpEnabled ? 'TOTP ativo' : 'TOTP pendente',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: monoTextColor,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: monoTextColor,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 SizedBox(height: 6),
                 Text(
@@ -462,9 +470,9 @@ class _TotpOverviewCard extends StatelessWidget {
                       ? 'Sua conta exige um código temporário do aplicativo autenticador.'
                       : 'Ative o autenticador e valide o primeiro código de 6 dígitos para concluir.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: monoMutedTextColor,
-                        height: 1.45,
-                      ),
+                    color: monoMutedTextColor,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -508,9 +516,9 @@ class _TotpBusyCard extends StatelessWidget {
             child: Text(
               context.tr.securityTotpValidating,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: monoMutedTextColor,
-                    height: 1.35,
-                  ),
+                color: monoMutedTextColor,
+                height: 1.35,
+              ),
             ),
           ),
         ],

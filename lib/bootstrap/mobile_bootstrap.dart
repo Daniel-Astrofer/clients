@@ -10,11 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/security/kerosene_secure_prefix.dart';
 import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 
-import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/core/navigation/deferred_page.dart';
 import 'package:kerosene/core/navigation/route_transition_observer.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
-import 'package:kerosene/core/router/mobile_go_router.dart';
+import 'package:kerosene/app/router/mobile_go_router.dart';
 import '../core/providers/shared_preferences_provider.dart';
 import '../core/providers/appearance_provider.dart';
 import '../core/providers/locale_provider.dart';
@@ -24,24 +23,21 @@ import '../core/responsive/kerosene_responsive.dart';
 import '../features/auth/presentation/screens/welcome_screen.dart';
 import '../features/home/presentation/screens/home_loading_screen.dart';
 import '../features/auth/presentation/screens/server_unavailable_screen.dart';
+// Deferred prefixes are consumed through loadLibrary tear-offs below.
+// ignore: unused_import
 import '../features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
     deferred as bitcoin_accounts;
-import '../features/home/presentation/screens/home_screen.dart'
-    deferred as home
+// ignore: unused_import
+import '../features/home/presentation/screens/home_screen.dart' deferred as home
     hide HomeSurfaceThemeContext;
 import '../features/security/presentation/providers/security_provider.dart';
 import '../features/security/presentation/widgets/app_entry_pin_gate.dart';
+// ignore: unused_import
 import '../features/security/presentation/screens/settings_screen.dart'
     deferred as settings;
 import '../features/notifications/presentation/widgets/global_notification_host.dart';
 import '../core/services/background_service.dart';
-import '../core/services/notification_service.dart' as local_notifications;
-import '../features/movement/presentation/hub/movement_hub_screen.dart'
-    deferred as deposits;
-import '../features/movement/presentation/send/send_money_screen.dart'
-    deferred as send_money;
-import '../features/movement/presentation/receive/receive_amount_entry_screen.dart'
-    deferred as receive;
+import '../app/notifications/notification_service.dart' as local_notifications;
 import '../core/providers/tor_providers.dart';
 import '../core/providers/app_cold_start_provider.dart';
 import '../core/services/tor_network_bootstrap.dart';
@@ -57,8 +53,17 @@ import '../core/utils/snackbar_helper.dart';
 import '../features/financial_accounts/presentation/providers/balance_websocket_provider.dart';
 import '../core/providers/price_provider.dart';
 import '../app/providers/price_alert_provider.dart';
-import '../core/services/notification_delivery_bootstrap.dart';
+import '../app/notifications/notification_delivery_bootstrap.dart';
 import '../core/utils/native_screen_capture.dart';
+// ignore: unused_import
+import '../features/movement/presentation/hub/movement_hub_screen.dart'
+    deferred as deposits;
+// ignore: unused_import
+import '../features/movement/presentation/send/send_money_screen.dart'
+    deferred as send_money;
+// ignore: unused_import
+import '../features/movement/presentation/receive/receive_amount_entry_screen.dart'
+    deferred as receive;
 
 /// Observes page transitions for [routeTransitionBusyProvider].
 RouteTransitionBusyObserver? _routeTransitionBusyObserver;
@@ -193,7 +198,8 @@ Future<void> _bootstrapPeripheralServices() async {
       try {
         // Absolute path deeplinks from backend (e.g. /home, /settings/security).
         if (route.startsWith('/')) {
-          unawaited(nav.pushNamed(route));
+          final router = keroseneGoRouter;
+          if (router != null) unawaited(router.push(route));
         }
       } catch (e) {
         debugPrint('Notification tap navigation failed for "$route": $e');

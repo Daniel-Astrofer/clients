@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 
 /// Canonical golden test resolutions mapped to [KeroseneWindowClass] breakpoints.

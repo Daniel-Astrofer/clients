@@ -132,9 +132,7 @@ class DeviceCredentialCapabilitiesResolver {
       // Linux has no local_auth plugin. Gate is the **app entry PIN** already
       // unlocked for this session (or optional appPinConfigured hint).
       // Do not hard-block enroll — otherwise custodial transfers can never step-up.
-      if (appPinConfigured ||
-          tier == DeviceCredentialTier.c ||
-          tier == DeviceCredentialTier.b) {
+      if (appPinConfigured || tier == DeviceCredentialTier.c) {
         canEnroll = true;
       } else {
         canEnroll = false;

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
-import 'package:kerosene/core/utils/nfc_payment_request_codec.dart';
+import 'package:kerosene/features/movement/kernel/intent/nfc_payment_request_codec.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/features/movement/application/unified_send_flags.dart';
 import 'package:kerosene/features/movement/data/fee_tier_selection.dart';

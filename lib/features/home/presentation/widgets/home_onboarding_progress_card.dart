@@ -1,9 +1,12 @@
+import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import '../providers/onboarding_progress_provider.dart';
 
@@ -20,6 +23,7 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
   Widget _buildCard(BuildContext context, OnboardingProgress progress) {
     final completed = progress.completedSteps;
     final isDone = progress.isAllCompleted;
+    final surface = HomeSurfaceTheme.of(context);
 
     if (isDone) {
       return const SizedBox.shrink();
@@ -28,20 +32,20 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Material(
-        color: Theme.of(context).colorScheme.surface, // Theme.of(context).colorScheme.surface
-        borderRadius: BorderRadius.circular(12),
+        color: surface.card,
+        borderRadius: BorderRadius.circular(HomeRadius.card),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(HomeRadius.card),
           onTap: () {
             HapticFeedback.selectionClick();
-            Navigator.pushNamed(context, '/onboarding/steps');
+            AppNavigation.push(context, '/onboarding/steps');
           },
           child: Container(
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(HomeRadius.card),
               border: Border.all(
-                color: Theme.of(context).dividerColor, // Theme.of(context).dividerColor
+                color: surface.surfaceBorder,
                 width: 1,
               ),
             ),
@@ -54,10 +58,9 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isDone ? 'Ativação Concluída' : 'Ativação da Conta',
-                        style: TextStyle(
+                        context.tr.onboardingJourneyTitle,
+                        style: AppTypography.inter(
                           color: Theme.of(context).colorScheme.onSurface,
-                          fontFamily: AppTypography.fontFamily,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
@@ -65,13 +68,10 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        isDone
-                            ? 'Sua conta está totalmente ativa.'
-                            : 'Complete $completed de 3 etapas essenciais.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 12.5,
+                        context.tr.onboardingProgressCount(completed),
+                        style: AppTypography.inter(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 13,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -80,7 +80,10 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
                 ),
                 Icon(
                   KeroseneIcons.chevronRight,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.35),
                   size: 18,
                 ),
               ],
@@ -112,8 +115,13 @@ class _SegmentedPieChartContainer extends StatelessWidget {
             painter: _SegmentedPieChartPainter(
               completedSteps: completedSteps,
               totalSteps: 3,
-              activeColor: isDone ? AppColors.hexFF4ADE80 : Theme.of(context).colorScheme.onSurface,
-              inactiveColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+              activeColor: isDone
+                  ? AppColors.hexFF4ADE80
+                  : Theme.of(context).colorScheme.onSurface,
+              inactiveColor: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.12),
             ),
           ),
           Center(
@@ -125,11 +133,10 @@ class _SegmentedPieChartContainer extends StatelessWidget {
                   )
                 : Text(
                     '$completedSteps/3',
-                    style: TextStyle(
+                    style: AppTypography.inter(
                       color: Theme.of(context).colorScheme.onSurface,
-                      fontFamily: AppTypography.financialFontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
           ),

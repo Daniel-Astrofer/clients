@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
@@ -10,10 +11,7 @@ import '../theme/financial_hub_tokens.dart';
 class AccountDetailsBottomSheet extends StatelessWidget {
   final BitcoinAccount account;
 
-  const AccountDetailsBottomSheet({
-    super.key,
-    required this.account,
-  });
+  const AccountDetailsBottomSheet({super.key, required this.account});
 
   static Future<void> show(
     BuildContext context, {
@@ -63,10 +61,9 @@ class AccountDetailsBottomSheet extends StatelessWidget {
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -74,12 +71,12 @@ class AccountDetailsBottomSheet extends StatelessWidget {
             const SizedBox(height: 18),
             // Title in Playfair Display
             Text(
-              'Detalhes Técnicos',
+              context.tr.accountDetailsTechnicalTitle,
               style: FinancialHubTokens.titleH1(fontSize: 24),
             ),
             const SizedBox(height: 4),
             Text(
-              'Material público de derivação, chaves e identificadores.',
+              context.tr.accountDetailsTechnicalBody,
               style: FinancialHubTokens.body(fontSize: 13),
             ),
             const SizedBox(height: 20),
@@ -88,8 +85,11 @@ class AccountDetailsBottomSheet extends StatelessWidget {
             const SizedBox(height: 10),
             _buildDetailRow(context, label: 'Derivação', value: derivation),
             const SizedBox(height: 10),
-            _buildDetailRow(context,
-                label: 'Script Policy', value: scriptPolicy),
+            _buildDetailRow(
+              context,
+              label: 'Script Policy',
+              value: scriptPolicy,
+            ),
             const SizedBox(height: 10),
             _buildDetailRow(context, label: 'ID da Conta', value: accountId),
 
@@ -100,15 +100,20 @@ class AccountDetailsBottomSheet extends StatelessWidget {
 
             if (coldWalletId.isNotEmpty) ...[
               const SizedBox(height: 10),
-              _buildDetailRow(context,
-                  label: 'Cold Wallet ID', value: coldWalletId),
+              _buildDetailRow(
+                context,
+                label: 'Cold Wallet ID',
+                value: coldWalletId,
+              ),
             ],
 
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
                 foregroundColor: Theme.of(context).colorScheme.onSurface,
                 elevation: 0,
                 padding: EdgeInsets.symmetric(vertical: 14),
@@ -118,7 +123,7 @@ class AccountDetailsBottomSheet extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'Fechar',
+                context.tr.closeAction,
                 style: FinancialHubTokens.buttonLabel(fontSize: 14),
               ),
             ),
@@ -148,10 +153,7 @@ class AccountDetailsBottomSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: FinancialHubTokens.caption(),
-                ),
+                Text(label, style: FinancialHubTokens.caption()),
                 const SizedBox(height: 2),
                 Text(
                   value,

@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
-import 'package:kerosene/storybook/storybook_mocks.dart';
 
 import 'golden_harness.dart';
 

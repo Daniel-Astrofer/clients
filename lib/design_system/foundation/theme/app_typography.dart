@@ -14,8 +14,7 @@ import 'app_colors.dart';
 /// - Numbers, editable transaction amounts and Home balance: Plus Jakarta Sans weight 590 with tabular figures.
 /// - Hashes and technical IDs: JetBrains Mono.
 ///
-/// Signature half-step weights 510 (headings) and 590 (emphasis) replace
-/// standard 600/700 bold — the half-step is the Linear typographic voice.
+/// Use bundled 500/600 faces for consistent weights on every platform.
 /// Negative letter-spacing tightens rhythm at every size.
 class AppTypography {
   AppTypography._();
@@ -37,8 +36,8 @@ class AppTypography {
   // Flutter FontWeight accepts any integer via FontWeight(w).
   static const FontWeight w400 = FontWeight.w400;
   static const FontWeight w500 = FontWeight.w500;
-  static const FontWeight w510 = FontWeight(510);
-  static const FontWeight w590 = FontWeight(590);
+  static const FontWeight w510 = FontWeight.w500;
+  static const FontWeight w590 = FontWeight.w600;
 
   static TextTheme plusJakartaSansTextTheme(TextTheme textTheme) {
     return GoogleFonts.plusJakartaSansTextTheme(textTheme);
@@ -80,7 +79,8 @@ class AppTypography {
   );
 
   // Compatibility aliases.
-  static final TextStyle h1 = display;
+  static final TextStyle h1 =
+      inter(fontSize: 32, fontWeight: w590, height: 1.15, letterSpacing: -0.5);
   static final TextStyle h1Web = displayWeb;
 
   // ─────────────────────────────────────────────────────────────
@@ -284,11 +284,11 @@ class AppTypography {
     Color? color,
   }) {
     return inter(
-      fontSize: 46,
-      fontWeight: w590,
+      fontSize: 48,
+      fontWeight: w500,
       color: color ?? AppColors.textPrimary,
       height: 1.02,
-      letterSpacing: 3,
+      letterSpacing: 0,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
@@ -88,10 +90,7 @@ class KeroseneFinancialHeader extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: palette.border,
-                          width: 1,
-                        ),
+                        border: Border.all(color: palette.border, width: 1),
                       ),
                       child: Text(
                         custodyLabel!,
@@ -106,7 +105,7 @@ class KeroseneFinancialHeader extends StatelessWidget {
                   if (onWalletTap != null) ...[
                     SizedBox(width: AppSpacing.xs),
                     Icon(
-                      Icons.arrow_drop_down,
+                      KeroseneIcons.arrowDropDown,
                       size: 16,
                       color: palette.textDisabled,
                     ),
@@ -120,7 +119,7 @@ class KeroseneFinancialHeader extends StatelessWidget {
           if (isSyncing) ...[
             SizedBox(height: AppSpacing.xs),
             Text(
-              'Sincronizando...',
+              context.tr.financialHeaderSyncing,
               style: AppTypography.inter(
                 fontSize: 12,
                 color: palette.textDisabled,
@@ -135,10 +134,7 @@ class KeroseneFinancialHeader extends StatelessWidget {
           ],
 
           // Action cluster
-          if (actions != null) ...[
-            SizedBox(height: AppSpacing.lg),
-            actions!,
-          ],
+          if (actions != null) ...[SizedBox(height: AppSpacing.lg), actions!],
         ],
       ),
     );

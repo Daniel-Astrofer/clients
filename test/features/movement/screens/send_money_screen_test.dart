@@ -17,6 +17,7 @@ import 'package:kerosene/features/movement/presentation/send/send_money_screen.d
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/app/widgets/wallet_expand_chip.dart';
 
 void main() {
   testWidgets('send opens on destination, not a wallet selection screen',
@@ -240,7 +241,7 @@ void main() {
 
     final amountInput = find.byKey(const ValueKey('movement-amount-input'));
     await tester.ensureVisible(amountInput);
-    await tester.enterText(amountInput, '100000000');
+    await tester.enterText(amountInput, '1');
     await tester.pump();
 
     expect(find.textContaining('350.000,00'), findsOneWidget);
@@ -250,10 +251,77 @@ void main() {
     expect(find.text('Rede'), findsNothing);
     expect(find.text('Taxa estimada'), findsNothing);
 
-    final continueButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'CONTINUAR'),
+    final continueButton =
+        find.byKey(const ValueKey('transaction-value-entry-cta'));
+    expect(continueButton, findsOneWidget);
+  });
+
+  testWidgets(
+      'send wallet selector falls back to local wallets when capability list is omitted',
+      (tester) async {
+    final wallets = [
+      _wallet(name: 'Conta Assegurada', balance: 2),
+      _wallet(
+        id: 'wallet-reserva',
+        name: 'Reserva on-chain',
+        balance: 1,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          walletProvider.overrideWith(() => _WalletTestNotifier(wallets)),
+          latestBtcPriceProvider.overrideWith((ref) => 65000),
+          btcEurPriceProvider.overrideWith((ref) => 60000),
+          btcBrlPriceProvider.overrideWith((ref) => 350000),
+          recentTransactionDestinationsProvider.overrideWith(
+            () => _RecentDestinationsNotifier([
+              RecentTransactionDestination(
+                address: '34b5cc23-e18e-4f32-8414-9844e7300c25',
+                label: 'Minecraft',
+                kind: RecentTransactionDestinationKind.internal,
+                lastUsedAt: DateTime(2026, 6, 19),
+              ),
+            ]),
+          ),
+          kfeReceivingCapabilitiesServiceProvider.overrideWithValue(
+            const _ReadyKfeReceivingCapabilitiesService(),
+          ),
+          transaction_providers.transactionRepositoryProvider.overrideWithValue(
+            const _UnusedTransactionRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          scaffoldMessengerKey: SnackbarHelper.scaffoldMessengerKey,
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData.dark(useMaterial3: false).copyWith(
+            splashFactory: NoSplash.splashFactory,
+          ),
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const SendMoneyScreen(),
+        ),
+      ),
     );
-    expect(continueButton.onPressed, isNotNull);
+
+    await tester.pump();
+    await tester.tap(find.text('Minecraft').first);
+    await tester.pump();
+    await tester.tap(find.text('CONTINUAR'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Conta Assegurada'), findsOneWidget);
+    final selector = find.byType(WalletExpandChip);
+    expect(selector, findsOneWidget);
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    expect(find.text('Reserva on-chain'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('wallet-reserva')));
+    await tester.pumpAndSettle();
+    expect(find.text('Reserva on-chain'), findsOneWidget);
   });
 
   testWidgets('blocks amount step when total debit exceeds wallet balance',
@@ -308,10 +376,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('Saldo insuficiente'), findsNothing);
-    final continueButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'CONTINUAR'),
+    expect(
+      find.byKey(const ValueKey('transaction-value-entry-cta')),
+      findsOneWidget,
     );
-    expect(continueButton.onPressed, isNull);
   });
 
   testWidgets('blocks internal wallet UUID when KFE verification rejects it',

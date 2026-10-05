@@ -186,10 +186,17 @@ void main() {
           SourceCustody.custodialOnchain,
         ],
       );
-      // Current source is custodial → only onchain is selectable for this wallet.
+      // Default follows the current custodial source, while the wallet step
+      // keeps the internal alternative available for an account switch.
       expect(resolved.selectedRail, PaymentRail.onchain);
-      expect(resolved.alternatives, hasLength(1));
-      expect(resolved.alternatives.first.rail, PaymentRail.onchain);
+      expect(resolved.alternatives, hasLength(2));
+      expect(
+        resolved.alternatives.map((option) => option.rail),
+        containsAll(<PaymentRail>[
+          PaymentRail.internal,
+          PaymentRail.onchain,
+        ]),
+      );
     });
 
     test(

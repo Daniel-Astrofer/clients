@@ -80,7 +80,8 @@ class MonitoringScreen extends ConsumerWidget {
                   valueBuilder: (data) => '${data['status'] ?? 'UNKNOWN'}',
                   subtitleBuilder: (data) {
                     final day = data['dayEpoch']?.toString();
-                    final peers = data['peerCount'] ?? data['votingServers'] ?? 0;
+                    final peers =
+                        data['peerCount'] ?? data['votingServers'] ?? 0;
                     if (day != null && day.isNotEmpty) {
                       return 'day $day · peers $peers';
                     }

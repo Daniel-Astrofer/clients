@@ -115,7 +115,8 @@ class SendFlowCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: tokens.surfaceHigh,
         borderRadius: tokens.cardBorderRadius,
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.55)),
+        border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.55)),
         boxShadow: tokens.cardShadow,
       ),
       child: Padding(

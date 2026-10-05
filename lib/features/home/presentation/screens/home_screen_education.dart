@@ -1,8 +1,13 @@
+import 'package:kerosene/core/navigation/app_navigation.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
+// architecture-allow-large-file: education sequencing and its existing widget
+// callbacks remain together to preserve playback behavior.
 
 import 'dart:math' as math;
 
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
+import 'package:kerosene/features/home/domain/home_communication_adapters.dart';
+import 'package:kerosene/features/home/domain/entities/home_communication_item.dart';
 import 'package:kerosene/features/home/presentation/providers/home_feed_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 
@@ -66,8 +71,8 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
     return Column(
       children: [
         AnimatedSize(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
+          duration: KeroseneMotion.homeEducation,
+          curve: KeroseneMotion.standard,
           alignment: Alignment.topCenter,
           child: SizedBox(
             height: feedHeight,
@@ -89,12 +94,16 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(homeSize(16)),
+                      borderRadius: BorderRadius.circular(
+                        homeSize(HomeRadius.card),
+                      ),
                       onTap: card.cta?.isNavigate == true
                           ? () => _openFeedCta(context, card.cta!)
                           : null,
                       child: HomeGlassPanel(
-                        borderRadius: BorderRadius.circular(homeSize(16)),
+                        borderRadius: BorderRadius.circular(
+                          homeSize(HomeRadius.card),
+                        ),
                         padding: EdgeInsets.all(cardPadding),
                         child: Row(
                           children: [
@@ -114,8 +123,9 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: HomeTypography.cardHeader(
-                                      color: Theme.of(context)
-                                          .colorScheme.onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                     ),
                                   ),
                                   SizedBox(height: homeSize(8)),
@@ -124,7 +134,9 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                       fontSize: HomeTypography.captionSize,
                                       height: 1.45,
                                       letterSpacing: 0,
@@ -138,10 +150,14 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                           card.tag.toUpperCase(),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.labelSmall?.copyWith(
-                                            color: Theme.of(context).colorScheme.onSurface
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
                                                 .withValues(alpha: 0.72),
-                                            fontSize: HomeTypography.smallLabelSize,
+                                            fontSize:
+                                                HomeTypography.smallLabelSize,
                                             fontWeight: FontWeight.w300,
                                             letterSpacing: 1.2,
                                           ),
@@ -150,9 +166,11 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                       if (card.cta?.isNavigate == true)
                                         Text(
                                           card.cta!.label,
-                                          style: theme.textTheme.labelSmall?.copyWith(
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
                                             color: homeAmberColor,
-                                            fontSize: HomeTypography.smallLabelSize,
+                                            fontSize:
+                                                HomeTypography.smallLabelSize,
                                             fontWeight: FontWeight.w600,
                                             letterSpacing: 0.4,
                                           ),
@@ -187,7 +205,7 @@ void _openFeedCta(BuildContext context, HomeFeedCta cta) {
   final target = cta.target.trim();
   if (target.isEmpty) return;
   if (target.startsWith('/')) {
-    Navigator.of(context).pushNamed(target);
+    AppNavigation.push(context, target);
     return;
   }
   // Unknown scheme — ignore safely.
@@ -206,16 +224,23 @@ class _HomeFeedMediaThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Render through the shared communication contract when the full feed
+    // item is available. The legacy media argument remains for old callers.
+    final communicationMedia =
+        feedItem == null ? null : communicationFromFeed(feedItem!).media;
     final accent = switch (kind) {
       HomeFeedKind.promo => homeAmberColor,
-      HomeFeedKind.announcement => Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+      HomeFeedKind.announcement => Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: 0.70),
       HomeFeedKind.feature => AppColors.hexFF5EE9A0,
       _ => Theme.of(context).colorScheme.onSurface,
     };
 
     Widget child;
-    final url = media.url?.trim() ?? '';
-    final poster = media.posterUrl?.trim() ?? '';
+    final url = (communicationMedia?.source ?? media.url)?.trim() ?? '';
+    final poster =
+        (communicationMedia?.poster ?? media.posterUrl)?.trim() ?? '';
     final imageUrl = poster.isNotEmpty ? poster : url;
     // Skip legacy mock product shots under assets/feed/cards/.
     final isLegacyMockCard = imageUrl.contains('feed/cards/');
@@ -223,9 +248,13 @@ class _HomeFeedMediaThumb extends StatelessWidget {
     final assetPath = isAsset ? imageUrl.substring('asset:'.length) : imageUrl;
 
     final isImageCard = !isLegacyMockCard &&
-        (media.type == HomeFeedMediaType.image ||
-            media.type == HomeFeedMediaType.video ||
-            media.type == HomeFeedMediaType.lottie) &&
+        (communicationMedia?.type == HomeCommunicationMediaType.image ||
+            communicationMedia?.type == HomeCommunicationMediaType.video ||
+            communicationMedia?.type == HomeCommunicationMediaType.lottie ||
+            (communicationMedia == null &&
+                (media.type == HomeFeedMediaType.image ||
+                    media.type == HomeFeedMediaType.video ||
+                    media.type == HomeFeedMediaType.lottie))) &&
         imageUrl.isNotEmpty;
     final thumbW = isImageCard ? homeSize(72) : homeSize(56);
     final thumbH = homeSize(46);
@@ -238,33 +267,23 @@ class _HomeFeedMediaThumb extends StatelessWidget {
               width: thumbW,
               height: imgH,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(
-                media.resolveIcon(),
-                color: accent,
-                size: homeSize(21),
-              ),
+              errorBuilder: (_, __, ___) =>
+                  Icon(media.resolveIcon(), color: accent, size: homeSize(21)),
             )
           : Image.network(
               imageUrl,
               width: thumbW,
               height: imgH,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(
-                media.resolveIcon(),
-                color: accent,
-                size: homeSize(21),
-              ),
+              errorBuilder: (_, __, ___) =>
+                  Icon(media.resolveIcon(), color: accent, size: homeSize(21)),
             );
       child = ClipRRect(
         borderRadius: BorderRadius.circular(homeSize(8)),
         child: image,
       );
     } else {
-      child = Icon(
-        media.resolveIcon(),
-        color: accent,
-        size: homeSize(21),
-      );
+      child = Icon(media.resolveIcon(), color: accent, size: homeSize(21));
     }
 
     return Container(
@@ -275,7 +294,9 @@ class _HomeFeedMediaThumb extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(homeSize(12)),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -316,8 +337,9 @@ List<HomeEducationCardData> homeEducationCards(
 }
 
 /// Same duration/curve as activity card expand/collapse.
-const Duration _kHomeDistributionRevealDuration = Duration(milliseconds: 800);
-const Curve _kHomeDistributionRevealCurve = Curves.easeInOutCubic;
+const Duration _kHomeDistributionRevealDuration =
+    KeroseneMotion.homeDistribution;
+const Curve _kHomeDistributionRevealCurve = KeroseneMotion.standardInOut;
 
 class HomeFundsDistributionSection extends ConsumerStatefulWidget {
   final WalletState walletState;
@@ -430,7 +452,7 @@ class _HomeFundsDistributionSectionState
     final dominantId = dominantEntry?.wallet.id;
 
     return HomeGlassPanel(
-      borderRadius: BorderRadius.circular(homeSize(16)),
+      borderRadius: BorderRadius.circular(homeSize(HomeRadius.card)),
       padding: EdgeInsets.fromLTRB(
         homeSize(18),
         homeSize(16),
@@ -453,7 +475,9 @@ class _HomeFundsDistributionSectionState
               TextButton(
                 onPressed: widget.onViewStatement,
                 style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.78),
                   padding: EdgeInsets.symmetric(horizontal: homeSize(8)),
                   minimumSize: Size(0, homeSize(32)),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -469,8 +493,8 @@ class _HomeFundsDistributionSectionState
             ],
           ),
           SizedBox(height: homeSize(14)),
-          if (entries.isEmpty)
-            HomeDistributionEmptyState()
+          if (entries.isEmpty || totalBalance <= 0)
+            HomeDistributionEmptyState(hasWallets: entries.isNotEmpty)
           else
             AnimatedBuilder(
               animation: _progress,
@@ -487,7 +511,8 @@ class _HomeFundsDistributionSectionState
                         children: [
                           CustomPaint(
                             size: Size.square(homeSize(142)),
-                            painter: HomeDistributionChartPainter(context: context, 
+                            painter: HomeDistributionChartPainter(
+                              context: context,
                               entries: entries,
                               progress: t,
                             ),
@@ -505,8 +530,10 @@ class _HomeFundsDistributionSectionState
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.labelSmall?.copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.84),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.84),
                                       fontSize: homeFontSize(10),
                                       fontWeight: FontWeight.w600,
                                       height: 1.15,
@@ -522,7 +549,9 @@ class _HomeFundsDistributionSectionState
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.labelLarge?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                       fontSize: homeFontSize(17),
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0,
@@ -582,18 +611,21 @@ class HomeWalletDistributionEntry {
 }
 
 class HomeDistributionEmptyState extends StatelessWidget {
-  HomeDistributionEmptyState();
+  final bool hasWallets;
+
+  const HomeDistributionEmptyState({this.hasWallets = false});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final surface = HomeSurfaceTheme.of(context);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(homeSize(16)),
       decoration: BoxDecoration(
-        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+        color: surface.surfaceDim,
         borderRadius: BorderRadius.circular(homeSize(14)),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: surface.surfaceBorder),
       ),
       child: Row(
         children: [
@@ -601,12 +633,13 @@ class HomeDistributionEmptyState extends StatelessWidget {
             width: homeSize(36),
             height: homeSize(36),
             decoration: BoxDecoration(
-              color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+              color: surface.card,
               shape: BoxShape.circle,
+              border: Border.all(color: surface.surfaceBorder),
             ),
             child: Icon(
               KeroseneIcons.wallet,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.84),
+              color: surface.textPrimary,
               size: homeSize(18),
             ),
           ),
@@ -615,12 +648,18 @@ class HomeDistributionEmptyState extends StatelessWidget {
             child: Text(
               _distributionCopy(
                 context,
-                pt: 'Nenhuma carteira disponível para distribuir fundos.',
-                en: 'No wallet available for fund distribution.',
-                es: 'No hay billeteras disponibles para distribuir fondos.',
+                pt: hasWallets
+                    ? 'Sua distribuição aparecerá quando houver saldo nas carteiras.'
+                    : 'Nenhuma carteira disponível para distribuir fundos.',
+                en: hasWallets
+                    ? 'Your distribution will appear when your wallets have a balance.'
+                    : 'No wallet available for fund distribution.',
+                es: hasWallets
+                    ? 'Tu distribución aparecerá cuando tus billeteras tengan saldo.'
+                    : 'No hay billeteras disponibles para distribuir fondos.',
               ),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: surface.textSecondary,
                 fontSize: homeFontSize(12),
                 height: 1.35,
                 fontWeight: FontWeight.w300,
@@ -754,7 +793,8 @@ class HomeDistributionChartPainter extends CustomPainter {
   /// 0 → 1 reveal; arcs ease into their final positions.
   final double progress;
 
-  const HomeDistributionChartPainter({required this.context, 
+  const HomeDistributionChartPainter({
+    required this.context,
     required this.entries,
     this.progress = 1,
   });
@@ -766,14 +806,18 @@ class HomeDistributionChartPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) / 2 - homeSize(12);
     final strokeWidth = homeSize(16);
     final basePaint = Paint()
-      ..color = Theme.of(context).dividerColor.withValues(alpha: 0.72 * (0.35 + 0.65 * t))
+      ..color = Theme.of(
+        context,
+      ).dividerColor.withValues(alpha: 0.72 * (0.35 + 0.65 * t))
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.butt;
     canvas.drawCircle(center, radius, basePaint);
 
-    final totalShare =
-        entries.fold<double>(0, (sum, entry) => sum + entry.share);
+    final totalShare = entries.fold<double>(
+      0,
+      (sum, entry) => sum + entry.share,
+    );
     if (totalShare <= 0 || t <= 0) return;
 
     final segmentPaint = Paint()
@@ -930,16 +974,24 @@ class HomeActivityFilterChip extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Ink(
+            AnimatedContainer(
+              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+              curve: KeroseneMotion.standard,
               padding: EdgeInsets.symmetric(
-                horizontal: homeSize(16),
-                vertical: homeSize(7),
+                horizontal: homeSize(selected ? 17 : 16),
+                vertical: homeSize(selected ? 8 : 7),
               ),
               decoration: BoxDecoration(
-                color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.surface,
+                color: selected
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: 0.72),
                 borderRadius: BorderRadius.circular(homeSize(999)),
                 border: Border.all(
-                  color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).dividerColor,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).dividerColor.withValues(alpha: 0.72),
                 ),
               ),
               child: Text(
@@ -963,7 +1015,10 @@ class HomeActivityFilterChip extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.hexFFE53935,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1),
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 1,
+                    ),
                   ),
                 ),
               ),
@@ -1021,7 +1076,7 @@ String homeFilterLabel(BuildContext context, HomeActivityFilter filter) {
 
 class HomeSectionHeader extends StatelessWidget {
   final String title;
-  final VoidCallback onAction;
+  final VoidCallback? onAction;
 
   /// Text action (e.g. “Veja seu extrato”); when null, falls back to icon.
   final String? actionLabel;
@@ -1033,7 +1088,7 @@ class HomeSectionHeader extends StatelessWidget {
 
   const HomeSectionHeader({
     required this.title,
-    required this.onAction,
+    this.onAction,
     this.actionLabel,
     this.actionIcon = KeroseneIcons.history,
     this.actionTooltip,
@@ -1057,17 +1112,19 @@ class HomeSectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        if (actionLabel != null)
+        if (onAction != null && actionLabel != null)
           TextButton(
             onPressed: onAction,
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: const Size(0, 36),
+              foregroundColor: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.88),
+              padding: EdgeInsets.symmetric(horizontal: homeSize(8)),
+              minimumSize: Size(0, homeSize(40)),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               textStyle: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w400,
-                fontSize: HomeTypography.bodySize,
+                fontWeight: AppTypography.w510,
+                fontSize: HomeTypography.captionSize,
                 letterSpacing: 0,
               ),
             ),
@@ -1080,13 +1137,15 @@ class HomeSectionHeader extends StatelessWidget {
                   Icon(
                     KeroseneIcons.chevronRight,
                     size: homeSize(16),
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.88),
                   ),
                 ],
               ],
             ),
           )
-        else
+        else if (onAction != null)
           IconButton(
             onPressed: onAction,
             tooltip: tooltip,

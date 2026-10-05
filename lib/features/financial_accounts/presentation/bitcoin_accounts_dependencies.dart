@@ -23,7 +23,7 @@ export 'package:kerosene/features/financial_accounts/domain/services/bitcoin_acc
 export 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_public_material.dart';
 export 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 export 'package:kerosene/features/movement/providers/transaction_provider.dart';
-export 'package:kerosene/features/movement/data/entities/transaction.dart';
+export 'package:kerosene/features/movement/domain/entities/transaction.dart';
 export 'bitcoin_accounts_empty_layout.dart';
 export 'bitcoin_accounts_header.dart';
 export 'bitcoin_accounts_presentation_support.dart';

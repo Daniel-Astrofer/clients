@@ -1,7 +1,6 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import '../bitcoin_accounts_dependencies.dart';
-import '../bitcoin_accounts_screen.dart';
 import '../bitcoin_widgets/bottom_sheets.dart';
 
 class InternalAccountCreationFlow extends ConsumerStatefulWidget {
@@ -151,7 +150,8 @@ class InternalAccountCreationFlowState
             ),
             Expanded(
               child: AnimatedSwitcher(
-                duration: KeroseneMotion.short,
+                duration: KeroseneMotion.duration(
+                    context, KeroseneMotion.statusChange),
                 child: switch (step) {
                   InternalAccountStep.custody => const SizedBox.shrink(),
                   InternalAccountStep.details => buildDetailsStep(),

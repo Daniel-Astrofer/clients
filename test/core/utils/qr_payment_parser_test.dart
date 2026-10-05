@@ -48,6 +48,23 @@ void main() {
       expect(uri.amountBtc, 0.00025);
     });
 
+    test('encodes a portable BIP-21 payload for external wallets', () {
+      const address = 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x';
+      final encoded = QrPaymentParser.encode(
+        address: address,
+        amountBtc: 0.00025,
+        label: 'Conta Assegurada',
+        message: 'Recebimento Kerosene',
+      );
+
+      expect(encoded, startsWith('bitcoin:$address?amount=0.00025'));
+      final decoded = QrPaymentParser.decode(encoded);
+      expect(decoded?.address, address);
+      expect(decoded?.amountBtc, 0.00025);
+      expect(decoded?.label, 'Conta Assegurada');
+      expect(decoded?.message, 'Recebimento Kerosene');
+    });
+
     test('decodes bitcoin uri with amount and label', () {
       final data = QrPaymentParser.decode(
         'bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh?amount=0.05&label=Reserva',

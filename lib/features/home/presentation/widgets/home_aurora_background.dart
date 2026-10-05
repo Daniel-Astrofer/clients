@@ -48,7 +48,8 @@ class HomeAuroraRendererDebugToggle extends ConsumerWidget {
       right: 12,
       top: MediaQuery.paddingOf(context).top + 8,
       child: Material(
-        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.55),
+        color:
+            Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: () => ref.read(homeAuroraRendererProvider.notifier).toggle(),
@@ -58,7 +59,10 @@ class HomeAuroraRendererDebugToggle extends ConsumerWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.70),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,

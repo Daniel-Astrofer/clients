@@ -203,6 +203,67 @@ void main() {
     expect(find.text('Digite o PIN para acessar sua conta'), findsOneWidget);
   });
 
+  testWidgets('retains a full PIN and exposes retry after transient failure',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final sharedPreferences = await SharedPreferences.getInstance();
+    final repository = _SequencedPinVerifySecurityRepository([
+      const Left(
+        AuthFailure(message: 'upstream unavailable', errorCode: 'SYS_500'),
+      ),
+      const Right(
+        AppPinStatus(enabled: true, configured: true),
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _AuthenticatedAuthController(),
+          ),
+          securityRepositoryProvider.overrideWithValue(repository),
+          appPinGateStatusProvider.overrideWithValue(
+            const AppPinStatus(
+              enabled: true,
+              configured: true,
+              minPinLength: 4,
+              maxPinLength: 4,
+            ),
+          ),
+          appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          balanceWebSocketServiceProvider.overrideWith((ref) async => null),
+        ],
+        child: const MaterialApp(
+          locale: Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AppEntryPinGate(child: Text('home ready')),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pumpAndSettle();
+
+    expect(repository.verifyCalls, 1);
+    expect(
+      (tester.widget(find.byType(PinEntryScaffold)) as PinEntryScaffold)
+          .valueLength,
+      4,
+    );
+    expect(find.byType(FilledButton), findsOneWidget);
+
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
+    expect(repository.verifyCalls, 2);
+    expect(repository.pins, everyElement('1234'));
+    expect(find.text('home ready'), findsOneWidget);
+  });
+
   test('reloads app PIN status when the authenticated session changes',
       () async {
     SharedPreferences.setMockInitialValues({});
@@ -436,6 +497,26 @@ class _PendingPinSecurityRepository implements SecurityRepository {
 
   void completeVerify(Either<Failure, AppPinStatus> result) {
     _verifyCompleter.complete(result);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _SequencedPinVerifySecurityRepository implements SecurityRepository {
+  final List<Either<Failure, AppPinStatus>> results;
+  final List<String> pins = [];
+
+  _SequencedPinVerifySecurityRepository(this.results);
+
+  int get verifyCalls => pins.length;
+
+  @override
+  Future<Either<Failure, AppPinStatus>> verifyAppPin({
+    required String pin,
+  }) async {
+    pins.add(pin);
+    return results[pins.length - 1];
   }
 
   @override

@@ -9,11 +9,11 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/utils/api_display_text.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/utils/safe_display_text.dart';
-import 'package:kerosene/features/movement/data/transaction_address_display.dart';
-import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_address_display.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/presentation/shared/financial_status_badge.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_visuals.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
@@ -393,14 +393,12 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                         compact: true,
                         child: Text(
                           ApiDisplayText.message(context, _description),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: monoTextColor,
-                                fontSize: 13,
-                                height: 1.35,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: monoTextColor,
+                                    fontSize: 13,
+                                    height: 1.35,
+                                  ),
                         ),
                       ),
                   ],

@@ -2,11 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_presentation_support.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_wallet_support.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/internal_account_creation_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_details.dart';
@@ -16,10 +17,7 @@ import '../theme/financial_hub_tokens.dart';
 class WalletManageBottomSheet extends ConsumerStatefulWidget {
   final BitcoinAccount account;
 
-  const WalletManageBottomSheet({
-    super.key,
-    required this.account,
-  });
+  const WalletManageBottomSheet({super.key, required this.account});
 
   static Future<void> show(
     BuildContext context, {
@@ -58,10 +56,7 @@ class _WalletManageBottomSheetState
         children: [
           Expanded(
             flex: 2,
-            child: Text(
-              label,
-              style: FinancialHubTokens.caption(),
-            ),
+            child: Text(label, style: FinancialHubTokens.caption()),
           ),
           Expanded(
             flex: 3,
@@ -69,8 +64,11 @@ class _WalletManageBottomSheetState
               onTap: copyable
                   ? () {
                       Clipboard.setData(ClipboardData(text: value));
-                      AppNotice.showSuccess(context,
-                          title: 'Copiado', message: value);
+                      AppNotice.showSuccess(
+                        context,
+                        title: 'Copiado',
+                        message: value,
+                      );
                     }
                   : null,
               child: Text(
@@ -125,10 +123,9 @@ class _WalletManageBottomSheetState
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -136,12 +133,12 @@ class _WalletManageBottomSheetState
             const SizedBox(height: 18),
             // Title in Playfair Display
             Text(
-              'Gerenciar Conta',
+              context.tr.walletManageAccountTitle,
               style: FinancialHubTokens.titleH1(fontSize: 24),
             ),
             const SizedBox(height: 4),
             Text(
-              'Configurações e dados reativos à custódia.',
+              context.tr.walletManageAccountBody,
               style: FinancialHubTokens.body(fontSize: 13),
             ),
             SizedBox(height: 20),
@@ -161,7 +158,7 @@ class _WalletManageBottomSheetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Nome da Carteira',
+                          context.tr.walletManageWalletName,
                           style: FinancialHubTokens.caption(),
                         ),
                         const SizedBox(height: 2),
@@ -178,7 +175,9 @@ class _WalletManageBottomSheetState
                         : () => _renameWallet(context),
                     icon: _busyAction == 'rename'
                         ? CupertinoActivityIndicator()
-                        : Icon(KeroseneIcons.edit, color: Theme.of(context).colorScheme.onSurface,
+                        : Icon(
+                            KeroseneIcons.edit,
+                            color: Theme.of(context).colorScheme.onSurface,
                             size: 20,
                           ),
                   ),
@@ -198,15 +197,23 @@ class _WalletManageBottomSheetState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildDetailRow('ID da Conta', widget.account.id,
-                      copyable: true),
+                  _buildDetailRow(
+                    'ID da Conta',
+                    widget.account.id,
+                    copyable: true,
+                  ),
                   if ((widget.account.cardId ?? '').trim().isNotEmpty)
-                    _buildDetailRow('Card ID', widget.account.cardId!,
-                        copyable: true),
+                    _buildDetailRow(
+                      'Card ID',
+                      widget.account.cardId!,
+                      copyable: true,
+                    ),
                   if ((widget.account.coldWalletId ?? '').trim().isNotEmpty)
                     _buildDetailRow(
-                        'Cold Wallet ID', widget.account.coldWalletId!,
-                        copyable: true),
+                      'Cold Wallet ID',
+                      widget.account.coldWalletId!,
+                      copyable: true,
+                    ),
                 ],
               ),
             ),
@@ -224,12 +231,14 @@ class _WalletManageBottomSheetState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Situação da Conta',
+                    context.tr.walletManageAccountStatus,
                     style: FinancialHubTokens.caption(),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _isLocked
                           ? Colors.red.withValues(alpha: 0.2)
@@ -239,8 +248,9 @@ class _WalletManageBottomSheetState
                     child: Text(
                       statusText,
                       style: FinancialHubTokens.numberText(
-                        color:
-                            _isLocked ? Colors.redAccent : Colors.greenAccent,
+                        color: _isLocked
+                            ? Colors.redAccent
+                            : Colors.greenAccent,
                         fontSize: 12,
                       ),
                     ),
@@ -274,7 +284,7 @@ class _WalletManageBottomSheetState
                         Text(
                           _isLocked
                               ? 'A carteira já está bloqueada para uso.'
-                              : 'Ative para bloquear esta carteira.',
+                              : 'Confira os detalhes antes de confirmar.',
                           style: FinancialHubTokens.caption(),
                         ),
                       ],
@@ -284,11 +294,13 @@ class _WalletManageBottomSheetState
                   if (_busyAction == 'archive')
                     const CupertinoActivityIndicator(radius: 12)
                   else
-                    Switch.adaptive(
-                      value: _isLocked,
-                      activeTrackColor: FinancialHubTokens.accentGold,
-                      onChanged:
-                          _isLocked ? null : (_) => _archiveWallet(context),
+                    TextButton(
+                      onPressed: _isLocked
+                          ? null
+                          : () => _archiveWallet(context),
+                      child: Text(
+                        widget.account.isWatchOnly ? 'Arquivar' : 'Bloquear',
+                      ),
                     ),
                 ],
               ),
@@ -307,23 +319,27 @@ class _WalletManageBottomSheetState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Material Público',
+                      context.tr.walletManagePublicMaterial,
                       style: FinancialHubTokens.numberText(fontSize: 14),
                     ),
                     const SizedBox(height: 8),
                     _buildDetailRow(
-                        'Fingerprint',
-                        bitcoinAccountDisplayValue(
-                            widget.account.xpubFingerprint),
-                        copyable: true),
+                      'Fingerprint',
+                      bitcoinAccountDisplayValue(
+                        widget.account.xpubFingerprint,
+                      ),
+                      copyable: true,
+                    ),
                     _buildDetailRow(
-                        'Derivation',
-                        bitcoinAccountDisplayValue(
-                            widget.account.derivationPath),
-                        copyable: true),
-                    _buildDetailRow('Script policy',
-                        bitcoinAccountDisplayValue(widget.account.scriptPolicy),
-                        copyable: true),
+                      'Derivation',
+                      bitcoinAccountDisplayValue(widget.account.derivationPath),
+                      copyable: true,
+                    ),
+                    _buildDetailRow(
+                      'Script policy',
+                      bitcoinAccountDisplayValue(widget.account.scriptPolicy),
+                      copyable: true,
+                    ),
                   ],
                 ),
               ),
@@ -334,9 +350,9 @@ class _WalletManageBottomSheetState
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Theme(
-                  data: Theme.of(context).copyWith(
-                    dividerColor: Colors.transparent,
-                  ),
+                  data: Theme.of(
+                    context,
+                  ).copyWith(dividerColor: Colors.transparent),
                   child: ColdWalletBackendOptions(
                     account: widget.account,
                     expandedKey: _expandedKey,
@@ -355,22 +371,21 @@ class _WalletManageBottomSheetState
 
   Future<void> _renameWallet(BuildContext context) async {
     final nextLabel = await askWalletName(context, widget.account);
-    if (nextLabel == null || !mounted) return;
+    if (nextLabel == null || !context.mounted) return;
 
     setState(() => _busyAction = 'rename');
     try {
-      await ref.read(bitcoinAccountsProvider.notifier).renameWallet(
-            accountId: widget.account.id,
-            label: nextLabel,
-          );
-      if (!mounted) return;
+      await ref
+          .read(bitcoinAccountsProvider.notifier)
+          .renameWallet(accountId: widget.account.id, label: nextLabel);
+      if (!context.mounted) return;
       AppNotice.showSuccess(
         context,
         title: 'Nome Atualizado',
         message: nextLabel,
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       AppNotice.showError(
         context,
         title: 'Erro ao Atualizar',
@@ -385,14 +400,14 @@ class _WalletManageBottomSheetState
 
   Future<void> _archiveWallet(BuildContext context) async {
     final confirmed = await confirmWalletArchive(context, widget.account);
-    if (!confirmed || !mounted) return;
+    if (!confirmed || !context.mounted) return;
 
     setState(() => _busyAction = 'archive');
     try {
-      await ref.read(bitcoinAccountsProvider.notifier).archiveWallet(
-            accountId: widget.account.id,
-          );
-      if (!mounted) return;
+      await ref
+          .read(bitcoinAccountsProvider.notifier)
+          .archiveWallet(accountId: widget.account.id);
+      if (!context.mounted) return;
       AppNotice.showSuccess(
         context,
         title: 'Carteira Atualizada',
@@ -400,7 +415,7 @@ class _WalletManageBottomSheetState
       );
       Navigator.pop(context);
     } catch (_) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       AppNotice.showError(
         context,
         title: 'Erro',

@@ -68,7 +68,8 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                         Text(
                           context.tr.settingsRecoveryHubSubtitle,
                           style: AppTypography.inter(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                             height: 1.55,
                           ),
@@ -171,7 +172,10 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(vertical: 48),
                             child: Center(
                               child: CircularProgressIndicator(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.54),
                               ),
                             ),
                           ),
@@ -182,7 +186,11 @@ class SettingsRecoveryHubScreen extends ConsumerWidget {
                                 context.tr,
                                 error.toString(),
                               ),
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.70)),
                             ),
                           ),
                         ),

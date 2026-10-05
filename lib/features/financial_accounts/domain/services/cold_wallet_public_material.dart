@@ -7,7 +7,7 @@ import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/bip39_mnemonic_utils.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/electrum_seed_utils.dart';
-import 'package:kerosene/features/movement/data/payment_security_guards.dart';
+import 'package:kerosene/app/security/payment_security_guards.dart';
 
 /// Legacy default (mainnet). Prefer [appColdWalletDerivationPath] for new wallets.
 const defaultColdWalletDerivationPath = "m/84'/0'/0'";
@@ -52,6 +52,25 @@ class ColdWalletPublicMaterialDeriver {
     bool allowInvalidChecksum = false,
     ColdWalletSeedKind? seedKind,
   }) {
+    // A valid BIP39 phrase can very rarely also match Electrum's version
+    // prefix checksum. BIP39 is the explicit/default contract here, so only
+    // fall back to Electrum after BIP39 validation fails (or when the caller
+    // explicitly selected Electrum).
+    if (seedKind != ColdWalletSeedKind.electrum) {
+      final parsed = Bip39MnemonicUtils.parse(
+        mnemonic,
+        allowInvalidChecksum: allowInvalidChecksum,
+      );
+      if (parsed.isValid) {
+        return _deriveBip39(
+          mnemonic: parsed.phrase,
+          extraWord: extraWord,
+          derivationPath: derivationPath,
+          allowInvalidChecksum: allowInvalidChecksum,
+        );
+      }
+    }
+
     final electrum = ElectrumSeedUtils.detect(mnemonic);
     final kind = seedKind ??
         (electrum != null

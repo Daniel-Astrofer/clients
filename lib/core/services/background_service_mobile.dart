@@ -13,7 +13,7 @@ import '../config/app_config.dart';
 import '../security/secure_storage_service.dart';
 import 'background_network_bridge.dart';
 import 'native_notification_presenter.dart';
-import 'notification_service.dart';
+import 'package:kerosene/app/notifications/notification_service.dart';
 
 /// flutter_background_service only supports Android / iOS.
 bool get _supportsBackgroundService {
@@ -136,7 +136,9 @@ Dio _buildBackgroundDio({
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
 
-  await NotificationService().init();
+  // Android runtime notification permission must be requested from the main
+  // isolate. The background isolate only initializes channels/plugin state.
+  await NotificationService().init(requestPermission: false);
 
   final secureStorage = SecureStorageService();
   String? token = await secureStorage.read(key: AppConfig.authTokenKey);

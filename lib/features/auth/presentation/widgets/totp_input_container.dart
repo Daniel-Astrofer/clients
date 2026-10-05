@@ -173,7 +173,10 @@ class _TotpInputContainerState extends State<TotpInputContainer>
                               )
                             : isFilled
                                 ? accent.withValues(alpha: 0.28)
-                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10);
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.10);
                     final glowColor = widget.hasError
                         ? accent.withValues(alpha: 0.18)
                         : accent.withValues(
@@ -190,9 +193,12 @@ class _TotpInputContainerState extends State<TotpInputContainer>
                           curve: KeroseneMotion.standard,
                           height: 72,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(
-                              alpha: isFilled || isActive ? 0.065 : 0.035,
-                            ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(
+                                  alpha: isFilled || isActive ? 0.065 : 0.035,
+                                ),
                             borderRadius: BorderRadius.circular(0),
                             border: Border.all(
                               color: borderColor,
@@ -235,7 +241,10 @@ class _TotpInputContainerState extends State<TotpInputContainer>
                                   fontWeight: FontWeight.w800,
                                   color: isFilled
                                       ? Theme.of(context).colorScheme.onSurface
-                                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.16),
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.16),
                                 ),
                                 child: Text(isFilled ? text[index] : '•'),
                               ),

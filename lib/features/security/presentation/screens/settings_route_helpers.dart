@@ -31,7 +31,8 @@ PageRouteBuilder<void> _settingsRoute({
     transitionDuration: KeroseneMotion.medium,
     reverseTransitionDuration: KeroseneMotion.short,
     pageBuilder: pageBuilder,
-    transitionsBuilder: (_, animation, __, child) {
+    transitionsBuilder: (context, animation, __, child) {
+      if (KeroseneMotion.reduceMotion(context)) return child;
       final curved = CurvedAnimation(
         parent: animation,
         curve: KeroseneMotion.emphasized,

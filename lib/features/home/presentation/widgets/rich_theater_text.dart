@@ -27,6 +27,10 @@ TextStyle _theaterStyle(TextStyle base) {
 
 /// Hierarchical theater copy: H1 / H2 / body / bullets / caption + bold spans.
 ///
+/// Decorative emoji are intentionally omitted from the visual tree. They vary
+/// wildly between Android devices and made the banking surface feel playful
+/// instead of precise; semantic text remains unchanged.
+///
 /// Emojis are decorative leading glyphs; [semanticsLabel] concatenates plain text.
 class RichTheaterText extends StatelessWidget {
   final String title;
@@ -76,13 +80,15 @@ class RichTheaterText extends StatelessWidget {
     ).copyWith(height: 1.25));
     final h2Style = _theaterStyle(
       theme.textTheme.titleMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
             fontSize: h2Size,
             fontWeight: FontWeight.w700,
             height: 1.3,
           ) ??
           TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
             fontSize: h2Size,
             fontWeight: FontWeight.w700,
             height: 1.3,
@@ -90,13 +96,15 @@ class RichTheaterText extends StatelessWidget {
     );
     final bodyStyle = _theaterStyle(
       theme.textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
             fontSize: bodySize,
             fontWeight: FontWeight.w300,
             height: 1.45,
           ) ??
           TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
             fontSize: bodySize,
             fontWeight: FontWeight.w300,
             height: 1.45,
@@ -108,13 +116,15 @@ class RichTheaterText extends StatelessWidget {
     );
     final captionStyle = _theaterStyle(
       theme.textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
             fontSize: captionSize,
             fontWeight: FontWeight.w300,
             height: 1.35,
           ) ??
           TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
             fontSize: captionSize,
             fontWeight: FontWeight.w300,
             height: 1.35,
@@ -141,8 +151,7 @@ class RichTheaterText extends StatelessWidget {
         // Title already painted as H1.
         continue;
       }
-      if (!block.hasVisibleText &&
-          (block.emoji == null || block.emoji!.isEmpty)) {
+      if (!block.hasVisibleText) {
         continue;
       }
 
@@ -168,11 +177,7 @@ class RichTheaterText extends StatelessWidget {
 
       children.add(SizedBox(height: topGap));
       children.add(
-        _BlockRow(
-          block: block,
-          baseStyle: style,
-          emojiSize: block.role == TheaterBlockRole.h2 ? h2Size : bodySize + 1,
-        ),
+        _BlockRow(block: block, baseStyle: style),
       );
     }
 
@@ -208,43 +213,15 @@ class RichTheaterText extends StatelessWidget {
 class _BlockRow extends StatelessWidget {
   final TheaterTextBlock block;
   final TextStyle baseStyle;
-  final double emojiSize;
 
   const _BlockRow({
     required this.block,
     required this.baseStyle,
-    required this.emojiSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    final emoji = (block.emoji ?? '').trim();
-    final rich = _buildRichText(block.text, block.spans, baseStyle);
-
-    if (emoji.isEmpty) {
-      return rich;
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ExcludeSemantics(
-          child: SizedBox(
-            width: homeSize(emojiSize + 6),
-            child: Text(
-              emoji,
-              style: TextStyle(
-                fontSize: emojiSize,
-                height: 1.2,
-                fontFamilyFallback: kTheaterEmojiFontFallback,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(width: homeSize(6)),
-        Expanded(child: rich),
-      ],
-    );
+    return _buildRichText(block.text, block.spans, baseStyle);
   }
 
   Widget _buildRichText(

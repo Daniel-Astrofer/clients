@@ -43,58 +43,65 @@ class ReceiveFlowTitleBar extends StatelessWidget {
           bodyScale,
     );
 
-    final horizontalPad = alignLeft || compact
-        ? ReceiveFlowLayout.pageHorizontal - 4
-        : 8.0;
+    final horizontalPad =
+        alignLeft || compact ? ReceiveFlowLayout.pageHorizontal - 4 : 8.0;
     final backWidth =
         onBack != null ? 48.0 : (alignLeft || compact ? 0.0 : 48.0);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(horizontalPad, 0, ReceiveFlowLayout.pageHorizontal, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (onBack != null)
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  onPressed: onBack,
-                  icon: Icon(KeroseneIcons.back, size: 22),
-                  style: IconButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    minimumSize: const Size.square(48),
-                    padding: EdgeInsets.zero,
+    // Some previews embed this chrome directly as a widget, without the
+    // bounded shell supplied by the app scaffold. Keep the title finite in
+    // that context so Expanded cannot negotiate an effectively infinite Row.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+            horizontalPad, 0, ReceiveFlowLayout.pageHorizontal, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (onBack != null)
+                  IconButton(
+                    tooltip:
+                        MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: onBack,
+                    icon: Icon(KeroseneIcons.back, size: 22),
+                    style: IconButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      minimumSize: const Size.square(48),
+                      padding: EdgeInsets.zero,
+                    ),
+                  )
+                else if (!alignLeft && !compact)
+                  const SizedBox(width: 48, height: 48),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: ReceiveFlowLayout.titleTextTopPadding,
+                      left: backWidth == 0 ? 0 : 0,
+                    ),
+                    child: Text(
+                      title,
+                      style: resolvedTitle,
+                    ),
                   ),
-                )
-              else if (!alignLeft && !compact)
-                const SizedBox(width: 48, height: 48),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: ReceiveFlowLayout.titleTextTopPadding,
-                    left: backWidth == 0 ? 0 : 0,
-                  ),
-                  child: Text(
-                    title,
-                    style: resolvedTitle,
-                  ),
+                ),
+              ],
+            ),
+            if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: EdgeInsets.only(left: onBack != null ? 56 : 0),
+                child: Text(
+                  subtitle!,
+                  style: resolvedSubtitle,
                 ),
               ),
             ],
-          ),
-          if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Padding(
-              padding: EdgeInsets.only(left: onBack != null ? 56 : 0),
-              child: Text(
-                subtitle!,
-                style: resolvedSubtitle,
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -126,15 +133,14 @@ class ReceiveFlowScreenShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final viewportH = constraints.maxHeight.isFinite &&
-                constraints.maxHeight > 0
-            ? constraints.maxHeight
-            : MediaQuery.sizeOf(context).height;
+        final viewportH =
+            constraints.maxHeight.isFinite && constraints.maxHeight > 0
+                ? constraints.maxHeight
+                : MediaQuery.sizeOf(context).height;
         final statusPad =
             embeddedInSheet ? 0.0 : ReceiveFlowLayout.statusTopPad(context);
-        final lead = embeddedInSheet
-            ? 12.0
-            : ReceiveFlowLayout.titleTopLead(viewportH);
+        final lead =
+            embeddedInSheet ? 12.0 : ReceiveFlowLayout.titleTopLead(viewportH);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

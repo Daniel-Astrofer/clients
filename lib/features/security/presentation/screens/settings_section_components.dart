@@ -50,7 +50,8 @@ class SettingsSection extends StatelessWidget {
                       child: Divider(
                         height: 1,
                         thickness: 1,
-                        color: KeroseneBrandTokens.border.withValues(alpha: 0.20),
+                        color:
+                            KeroseneBrandTokens.border.withValues(alpha: 0.20),
                       ),
                     ),
                 ],

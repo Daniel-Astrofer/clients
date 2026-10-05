@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 /// Entidade Deposit — registro de depósito Bitcoin
 class Deposit extends Equatable {

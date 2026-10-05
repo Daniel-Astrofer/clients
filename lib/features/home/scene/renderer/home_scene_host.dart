@@ -1,4 +1,7 @@
+import 'package:kerosene/core/constants/localized_copy.dart';
+import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,8 +48,10 @@ class HomeSceneHost extends ConsumerStatefulWidget {
 
 class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     with TickerProviderStateMixin {
-  static const _openMs = 720;
-  static const _swapMs = 520;
+  // Keep the home chrome responsive. Long theatrical transitions made the
+  // balance feel delayed on mid-range Android devices.
+  static const _openMs = 360;
+  static const _swapMs = 240;
 
   Timer? _lifecycleTimer;
   String _sessionId = '';
@@ -79,11 +84,11 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     super.initState();
     _openCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: _openMs),
+      duration: KeroseneMotion.fromMilliseconds(_openMs),
     );
     _swapCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: _swapMs),
+      duration: KeroseneMotion.fromMilliseconds(_swapMs),
     )..value = 1;
 
     _openT = CurvedAnimation(
@@ -249,10 +254,13 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       return;
     }
     final showMs = scene.lifecycle.showDurationMs.clamp(4000, 60000);
-    _lifecycleTimer = Timer(Duration(milliseconds: showMs), () {
-      if (!mounted) return;
-      _complete(scene, stage);
-    });
+    _lifecycleTimer = Timer(
+      KeroseneMotion.fromMilliseconds(showMs.toInt()),
+      () {
+        if (!mounted) return;
+        _complete(scene, stage);
+      },
+    );
   }
 
   void _onSceneChanged(HomeScene scene) {
@@ -273,7 +281,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
       _sessionId = id;
       _lifecycleTimer?.cancel();
       _applyBodyShift(open: false);
-      final snapClose = reduce || !TickerMode.of(context);
+      final snapClose = reduce || !TickerMode.valuesOf(context).enabled;
       if (snapClose) {
         _openCtrl.value = 0;
         setState(() {
@@ -305,7 +313,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
     // If an ancestor muted tickers (scroll-busy TickerMode, etc.), forward()
     // never advances — snap open so copy is visible immediately.
-    final tickersEnabled = TickerMode.of(context);
+    final tickersEnabled = TickerMode.valuesOf(context).enabled;
     final snapOpen = reduce || !tickersEnabled;
 
     if (isNewPiece && wasOpen && _displayScene != null) {
@@ -381,10 +389,9 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     _lifecycleTimer?.cancel();
 
     if (scene.lifecycle.restoreOnComplete) {
-      ref.read(homeStagePlaybackProvider.notifier).close(
-            durationMs: _openMs,
-            curve: HomeStageCurveToken.easeOutCubic,
-          );
+      ref
+          .read(homeStagePlaybackProvider.notifier)
+          .close(durationMs: _openMs, curve: HomeStageCurveToken.easeOutCubic);
     }
 
     if (stage.isActive &&
@@ -398,7 +405,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
     if (!mounted) return;
     final reduce = KeroseneMotion.reduceMotion(context);
-    final snapClose = reduce || !TickerMode.of(context);
+    final snapClose = reduce || !TickerMode.valuesOf(context).enabled;
     if (snapClose) {
       _openCtrl.value = 0;
       setState(() {
@@ -417,14 +424,14 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     final target = action.trim();
     if (target.isEmpty) return;
     if (target.startsWith('/')) {
-      Navigator.of(context).pushNamed(target);
+      AppNavigation.push(context, target);
       return;
     }
     switch (target.toLowerCase()) {
       case 'open_lightning' || 'lightning':
-        Navigator.of(context).pushNamed('/receive');
+        AppNavigation.push(context, '/receive');
       case 'open_wallet' || 'wallet':
-        Navigator.of(context).pushNamed('/wallets');
+        AppNavigation.push(context, '/accounts');
       case 'open_settings' || 'settings':
         AppPrimaryNavigationBar.navigateTo(
           context,
@@ -432,7 +439,7 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
         );
       default:
         if (target.contains('_')) {
-          Navigator.of(context).pushNamed('/$target');
+          AppNavigation.push(context, '/$target');
         }
     }
   }
@@ -446,8 +453,10 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
             '${s.id}|${s.layout.name}|${s.hasForegroundContent}|${s.media.type.name}',
       ),
     );
-    final resting =
-        ref.watch(homeSurfaceProvider.select((s) => s.restingHeader));
+    final resting = ref.watch(
+      homeSurfaceProvider.select((s) => s.restingHeader),
+    );
+    final playback = ref.watch(homeStagePlaybackProvider);
     final screenH = MediaQuery.sizeOf(context).height;
     final topInset = MediaQuery.paddingOf(context).top;
 
@@ -463,11 +472,20 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
     }
 
     final notifKey = widget.notificationButtonKey ?? _localNotifKey;
-    final chrome = _HeaderChrome(notificationButtonKey: notifKey);
+    final actionCount = <bool>[
+      resting.balanceVisibility,
+      resting.notifications,
+      resting.settings,
+    ].where((visible) => visible).length;
+    final chrome = _HeaderChrome(
+      notificationButtonKey: notifKey,
+      showBalance: resting.balanceVisibility,
+      showNotifications: resting.notifications,
+      showSettings: resting.settings,
+    );
     // Keep copy under chrome, not mid-viewport — long pad buried receive text
     // into the balance/glow band on short phones.
-    final midTopPad =
-        (screenH * 0.04 - topInset * 0.1).clamp(10.0, 28.0);
+    final midTopPad = (screenH * 0.04 - topInset * 0.1).clamp(10.0, 28.0);
 
     final greeting = _RestingGreetingText(
       userName: widget.userName,
@@ -484,31 +502,29 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
         !_openCtrl.isAnimating &&
         !_swapCtrl.isAnimating) {
       final body = _cachedBody(current, interactive: true, liveContent: true);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Expanded(child: SizedBox.shrink()),
-              chrome,
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: midTopPad),
-            child: body,
-          ),
-        ],
+      return _HeaderSceneLayout(
+        body: body,
+        chrome: chrome,
+        actionCount: actionCount,
+        placement: _effectiveActionsPlacement(
+          playback.actionsPlacement,
+          active: true,
+        ),
+        sceneTopPadding: midTopPad,
       );
     }
 
     // Settled closed.
     if (current == null && _openCtrl.value <= 0.001 && !_openCtrl.isAnimating) {
-      return Row(
-        children: [
-          Expanded(child: greeting),
-          chrome,
-        ],
+      return _HeaderSceneLayout(
+        leading: greeting,
+        chrome: chrome,
+        actionCount: actionCount,
+        placement: _effectiveActionsPlacement(
+          resting.actionsPlacement,
+          active: false,
+        ),
+        sceneTopPadding: midTopPad,
       );
     }
 
@@ -533,33 +549,19 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
         final currentBody = current != null
             ? _bodyCache['${_sceneCacheKey(current)}|live=true|i=true'] ??
-                _cachedBody(current, interactive: true, liveContent: true)
+                  _cachedBody(current, interactive: true, liveContent: true)
             : null;
         final previousBody = previous != null
             ? _bodyCache['${_sceneCacheKey(previous)}|live=false|i=false'] ??
-                _cachedBody(previous, interactive: false, liveContent: false)
+                  _cachedBody(previous, interactive: false, liveContent: false)
             : null;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Opacity(
-                    opacity: (1.0 - open).clamp(0.0, 1.0),
-                    child: IgnorePointer(
-                      ignoring: open > 0.35,
-                      child: greeting,
-                    ),
-                  ),
-                ),
-                chromeChild!,
-              ],
-            ),
-            if (showShell && currentBody != null)
-              ClipRect(
+        final animatedGreeting = Opacity(
+          opacity: (1.0 - open).clamp(0.0, 1.0),
+          child: IgnorePointer(ignoring: open > 0.35, child: greeting),
+        );
+        final animatedBody = showShell && currentBody != null
+            ? ClipRect(
                 child: Align(
                   alignment: Alignment.topCenter,
                   heightFactor: open.clamp(0.0, 1.0),
@@ -567,22 +569,170 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
                     opacity: open.clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(0, (1.0 - open) * -18),
-                      child: Padding(
-                        padding: EdgeInsets.only(top: midTopPad * open),
-                        child: _CrossfadeCached(
-                          previous: previousBody,
-                          current: currentBody,
-                          progress: swap,
-                        ),
+                      child: _CrossfadeCached(
+                        previous: previousBody,
+                        current: currentBody,
+                        progress: swap,
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+              )
+            : null;
+
+        return _HeaderSceneLayout(
+          leading: animatedGreeting,
+          body: animatedBody,
+          chrome: chromeChild!,
+          actionCount: actionCount,
+          placement: _effectiveActionsPlacement(
+            showShell ? playback.actionsPlacement : resting.actionsPlacement,
+            active: showShell,
+          ),
+          sceneTopPadding: midTopPad * open,
         );
       },
     );
+  }
+}
+
+HomeStageActionsPlacement _effectiveActionsPlacement(
+  HomeStageActionsPlacement placement, {
+  required bool active,
+}) {
+  if (placement != HomeStageActionsPlacement.unknown) return placement;
+  return active
+      ? HomeStageActionsPlacement.belowStage
+      : HomeStageActionsPlacement.trailing;
+}
+
+class _HeaderSceneLayout extends StatelessWidget {
+  final Widget? leading;
+  final Widget? body;
+  final Widget chrome;
+  final int actionCount;
+  final HomeStageActionsPlacement placement;
+  final double sceneTopPadding;
+
+  const _HeaderSceneLayout({
+    this.leading,
+    this.body,
+    required this.chrome,
+    required this.actionCount,
+    required this.placement,
+    required this.sceneTopPadding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasActions =
+        actionCount > 0 && placement != HomeStageActionsPlacement.hidden;
+    final active = body != null;
+
+    if (!active) {
+      final idleLeading = leading ?? const SizedBox.shrink();
+      if (!hasActions) return idleLeading;
+      return switch (placement) {
+        HomeStageActionsPlacement.belowStage => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            idleLeading,
+            SizedBox(height: homeSize(12)),
+            Align(alignment: Alignment.centerRight, child: chrome),
+          ],
+        ),
+        HomeStageActionsPlacement.overlayEnd => Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                right: homeSize(actionCount * 48 + (actionCount - 1) * 8 + 8),
+              ),
+              child: idleLeading,
+            ),
+            chrome,
+          ],
+        ),
+        _ => Row(
+          children: [
+            Expanded(child: idleLeading),
+            chrome,
+          ],
+        ),
+      };
+    }
+
+    final sceneBody = body!;
+    final activeLeading = leading;
+    final leadingRow = activeLeading == null
+        ? null
+        : Row(children: [Expanded(child: activeLeading)]);
+
+    return switch (placement) {
+      HomeStageActionsPlacement.trailing => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(child: activeLeading ?? const SizedBox.shrink()),
+              if (hasActions) chrome,
+            ],
+          ),
+          Padding(
+            padding: EdgeInsets.only(top: sceneTopPadding),
+            child: sceneBody,
+          ),
+        ],
+      ),
+      HomeStageActionsPlacement.belowStage => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leadingRow != null) leadingRow,
+          Padding(
+            padding: EdgeInsets.only(top: sceneTopPadding),
+            child: sceneBody,
+          ),
+          if (hasActions) ...[
+            SizedBox(height: homeSize(12)),
+            Align(alignment: Alignment.centerRight, child: chrome),
+          ],
+        ],
+      ),
+      HomeStageActionsPlacement.overlayEnd => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leadingRow != null) leadingRow,
+          Stack(
+            alignment: Alignment.topRight,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  top: math.max(sceneTopPadding, homeSize(56)),
+                ),
+                child: sceneBody,
+              ),
+              if (hasActions) chrome,
+            ],
+          ),
+        ],
+      ),
+      HomeStageActionsPlacement.hidden ||
+      HomeStageActionsPlacement.unknown => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leadingRow != null) leadingRow,
+          Padding(
+            padding: EdgeInsets.only(top: sceneTopPadding),
+            child: sceneBody,
+          ),
+        ],
+      ),
+    };
   }
 }
 
@@ -697,8 +847,16 @@ class _TheaterBody extends ConsumerWidget {
 
 class _HeaderChrome extends ConsumerWidget {
   final GlobalKey notificationButtonKey;
+  final bool showBalance;
+  final bool showNotifications;
+  final bool showSettings;
 
-  const _HeaderChrome({required this.notificationButtonKey});
+  const _HeaderChrome({
+    required this.notificationButtonKey,
+    required this.showBalance,
+    required this.showNotifications,
+    required this.showSettings,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -706,10 +864,22 @@ class _HeaderChrome extends ConsumerWidget {
     final notificationCount = ref.watch(sessionNotificationUnreadCountProvider);
     final gap = homeSize(8);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+    final actions = <Widget>[
+      if (showBalance)
         HomeHeaderIconButton(
+          semanticLabel:
+              (balanceSettings.isHidden
+                      ? const LocalizedCopy(
+                          en: 'Show balance',
+                          pt: 'Mostrar saldo',
+                          es: 'Mostrar saldo',
+                        )
+                      : const LocalizedCopy(
+                          en: 'Hide balance',
+                          pt: 'Ocultar saldo',
+                          es: 'Ocultar saldo',
+                        ))
+                  .resolve(context),
           icon: balanceSettings.isHidden
               ? KeroseneIcons.eyeOff
               : KeroseneIcons.eye,
@@ -718,9 +888,14 @@ class _HeaderChrome extends ConsumerWidget {
             ref.read(balanceSettingsProvider.notifier).toggleVisibility();
           },
         ),
-        SizedBox(width: gap),
+      if (showNotifications)
         HomeHeaderIconButton(
           key: notificationButtonKey,
+          semanticLabel: const LocalizedCopy(
+            en: 'Notifications',
+            pt: 'Notificações',
+            es: 'Notificaciones',
+          ).resolve(context),
           icon: KeroseneIcons.notifications,
           hasBadge: notificationCount > 0,
           onTap: () async {
@@ -731,14 +906,28 @@ class _HeaderChrome extends ConsumerWidget {
             );
           },
         ),
-        SizedBox(width: gap),
+      if (showSettings)
         HomeHeaderIconButton(
           icon: KeroseneIcons.settings,
+          semanticLabel: const LocalizedCopy(
+            en: 'Settings',
+            pt: 'Ajustes',
+            es: 'Ajustes',
+          ).resolve(context),
           onTap: () {
             HapticFeedback.selectionClick();
             context.push('/settings');
           },
         ),
+    ];
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < actions.length; index++) ...[
+          if (index > 0) SizedBox(width: gap),
+          actions[index],
+        ],
       ],
     );
   }
@@ -748,10 +937,7 @@ class _RestingGreetingText extends StatelessWidget {
   final String userName;
   final HomeRestingHeader resting;
 
-  const _RestingGreetingText({
-    required this.userName,
-    required this.resting,
-  });
+  const _RestingGreetingText({required this.userName, required this.resting});
 
   @override
   Widget build(BuildContext context) {
@@ -760,30 +946,35 @@ class _RestingGreetingText extends StatelessWidget {
     final hour = DateTime.now().hour;
     final text = !resting.includeName
         ? (hour < 12
-            ? context.tr.homeGreetingMorning('').trim()
-            : hour < 18
-                ? context.tr.homeGreetingAfternoon('').trim()
-                : context.tr.homeGreetingEvening('').trim())
+              ? context.tr.homeGreetingMorning('').trim()
+              : hour < 18
+              ? context.tr.homeGreetingAfternoon('').trim()
+              : context.tr.homeGreetingEvening('').trim())
         : hour < 12
-            ? context.tr.homeGreetingMorning(userName)
-            : hour < 18
-                ? context.tr.homeGreetingAfternoon(userName)
-                : context.tr.homeGreetingEvening(userName);
+        ? context.tr.homeGreetingMorning(userName)
+        : hour < 18
+        ? context.tr.homeGreetingAfternoon(userName)
+        : context.tr.homeGreetingEvening(userName);
 
     final fontSize = responsive.compactFontSize(
-      tiny: homeFontSize(22),
-      compact: homeFontSize(24),
-      regular: homeFontSize(25),
+      tiny: homeFontSize(18),
+      compact: homeFontSize(20),
+      regular: homeFontSize(22),
     );
 
     return Text(
       text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: HomeTypography.heroTitle(
-        color: theme.colorScheme.onSurface,
-        fontSize: fontSize,
-      ),
+      style:
+          HomeTypography.heroTitle(
+            color: theme.colorScheme.onSurface,
+            fontSize: fontSize,
+          ).copyWith(
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.2,
+            height: 1.15,
+          ),
     );
   }
 }

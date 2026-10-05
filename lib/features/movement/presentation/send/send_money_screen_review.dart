@@ -1,17 +1,19 @@
-import 'package:flutter/services.dart';
+// architecture-allow-large-file: review and authorization composition preserve
+// the deferred route and external confirmation callback contracts.
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 import 'package:kerosene/features/movement/presentation/send/send_amount_step.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/presentation/send/send_money_formatters.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_review_args.dart';
-import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/components/generic/kerosene_education_dialog.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
 import 'send_money_screen_dependencies.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 class SendPaymentReviewRowData {
   final String label;
@@ -161,7 +163,7 @@ class InternalTransferReviewScreenState<T>
   }
 
   Future<void> _confirm() async {
-    if (!_canAuthorize) return;
+    if (!_canAuthorize || _isSubmitting) return;
     HapticFeedback.mediumImpact();
     setState(() {
       _isSubmitting = true;
@@ -169,22 +171,23 @@ class InternalTransferReviewScreenState<T>
     });
     _startSubmittingPhases();
 
-    // Short breath before auth gate — keep under a frame budget, not a pause.
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    if (!mounted) return;
-
-    final result = await widget.onConfirm(context);
-    if (!mounted) return;
-
-    if (result != null) {
+    try {
+      final result = await widget.onConfirm(context);
+      if (!mounted) return;
+      if (result != null && result != false) {
+        _stopSubmittingPhases();
+        _finishWithResult(result);
+        return;
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr.tryAgain)));
+    } finally {
       _stopSubmittingPhases();
-      _finishWithResult(result);
-      return;
+      if (mounted) setState(() => _isSubmitting = false);
     }
-
-
-    _stopSubmittingPhases();
-    setState(() => _isSubmitting = false);
   }
 
   void _dismiss() {
@@ -258,7 +261,7 @@ class InternalTransferReviewScreenState<T>
                                           widget.onFeeTierChanged != null) ...[
                                         const SizedBox(height: 20),
                                         Text(
-                                          'Velocidade do envio',
+                                          context.tr.sendSpeedTitle,
                                           textAlign: TextAlign.center,
                                           style: AppTypography.inter(
                                             color: _cMuted,
@@ -268,7 +271,7 @@ class InternalTransferReviewScreenState<T>
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'O valor do pagamento está fixo. Você só pode ajustar a velocidade e as taxas.',
+                                          context.tr.sendFixedAmountNotice,
                                           textAlign: TextAlign.center,
                                           style: AppTypography.inter(
                                             color: _cMuted.withValues(
@@ -291,13 +294,15 @@ class InternalTransferReviewScreenState<T>
                                         _FirstSendAckBlock(
                                           preview:
                                               widget.firstSendAddressPreview ??
-                                                  '',
+                                              '',
                                           acknowledged: _firstSendAcknowledged,
                                           enabled: !_isSubmitting,
                                           onChanged: (value) {
                                             HapticFeedback.selectionClick();
-                                            setState(() =>
-                                                _firstSendAcknowledged = value);
+                                            setState(
+                                              () => _firstSendAcknowledged =
+                                                  value,
+                                            );
                                           },
                                         ),
                                       ],
@@ -456,11 +461,7 @@ class _ReviewBody extends StatelessWidget {
   final SendPaymentReviewCardData card;
   final VoidCallback? onBack;
 
-  const _ReviewBody({
-    required this.title,
-    required this.card,
-    this.onBack,
-  });
+  const _ReviewBody({required this.title, required this.card, this.onBack});
 
   static const double _headerGap = 45.5; // 35 * 1.3
   static const double _sectionGap = 26; // 20 * 1.3
@@ -475,10 +476,11 @@ class _ReviewBody extends StatelessWidget {
     final icon = card.isLightning
         ? KeroseneIcons.bolt
         : card.isOnChain
-            ? KeroseneIcons.send
-            : KeroseneIcons.user;
+        ? KeroseneIcons.send
+        : KeroseneIcons.user;
 
-    final showAddress = card.recipientAddress.trim().isNotEmpty &&
+    final showAddress =
+        card.recipientAddress.trim().isNotEmpty &&
         card.recipientAddress.trim() != card.recipientName.trim();
 
     return Column(
@@ -658,10 +660,7 @@ class _ReviewLine extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ReviewLine({
-    required this.label,
-    required this.value,
-  });
+  const _ReviewLine({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -984,15 +983,16 @@ class _ReceiptBody extends StatelessWidget {
                       child: Text(
                         row.value,
                         textAlign: TextAlign.right,
-                        style: AppTypography.financial(
-                          color: Colors.black87,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ).copyWith(
-                          fontFeatures: row.numeric
-                              ? const [FontFeature.tabularFigures()]
-                              : null,
-                        ),
+                        style:
+                            AppTypography.financial(
+                              color: Colors.black87,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ).copyWith(
+                              fontFeatures: row.numeric
+                                  ? const [FontFeature.tabularFigures()]
+                                  : null,
+                            ),
                       ),
                     ),
                   ],
@@ -1010,7 +1010,8 @@ class _SkeuomorphicReceiptPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFF9F6F0) // Paper color
+      ..color = AppColors
+          .hexFFF9F6F0 // Paper color
       ..style = PaintingStyle.fill;
 
     final shadowPaint = Paint()
@@ -1105,9 +1106,7 @@ class _AuthorizeButton extends StatelessWidget {
           child: Ink(
             decoration: BoxDecoration(
               color: ready ? _cText : _cSurfaceHigh.withValues(alpha: 0.64),
-              border: Border.all(
-                color: ready ? _cText : _cBorder,
-              ),
+              border: Border.all(color: ready ? _cText : _cBorder),
               borderRadius: BorderRadius.circular(999),
             ),
             child: ClipRRect(
@@ -1115,23 +1114,12 @@ class _AuthorizeButton extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Green progress wipe on authorize (original motion).
-                  TweenAnimationBuilder<double>(
-                    tween: Tween<double>(end: isSubmitting ? 1 : 0),
-                    duration: const Duration(milliseconds: 920),
-                    curve: Curves.easeInOutCubic,
-                    builder: (context, value, child) {
-                      return FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: value,
-                        child: child,
-                      );
-                    },
-                    child: ColoredBox(color: _cSuccess),
-                  ),
                   Center(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
+                      duration: KeroseneMotion.duration(
+                        context,
+                        KeroseneMotion.short,
+                      ),
                       child: Row(
                         key: ValueKey<String>(
                           isSubmitting ? 's:$submittingLabel' : 'idle',
@@ -1187,11 +1175,7 @@ class _ReceiptSuccessMark extends StatelessWidget {
           color: _cSuccess.withValues(alpha: 0.16),
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          KeroseneIcons.check,
-          color: _cSuccess,
-          size: 34,
-        ),
+        child: Icon(KeroseneIcons.check, color: _cSuccess, size: 34),
       ),
     );
   }
@@ -1201,10 +1185,7 @@ class _ReceiptPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _ReceiptPrimaryButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _ReceiptPrimaryButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -1234,10 +1215,7 @@ class _ReceiptShareButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _ReceiptShareButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _ReceiptShareButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -1268,8 +1246,9 @@ String receiptAmountLabelFromStatus({
   required TxStatus status,
   required double fallbackAmountBtc,
 }) {
-  final amount =
-      status.amountReceived > 0 ? status.amountReceived : fallbackAmountBtc;
+  final amount = status.amountReceived > 0
+      ? status.amountReceived
+      : fallbackAmountBtc;
   return formatBtcValue(amount);
 }
 
@@ -1283,47 +1262,47 @@ String _formatReceiptDate(BuildContext context, DateTime value) {
   final locale = Localizations.localeOf(context).languageCode;
   final months = switch (locale) {
     'en' => const [
-        'JAN',
-        'FEB',
-        'MAR',
-        'APR',
-        'MAY',
-        'JUN',
-        'JUL',
-        'AUG',
-        'SEP',
-        'OCT',
-        'NOV',
-        'DEC',
-      ],
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ],
     'es' => const [
-        'ENE',
-        'FEB',
-        'MAR',
-        'ABR',
-        'MAY',
-        'JUN',
-        'JUL',
-        'AGO',
-        'SEP',
-        'OCT',
-        'NOV',
-        'DIC',
-      ],
+      'ENE',
+      'FEB',
+      'MAR',
+      'ABR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AGO',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DIC',
+    ],
     _ => const [
-        'JAN',
-        'FEV',
-        'MAR',
-        'ABR',
-        'MAI',
-        'JUN',
-        'JUL',
-        'AGO',
-        'SET',
-        'OUT',
-        'NOV',
-        'DEZ',
-      ],
+      'JAN',
+      'FEV',
+      'MAR',
+      'ABR',
+      'MAI',
+      'JUN',
+      'JUL',
+      'AGO',
+      'SET',
+      'OUT',
+      'NOV',
+      'DEZ',
+    ],
   };
   final day = value.day.toString().padLeft(2, '0');
   final month = months[value.month - 1];
@@ -1335,7 +1314,8 @@ String _formatReceiptDate(BuildContext context, DateTime value) {
 /// Review palette — redirects to [SendFlowTheme] so send and receive share
 /// one color language.  File-scope getters are kept for minimal diff.
 SendFlowTheme _reviewTokens() => SendFlowTheme.forVariant(
-      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+  ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+);
 
 Color get _cBackground => _reviewTokens().background;
 Color get _cSurface => _reviewTokens().surface;

@@ -47,7 +47,10 @@ class SummaryPill extends StatelessWidget {
           Text(
             label,
             style: AppTypography.caption.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.50),
               letterSpacing: 1.0,
             ),
           ),
@@ -89,7 +92,8 @@ class SecurityMetricCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: Column(
@@ -98,7 +102,10 @@ class SecurityMetricCard extends StatelessWidget {
           Text(
             label,
             style: AppTypography.caption.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.50),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.50),
               letterSpacing: 1.0,
             ),
           ),
@@ -113,7 +120,10 @@ class SecurityMetricCard extends StatelessWidget {
           Text(
             detail,
             style: AppTypography.bodySmall.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.70),
             ),
           ),
         ],
@@ -142,7 +152,10 @@ class KfeReserveDetailRow extends StatelessWidget {
           child: Text(
             label,
             style: AppTypography.bodySmall.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.70),
             ),
           ),
         ),
@@ -232,7 +245,10 @@ class SecurityStatusCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: AppTypography.bodySmall.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.70),
                       ),
                     ),
                   ],
@@ -260,8 +276,10 @@ class SecurityStatusCard extends StatelessWidget {
               ),
             ],
           ),
-            SizedBox(height: 18),
-            Divider(color: Theme.of(context).colorScheme.surfaceContainerHighest, height: 1),
+          SizedBox(height: 18),
+          Divider(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              height: 1),
           const SizedBox(height: 16),
           for (final row in rows) ...[
             Row(
@@ -271,7 +289,10 @@ class SecurityStatusCard extends StatelessWidget {
                   child: Text(
                     row.label,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.70),
                     ),
                   ),
                 ),

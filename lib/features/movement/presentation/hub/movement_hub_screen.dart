@@ -1,3 +1,5 @@
+// architecture-allow-large-file: movement rail selection and navigation keep
+// their existing provider and platform-channel contracts together.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -319,7 +321,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
     );
 
     // One shell for amount-first and legacy — status pad + lead + centered body.
-    return ColoredBox(
+    return Material(
       color: _receiveBackground,
       child: AnimatedSwitcher(
         duration: KeroseneMotion.medium,
@@ -683,8 +685,7 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
       body: ReceiveFlowScreenShell(
         onBack: () => Navigator.of(context).maybePop(),
         title: context.tr.receiveGatewayProvidersTitle,
-        subtitle:
-            'Third-party links only. Kerosene does not process fiat '
+        subtitle: 'Third-party links only. Kerosene does not process fiat '
             'or custody onramp funds. Testnet beta — use with care.',
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -722,7 +723,8 @@ class ReceiveGatewayProvidersScreen extends ConsumerWidget {
               return _GatewayProviderList(
                 sections: providers,
                 urls: urls,
-                onSelect: (provider) => _selectProvider(context, provider, urls),
+                onSelect: (provider) =>
+                    _selectProvider(context, provider, urls),
               );
             },
           ),

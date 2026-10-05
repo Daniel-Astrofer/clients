@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -39,18 +41,42 @@ class KeroseneBalanceDisplay extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(walletName!, style: AppTypography.inter(fontSize: 13, color: palette.textSecondary, fontWeight: AppTypography.w510)),
+                Text(
+                  walletName!,
+                  style: AppTypography.inter(
+                    fontSize: 13,
+                    color: palette.textSecondary,
+                    fontWeight: AppTypography.w510,
+                  ),
+                ),
                 if (custodyLabel != null) ...[
                   SizedBox(width: AppSpacing.sm),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), border: Border.all(color: AppColors.ashBorder, width: 1)),
-                    child: Text(custodyLabel!, style: AppTypography.inter(fontSize: 11, color: palette.textDisabled, fontWeight: AppTypography.w510)),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.ashBorder, width: 1),
+                    ),
+                    child: Text(
+                      custodyLabel!,
+                      style: AppTypography.inter(
+                        fontSize: 11,
+                        color: palette.textDisabled,
+                        fontWeight: AppTypography.w510,
+                      ),
+                    ),
                   ),
                 ],
                 if (onWalletTap != null) ...[
                   SizedBox(width: AppSpacing.xs),
-                  Icon(Icons.arrow_drop_down, size: 16, color: palette.textDisabled),
+                  Icon(
+                    KeroseneIcons.arrowDropDown,
+                    size: 16,
+                    color: palette.textDisabled,
+                  ),
                 ],
               ],
             ),
@@ -59,21 +85,48 @@ class KeroseneBalanceDisplay extends StatelessWidget {
         Semantics(
           label: isHidden ? 'Saldo oculto' : 'Saldo: $currency $amount',
           child: isHidden
-              ? Text('••••••', style: AppTypography.playfairDisplay(fontSize: 48, color: palette.textPrimary, fontWeight: AppTypography.w590))
+              ? Text(
+                  '••••••',
+                  style: AppTypography.playfairDisplay(
+                    fontSize: 48,
+                    color: palette.textPrimary,
+                    fontWeight: AppTypography.w590,
+                  ),
+                )
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text(currency, style: AppTypography.playfairDisplay(fontSize: 24, color: palette.textSecondary, fontWeight: AppTypography.w510)),
+                    Text(
+                      currency,
+                      style: AppTypography.playfairDisplay(
+                        fontSize: 24,
+                        color: palette.textSecondary,
+                        fontWeight: AppTypography.w510,
+                      ),
+                    ),
                     SizedBox(width: AppSpacing.xs),
-                    Text(amount, style: AppTypography.playfairDisplay(fontSize: 48, color: palette.textPrimary, fontWeight: AppTypography.w590)),
+                    Text(
+                      amount,
+                      style: AppTypography.playfairDisplay(
+                        fontSize: 48,
+                        color: palette.textPrimary,
+                        fontWeight: AppTypography.w590,
+                      ),
+                    ),
                   ],
                 ),
         ),
         if (isSyncing) ...[
           SizedBox(height: AppSpacing.xs),
-          Text('Sincronizando...', style: AppTypography.inter(fontSize: 12, color: palette.textDisabled)),
+          Text(
+            context.tr.balanceSyncing,
+            style: AppTypography.inter(
+              fontSize: 12,
+              color: palette.textDisabled,
+            ),
+          ),
         ],
       ],
     );

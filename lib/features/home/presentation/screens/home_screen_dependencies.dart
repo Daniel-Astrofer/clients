@@ -33,9 +33,9 @@ export 'package:kerosene/design_system/components/feedback/state_feedback_view.d
 export 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 export 'package:kerosene/shared/widgets/bouncing_button_wrapper.dart';
 export 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
-export 'package:kerosene/features/movement/data/entities/transaction.dart';
-export 'package:kerosene/features/movement/data/entities/payment_link.dart';
-export 'package:kerosene/features/movement/data/entities/tx_status.dart';
+export 'package:kerosene/features/movement/domain/entities/transaction.dart';
+export 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+export 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 export 'package:kerosene/features/movement/providers/transaction_provider.dart';
 export 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
 export 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'

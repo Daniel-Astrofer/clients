@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/security/domain/entities/kfe_reserve_overview.dart';
@@ -20,7 +19,9 @@ Widget buildKfeReserveLoadingCard({required BuildContext context}) {
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+      border: Border.all(
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
     ),
     child: Row(
       children: [
@@ -32,7 +33,11 @@ Widget buildKfeReserveLoadingCard({required BuildContext context}) {
         Expanded(
           child: Text(
             SovereigntyKfeReserveCopy.syncingOperationalTreasury,
-            style: AppTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+            style: AppTypography.bodySmall.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.70)),
           ),
         ),
       ],
@@ -89,8 +94,11 @@ Widget buildKfeReserveUnavailableCard({
               const SizedBox(height: 6),
               Text(
                 message,
-                style:
-                    AppTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+                style: AppTypography.bodySmall.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.70)),
               ),
             ],
           ),

@@ -1,11 +1,12 @@
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'package:flutter/foundation.dart' show listEquals;
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
 import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/movement/data/activity_archive_store.dart';
+import 'package:kerosene/app/storage/activity_archive_store.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
@@ -76,15 +77,17 @@ final homeHasUnseenCancelledProvider = Provider.autoDispose<bool>((ref) {
 class HomeTransactionsList extends ConsumerStatefulWidget {
   final VoidCallback onCreateWallet;
   final ValueChanged<Wallet> onDepositWallet;
+  final VoidCallback? onOpenStatement;
 
-  /// When true, builds a [SliverList] (virtualized) for the home [CustomScrollView].
-  /// When false, embeds as a [Column] (wide two-column layout).
+  /// When true, embeds the grouped activity surface in the home
+  /// [CustomScrollView]. When false, embeds it as a [Column] (wide layout).
   final bool asSliver;
 
   const HomeTransactionsList({
     super.key,
     required this.onCreateWallet,
     required this.onDepositWallet,
+    this.onOpenStatement,
     this.asSliver = false,
   });
 
@@ -98,7 +101,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   /// Multiple cards may stay open; expansion only grows downward.
   final Set<String> _expandedTransactionIds = <String>{};
 
-  /// Skeleton → data: one shared cascade for **all** rows (not only first 3).
+  /// Skeleton → data: one shared cascade for the three Home rows.
   bool _armEntranceReveal = true;
   bool _playEntranceReveal = false;
 
@@ -112,9 +115,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
   AnimationController? _entrance;
 
-  static const _itemRevealMs = 520;
-  static const _staggerMs = 48;
-  static const _maxEntranceMs = 1800;
+  static const _itemRevealMs = 220;
+  static const _staggerMs = 24;
+  static const _maxEntranceMs = 360;
 
   @override
   void dispose() {
@@ -125,7 +128,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   Duration _entranceDurationFor(int count) {
     if (count <= 0) return Duration.zero;
     final raw = _itemRevealMs + _staggerMs * (count - 1);
-    return Duration(milliseconds: raw.clamp(_itemRevealMs, _maxEntranceMs));
+    return KeroseneMotion.fromMilliseconds(
+      raw.clamp(_itemRevealMs, _maxEntranceMs).toInt(),
+    );
   }
 
   /// 0→1 progress for row [index] under shared controller value [t].
@@ -138,7 +143,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     final span = (end - start).clamp(0.001, 1.0);
     final local = ((t - start) / span).clamp(0.0, 1.0);
     // Soft settle — less abrupt than easeOutCubic.
-    return Curves.easeOutQuart.transform(local);
+    return KeroseneMotion.entrance.transform(local);
   }
 
   void _scheduleEntranceReveal(int itemCount) {
@@ -181,9 +186,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     });
   }
 
-  List<Widget> _ensureEntranceCache(
-    List<Transaction> filteredTxs,
-  ) {
+  List<Widget> _ensureEntranceCache(List<Transaction> filteredTxs) {
     final ids = [for (final tx in filteredTxs) tx.id];
     final cached = _entranceTileCache;
     final order = _entranceIdOrder;
@@ -250,16 +253,21 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
     final lastSync = ref.watch(transactionHistoryLastSyncProvider);
     final isOnline = ref.watch(networkStatusProvider);
-    final hasWallet = ref.watch(walletProvider
-        .select((state) => state is WalletLoaded && state.wallets.isNotEmpty));
-    final hasBalance = ref.watch(walletProvider.select((state) {
-      if (state is WalletLoaded) {
-        final w = state.selectedWallet ??
-            (state.wallets.isNotEmpty ? state.wallets.first : null);
-        return (w?.balance ?? 0) > 0;
-      }
-      return false;
-    }));
+    final hasWallet = ref.watch(
+      walletProvider.select(
+        (state) => state is WalletLoaded && state.wallets.isNotEmpty,
+      ),
+    );
+    final hasBalance = ref.watch(
+      walletProvider.select((state) {
+        if (state is WalletLoaded) {
+          final w = state.selectedWallet ??
+              (state.wallets.isNotEmpty ? state.wallets.first : null);
+          return (w?.balance ?? 0) > 0;
+        }
+        return false;
+      }),
+    );
 
     if (historyPhase == 2 && filteredTxs.isEmpty && lastHistoryEmpty) {
       final err = Padding(
@@ -281,17 +289,19 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         color: Theme.of(context).scaffoldBackgroundColor,
         child: _TransactionsSkeletonLoading(),
       );
-      return widget.asSliver
-          ? SliverToBoxAdapter(child: skeleton)
-          : skeleton;
+      return widget.asSliver ? SliverToBoxAdapter(child: skeleton) : skeleton;
     }
 
     final filterIsAll = selectedFilter == HomeActivityFilter.all;
     final filterIsCancelled = selectedFilter == HomeActivityFilter.cancelled;
 
-    if (filteredTxs.isNotEmpty) {
-      _pruneSteadyTileCache(filteredTxs);
-      _scheduleEntranceReveal(filteredTxs.length);
+    // Home is a glance surface. Keep the full history in the provider and
+    // expose only the latest three rows here; the statement owns the rest.
+    final visibleTxs = filteredTxs.take(3).toList(growable: false);
+
+    if (visibleTxs.isNotEmpty) {
+      _pruneSteadyTileCache(visibleTxs);
+      _scheduleEntranceReveal(visibleTxs.length);
     } else {
       _armEntranceReveal = false;
       _steadyTileCache.clear();
@@ -360,7 +370,8 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
               return;
             }
             unawaited(
-                refreshFinancialProjectionUi(ref, forceFullHistory: true));
+              refreshFinancialProjectionUi(ref, forceFullHistory: true),
+            );
           },
           showAction: showPrimaryAction || showClearOnCancelled,
           subtleAction: showClearOnCancelled,
@@ -371,113 +382,16 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       );
     } else {
       body = _buildTxStack(
-        filteredTxs: filteredTxs,
+        filteredTxs: visibleTxs,
         animate: _playEntranceReveal && _entrance != null,
       );
+      body = _buildHomeActivityContainer(context, body);
     }
 
     if (widget.asSliver) {
-      // Virtualized path for home CustomScrollView — only visible cards paint.
-      if (filteredTxs.isEmpty) {
-        return SliverToBoxAdapter(child: body);
-      }
-      final tiles =
-          _playEntranceReveal ? _ensureEntranceCache(filteredTxs) : null;
-      final count = filteredTxs.length;
-      final AnimationController? entranceCtrl = _entrance;
-      final bool animate = _playEntranceReveal && entranceCtrl != null;
-      final AnimationController? liveCtrl = animate ? entranceCtrl : null;
-
-      Widget itemBuilder(BuildContext context, int index) {
-        final tx = filteredTxs[index];
-
-        final expanded = _expandedTransactionIds.contains(tx.id);
-        final tile = tiles != null && index < tiles.length
-            ? tiles[index]
-            : _playEntranceReveal
-                ? _buildTransactionTile(tx, expanded: expanded)
-                : _steadyTile(tx, expanded: expanded);
-
-        // RepaintBoundary isolates opacity/translate from card paint during entrance.
-        final cachedTile = RepaintBoundary(child: tile);
-
-        Widget? dateHeader;
-        if (index == 0) {
-          dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-        } else {
-          final previousTx = filteredTxs[index - 1];
-          if (!_isSameDay(
-            tx.timestamp.toLocal(),
-            previousTx.timestamp.toLocal(),
-          )) {
-            dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-          }
-        }
-
-        Widget buildContent(double p, Widget child) {
-          final revealed = p <= 0
-              ? const SizedBox.shrink()
-              : Opacity(
-                  opacity: p,
-                  child: Transform.translate(
-                    offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
-                    child: child,
-                  ),
-                );
-
-          final gap = index > 0 ? homeSize(12) : 0.0;
-          Widget content;
-          if (dateHeader != null) {
-            content = Padding(
-              padding: EdgeInsets.only(top: gap),
-              child: Column(
-                key: ValueKey('col_${tx.id}'),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (index > 0)
-                    SizedBox(height: homeSize(AppSpacing.base) - gap),
-                  Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
-                  SizedBox(height: homeSize(AppSpacing.sm)),
-                  revealed,
-                ],
-              ),
-            );
-          } else {
-            content = Padding(
-              padding: EdgeInsets.only(top: gap),
-              child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
-            );
-          }
-
-          return ColoredBox(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: content,
-          );
-        }
-
-        if (liveCtrl != null) {
-          return AnimatedBuilder(
-            animation: liveCtrl,
-            child: cachedTile,
-            builder: (context, child) {
-              final p = _rowProgress(index, liveCtrl.value, count);
-              return buildContent(p, child ?? cachedTile);
-            },
-          );
-        }
-
-        return buildContent(1.0, cachedTile);
-      }
-
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          itemBuilder,
-          childCount: count,
-          addAutomaticKeepAlives: true,
-          addRepaintBoundaries: true,
-        ),
-      );
+      // Three rows plus the action are intentionally one surface, so the
+      // activity block reads as a grouped module instead of loose cards.
+      return SliverToBoxAdapter(child: body);
     }
 
     return Column(
@@ -493,9 +407,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
                       AppDateTime.formatRelative(context, lastSync),
                     )
                   : context.tr.homeOfflineExtract,
-              style: HomeTypography.dateHeader(
-                color: homeAmberColor,
-              ),
+              style: HomeTypography.dateHeader(color: homeAmberColor),
             ),
           ),
         body,
@@ -522,19 +434,6 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
       final cachedTile = RepaintBoundary(child: tile);
 
-      Widget? dateHeader;
-      if (index == 0) {
-        dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-      } else {
-        final previousTx = filteredTxs[index - 1];
-        if (!_isSameDay(
-          tx.timestamp.toLocal(),
-          previousTx.timestamp.toLocal(),
-        )) {
-          dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-        }
-      }
-
       Widget buildContent(double p, Widget child) {
         final revealed = p <= 0
             ? const SizedBox.shrink()
@@ -546,22 +445,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
                 ),
               );
 
-        if (dateHeader != null) {
-          return Column(
-            key: ValueKey('col_${tx.id}'),
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
-              Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
-              SizedBox(height: homeSize(AppSpacing.sm)),
-              revealed,
-            ],
-          );
-        }
-        return KeyedSubtree(
-          key: ValueKey(tx.id),
-          child: revealed,
+        return Padding(
+          padding: EdgeInsets.only(top: index > 0 ? homeSize(8) : 0),
+          child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
         );
       }
 
@@ -585,28 +471,56 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  Widget _buildHomeActivityContainer(BuildContext context, Widget child) {
+    final openStatement = widget.onOpenStatement;
+    final language = Localizations.localeOf(context).languageCode;
+    final moreLabel = switch (language) {
+      'en' => 'See more',
+      'es' => 'Ver más',
+      _ => 'Ver mais',
+    };
 
-  Widget _buildDateHeader(DateTime date) {
-    final label = AppDateTime.formatDate(context, date);
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 4.0, top: 12.0),
-      child: Text(
-        label,
-        style: HomeTypography.dateHeader(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+    return HomeGlassPanel(
+      padding: EdgeInsets.fromLTRB(
+        homeSize(10),
+        homeSize(10),
+        homeSize(10),
+        openStatement == null ? homeSize(10) : homeSize(4),
+      ),
+      borderRadius: BorderRadius.circular(homeSize(HomeRadius.card)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          child,
+          if (openStatement != null) ...[
+            SizedBox(height: homeSize(4)),
+            Align(
+              alignment: Alignment.center,
+              child: TextButton(
+                onPressed: openStatement,
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  minimumSize: Size(0, homeSize(40)),
+                  padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  moreLabel,
+                  style: TextStyle(
+                    fontSize: homeSize(13),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildTransactionTile(
-    Transaction tx, {
-    required bool expanded,
-  }) {
+  Widget _buildTransactionTile(Transaction tx, {required bool expanded}) {
     final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
     final semanticLabel =
         '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
@@ -659,10 +573,7 @@ class _TransactionsSkeletonLoadingState
   @override
   void initState() {
     super.initState();
-    _cascade = AnimationController(
-      vsync: this,
-      duration: HomeMotion.long,
-    );
+    _cascade = AnimationController(vsync: this, duration: HomeMotion.long);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (KeroseneMotion.reduceMotion(context)) {
@@ -691,20 +602,6 @@ class _TransactionsSkeletonLoadingState
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _cascadeItem(
-              progress: cascade,
-              start: 0.0,
-              end: 0.28,
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(left: 4.0, top: 12.0, bottom: 12.0),
-                child: _SkeletonBone(
-                  width: homeSize(140),
-                  height: homeSize(22),
-                  borderRadius: homeSize(7),
-                ),
-              ),
-            ),
             for (var i = 0; i < _rowCount; i++)
               _cascadeItem(
                 progress: cascade,
@@ -726,7 +623,7 @@ class _TransactionsSkeletonLoadingState
   }) {
     final span = (end - start).clamp(0.001, 1.0);
     final t = ((progress - start) / span).clamp(0.0, 1.0);
-    final eased = Curves.easeOutQuart.transform(t);
+    final eased = KeroseneMotion.entrance.transform(t);
     if (eased <= 0) {
       return const SizedBox.shrink();
     }
@@ -751,10 +648,14 @@ class _TransactionsSkeletonLoadingState
       child: Container(
         padding: EdgeInsets.all(homeSize(16)),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(homeSize(22)),
           border: Border.all(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.04),
           ),
         ),
         child: Row(
@@ -866,31 +767,43 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return HomeGlassPanel(
-      backgroundColor: blackSurface ? Theme.of(context).scaffoldBackgroundColor : null,
-      borderRadius: BorderRadius.circular(homeSize(18)),
+      backgroundColor:
+          blackSurface ? Theme.of(context).scaffoldBackgroundColor : null,
+      borderRadius: BorderRadius.circular(homeSize(HomeRadius.card)),
       padding: EdgeInsets.all(homeSize(AppSpacing.lg)),
       child: Column(
         crossAxisAlignment: plainCenteredIcon
             ? CrossAxisAlignment.center
             : CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: homeSize(48),
-            height: homeSize(48),
+          Container(
+            width: homeSize(56),
+            height: homeSize(56),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(homeSize(18)),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.10),
+              ),
+            ),
             child: Center(
-              child: Icon(icon,
-                  color: Theme.of(context).colorScheme.onSurface,
-                  size: homeSize(plainCenteredIcon ? 28 : 18)),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: homeSize(plainCenteredIcon ? 28 : 18),
+              ),
             ),
           ),
-          SizedBox(height: homeSize(AppSpacing.lg)),
+          SizedBox(height: homeSize(AppSpacing.md)),
           Text(
             title,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,
-            style: AppTypography.bodyMedium.copyWith(
+            style: HomeTypography.cardHeader(
               color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0,
             ),
           ),
           SizedBox(height: homeSize(AppSpacing.sm)),
@@ -898,7 +811,9 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             description,
             textAlign: plainCenteredIcon ? TextAlign.center : TextAlign.start,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.66),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.66),
               fontSize: homeFontSize(12),
               height: 1.4,
               letterSpacing: 0,
@@ -906,13 +821,16 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
           ),
           if (showAction) ...[
             SizedBox(
-                height: homeSize(subtleAction ? AppSpacing.md : AppSpacing.lg)),
+              height: homeSize(subtleAction ? AppSpacing.md : AppSpacing.lg),
+            ),
             if (subtleAction)
               Center(
                 child: TextButton(
                   onPressed: onAction,
                   style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.48),
                     padding: EdgeInsets.symmetric(
                       horizontal: homeSize(12),
                       vertical: homeSize(6),
@@ -931,23 +849,12 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
             else
               SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
+                height: homeSize(50),
+                child: AppButton(
+                  label: actionLabel,
                   onPressed: onAction,
-                  style: FilledButton.styleFrom(
-                    minimumSize: Size.fromHeight(homeSize(50)),
-                    backgroundColor: Theme.of(context).colorScheme.onSurface,
-                    foregroundColor: Theme.of(context).scaffoldBackgroundColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(homeSize(14)),
-                    ),
-                    textStyle: theme.textTheme.labelLarge?.copyWith(
-                      fontSize: homeFontSize(14),
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 0,
-                    ),
-                  ),
                   icon: Icon(actionIcon, size: homeSize(16)),
-                  label: Text(actionLabel.toUpperCase()),
+                  expand: true,
                 ),
               ),
           ],

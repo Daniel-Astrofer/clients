@@ -10,10 +10,9 @@ import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/kernel/routing/movement_flow_coordinator.dart';
-import 'package:kerosene/features/movement/data/entities/payment_link.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/design_system/components/financial/amount_entry_surface.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -44,12 +43,25 @@ class MovementAmountScreen extends ConsumerStatefulWidget {
 class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
   bool _isContinuing = false;
   Currency _selectedCurrency = Currency.btc;
+  late String _amountInput;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountInput = ref.read(movementFlowCoordinatorProvider).amountInput;
+  }
 
   Future<void> _continue() async {
     if (_isContinuing) return;
     HapticFeedback.mediumImpact();
     final flowState = ref.read(movementFlowCoordinatorProvider);
-    final amountBtc = _currentAmountBtc(flowState);
+    final amountBtc = _amountBtcFromInput(
+      amountInput: _amountInput,
+      currency: _selectedCurrency,
+      btcUsd: ref.read(latestBtcPriceProvider),
+      btcEur: ref.read(btcEurPriceProvider),
+      btcBrl: ref.read(btcBrlPriceProvider),
+    );
     if (widget.method == ReceiveAmountMethod.nfc) {
       final canUseNfc = await ref.read(receiveNfcCompatibilityProvider.future);
       if (!canUseNfc) {
@@ -162,8 +174,9 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         return widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL';
       case ReceiveAmountMethod.qrCode:
       case ReceiveAmountMethod.paymentLink:
-        // Internal wallet QR/link stays on-chain custodial address unless Lightning.
-        return widget.onChainWallet ? 'ONCHAIN' : 'ONCHAIN';
+        // QR and payment links are portable BIP-21 requests, including for
+        // Kerosene custody; P2P is the explicit internal-only method.
+        return 'ONCHAIN';
     }
   }
 
@@ -190,7 +203,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final amountBtc = _amountBtcFromInput(
-      amountInput: flowState.amountInput,
+      amountInput: _amountInput,
       currency: _selectedCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
@@ -221,7 +234,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         onBack: () => Navigator.of(context).maybePop(),
         title: title,
         subtitle: widget.wallet.name,
-        amountInput: flowState.amountInput,
+        amountInput: _amountInput,
         unitLabel: MoneyDisplay.tickerSymbolFor(_selectedCurrency),
         currency: _selectedCurrency,
         fiatReference: secondaryLabel,
@@ -248,19 +261,11 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
   }
 
   void _onAmountChanged(String value) {
+    final normalized = value.trim().isEmpty ? '0' : value;
+    setState(() => _amountInput = normalized);
     ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput(
-          value.trim().isEmpty ? '0' : value,
+          normalized,
         );
-  }
-
-  double _currentAmountBtc(MovementFlowState flowState) {
-    return _amountBtcFromInput(
-      amountInput: flowState.amountInput,
-      currency: _selectedCurrency,
-      btcUsd: ref.read(latestBtcPriceProvider),
-      btcEur: ref.read(btcEurPriceProvider),
-      btcBrl: ref.read(btcBrlPriceProvider),
-    );
   }
 
   double _amountBtcFromInput({
@@ -280,12 +285,11 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
   }
 
   void _toggleAmountCurrency() {
-    final flowState = ref.read(movementFlowCoordinatorProvider);
     final btcUsd = ref.read(latestBtcPriceProvider);
     final btcEur = ref.read(btcEurPriceProvider);
     final btcBrl = ref.read(btcBrlPriceProvider);
     final amountBtc = _amountBtcFromInput(
-      amountInput: flowState.amountInput,
+      amountInput: _amountInput,
       currency: _selectedCurrency,
       btcUsd: btcUsd,
       btcEur: btcEur,
@@ -313,6 +317,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         : nextCurrency == Currency.btc
             ? _trimTrailingZeros(nextAmount.toStringAsFixed(8))
             : _trimTrailingZeros(nextAmount.toStringAsFixed(2));
+    setState(() => _amountInput = raw);
     ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput(raw);
   }
 

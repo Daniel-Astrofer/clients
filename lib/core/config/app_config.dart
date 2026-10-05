@@ -2,8 +2,8 @@
 class AppConfig {
   // ==================== Node Routing ====================
 
-  // Dev/default is a non-routable placeholder. Resolve the live local-full
-  // onion via `infra/status.sh`, ONION_URL, or --dart-define KERO_NODE_*_URL.
+  // Dev/default is a non-routable placeholder. Supply reviewed node onions
+  // explicitly with --dart-define KERO_NODE_*_URL.
   // Release builds must always pass explicit --dart-define values.
   static const String _devPlaceholderOnionUrl =
       'http://local-full-placeholder.onion';
@@ -66,7 +66,7 @@ class AppConfig {
 
     throw StateError(
       'Release builds must define ${missingDefines.join(', ')} with '
-      '--dart-define. Refusing to use the embedded local-full onion default.',
+      '--dart-define. Refusing to use the embedded non-routable placeholder.',
     );
   }
 

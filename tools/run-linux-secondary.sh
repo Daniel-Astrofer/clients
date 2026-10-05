@@ -4,7 +4,7 @@
 # Isolation (must differ from run-linux-device-credential.sh):
 #   • KERO_SECURE_PREFIX=secondary_  → secure storage / device keys
 #   • KERO_PROFILE=secondary         → device name / install id salt
-#   • XDG under /tmp/kerosene_secundario
+#   • XDG under ~/.local/state/kerosene-profiles/secondary
 #
 # Usage:
 #   bash tools/run-linux-secondary.sh
@@ -34,12 +34,11 @@ ONION_URL="${ONION_URL:-}"
 RUN_MODE="${KERO_LINUX_RUN_MODE:-debug}"
 FORCE_REBUILD=0
 DEVICE="${KERO_LINUX_DEVICE:-linux}"
-NS="${KEROSENE_NAMESPACE:-kerosene-staging}"
 
 # Force secondary namespace — never inherit ambient primary_ prefix
 PROFILE_LABEL="secondary"
 SECURE_PREFIX="secondary_"
-SECONDARY_HOME="${KERO_SECONDARY_HOME:-/tmp/kerosene_secundario}"
+SECONDARY_HOME="${KERO_SECONDARY_HOME:-${HOME}/.local/state/kerosene-profiles/secondary}"
 
 # -- Isolated XDG for secondary --
 export KERO_PROFILE="$PROFILE_LABEL"
@@ -96,9 +95,6 @@ while (($#)); do
       export XDG_STATE_HOME="${SECONDARY_HOME}/state"
       mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
       ;;
-    --namespace=*)
-      NS="${arg#--namespace=}"
-      ;;
     -h|--help)
       usage
       exit 0
@@ -130,23 +126,7 @@ resolve_onion() {
     printf '%s\n' "${KERO_NODE_IS_URL}"
     return
   fi
-  # Auto-detect from K8s
-  if command -v kubectl >/dev/null 2>&1; then
-    local onion pod_path
-    for pod_path in \
-      "deploy/tor-onion:/keys/hostname" \
-      "deploy/tor-onion:/var/lib/tor/kerosene_service/hostname" \
-      "statefulset/staging-tor:/var/lib/tor/kerosene_service/hostname"; do
-      local pod="${pod_path%%:*}"
-      local path="${pod_path#*:}"
-      onion="$(kubectl -n "${NS}" exec "$pod" -- cat "$path" 2>/dev/null | tr -d '[:space:]' || true)"
-      if [[ -n "$onion" ]]; then
-        printf 'http://%s\n' "$onion"
-        return
-      fi
-    done
-  fi
-  die "Could not resolve the active deployment onion. Set ONION_URL=http://….onion or start the integrated quorum."
+  die "Set ONION_URL=http://….onion or KERO_NODE_IS_URL explicitly. Endpoint auto-discovery is intentionally disabled."
 }
 
 normalize_onion() {

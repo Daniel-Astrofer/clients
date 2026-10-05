@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/auth/controller/auth_providers.dart';
@@ -41,7 +39,11 @@ class _SettingsBackupCodesScreenState
         ),
         content: Text(
           context.tr.securityBackupCodesBody,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72)),
+          style: TextStyle(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.72)),
         ),
         actions: [
           TextButton(
@@ -217,7 +219,8 @@ class _SettingsBackupCodesScreenState
                         Text(
                           context.tr.settingsBackupSubtitle,
                           style: AppTypography.inter(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                             height: 1.55,
                           ),
@@ -234,14 +237,19 @@ class _SettingsBackupCodesScreenState
                                   children: [
                                     Icon(
                                       KeroseneIcons.verified,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.70),
                                       size: 28,
                                     ),
                                     SizedBox(height: AppSpacing.md),
                                     Text(
                                       context.tr.settingsBackupEnableTotpFirst,
                                       style: AppTypography.inter(
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -251,7 +259,9 @@ class _SettingsBackupCodesScreenState
                                       context
                                           .tr.securityBackupCodesLockedSubtitle,
                                       style: AppTypography.inter(
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
                                         fontSize: 14,
                                         height: 1.4,
                                       ),
@@ -313,10 +323,14 @@ class _SettingsBackupCodesScreenState
                                 ],
                               ),
                               loading: () => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 48),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 48),
                                 child: Center(
                                   child: CircularProgressIndicator(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.54),
                                   ),
                                 ),
                               ),
@@ -327,7 +341,11 @@ class _SettingsBackupCodesScreenState
                                     context.tr,
                                     error.toString(),
                                   ),
-                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+                                  style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.70)),
                                 ),
                               ),
                             );
@@ -336,7 +354,10 @@ class _SettingsBackupCodesScreenState
                             padding: const EdgeInsets.symmetric(vertical: 48),
                             child: Center(
                               child: CircularProgressIndicator(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.54),
                               ),
                             ),
                           ),
@@ -347,7 +368,11 @@ class _SettingsBackupCodesScreenState
                                 context.tr,
                                 error.toString(),
                               ),
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.70)),
                             ),
                           ),
                         ),

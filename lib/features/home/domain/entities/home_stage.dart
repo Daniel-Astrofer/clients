@@ -130,6 +130,15 @@ HomeStageActionsPlacement parseActionsPlacement(String? raw) =>
       _ => HomeStageActionsPlacement.unknown,
     };
 
+String serializeActionsPlacement(HomeStageActionsPlacement placement) =>
+    switch (placement) {
+      HomeStageActionsPlacement.trailing => 'TRAILING',
+      HomeStageActionsPlacement.belowStage => 'BELOW_STAGE',
+      HomeStageActionsPlacement.overlayEnd => 'OVERLAY_END',
+      HomeStageActionsPlacement.hidden => 'HIDDEN',
+      HomeStageActionsPlacement.unknown => 'BELOW_STAGE',
+    };
+
 HomeStageActionsPolicy parseActionsPolicy(String? raw) =>
     switch ((raw ?? '').toUpperCase()) {
       'ALWAYS_VISIBLE' => HomeStageActionsPolicy.alwaysVisible,
@@ -551,13 +560,7 @@ class HomeStageActionsLayout {
   }
 
   Map<String, dynamic> toJson() => {
-        'placement': switch (placement) {
-          HomeStageActionsPlacement.trailing => 'TRAILING',
-          HomeStageActionsPlacement.belowStage => 'BELOW_STAGE',
-          HomeStageActionsPlacement.overlayEnd => 'OVERLAY_END',
-          HomeStageActionsPlacement.hidden => 'HIDDEN',
-          HomeStageActionsPlacement.unknown => 'BELOW_STAGE',
-        },
+        'placement': serializeActionsPlacement(placement),
         'policy': switch (policy) {
           HomeStageActionsPolicy.alwaysVisible => 'ALWAYS_VISIBLE',
           HomeStageActionsPolicy.hideForVideo => 'HIDE_FOR_VIDEO',
@@ -1246,7 +1249,7 @@ class HomeRestingHeader {
           'includeName': includeName,
         },
         'actions': {
-          'placement': 'TRAILING',
+          'placement': serializeActionsPlacement(actionsPlacement),
           'balanceVisibility': balanceVisibility,
           'notifications': notifications,
           'settings': settings,

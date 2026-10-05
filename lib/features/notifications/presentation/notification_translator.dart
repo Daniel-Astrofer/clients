@@ -10,14 +10,18 @@ class NotificationTranslator {
         ? context.tr
         : lookupAppLocalizations(const Locale('pt'));
 
-    if (item.kind == SessionNotificationItem.kindAccountCreated)
+    if (item.kind == SessionNotificationItem.kindAccountCreated) {
       return tr.notifAccountCreatedTitle;
-    if (item.kind == SessionNotificationItem.kindSecurityLoginDetected)
+    }
+    if (item.kind == SessionNotificationItem.kindSecurityLoginDetected) {
       return tr.notifSecurityLoginDetectedTitle;
-    if (item.kind == SessionNotificationItem.kindSecurityAdminAccessAttempt)
+    }
+    if (item.kind == SessionNotificationItem.kindSecurityAdminAccessAttempt) {
       return tr.notifSecurityAdminAccessAttemptTitle;
-    if (item.kind == SessionNotificationItem.kindSecurityRecoveryCompleted)
+    }
+    if (item.kind == SessionNotificationItem.kindSecurityRecoveryCompleted) {
       return tr.notifSecurityRecoveryCompletedTitle;
+    }
 
     if (item.kind == SessionNotificationItem.kindTransferReceived ||
         item.kind == SessionNotificationItem.kindDepositConfirmed) {
@@ -47,12 +51,16 @@ class NotificationTranslator {
       return tr.notifTransactionStatusTitle('pendente');
     }
 
-    if (item.title == 'notification.transaction.cold.outbound.detected.title')
+    if (item.title == 'notification.transaction.cold.outbound.detected.title') {
       return tr.notifTransactionSentTitle;
-    if (item.title == 'notification.transaction.cold.outbound.confirmed.title')
+    }
+    if (item.title ==
+        'notification.transaction.cold.outbound.confirmed.title') {
       return tr.notifTransactionSentTitle;
-    if (item.title == 'notification.transaction.cold.inbound.detected.title')
+    }
+    if (item.title == 'notification.transaction.cold.inbound.detected.title') {
       return tr.notifTransactionReceivedTitle;
+    }
 
     return item.title;
   }
@@ -79,14 +87,18 @@ class NotificationTranslator {
     final currency =
         item.metadata['currency'] ?? item.metadata['ticker'] ?? 'BTC';
 
-    if (item.kind == SessionNotificationItem.kindAccountCreated)
+    if (item.kind == SessionNotificationItem.kindAccountCreated) {
       return tr.notifAccountCreatedBody;
-    if (item.kind == SessionNotificationItem.kindSecurityLoginDetected)
+    }
+    if (item.kind == SessionNotificationItem.kindSecurityLoginDetected) {
       return tr.notifSecurityLoginDetectedBody;
-    if (item.kind == SessionNotificationItem.kindSecurityAdminAccessAttempt)
+    }
+    if (item.kind == SessionNotificationItem.kindSecurityAdminAccessAttempt) {
       return tr.notifSecurityAdminAccessAttemptBody;
-    if (item.kind == SessionNotificationItem.kindSecurityRecoveryCompleted)
+    }
+    if (item.kind == SessionNotificationItem.kindSecurityRecoveryCompleted) {
       return tr.notifSecurityRecoveryCompletedBody;
+    }
 
     if (item.kind == SessionNotificationItem.kindTransferReceived ||
         item.kind == SessionNotificationItem.kindDepositConfirmed) {
@@ -120,15 +132,18 @@ class NotificationTranslator {
           amount, currency, network, 'pendente');
     }
 
-    if (item.body == 'notification.transaction.cold.outbound.detected.body')
+    if (item.body == 'notification.transaction.cold.outbound.detected.body') {
       return tr.notifTransactionSentBody(
           'Cold Wallet', amount, currency, address);
-    if (item.body == 'notification.transaction.cold.outbound.confirmed.body')
+    }
+    if (item.body == 'notification.transaction.cold.outbound.confirmed.body') {
       return tr.notifTransactionSentBody(
           'Cold Wallet', amount, currency, address);
-    if (item.body == 'notification.transaction.cold.inbound.detected.body')
+    }
+    if (item.body == 'notification.transaction.cold.inbound.detected.body') {
       return tr.notifTransactionReceivedBody(
           amount, currency, 'Cold Wallet', wallet);
+    }
 
     return item.body;
   }

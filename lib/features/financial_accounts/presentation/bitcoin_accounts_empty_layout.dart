@@ -62,26 +62,24 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
                 child: Column(
                   children: [
                     const Expanded(
-                      child: Center(
-                        child: _BitcoinAccountsEmptyContent(),
-                      ),
+                      child: Center(child: _BitcoinAccountsEmptyContent()),
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
                       style: colors.filledButtonStyle(minHeight: 56).copyWith(
-                        textStyle: WidgetStatePropertyAll(
-                          AppTypography.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
+                            textStyle: WidgetStatePropertyAll(
+                              AppTypography.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0,
+                              ),
+                            ),
+                            shape: WidgetStatePropertyAll(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                           ),
-                        ),
-                        shape: WidgetStatePropertyAll(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                       onPressed: onCreateInternalAccount,
                       child: Text(context.tr.bitcoinAccountsNewKeroseneCard),
                     ),
@@ -103,7 +101,9 @@ class BitcoinAccountsEmptyLayout extends StatelessWidget {
                         ),
                       ),
                       onPressed: onCreateColdWallet,
-                      child: const Text('Criar Cold Wallet'),
+                      child: Text(
+                        context.tr.financialAccountsCreateColdWalletButton,
+                      ),
                     ),
                   ],
                 ),

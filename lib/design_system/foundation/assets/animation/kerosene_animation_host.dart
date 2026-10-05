@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/animation/kerosene_animation_asset.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
@@ -34,8 +33,11 @@ class KeroseneAnimationHost extends StatelessWidget {
     return Semantics(
       label: semanticLabel ?? asset.semanticLabel,
       image: true,
-      child:
-          SizedBox(width: width, height: height, child: Center(child: content)),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Center(child: content),
+      ),
     );
   }
 }
@@ -47,13 +49,20 @@ class _KeroseneAnimationFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 32);
+    return Icon(
+      icon,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      size: 32,
+    );
   }
 }
 
 extension KeroseneAnimationAssetUi on KeroseneAnimationAsset {
   IconData get fallbackIcon {
     switch (this) {
+      case KeroseneAnimationAsset.brandLogo:
+      case KeroseneAnimationAsset.brandMark:
+        return KeroseneIcons.circle;
       case KeroseneAnimationAsset.successCheck:
       case KeroseneAnimationAsset.paymentReceived:
         return KeroseneIcons.success;
@@ -77,6 +86,10 @@ extension KeroseneAnimationAssetUi on KeroseneAnimationAsset {
 
   String get semanticLabel {
     switch (this) {
+      case KeroseneAnimationAsset.brandLogo:
+        return 'Marca Kerosene.';
+      case KeroseneAnimationAsset.brandMark:
+        return 'Símbolo Kerosene.';
       case KeroseneAnimationAsset.successCheck:
         return 'Operação concluída com segurança.';
       case KeroseneAnimationAsset.pendingConfirmation:

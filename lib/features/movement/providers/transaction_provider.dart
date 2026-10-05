@@ -1,3 +1,5 @@
+// architecture-allow-large-file: transaction providers coordinate pagination,
+// authorization, and retry DI contracts in one compatibility boundary.
 import 'dart:async';
 import 'dart:convert';
 
@@ -11,7 +13,8 @@ import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:kerosene/core/errors/failures.dart';
 import 'package:kerosene/core/security/device_credential_capabilities.dart';
 import 'package:kerosene/core/security/device_credential_enroll_policy.dart';
-import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/core/security/financial_payment_challenge.dart';
+import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/core/services/passkey_service.dart';
 import 'package:kerosene/core/services/sovereign_auth_service.dart';
@@ -24,7 +27,7 @@ import 'package:kerosene/features/auth/controller/auth_providers.dart'
 import 'package:kerosene/features/auth/presentation/state/auth_state.dart';
 import 'package:kerosene/features/ledger/domain/local_ledger_sync.dart';
 import 'package:kerosene/features/ledger/domain/transaction_ledger_adapter.dart';
-import 'package:kerosene/features/movement/data/activity_archive_store.dart';
+import 'package:kerosene/app/storage/activity_archive_store.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/data/entities/fee_estimate.dart';
@@ -740,6 +743,9 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
     String? appPin,
   }) async {
     state = const AsyncActionState(isLoading: true);
+    final operationIdempotencyKey = idempotencyKey?.trim().isNotEmpty == true
+        ? idempotencyKey!
+        : const Uuid().v4();
     try {
       final result = await _repository.sendTransaction(
         toAddress: toAddress,
@@ -751,7 +757,7 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
         passkeyAssertionJson: passkeyAssertionJson,
         confirmationPassphrase: confirmationPassphrase,
         totpCode: totpCode,
-        idempotencyKey: idempotencyKey,
+        idempotencyKey: operationIdempotencyKey,
         requestTimestamp: requestTimestamp,
         appPin: appPin,
       );
@@ -775,7 +781,7 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
           context: context,
           confirmationPassphrase: confirmationPassphrase,
           totpCode: totpCode,
-          idempotencyKey: idempotencyKey,
+          idempotencyKey: operationIdempotencyKey,
           requestTimestamp: requestTimestamp,
           appPin: appPin,
         );
@@ -1043,7 +1049,8 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         final link = await _repository.getPaymentLink(linkId);
         _ensurePaymentLinkPayable(link);
         final TransactionalPasskeyAssertion assertion;
-        if (_passkeyAssertionBuilder != null) {
+        if (_passkeyAssertionBuilder != null &&
+            stepUpAction?.isFinancialApproval != true) {
           assertion = TransactionalPasskeyAssertion(
             json: await _passkeyAssertionBuilder!(challenge),
           );
@@ -1319,10 +1326,30 @@ class _StepUpChallenge {
 /// older backends / test doubles that only embed PASSKEY_CHALLENGE_REQUIRED.
 _StepUpChallenge? _extractStepUpChallenge(Object error) {
   PasskeyActionRequired? action;
+  String? errorCode;
   if (error is AppException) {
     action = PasskeyActionRequired.fromErrorPayload(error.data);
+    errorCode = error.errorCode;
   } else if (error is Failure) {
     action = PasskeyActionRequired.fromErrorPayload(error.data);
+    errorCode = error.errorCode;
+  }
+  if (errorCode == FinancialPaymentChallenge.errorCode &&
+      action?.isFinancialApproval != true) {
+    action = const PasskeyActionRequired(
+      action: FinancialPaymentChallenge.action,
+      reason: '',
+      financialApprovalRequired: true,
+    );
+  }
+  if (action?.isFinancialApproval == true) {
+    // Malformed financial payloads reach the explicit rejection branch below;
+    // do not extract login challenges from messages or mixed legacy fields.
+    return _StepUpChallenge(
+      legacyChallenge: action!.financialChallenge?.challengeId ??
+          'invalid-financial-challenge',
+      actionRequired: action,
+    );
   }
 
   final legacyFromTyped = action?.legacyOrPasskeyChallenge;
@@ -1500,6 +1527,27 @@ Future<TransactionalPasskeyAssertion> buildTransactionalPasskeyAssertion({
   }
 
   final deviceKey = DeviceKeyService.instance;
+  if (actionRequired?.isFinancialApproval == true) {
+    final financial = actionRequired!.financialChallenge;
+    if (financial == null) {
+      throw const ServerException(
+        message:
+            'Autorização financeira inválida. Atualize o aplicativo e tente novamente.',
+        errorCode: 'ERR_KFE_PAYMENT_CHALLENGE_INVALID',
+      );
+    }
+    final proof = await deviceKey.authenticateFinancial(
+      challenge: financial,
+      username: username,
+    );
+    return TransactionalPasskeyAssertion(
+      json: jsonEncode(proof),
+      commitOnSuccess: () => DeviceCredentialTelemetry.recordStepUp(
+        kind: 'FINANCIAL_DEVICE_KEY',
+        success: true,
+      ),
+    );
+  }
   // Linux/desktop: auto-enroll Device Key on first custodial step-up when allowed
   // (local_auth is missing; app entry PIN already gated the session).
   if (!await deviceKey.hasRegisteredDeviceKey(username)) {

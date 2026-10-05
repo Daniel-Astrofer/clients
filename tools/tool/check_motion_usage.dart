@@ -1,4 +1,4 @@
-#!/usr/bin/env dart run
+#!/usr/bin/env -S dart run
 // ignore_for_file: avoid_print
 
 /// Checks that feature code uses [KeroseneMotion] tokens instead of raw
@@ -7,6 +7,7 @@
 /// Usage: dart run tool/check_motion_usage.dart [path]
 ///
 /// Exits 0 if clean, 1 if violations found.
+library;
 
 import 'dart:io';
 
@@ -89,8 +90,9 @@ void main(List<String> args) {
 
       // Check for raw Duration(...)
       if (_rawDurationPattern.hasMatch(line)) {
-        violations.add('$relPath:$lineNo: raw Duration — use KeroseneMotion token\n'
-            '  $trimmed');
+        violations
+            .add('$relPath:$lineNo: raw Duration — use KeroseneMotion token\n'
+                '  $trimmed');
       }
 
       // Check for unexpected Curves.*

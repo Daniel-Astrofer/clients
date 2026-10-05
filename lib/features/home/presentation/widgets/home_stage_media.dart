@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
 import 'package:video_player/video_player.dart';
@@ -87,7 +89,7 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     final pos = c.value.position;
     final dur = c.value.duration;
     if (dur.inMilliseconds > 0 &&
-        pos >= dur - const Duration(milliseconds: 200) &&
+        pos >= dur - KeroseneMotion.inputHeroSettle &&
         !c.value.isPlaying) {
       widget.onVideoComplete?.call();
     }
@@ -102,16 +104,16 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
 
     return switch (media.type) {
       HomeStageMediaType.icon => Icon(
-          media.resolveIcon(),
-          color: Theme.of(context).colorScheme.onSurface,
-          size: homeSize(28),
-        ),
+        media.resolveIcon(),
+        color: Theme.of(context).colorScheme.onSurface,
+        size: homeSize(28),
+      ),
       HomeStageMediaType.image || HomeStageMediaType.lottie => _networkOrAsset(
-          media.posterUrl?.isNotEmpty == true
-              ? media.posterUrl!
-              : (media.url ?? ''),
-          h,
-        ),
+        media.posterUrl?.isNotEmpty == true
+            ? media.posterUrl!
+            : (media.url ?? ''),
+        h,
+      ),
       HomeStageMediaType.video => _buildVideo(h),
       _ => const SizedBox.shrink(),
     };
@@ -143,15 +145,25 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
         children: [
           _networkOrAsset(poster, h),
           if (!_failed)
-            Icon(Icons.play_circle_fill,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70), size: homeSize(36)),
+            Icon(
+              KeroseneIcons.playCircle,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.70),
+              size: homeSize(36),
+            ),
         ],
       );
     }
     return SizedBox(
       height: h * 0.5,
       child: Center(
-        child: Icon(Icons.videocam_off_outlined, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
+        child: Icon(
+          KeroseneIcons.videoCameraOff,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.38),
+        ),
       ),
     );
   }
@@ -161,14 +173,18 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     final isAsset = url.startsWith('asset:');
     final path = isAsset ? url.substring('asset:'.length) : url;
     final child = isAsset
-        ? Image.asset(path,
+        ? Image.asset(
+            path,
             height: h,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink())
-        : Image.network(path,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          )
+        : Image.network(
+            path,
             height: h,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink());
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
     return ClipRRect(
       borderRadius: BorderRadius.circular(homeSize(12)),
       child: child,

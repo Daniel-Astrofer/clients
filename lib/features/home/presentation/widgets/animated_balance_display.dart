@@ -3,7 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+
+const _balanceUpdateDuration = KeroseneMotion.inputHeroSettle;
 
 /// Balance amount with optional digit-roll (odometer) for **large value changes**.
 ///
@@ -21,6 +22,9 @@ class AnimatedBalanceDisplay extends StatefulWidget {
   final String locale;
   final double decimalScaleFactor;
   final double separatorScaleFactor;
+
+  /// Retained for caller compatibility; cells follow measured tabular glyphs.
+  @Deprecated('Digit width is measured from the text style and text scale.')
   final double digitWidthFactor;
   final double characterSpacing;
   final VoidCallback? onDecimalTap;
@@ -78,7 +82,7 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
     _refreshCharacterLayout();
     _flashController = AnimationController(
       vsync: this,
-      duration: KeroseneMotion.ceremonial,
+      duration: _balanceUpdateDuration,
       value: 1.0,
     );
     _flashOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
@@ -91,7 +95,8 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
     super.didUpdateWidget(oldWidget);
 
     final balanceChanged = widget.balance != oldWidget.balance;
-    final formatChanged = widget.decimalPlaces != oldWidget.decimalPlaces ||
+    final formatChanged =
+        widget.decimalPlaces != oldWidget.decimalPlaces ||
         widget.prefix != oldWidget.prefix ||
         widget.isHidden != oldWidget.isHidden ||
         widget.locale != oldWidget.locale;
@@ -102,7 +107,8 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
       final delta = (widget.balance - _lastBalance).abs();
       final largeDelta = delta >= widget.largeDeltaThreshold;
       // Roll only on real large balance moves, never when suppressRoll (tab swipe).
-      _allowRollOnThisUpdate = !widget.suppressRoll &&
+      _allowRollOnThisUpdate =
+          !widget.suppressRoll &&
           !widget.isHidden &&
           balanceChanged &&
           largeDelta &&
@@ -119,7 +125,8 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
       if (widget.enableFlash &&
           balanceChanged &&
           largeDelta &&
-          !widget.isHidden) {
+          !widget.isHidden &&
+          !KeroseneMotion.reduceMotion(context)) {
         _flashColor = widget.balance > oldWidget.balance
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.error;
@@ -154,7 +161,7 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
       return _buildRow(widget.style);
     }
 
-    if (!widget.enableFlash) {
+    if (!widget.enableFlash || KeroseneMotion.reduceMotion(context)) {
       return _buildRow(widget.style);
     }
 
@@ -175,6 +182,12 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
   }
 
   Widget _buildRow(TextStyle style) {
+    style = style.copyWith(
+      fontFeatures: [
+        ...?style.fontFeatures,
+        const FontFeature.tabularFigures(),
+      ],
+    );
     if (widget.isHidden) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -189,7 +202,8 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
         ...leadingChars,
         if (decimalChars.isNotEmpty)
@@ -198,6 +212,8 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
             behavior: HitTestBehavior.opaque,
             child: Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: decimalChars,
             ),
           ),
@@ -222,52 +238,79 @@ class _AnimatedBalanceDisplayState extends State<AnimatedBalanceDisplay>
     List<_BalanceCharacter> characters,
     TextStyle style,
   ) {
-    return characters.map((character) {
-      final currentStyle = character.isDecimalPart
-          ? style.copyWith(
-              fontSize: (style.fontSize ?? 40) * widget.decimalScaleFactor,
-              color: style.color?.withValues(alpha: 0.8),
-            )
-          : style;
+    final decimalStyle = style.copyWith(
+      fontSize: (style.fontSize ?? 40) * widget.decimalScaleFactor,
+      color: style.color?.withValues(alpha: 0.9),
+    );
+    final digitSize = _measureDigitSize(style);
+    final decimalDigitSize = _measureDigitSize(decimalStyle);
+    final allowMotion = !KeroseneMotion.reduceMotion(context);
+    return characters
+        .map((character) {
+          final currentStyle = character.isDecimalPart ? decimalStyle : style;
 
-      late final Widget child;
+          late final Widget child;
 
-      if (!character.isDigit) {
-        child = Text(
-          character.value,
-          style: character.isSeparator
-              ? style.copyWith(
-                  fontSize:
-                      (style.fontSize ?? 40) * widget.separatorScaleFactor,
-                  color: style.color?.withValues(alpha: 0.5),
-                )
-              : currentStyle,
-          key: ValueKey('static_${_layoutGeneration}_${character.index}'),
-        );
-      } else {
-        final delay = widget.animateInitialValue && _allowRollOnThisUpdate
-            ? KeroseneMotion.stagger(character.index)
-            : Duration.zero;
+          if (!character.isDigit) {
+            child = Text(
+              character.value,
+              style: character.isSeparator
+                  ? style.copyWith(
+                      fontSize:
+                          (style.fontSize ?? 40) * widget.separatorScaleFactor,
+                      color: style.color?.withValues(alpha: 0.5),
+                    )
+                  : currentStyle,
+              key: ValueKey('static_${_layoutGeneration}_${character.index}'),
+            );
+          } else {
+            final delay = widget.animateInitialValue && _allowRollOnThisUpdate
+                ? KeroseneMotion.stagger(character.index)
+                : Duration.zero;
 
-        child = _RollingDigit(
-          // Stable key by position so digit identity survives value changes.
-          key: ValueKey('rolling_${_layoutGeneration}_${character.index}'),
-          digit: character.value,
-          style: currentStyle,
-          delay: delay,
-          widthFactor: widget.digitWidthFactor,
-          animateInitialValue:
-              widget.animateInitialValue && _allowRollOnThisUpdate,
-          allowRollOnChange: _allowRollOnThisUpdate && !widget.suppressRoll,
-        );
-      }
+            child = _RollingDigit(
+              // Stable key by position so digit identity survives value changes.
+              key: ValueKey('rolling_${_layoutGeneration}_${character.index}'),
+              digit: character.value,
+              style: currentStyle,
+              delay: delay,
+              size: character.isDecimalPart ? decimalDigitSize : digitSize,
+              animateInitialValue:
+                  allowMotion &&
+                  widget.animateInitialValue &&
+                  _allowRollOnThisUpdate,
+              allowRollOnChange:
+                  allowMotion && _allowRollOnThisUpdate && !widget.suppressRoll,
+            );
+          }
 
-      return Padding(
-        padding:
-            EdgeInsets.symmetric(horizontal: widget.characterSpacing * 0.5),
-        child: child,
-      );
-    }).toList(growable: false);
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.characterSpacing * 0.5,
+            ),
+            child: child,
+          );
+        })
+        .toList(growable: false);
+  }
+
+  Size _measureDigitSize(TextStyle style) {
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      maxLines: 1,
+    );
+    var width = 0.0;
+    var height = 0.0;
+    for (var digit = 0; digit < 10; digit++) {
+      painter.text = TextSpan(text: '$digit', style: style);
+      painter.layout();
+      width = math.max(width, painter.width);
+      height = math.max(height, painter.height);
+    }
+    painter.dispose();
+    return Size(width, height);
   }
 }
 
@@ -275,10 +318,7 @@ class _BalanceCharacterLayout {
   final List<_BalanceCharacter> leading;
   final List<_BalanceCharacter> decimal;
 
-  const _BalanceCharacterLayout({
-    required this.leading,
-    required this.decimal,
-  });
+  const _BalanceCharacterLayout({required this.leading, required this.decimal});
 
   List<_BalanceCharacter> get all => [...leading, ...decimal];
 
@@ -327,7 +367,7 @@ class _RollingDigit extends StatefulWidget {
   final String digit;
   final TextStyle style;
   final Duration delay;
-  final double widthFactor;
+  final Size size;
   final bool animateInitialValue;
   final bool allowRollOnChange;
 
@@ -336,7 +376,7 @@ class _RollingDigit extends StatefulWidget {
     required this.digit,
     required this.style,
     this.delay = Duration.zero,
-    this.widthFactor = 0.64,
+    required this.size,
     this.animateInitialValue = false,
     this.allowRollOnChange = false,
   });
@@ -370,7 +410,7 @@ class _RollingDigitState extends State<_RollingDigit>
       vsync: this,
       duration: widget.animateInitialValue
           ? KeroseneMotion.odometerCeremony
-          : KeroseneMotion.odometerUpdate,
+          : _balanceUpdateDuration,
     );
 
     _animation = CurvedAnimation(
@@ -380,7 +420,11 @@ class _RollingDigitState extends State<_RollingDigit>
 
     if (widget.animateInitialValue) {
       Future.delayed(widget.delay, () {
-        if (!mounted) return;
+        if (!mounted ||
+            !widget.animateInitialValue ||
+            KeroseneMotion.reduceMotion(context)) {
+          return;
+        }
         setState(() {
           _rotations = 1;
           _previousDigit = (_targetDigit + 7) % 10;
@@ -414,7 +458,7 @@ class _RollingDigitState extends State<_RollingDigit>
       _targetDigit = newDigit;
       _rotations = 0;
     });
-    _controller.duration = KeroseneMotion.odometerUpdate;
+    _controller.duration = _balanceUpdateDuration;
     _controller.forward(from: 0.0);
   }
 
@@ -426,95 +470,125 @@ class _RollingDigitState extends State<_RollingDigit>
 
   @override
   Widget build(BuildContext context) {
-    final double fontSize = widget.style.fontSize ?? 40;
-    final double height = fontSize * 1.32;
+    final height = widget.size.height;
 
     return SizedBox(
       height: height,
-      width: fontSize * widget.widthFactor,
-      child: ClipRect(
-        child: AnimatedBuilder(
-          animation: _animation,
-          builder: (context, _) {
-            final t = _animation.value;
-            if (t >= 0.999) {
-              return _StaticDigit(
-                digit: widget.digit,
-                style: widget.style,
-              );
-            }
+      width: widget.size.width,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Keep the text baseline stable while the moving glyphs are clipped.
+          ExcludeSemantics(
+            child: Opacity(
+              opacity: 0,
+              child: Text(widget.digit, style: widget.style),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnoreBaseline(
+              child: ClipRect(
+                child: AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, _) {
+                    final t = _animation.value;
+                    if (t >= 0.999 || KeroseneMotion.reduceMotion(context)) {
+                      return _StaticDigit(
+                        digit: widget.digit,
+                        style: widget.style,
+                      );
+                    }
 
-            int diff = _targetDigit - _previousDigit;
-            if (diff < 0) diff += 10;
+                    int diff = _targetDigit - _previousDigit;
+                    if (diff < 0) diff += 10;
 
-            final totalSteps = (_rotations * 10) + diff;
-            if (totalSteps <= 0) {
-              return _StaticDigit(digit: widget.digit, style: widget.style);
-            }
+                    final totalSteps = (_rotations * 10) + diff;
+                    if (totalSteps <= 0) {
+                      return _StaticDigit(
+                        digit: widget.digit,
+                        style: widget.style,
+                      );
+                    }
 
-            final baseColor =
-                widget.style.color ?? Theme.of(context).colorScheme.onSurface;
-            final visibleDigits = <({double distance, Widget child})>[];
+                    final baseColor =
+                        widget.style.color ??
+                        Theme.of(context).colorScheme.onSurface;
+                    final visibleDigits = <({double distance, Widget child})>[];
 
-            for (int i = 0; i <= totalSteps; i++) {
-              final rawOffset = (i - (t * totalSteps)) * height;
-              final normalizedOffset = rawOffset / height;
-              final distance = normalizedOffset.abs();
+                    for (int i = 0; i <= totalSteps; i++) {
+                      final rawOffset = (i - (t * totalSteps)) * height;
+                      final normalizedOffset = rawOffset / height;
+                      final distance = normalizedOffset.abs();
 
-              if (distance > _visibleExtent) {
-                continue;
-              }
+                      if (distance > _visibleExtent) {
+                        continue;
+                      }
 
-              final centerProgress =
-                  (1 - (distance / _visibleExtent)).clamp(0.0, 1.0).toDouble();
-              final easedCenter =
-                  KeroseneMotion.standard.transform(centerProgress);
-              final opacity = _edgeOpacity + ((1 - _edgeOpacity) * easedCenter);
-              final scale = _edgeScale + ((1 - _edgeScale) * easedCenter);
-              final tilt = normalizedOffset * _maxTiltRadians;
-              final curvedOffset = math.sin(
-                      (normalizedOffset / _visibleExtent) * (math.pi / 2)) *
-                  height *
-                  _visibleExtent;
+                      final centerProgress = (1 - (distance / _visibleExtent))
+                          .clamp(0.0, 1.0)
+                          .toDouble();
+                      final easedCenter = KeroseneMotion.standard.transform(
+                        centerProgress,
+                      );
+                      final opacity =
+                          _edgeOpacity + ((1 - _edgeOpacity) * easedCenter);
+                      final scale =
+                          _edgeScale + ((1 - _edgeScale) * easedCenter);
+                      final tilt = normalizedOffset * _maxTiltRadians;
+                      final curvedOffset =
+                          math.sin(
+                            (normalizedOffset / _visibleExtent) * (math.pi / 2),
+                          ) *
+                          height *
+                          _visibleExtent;
 
-              visibleDigits.add((
-                distance: distance,
-                child: Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, _perspective)
-                    ..translateByDouble(0.0, curvedOffset, 0.0, 1.0)
-                    ..rotateX(tilt)
-                    ..scaleByDouble(scale, scale, 1.0, 1.0),
-                  child: Center(
-                    child: Text(
-                      ((_previousDigit + i) % 10).toString(),
-                      style: widget.style.copyWith(
-                        color: baseColor.withValues(
-                          alpha: (baseColor.a * opacity).clamp(0.0, 1.0),
+                      visibleDigits.add((
+                        distance: distance,
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, _perspective)
+                            ..translateByDouble(0.0, curvedOffset, 0.0, 1.0)
+                            ..rotateX(tilt)
+                            ..scaleByDouble(scale, scale, 1.0, 1.0),
+                          child: Center(
+                            child: Text(
+                              ((_previousDigit + i) % 10).toString(),
+                              style: widget.style.copyWith(
+                                color: baseColor.withValues(
+                                  alpha: (baseColor.a * opacity).clamp(
+                                    0.0,
+                                    1.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
+                      ));
+                    }
+
+                    visibleDigits.sort(
+                      (a, b) => b.distance.compareTo(a.distance),
+                    );
+
+                    // Edge fade comes from per-digit opacity/scale above — no ShaderMask
+                    // (dstIn forces saveLayer every roll frame).
+                    return RepaintBoundary(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.hardEdge,
+                        children: [
+                          for (final digit in visibleDigits) digit.child,
+                        ],
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
-              ));
-            }
-
-            visibleDigits.sort((a, b) => b.distance.compareTo(a.distance));
-
-            // Edge fade comes from per-digit opacity/scale above — no ShaderMask
-            // (dstIn forces saveLayer every roll frame).
-            return RepaintBoundary(
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.hardEdge,
-                children: [
-                  for (final digit in visibleDigits) digit.child,
-                ],
               ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -524,15 +598,10 @@ class _StaticDigit extends StatelessWidget {
   final String digit;
   final TextStyle style;
 
-  const _StaticDigit({
-    required this.digit,
-    required this.style,
-  });
+  const _StaticDigit({required this.digit, required this.style});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(digit, style: style),
-    );
+    return Center(child: Text(digit, style: style));
   }
 }

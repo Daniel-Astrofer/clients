@@ -16,22 +16,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('home tabs start on total balance then switch without carousel',
+  testWidgets('home balance starts on total and swipes to internal wallet',
       (tester) async {
     await _pumpBalance(tester, wallets: [_wallet(name: 'Carteira Global')]);
 
-    expect(find.text('SALDO TOTAL'), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-balance-tabs')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-balance-hero')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-balance-carousel')), findsNothing);
-    expect(find.text('Conta'), findsOneWidget);
+    expect(find.text('SALDO'), findsNothing);
+    expect(
+        find.byKey(const ValueKey('home-balance-hero-total')), findsOneWidget);
+    expect(find.byType(PageView), findsOneWidget);
 
-    await tester.tap(find.text('Conta'));
+    await tester.drag(find.byType(PageView), const Offset(-300, 0));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('SALDO INTERNO'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-hero-platform')),
+        findsOneWidget);
     expect(find.text('Carteira Global'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));
@@ -51,22 +52,23 @@ void main() {
       ],
     );
 
-    expect(find.text('SALDO TOTAL'), findsOneWidget);
-    expect(find.text('Conta'), findsOneWidget);
-    expect(find.text('Cofre'), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-balance-carousel')), findsNothing);
+    expect(find.text('SALDO'), findsNothing);
+    expect(find.byType(PageView), findsOneWidget);
 
-    await tester.tap(find.text('Conta'));
+    await tester.drag(find.byType(PageView), const Offset(-300, 0));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('SALDO INTERNO'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-hero-platform')),
+        findsOneWidget);
     expect(find.text('Carteira Global'), findsOneWidget);
 
-    await tester.tap(find.text('Cofre'));
+    await tester.drag(find.byType(PageView), const Offset(-300, 0));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('SALDO DO COFRE'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('home-balance-hero-cold')), findsOneWidget);
     expect(find.text('Cold vault'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));
@@ -77,6 +79,12 @@ Future<void> _pumpBalance(
   WidgetTester tester, {
   required List<Wallet> wallets,
 }) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
   SharedPreferences.setMockInitialValues(const {});
   final sharedPreferences = await SharedPreferences.getInstance();
   final walletState = WalletLoaded(

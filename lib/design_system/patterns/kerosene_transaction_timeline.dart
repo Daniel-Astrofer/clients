@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
@@ -53,13 +54,32 @@ class KeroseneTransactionTimeline extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () => onFilterChanged?.call(filter),
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
                       decoration: BoxDecoration(
                         color: isActive ? palette.surface : null,
                         borderRadius: BorderRadius.circular(9999),
-                        border: Border.all(color: isActive ? palette.textPrimary : palette.border, width: 1),
+                        border: Border.all(
+                          color: isActive
+                              ? palette.textPrimary
+                              : palette.border,
+                          width: 1,
+                        ),
                       ),
-                      child: Text(filter.label, style: AppTypography.inter(fontSize: 12, color: isActive ? palette.textPrimary : palette.textSecondary, fontWeight: isActive ? AppTypography.w510 : AppTypography.w400)),
+                      child: Text(
+                        filter.label,
+                        style: AppTypography.inter(
+                          fontSize: 12,
+                          color: isActive
+                              ? palette.textPrimary
+                              : palette.textSecondary,
+                          fontWeight: isActive
+                              ? AppTypography.w510
+                              : AppTypography.w400,
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -73,26 +93,37 @@ class KeroseneTransactionTimeline extends StatelessWidget {
         if (transactions.isEmpty)
           Padding(
             padding: EdgeInsets.all(AppSpacing.module),
-            child: Text('Nenhuma movimentacao', style: AppTypography.inter(fontSize: 13, color: palette.textDisabled)),
+            child: Text(
+              context.tr.transactionNoMovement,
+              style: AppTypography.inter(
+                fontSize: 13,
+                color: palette.textDisabled,
+              ),
+            ),
           )
         else
-          ...transactions.take(compact ? 5 : transactions.length).map((tx) =>
-            KeroseneTransactionRow(
-              type: tx.type,
-              counterparty: tx.counterparty,
-              amount: tx.amount,
-              currency: tx.currency,
-              status: tx.status,
-              timestamp: tx.timestamp,
-              isPending: tx.isPending,
-              onTap: () => onTransactionTap?.call(tx),
-            ),
-          ),
+          ...transactions
+              .take(compact ? 5 : transactions.length)
+              .map(
+                (tx) => KeroseneTransactionRow(
+                  type: tx.type,
+                  counterparty: tx.counterparty,
+                  amount: tx.amount,
+                  currency: tx.currency,
+                  status: tx.status,
+                  timestamp: tx.timestamp,
+                  isPending: tx.isPending,
+                  onTap: () => onTransactionTap?.call(tx),
+                ),
+              ),
 
         // View all
         if (compact && onViewAll != null && transactions.length > 5) ...[
           SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: onViewAll, child: Text('Ver todas')),
+          TextButton(
+            onPressed: onViewAll,
+            child: Text(context.tr.transactionViewAll),
+          ),
         ],
       ],
     );
@@ -130,11 +161,11 @@ enum KeroseneTxFilter {
   pending;
 
   String get label => switch (this) {
-        KeroseneTxFilter.all => 'Todas',
-        KeroseneTxFilter.incoming => 'Recebidas',
-        KeroseneTxFilter.outgoing => 'Enviadas',
-        KeroseneTxFilter.lightning => 'Lightning',
-        KeroseneTxFilter.onchain => 'On-chain',
-        KeroseneTxFilter.pending => 'Pendentes',
-      };
+    KeroseneTxFilter.all => 'Todas',
+    KeroseneTxFilter.incoming => 'Recebidas',
+    KeroseneTxFilter.outgoing => 'Enviadas',
+    KeroseneTxFilter.lightning => 'Lightning',
+    KeroseneTxFilter.onchain => 'On-chain',
+    KeroseneTxFilter.pending => 'Pendentes',
+  };
 }

@@ -604,7 +604,8 @@ class LandingBrandMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        KeroseneLogo(size: compact ? 34 : 44, showText: false, color: Colors.white),
+        KeroseneLogo(
+            size: compact ? 34 : 44, showText: false, color: Colors.white),
         SizedBox(width: compact ? 12 : 18),
         Text(
           label.toUpperCase(),

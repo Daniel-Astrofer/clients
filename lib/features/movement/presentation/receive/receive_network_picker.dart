@@ -41,8 +41,7 @@ class ReceiveNetworkPicker extends StatelessWidget {
     required this.onBack,
   });
 
-  static Color get _optionBg =>
-      SendFlowTheme.forVariant(
+  static Color get _optionBg => SendFlowTheme.forVariant(
         ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
       ).surfaceHigh;
 

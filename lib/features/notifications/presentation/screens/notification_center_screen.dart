@@ -1,5 +1,6 @@
+import 'package:kerosene/core/constants/localized_copy.dart';
+import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -21,43 +22,13 @@ Future<void> openNotificationCenter(
   BuildContext context, {
   required GlobalKey originKey,
 }) {
-  final navigator = Navigator.of(context);
-  final overlayObject = navigator.overlay?.context.findRenderObject();
-  final overlayBox = overlayObject is RenderBox ? overlayObject : null;
-  final originRect = _originRectForKey(originKey, overlayBox) ??
-      _fallbackOriginRect(MediaQuery.sizeOf(context));
-
-  return navigator.push<void>(_notificationCenterRoute(originRect));
+  return Navigator.of(context).push<void>(_notificationCenterRoute());
 }
 
-Rect? _originRectForKey(GlobalKey key, RenderBox? overlayBox) {
-  if (overlayBox == null) {
-    return null;
-  }
-
-  final renderObject = key.currentContext?.findRenderObject();
-  if (renderObject is! RenderBox || !renderObject.hasSize) {
-    return null;
-  }
-
-  final topLeft = renderObject.localToGlobal(Offset.zero, ancestor: overlayBox);
-  return topLeft & renderObject.size;
-}
-
-Rect _fallbackOriginRect(Size size) {
-  const fallbackSize = 42.0;
-  return Rect.fromLTWH(
-    size.width - fallbackSize - 20,
-    48,
-    fallbackSize,
-    fallbackSize,
-  );
-}
-
-Route<void> _notificationCenterRoute(Rect originRect) {
+Route<void> _notificationCenterRoute() {
   return PageRouteBuilder<void>(
     opaque: true,
-    transitionDuration: KeroseneMotion.long,
+    transitionDuration: KeroseneMotion.pageIn,
     reverseTransitionDuration: KeroseneMotion.medium,
     pageBuilder: (context, animation, secondaryAnimation) {
       return const NotificationCenterScreen();
@@ -70,58 +41,10 @@ Route<void> _notificationCenterRoute(Rect originRect) {
         reverseCurve: KeroseneMotion.exit,
       );
 
-      if (reduceMotion) {
-        return FadeTransition(opacity: curved, child: child);
-      }
-
-      return AnimatedBuilder(
-        animation: curved,
-        builder: (context, _) {
-          final size = MediaQuery.sizeOf(context);
-          final center = originRect.center;
-          final startRadius = math.max(originRect.width, originRect.height) / 2;
-          final endRadius = _distanceToFarthestCorner(center, size);
-          final radius = startRadius + (endRadius - startRadius) * curved.value;
-          final opacity = const Interval(
-            0.10,
-            0.78,
-            curve: KeroseneMotion.standard,
-          ).transform(curved.value);
-
-          return ClipPath(
-            clipper: _CircularRevealClipper(center: center, radius: radius),
-            child: Opacity(opacity: opacity, child: child),
-          );
-        },
-      );
+      if (reduceMotion) return child;
+      return FadeTransition(opacity: curved, child: child);
     },
   );
-}
-
-double _distanceToFarthestCorner(Offset center, Size size) {
-  return [
-    Offset.zero,
-    Offset(size.width, 0),
-    Offset(0, size.height),
-    Offset(size.width, size.height),
-  ].map((corner) => (corner - center).distance).reduce(math.max);
-}
-
-class _CircularRevealClipper extends CustomClipper<Path> {
-  final Offset center;
-  final double radius;
-
-  const _CircularRevealClipper({required this.center, required this.radius});
-
-  @override
-  Path getClip(Size size) {
-    return Path()..addOval(Rect.fromCircle(center: center, radius: radius));
-  }
-
-  @override
-  bool shouldReclip(_CircularRevealClipper oldClipper) {
-    return oldClipper.center != center || oldClipper.radius != radius;
-  }
 }
 
 class NotificationCenterScreen extends ConsumerStatefulWidget {
@@ -135,17 +58,29 @@ class NotificationCenterScreen extends ConsumerStatefulWidget {
 class _NotificationCenterScreenState
     extends ConsumerState<NotificationCenterScreen> {
   _NotificationCenterFilter _filter = _NotificationCenterFilter.all;
+  bool _loading = true;
+  bool _loadFailed = false;
 
   @override
   void initState() {
     super.initState();
-    unawaited(
-      Future.microtask(
-        () => ref
-            .read(sessionNotificationFeedProvider.notifier)
-            .reloadFromServer(),
-      ),
-    );
+    unawaited(Future.microtask(_reload));
+  }
+
+  Future<void> _reload() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    final ok = await ref
+        .read(sessionNotificationFeedProvider.notifier)
+        .reloadFromServer();
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _loadFailed = !ok;
+    });
   }
 
   @override
@@ -198,24 +133,54 @@ class _NotificationCenterScreenState
                         onMarkAllRead: unreadCount == 0
                             ? null
                             : () => ref
-                                .read(
-                                  sessionNotificationFeedProvider.notifier,
-                                )
-                                .markAllRead(),
+                                  .read(
+                                    sessionNotificationFeedProvider.notifier,
+                                  )
+                                  .markAllRead(),
                         onClear: notifications.isEmpty
                             ? null
                             : () => ref
-                                .read(
-                                  sessionNotificationFeedProvider.notifier,
-                                )
-                                .clear(),
+                                  .read(
+                                    sessionNotificationFeedProvider.notifier,
+                                  )
+                                  .clear(),
                       ),
                       reduceMotion: reduceMotion,
                       delay: 170,
                     ),
                   ),
                 ),
-                if (filtered.isEmpty)
+                if (_loading && notifications.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_loadFailed && notifications.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            const LocalizedCopy(
+                              en: 'Notifications could not be loaded.',
+                              pt: 'Não foi possível carregar as notificações.',
+                              es: 'No se pudieron cargar las notificaciones.',
+                            ).resolve(context),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: _reload,
+                            child: Text(context.tr.tryAgain),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (filtered.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: _animated(
@@ -233,7 +198,9 @@ class _NotificationCenterScreenState
                           Text(
                             group.label,
                             style: AppTypography.inter(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.58),
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               height: 1,
@@ -278,12 +245,14 @@ class _NotificationCenterScreenState
   ) {
     final filtered = switch (_filter) {
       _NotificationCenterFilter.all => List.of(notifications),
-      _NotificationCenterFilter.alerts => notifications
-          .where((item) => !_isSecurityNotification(context, item))
-          .toList(),
-      _NotificationCenterFilter.security => notifications
-          .where((item) => _isSecurityNotification(context, item))
-          .toList(),
+      _NotificationCenterFilter.alerts =>
+        notifications
+            .where((item) => !_isSecurityNotification(context, item))
+            .toList(),
+      _NotificationCenterFilter.security =>
+        notifications
+            .where((item) => _isSecurityNotification(context, item))
+            .toList(),
     };
     filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return filtered;
@@ -327,16 +296,16 @@ class _NotificationCenterScreenState
     return child
         .animate()
         .fadeIn(
-          duration: 320.ms,
-          delay: delay.ms,
+          duration: KeroseneMotion.statusChange,
+          delay: KeroseneMotion.fromMilliseconds(delay.clamp(0, 60).toInt()),
           curve: KeroseneMotion.standard,
           begin: 0.18,
         )
         .slideY(
           begin: 0.035,
           end: 0,
-          duration: 360.ms,
-          delay: delay.ms,
+          duration: KeroseneMotion.statusChange,
+          delay: KeroseneMotion.fromMilliseconds(delay.clamp(0, 60).toInt()),
           curve: KeroseneMotion.standard,
         );
   }
@@ -384,14 +353,18 @@ class _NotificationCenterHeader extends StatelessWidget {
         IconButton(
           tooltip: context.tr.notifCenterSettingsTooltip,
           onPressed: () =>
-              Navigator.of(context).pushNamed('/settings/notifications'),
+              AppNavigation.push(context, '/settings/notifications'),
           icon: const Icon(KeroseneIcons.settings),
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.78),
           iconSize: 18,
           style: IconButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.08),
             shape: const CircleBorder(),
-            fixedSize: const Size(34, 34),
+            fixedSize: const Size(48, 48),
           ),
         ),
       ],
@@ -463,14 +436,22 @@ class _NotificationCenterActions extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
           ),
           child: Text(
             statusLabel,
             style: AppTypography.inter(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.58),
               fontSize: 11,
               fontWeight: FontWeight.w700,
               height: 1,
@@ -509,7 +490,9 @@ class _NotificationActionTextButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.72 : 0.22),
+        foregroundColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: enabled ? 0.72 : 0.22),
         minimumSize: const Size(0, 30),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -605,7 +588,11 @@ class _NotificationCenterCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.hexFF141414,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.035)),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.035),
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -633,7 +620,9 @@ class _NotificationCenterCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.inter(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.92),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.92),
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               height: 1.2,
@@ -645,7 +634,9 @@ class _NotificationCenterCard extends StatelessWidget {
                         Text(
                           _timeLabel(context, item.timestamp),
                           style: AppTypography.inter(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.35),
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                             height: 1.2,
@@ -660,7 +651,9 @@ class _NotificationCenterCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.58),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.58),
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         height: 1.42,
@@ -709,14 +702,20 @@ class _NotificationEmptyState extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.hexFF141414,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.06),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 KeroseneIcons.notificationsOff,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.54),
                 size: 26,
               ),
               const SizedBox(height: 12),
@@ -724,7 +723,9 @@ class _NotificationEmptyState extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.86),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.86),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
@@ -735,7 +736,9 @@ class _NotificationEmptyState extends StatelessWidget {
                 context.tr.notifCenterEmptyHint,
                 textAlign: TextAlign.center,
                 style: AppTypography.inter(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.48),
                   fontSize: 12,
                   height: 1.35,
                   letterSpacing: 0,

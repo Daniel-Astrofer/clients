@@ -67,6 +67,16 @@ void main() {
   });
 
   group('ApiClient retry policy', () {
+    test('does not replay the single-use PoW signup request', () {
+      final shouldRetry = ApiClient.shouldRetryRequest(
+        method: 'POST',
+        path: '/auth/signup',
+        data: const {'challenge': 'pow', 'nonce': 'nonce'},
+      );
+
+      expect(shouldRetry, isFalse);
+    });
+
     test('does not retry passkey onboarding finish', () {
       final shouldRetry = ApiClient.shouldRetryRequest(
         method: 'POST',

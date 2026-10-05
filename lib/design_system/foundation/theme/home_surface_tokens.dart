@@ -25,10 +25,10 @@ abstract final class HomeSurfaceTokens {
   static Color get overlayDim => HomeSurfaceTheme.current.overlayDim;
 
   // --- radii ---
-  static const double radiusSmall = 4.0;
-  static const double radiusMedium = 4.0;
-  static const double radiusCard = 8.0;
-  static const double radiusPanel = 8.0;
+  static const double radiusSmall = 8.0;
+  static const double radiusMedium = 16.0;
+  static const double radiusCard = 20.0;
+  static const double radiusPanel = 20.0;
 
   static const double densityScale = 1.0;
 
@@ -36,11 +36,11 @@ abstract final class HomeSurfaceTokens {
   static double fontSize(double value) => value;
 
   // --- type scale (canonical for all home sections) ---
-  static double get sectionTitleSize => fontSize(22);
+  static double get sectionTitleSize => fontSize(20);
   static double get cardTitleSize => fontSize(18);
-  static double get bodySize => fontSize(14);
-  static double get captionSize => fontSize(12);
-  static double get smallLabelSize => fontSize(10);
+  static double get bodySize => fontSize(15);
+  static double get captionSize => fontSize(13);
+  static double get smallLabelSize => fontSize(12);
 
   static TextStyle get title => HomeSurfaceTheme.current.title;
   static TextStyle get body => HomeSurfaceTheme.current.body;
@@ -56,7 +56,7 @@ abstract final class HomeSurfaceTokens {
 /// home screen shares a single motion language.
 abstract final class HomeMotion {
   /// Default entrance duration for sections cascading in.
-  static const Duration entrance = Duration(milliseconds: 600);
+  static const Duration entrance = Duration(milliseconds: 260);
 
   /// Stagger delay between sibling items (rows, cards, chips).
   static const Duration stagger = Duration(milliseconds: 50);
@@ -68,19 +68,18 @@ abstract final class HomeMotion {
   static const Curve revealCurve = Curves.easeInOutCubic;
 
   /// Short transition (cross-fade, chip toggle).
-  static const Duration short = Duration(milliseconds: 280);
+  static const Duration short = Duration(milliseconds: 180);
 
   /// Medium transition (card swap, view change).
-  static const Duration medium = Duration(milliseconds: 480);
+  static const Duration medium = Duration(milliseconds: 260);
 
   /// Long reveal (initial load cascade).
-  static const Duration long = Duration(milliseconds: 800);
+  static const Duration long = Duration(milliseconds: 360);
 
-  /// Fixed aurora band height as fraction of screen height.
-  ///
-  /// The band ends around the middle of the balance hero. The balance
-  /// itself remains in the scroll view; only this background is pinned.
+  /// Legacy renderer compatibility. The active halo uses content-sized bounds.
   static const double auroraBandFraction = 0.42;
+  static const double auroraBandHeight = 300;
+  static const double veilHeight = 96;
 
   /// Veil gradient stops (covers ~0 → 1 from aurora bottom toward feed).
   static const List<double> veilStops = [0.0, 0.22, 0.48, 0.74, 1.0];
@@ -290,58 +289,54 @@ abstract class HomeTypography {
   // SEMANTIC TEXT STYLES
   //
   // Every screen references these instead of composing inline.
-  // To change Playfair weight globally, edit the w200 here.
+  // Operational headings share the same sans family as amounts and controls.
   // To resize all section titles, edit sectionTitleSize above.
   // ============================================================
 
-  // -- Playfair Display (serif) --
+  // -- Operational headings (Plus Jakarta Sans) --
 
   /// Section header: "Atividades recentes", "Distribuição de fundos", etc.
-  static TextStyle sectionHeader({Color? color}) =>
-      AppTypography.newsreader(
+  static TextStyle sectionHeader({Color? color}) => AppTypography.inter(
         color: color,
         fontSize: sectionTitleSize,
-        fontWeight: FontWeight.w200,
-        height: 1.15,
-        letterSpacing: 0,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+        letterSpacing: -0.3,
       );
 
   /// Card title: education cards, setup notices.
-  static TextStyle cardHeader({Color? color}) =>
-      AppTypography.newsreader(
+  static TextStyle cardHeader({Color? color}) => AppTypography.inter(
         color: color,
         fontSize: cardTitleSize,
-        fontWeight: FontWeight.w200,
-        height: 1.1,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
         letterSpacing: 0,
       );
 
   /// Large hero title: onboarding, welcome, statement.
   static TextStyle heroTitle({Color? color, double fontSize = 32}) =>
-      AppTypography.newsreader(
+      AppTypography.inter(
         color: color,
         fontSize: fontSize,
-        fontWeight: FontWeight.w200,
-        height: 1.12,
-        letterSpacing: 0,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+        letterSpacing: -0.5,
       );
 
   // -- Plus Jakarta Sans (body / labels) --
 
   /// Date / group headers: "Hoje", "Ontem", section labels like "TOTAL".
-  static TextStyle dateHeader({Color? color}) =>
-      AppTypography.label.copyWith(
+  static TextStyle dateHeader({Color? color}) => AppTypography.label.copyWith(
         color: color,
         fontSize: captionSize,
-        letterSpacing: 1.0,
+        letterSpacing: 0.5,
       );
 
   /// Filter / status chip label.
-  static TextStyle filterChip({Color? color}) =>
-      AppTypography.label.copyWith(
+  static TextStyle filterChip({Color? color}) => AppTypography.label.copyWith(
         color: color,
         fontSize: captionSize,
-        fontWeight: FontWeight.w300,
+        fontWeight: FontWeight.w500,
         letterSpacing: 0,
       );
 
@@ -354,8 +349,7 @@ abstract class HomeTypography {
       );
 
   /// Small caption / meta text.
-  static TextStyle caption({Color? color}) =>
-      AppTypography.bodySmall.copyWith(
+  static TextStyle caption({Color? color}) => AppTypography.bodySmall.copyWith(
         color: color,
         fontSize: captionSize,
         letterSpacing: 0,
@@ -381,7 +375,7 @@ abstract class HomeTypography {
       AppTypography.bodyMedium.copyWith(
         color: color,
         fontSize: 15,
-        fontWeight: FontWeight.w300,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       );
 

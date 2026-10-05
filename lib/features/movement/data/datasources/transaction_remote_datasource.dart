@@ -1,3 +1,5 @@
+// architecture-allow-large-file: transport payload compatibility and response
+// decoding remain together to preserve external API contracts.
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
@@ -367,9 +369,10 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'amountLocked': true,
       'referenceLabel': referenceLabel,
       'metadata': mergedMetadata,
-      // Always expose wallet destination so in-app pay settles via INTERNAL ledger
-      // (including LIGHTNING-rail payment requests — LND self-pay is denied).
-      if (walletId.isNotEmpty) 'destinationHash': walletId,
+      // Expose the wallet destination only for rails settled through the
+      // internal ledger. On-chain links use their issued deposit address.
+      if ((isInternal || isLightning) && walletId.isNotEmpty)
+        'destinationHash': walletId,
       if (paymentUri != null) 'paymentUri': paymentUri,
       if (bolt11.isNotEmpty) 'paymentRequest': bolt11,
       if (paymentHash.isNotEmpty) 'paymentHash': paymentHash,
@@ -1148,9 +1151,32 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
       'idempotencyKey',
     );
     final normalizedDescription = _optionalText(description);
-    // Prefer paymentRequest when present, else toAddress.
-    final rawDestination =
-        _optionalText(paymentRequest) ?? _optionalText(toAddress) ?? '';
+    final normalizedToAddress = _optionalText(toAddress);
+    final normalizedPaymentRequest = _optionalText(paymentRequest);
+
+    // A platform payment request carries two different values for an
+    // internal payment: its public request id and the recipient wallet UUID.
+    // Keep those channels separate instead of letting the public id replace
+    // the destination wallet in the wire payload.
+    final paymentRequestDestination = normalizedPaymentRequest != null &&
+            _looksLikeExecutableLightningDestination(
+              normalizedPaymentRequest,
+            )
+        ? normalizedPaymentRequest
+        : null;
+    final walletUuidDestination = [
+      normalizedToAddress,
+      normalizedPaymentRequest,
+    ].whereType<String>().firstWhere(
+          _looksLikeUuid,
+          orElse: () => '',
+        );
+    // Prefer an executable Lightning request, then an explicit wallet UUID,
+    // then preserve the legacy single-value fallback.
+    final rawDestination = paymentRequestDestination ??
+        (walletUuidDestination.isNotEmpty
+            ? walletUuidDestination
+            : normalizedToAddress ?? normalizedPaymentRequest ?? '');
     if (rawDestination.isEmpty) {
       throw ValidationException(
         message: isLightning
@@ -1163,13 +1189,13 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
     // (UI sometimes picks "Lightning" rail for a Kerosene user and locks wallet id.)
     final isWalletUuid = _looksLikeUuid(rawDestination);
     // Explicit platform payment-request public id → always INTERNAL ledger.
-    final explicitPaymentRequestPublicId =
-        _optionalText(paymentRequest) != null &&
-                !_looksLikeUuid(_optionalText(paymentRequest)!) &&
-                !_looksLikeExecutableLightningDestination(
-                    _optionalText(paymentRequest)!)
-            ? _optionalText(paymentRequest)
-            : null;
+    final explicitPaymentRequestPublicId = normalizedPaymentRequest != null &&
+            !_looksLikeUuid(normalizedPaymentRequest) &&
+            !_looksLikeExecutableLightningDestination(
+              normalizedPaymentRequest,
+            )
+        ? normalizedPaymentRequest
+        : null;
     final effectiveLightning = isLightning &&
         explicitPaymentRequestPublicId == null &&
         !isWalletUuid &&
@@ -1181,8 +1207,10 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
         isWalletUuid ||
         (!effectiveLightning && _looksLikeUuid(destination));
     final paymentRequestPublicId = explicitPaymentRequestPublicId ??
-        (isInternal && !_looksLikeUuid(rawDestination)
-            ? _optionalText(paymentRequest)
+        (isInternal &&
+                normalizedPaymentRequest != null &&
+                !_looksLikeUuid(normalizedPaymentRequest)
+            ? normalizedPaymentRequest
             : null);
     final rail = effectiveLightning
         ? 'LIGHTNING'

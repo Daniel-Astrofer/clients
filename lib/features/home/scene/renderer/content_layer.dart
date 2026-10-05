@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show homeFontSize, homeSize;
@@ -56,14 +57,18 @@ class SceneContentLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!content.hasText) return const SizedBox.shrink();
 
-    final title = content.resolveTitle(userName).trim();
-    final subtitle = content.subtitle.trim();
-    final body = (content.body ?? '').trim();
-    final full = body.isNotEmpty
-        ? (subtitle.isNotEmpty
-            ? '$title\n\n$subtitle\n\n$body'
-            : '$title\n\n$body')
-        : (subtitle.isNotEmpty ? '$title\n\n$subtitle' : title);
+    // Scene metadata may contain an emoji lead from the legacy stage schema.
+    // It is useful to keep the text, but platform emoji fonts make the same
+    // financial message look different on every device. The scene renderer
+    // owns this normalization so every presentation surface stays consistent.
+    final title =
+        _withoutDecorativeGlyphs(content.resolveTitle(userName)).trim();
+    final subtitle = _withoutDecorativeGlyphs(content.subtitle).trim();
+    final body = _withoutDecorativeGlyphs(content.body ?? '').trim();
+    final secondary = [
+      if (subtitle.isNotEmpty) subtitle,
+      if (body.isNotEmpty && body != subtitle) body,
+    ].join('\n\n');
 
     final semanticsLabel = [
       if (title.isNotEmpty) title,
@@ -74,19 +79,16 @@ class SceneContentLayer extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final isLight = Theme.of(context).brightness == Brightness.light;
     final ink = scheme.onSurface;
-    final shadows = isLight ? kTheaterTextShadowsLight : kTheaterTextShadowsDark;
+    final shadows =
+        isLight ? kTheaterTextShadowsLight : kTheaterTextShadowsDark;
 
     // Dark theater: near-white on OLED. Light: scaffold ink + soft halo on blooms.
     final titleStyle = AppTypography.h1.copyWith(
       color: isLight ? ink : const Color(0xFFFFFFF2),
       height: 1.12,
-      fontSize: compact ? homeFontSize(26) : homeFontSize(32),
+      fontSize: compact ? homeFontSize(22) : homeFontSize(26),
+      fontWeight: AppTypography.w510,
       shadows: shadows,
-      fontFamilyFallback: const [
-        'Noto Color Emoji',
-        'Segoe UI Emoji',
-        'Apple Color Emoji',
-      ],
     );
 
     final subtitleStyle = AppTypography.h2.copyWith(
@@ -94,8 +96,8 @@ class SceneContentLayer extends StatelessWidget {
           ? ink.withValues(alpha: 0.88)
           : Colors.white.withValues(alpha: 0.92),
       height: 1.28,
-      fontSize: compact ? homeFontSize(16) : homeFontSize(18),
-      fontWeight: FontWeight.w600,
+      fontSize: compact ? homeFontSize(14) : homeFontSize(16),
+      fontWeight: FontWeight.w500,
       shadows: shadows,
     );
 
@@ -104,22 +106,23 @@ class SceneContentLayer extends StatelessWidget {
           ? scheme.onSurfaceVariant
           : Colors.white.withValues(alpha: 0.82),
       height: 1.4,
-      fontSize: homeFontSize(15),
+      fontSize: homeFontSize(14),
+      fontWeight: FontWeight.w400,
       shadows: shadows,
     );
 
     final child = switch (content.textMode) {
-      SceneTextMode.typewriter => _TypewriterReveal(
-          fullText: full,
+      // A title is a decision anchor. Paint it on the first frame and reserve
+      // the short transition for supporting copy so a theater piece never
+      // feels stalled while text is being revealed.
+      SceneTextMode.typewriter => _ImmediateTitleReveal(
+          title: title,
+          secondary: secondary,
           titleStyle: titleStyle,
-          bodyStyle: subtitle.isNotEmpty || body.isNotEmpty
-              ? subtitleStyle
-              : bodyStyle,
+          subtitleStyle: subtitleStyle,
+          bodyStyle: bodyStyle,
           durationMs: showDurationMs,
           align: align,
-          caretColor: isLight
-              ? ink.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.55),
         ),
       SceneTextMode.marquee => _MarqueeLine(
           text: title,
@@ -205,6 +208,175 @@ class _StaticBlock extends StatelessWidget {
   }
 }
 
+class _ImmediateTitleReveal extends StatefulWidget {
+  final String title;
+  final String secondary;
+  final TextStyle titleStyle;
+  final TextStyle subtitleStyle;
+  final TextStyle bodyStyle;
+  final int durationMs;
+  final TextAlign align;
+
+  const _ImmediateTitleReveal({
+    required this.title,
+    required this.secondary,
+    required this.titleStyle,
+    required this.subtitleStyle,
+    required this.bodyStyle,
+    required this.durationMs,
+    required this.align,
+  });
+
+  @override
+  State<_ImmediateTitleReveal> createState() => _ImmediateTitleRevealState();
+}
+
+class _ImmediateTitleRevealState extends State<_ImmediateTitleReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this);
+    _restart();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ImmediateTitleReveal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.title != widget.title ||
+        oldWidget.secondary != widget.secondary ||
+        oldWidget.durationMs != widget.durationMs) {
+      _restart();
+    }
+  }
+
+  void _restart() {
+    _controller
+      ..duration = const Duration(milliseconds: 260)
+      ..forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cross = widget.align == TextAlign.center
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.start;
+    final secondary = widget.secondary;
+    final reveal = KeroseneMotion.reduceMotion(context)
+        ? const AlwaysStoppedAnimation<double>(1)
+        : CurvedAnimation(
+            parent: _controller,
+            curve: KeroseneMotion.standard,
+          );
+    final body = secondary.isEmpty
+        ? const SizedBox.shrink()
+        : FadeTransition(
+            opacity: reveal,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.04),
+                end: Offset.zero,
+              ).animate(reveal),
+              child: _SecondaryCopy(
+                text: secondary,
+                subtitleStyle: widget.subtitleStyle,
+                bodyStyle: widget.bodyStyle,
+                align: widget.align,
+              ),
+            ),
+          );
+
+    return Column(
+      crossAxisAlignment: cross,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.title.isNotEmpty)
+          Text(
+            widget.title,
+            style: widget.titleStyle,
+            textAlign: widget.align,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        if (secondary.isNotEmpty) ...[
+          SizedBox(height: homeSize(6)),
+          body,
+        ],
+      ],
+    );
+  }
+}
+
+class _SecondaryCopy extends StatelessWidget {
+  final String text;
+  final TextStyle subtitleStyle;
+  final TextStyle bodyStyle;
+  final TextAlign align;
+
+  const _SecondaryCopy({
+    required this.text,
+    required this.subtitleStyle,
+    required this.bodyStyle,
+    required this.align,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = text.split('\n\n');
+    final cross = align == TextAlign.center
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.start;
+    return Column(
+      crossAxisAlignment: cross,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (parts.first.trim().isNotEmpty)
+          Text(
+            parts.first,
+            style: subtitleStyle,
+            textAlign: align,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+          ),
+        if (parts.length > 1 && parts.sublist(1).join('\n\n').trim().isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: homeSize(6)),
+            child: Text(
+              parts.sublist(1).join('\n\n'),
+              style: bodyStyle,
+              textAlign: align,
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _withoutDecorativeGlyphs(String value) {
+  if (value.isEmpty) return value;
+  final out = StringBuffer();
+  for (final rune in value.runes) {
+    final isEmoji = (rune >= 0x1F000 && rune <= 0x1FAFF) ||
+        (rune >= 0x2600 && rune <= 0x27BF) ||
+        rune == 0xFE0E ||
+        rune == 0xFE0F ||
+        rune == 0x200D ||
+        (rune >= 0x1F3FB && rune <= 0x1F3FF);
+    if (!isEmoji) out.writeCharCode(rune);
+  }
+  return out.toString().replaceAll(RegExp(r' {2,}'), ' ').trim();
+}
+
 /// Typewriter that **never grows layout**: full text is laid out invisibly
 /// (ghost) so height is reserved from frame 0; visible prefix paints on top.
 class _TypewriterReveal extends StatefulWidget {
@@ -220,7 +392,9 @@ class _TypewriterReveal extends StatefulWidget {
     required this.titleStyle,
     required this.bodyStyle,
     required this.durationMs,
+    // ignore: unused_element_parameter
     this.align = TextAlign.start,
+    // ignore: unused_element_parameter
     this.caretColor = const Color(0x8CFFFFFF),
   });
 
@@ -271,7 +445,7 @@ class _TypewriterRevealState extends State<_TypewriterReveal>
     _runes = widget.fullText.runes.toList(growable: false);
     _visibleCharacters.value = 0;
     if (_runes.isEmpty) return;
-    final typeWindow = (widget.durationMs * 0.55).round().clamp(4000, 14000);
+    final typeWindow = (widget.durationMs * 0.22).round().clamp(700, 2600);
     _controller.duration = Duration(milliseconds: typeWindow);
     _controller.forward(from: 0);
   }
@@ -290,7 +464,7 @@ class _TypewriterRevealState extends State<_TypewriterReveal>
       _controller.value = 1;
       return;
     }
-    final typeWindow = (widget.durationMs * 0.55).round().clamp(4000, 14000);
+    final typeWindow = (widget.durationMs * 0.22).round().clamp(700, 2600);
     _controller.duration = Duration(milliseconds: typeWindow);
     // Resume from current visible fraction so append keeps typing forward.
     final from = (kept / _runes.length).clamp(0.0, 1.0);

@@ -20,9 +20,16 @@ class ApiClient implements ApiTransport {
   static const int _paranoidMaxPayloadBytes = 2048;
   static const int _psbtMaxPayloadBytes = 64 * 1024;
   static const Set<String> _challengeConsumingAuthPaths = {
+    // PoW is single-use: retrying signup after a transport 5xx would replay
+    // the nonce/challenge pair and turn a transient error into a false auth
+    // failure.
+    AppConfig.authSignup,
     AppConfig.authPasskeyOnboardingFinish,
     AppConfig.authPasskeyVerify,
     AppConfig.authPasskeyRegister,
+    AppConfig.authDeviceKeyOnboardingFinish,
+    AppConfig.authDeviceKeyVerify,
+    AppConfig.authDeviceKeyRegisterFinish,
     AppConfig.authEmergencyRecoveryFinish,
   };
   late final Dio _dio;

@@ -1,3 +1,5 @@
+// architecture-allow-large-file: receive rail state and request lifecycle are
+// kept together to preserve backend and navigation contracts.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -20,11 +22,11 @@ import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
-import 'package:kerosene/features/movement/data/entities/external_transfer.dart';
-import 'package:kerosene/features/movement/data/entities/onchain_address_allocation.dart';
-import 'package:kerosene/features/movement/data/activity_archive_store.dart';
-import 'package:kerosene/features/movement/data/entities/payment_link.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
+import 'package:kerosene/features/movement/domain/entities/onchain_address_allocation.dart';
+import 'package:kerosene/app/storage/activity_archive_store.dart';
+import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/design_system/components/financial/confirmation_surface.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -37,7 +39,8 @@ import 'receive_request_flow_components.dart';
 enum ReceiveRequestStage { qr, confirmations, identified }
 
 SendFlowTheme _flowTokens() => SendFlowTheme.forVariant(
-      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+    );
 
 Color get _receiveBackground => _flowTokens().background;
 Color get _receiveText => _flowTokens().textPrimary;
@@ -128,9 +131,9 @@ class _ReceiveRequestFlowScreenState
       final link = _link;
       if (link != null && (link.isCancelled || link.isExpired)) {
         unawaited(
-          ref.read(activityArchiveProvider.notifier).markArchived(
-                paymentLinkArchiveId(link.id),
-              ),
+          ref
+              .read(activityArchiveProvider.notifier)
+              .markArchived(paymentLinkArchiveId(link.id)),
         );
       }
     });
@@ -276,14 +279,11 @@ class _ReceiveRequestFlowScreenState
         return widget.onChainWallet ? 'ONCHAIN' : 'INTERNAL';
       case ReceiveAmountMethod.qrCode:
       case ReceiveAmountMethod.paymentLink:
-        // Custodial / ledger wallets: QR is a Kerosene payment request (internal).
-        // Cold / on-chain wallets: BIP-21 address request.
-        if (widget.onChainWallet ||
-            widget.wallet.isColdWallet ||
-            widget.wallet.isSelfCustody) {
-          return 'ONCHAIN';
-        }
-        return 'INTERNAL';
+        // QR and payment-link receiving must be usable outside Kerosene too.
+        // The backend issues a monitored receiving address for INTERNAL wallets
+        // as well, so the shared payload can be a standard BIP-21 URI for both
+        // Electrum and Kerosene. P2P remains the explicit INTERNAL rail.
+        return 'ONCHAIN';
     }
   }
 
@@ -332,8 +332,10 @@ class _ReceiveRequestFlowScreenState
       }
     } catch (error) {
       if (!mounted) return;
-      final translated =
-          ErrorTranslator.translate(context.tr, error.toString());
+      final translated = ErrorTranslator.translate(
+        context.tr,
+        error.toString(),
+      );
       setState(() {
         _isLoadingRequest = false;
         _errorMessage = translated;
@@ -389,8 +391,10 @@ class _ReceiveRequestFlowScreenState
       _startTransferPolling();
     } catch (error) {
       if (!mounted) return;
-      final translated =
-          ErrorTranslator.translate(context.tr, error.toString());
+      final translated = ErrorTranslator.translate(
+        context.tr,
+        error.toString(),
+      );
       setState(() {
         _isLoadingRequest = false;
         _errorMessage = translated;
@@ -500,9 +504,8 @@ class _ReceiveRequestFlowScreenState
 
     try {
       final PaymentLink latest;
-      latest = await ref.read(transactionRepositoryProvider).getPaymentLink(
-            linkId,
-          );
+      latest =
+          await ref.read(transactionRepositoryProvider).getPaymentLink(linkId);
 
       if (!mounted) return;
       final previousStatus = _link?.status.trim().toLowerCase() ?? '';
@@ -601,8 +604,8 @@ class _ReceiveRequestFlowScreenState
     final linkId = _link?.id.trim() ?? '';
     final address = _addressValue.trim().toLowerCase();
     final walletId = widget.wallet.id.trim().toLowerCase();
-    final createdAt = _link?.createdAt ??
-        DateTime.now().subtract(const Duration(hours: 2));
+    final createdAt =
+        _link?.createdAt ?? DateTime.now().subtract(const Duration(hours: 2));
 
     for (final tx in history) {
       if (!tx.isCredit) continue;
@@ -716,10 +719,16 @@ class _ReceiveRequestFlowScreenState
     }
 
     final explicitUri = link.paymentUri?.trim();
-    if (explicitUri != null &&
-        explicitUri.isNotEmpty &&
-        !explicitUri.toLowerCase().startsWith('bitcoin:')) {
-      return explicitUri;
+    if (explicitUri != null && explicitUri.isNotEmpty) {
+      final lower = explicitUri.toLowerCase();
+      // Keep a backend-provided BIP-21 payload intact. It is the portable
+      // contract shared by Electrum and Kerosene.
+      if (lower.startsWith('bitcoin:') || lower.startsWith('web+bitcoin:')) {
+        return explicitUri;
+      }
+      // Non-Bitcoin links are only valid for an explicitly non-on-chain rail
+      // (for example a Kerosene internal payment request).
+      if (!_isOnChainReceive) return explicitUri;
     }
     if (link.isInternalPaymentRequest || !_isOnChainReceive) {
       return QrPaymentParser.encodePaymentLink(link.id);
@@ -765,12 +774,29 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _paymentValue {
+    final current = _paymentUri?.trim() ?? '';
+    if (_isOnChainReceive) {
+      final lower = current.toLowerCase();
+      if (lower.startsWith('bitcoin:') || lower.startsWith('web+bitcoin:')) {
+        return current;
+      }
+      // Never share an internal/web fallback as the payment payload for an
+      // on-chain request. Electrum needs a BIP-21 URI (or the raw address).
+      final address = _addressValue;
+      if (address.isNotEmpty && looksLikeBitcoinAddress(address)) {
+        return QrPaymentParser.encode(
+          address: address,
+          amountBtc: widget.amountBtc,
+          label: widget.wallet.name,
+          message: context.tr.receiveKeroseneTitle,
+        );
+      }
+    }
     final link = _link;
     if (link != null) {
       final shareable = link.shareablePaymentPayload.trim();
       if (shareable.isNotEmpty) return shareable;
     }
-    final current = _paymentUri?.trim() ?? '';
     if (current.isNotEmpty) return current;
     if (_isLightningReceive) {
       final bolt11 = _addressValue;
@@ -861,7 +887,8 @@ class _ReceiveRequestFlowScreenState
     final received = _link?.amountBtc ??
         _observedTransfer?.amountBtc ??
         _allocation?.expectedAmountBtc;
-    final btc = (received != null && received > 0) ? received : widget.amountBtc;
+    final btc =
+        (received != null && received > 0) ? received : widget.amountBtc;
     final amount = MoneyDisplay.formatCompact(
       amount: btc,
       currency: Currency.btc,
@@ -873,7 +900,8 @@ class _ReceiveRequestFlowScreenState
 
   String get _requestedAmountLabel {
     final received = _link?.amountBtc;
-    final btc = (received != null && received > 0) ? received : widget.amountBtc;
+    final btc =
+        (received != null && received > 0) ? received : widget.amountBtc;
     final amount = MoneyDisplay.format(
       amount: btc,
       currency: Currency.btc,
@@ -921,14 +949,9 @@ class _ReceiveRequestFlowScreenState
     final received = _link?.amountBtc ??
         _observedTransfer?.amountBtc ??
         _allocation?.expectedAmountBtc;
-    final btc = (received != null && received > 0) ? received : widget.amountBtc;
-    return '≈ ${money.formatAmountFromBtc(
-      btcAmount: btc,
-      currency: fiat,
-      btcUsd: ref.watch(latestBtcPriceProvider),
-      btcEur: ref.watch(btcEurPriceProvider),
-      btcBrl: ref.watch(btcBrlPriceProvider),
-    )}';
+    final btc =
+        (received != null && received > 0) ? received : widget.amountBtc;
+    return '≈ ${money.formatAmountFromBtc(btcAmount: btc, currency: fiat, btcUsd: ref.watch(latestBtcPriceProvider), btcEur: ref.watch(btcEurPriceProvider), btcBrl: ref.watch(btcBrlPriceProvider))}';
   }
 
   Future<void> _copyPaymentValue() async {
@@ -944,10 +967,7 @@ class _ReceiveRequestFlowScreenState
     final subject = ReceiveMoneyCopy.hubTitle(context);
     await HapticFeedback.selectionClick();
     await SharePlus.instance.share(
-      ShareParams(
-        text: payload,
-        subject: subject,
-      ),
+      ShareParams(text: payload, subject: subject),
     );
   }
 
@@ -1031,8 +1051,10 @@ class _ReceiveRequestFlowScreenState
   Widget build(BuildContext context) {
     // When an inbound lands for this payment request / address, leave the QR
     // even if the payment-link poll lags one cycle.
-    ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider,
-        (previous, next) {
+    ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider, (
+      previous,
+      next,
+    ) {
       next.whenData(_maybeAdvanceFromInboundHistory);
     });
 
@@ -1091,7 +1113,7 @@ class _ReceiveRequestFlowScreenState
       children: [
         _buildQrTopBar(context),
         Expanded(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
               ReceiveFlowLayout.pageHorizontal,
               ReceiveFlowLayout.titleToContentGap,
@@ -1109,7 +1131,7 @@ class _ReceiveRequestFlowScreenState
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const Spacer(flex: 2),
+                const SizedBox(height: 24),
                 Center(child: _buildQrBox(size: 220)),
                 const SizedBox(height: 18),
                 Center(child: _buildQrAmount(context)),
@@ -1119,7 +1141,7 @@ class _ReceiveRequestFlowScreenState
                   const SizedBox(height: 12),
                   InlineNotice(message: _errorMessage!),
                 ],
-                const Spacer(flex: 2),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -1248,30 +1270,32 @@ class _ReceiveRequestFlowScreenState
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: GestureDetector(
+            child: InkWell(
               key: const ValueKey('receive-address-pill-copy'),
-              behavior: HitTestBehavior.opaque,
               onTap: _copyRawAddress,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Flexible(
-                    child: Text(
-                      display,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.right,
-                      style: AppTypography.ibmPlexMono(
-                        color: _receiveText,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        height: 1.3,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        display,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: AppTypography.ibmPlexMono(
+                          color: _receiveText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(KeroseneIcons.copy, size: 12, color: _receiveMuted),
-                ],
+                    const SizedBox(width: 6),
+                    Icon(KeroseneIcons.copy, size: 18, color: _receiveMuted),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1302,7 +1326,7 @@ class _ReceiveRequestFlowScreenState
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         Expanded(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
               ReceiveFlowLayout.pageHorizontal,
               ReceiveFlowLayout.optionGap,
@@ -1382,7 +1406,8 @@ class _ReceiveRequestFlowScreenState
             ),
             child: MovementConfirmationSurface(
               leading: ReceiveSuccessGraphic(
-                  animation: const AlwaysStoppedAnimation(1)),
+                animation: const AlwaysStoppedAnimation(1),
+              ),
               title: identifiedLabel,
               amountLabel: _amountLabel,
               supportingLabel: _fiatLabel,
@@ -1466,11 +1491,14 @@ class _ReceiveRequestFlowScreenState
 
   Widget _buildQrBox({required double size}) {
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.92, end: 1),
-      duration: const Duration(milliseconds: 520),
-      curve: Curves.easeOutCubic,
+      tween: Tween(
+        begin: KeroseneMotion.reduceMotion(context) ? 1.0 : 0.985,
+        end: 1,
+      ),
+      duration: KeroseneMotion.duration(context, KeroseneMotion.statusChange),
+      curve: KeroseneMotion.standard,
       builder: (context, scale, child) {
-        final t = ((scale - 0.92) / 0.08).clamp(0.0, 1.0);
+        final t = ((scale - 0.985) / 0.015).clamp(0.0, 1.0);
         return Opacity(
           opacity: t,
           child: Transform.scale(scale: scale, child: child),
@@ -1483,9 +1511,7 @@ class _ReceiveRequestFlowScreenState
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: Colors.black.withValues(alpha: 0.08),
-          ),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -1519,12 +1545,10 @@ class _ReceiveRequestFlowScreenState
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
-      style:
-          AppTypography.amountInput(isBtc: true, color: _receiveText).copyWith(
-        fontSize: 26,
-        height: 1.12,
-        letterSpacing: 0,
-      ),
+      style: AppTypography.amountInput(
+        isBtc: true,
+        color: _receiveText,
+      ).copyWith(fontSize: 26, height: 1.12, letterSpacing: 0),
     );
   }
 }

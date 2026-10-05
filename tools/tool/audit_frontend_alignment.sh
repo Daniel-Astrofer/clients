@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
-python3 tool/audit_frontend_alignment.py
+FRONTEND_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$FRONTEND_ROOT"
+python3 tools/tool/audit_frontend_alignment.py

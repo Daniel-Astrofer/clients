@@ -43,10 +43,10 @@ class TransactionAuthResult {
   });
 
   const TransactionAuthResult.cancelled()
-      : this._(outcome: TransactionAuthOutcome.cancelled);
+    : this._(outcome: TransactionAuthOutcome.cancelled);
 
   const TransactionAuthResult.unavailable()
-      : this._(outcome: TransactionAuthOutcome.unavailable);
+    : this._(outcome: TransactionAuthOutcome.unavailable);
 
   const TransactionAuthResult.success({
     String? confirmationPassphrase,
@@ -54,12 +54,12 @@ class TransactionAuthResult {
     String? passkeyAssertionJson,
     String? appPin,
   }) : this._(
-          outcome: TransactionAuthOutcome.success,
-          confirmationPassphrase: confirmationPassphrase,
-          totpCode: totpCode,
-          passkeyAssertionJson: passkeyAssertionJson,
-          appPin: appPin,
-        );
+         outcome: TransactionAuthOutcome.success,
+         confirmationPassphrase: confirmationPassphrase,
+         totpCode: totpCode,
+         passkeyAssertionJson: passkeyAssertionJson,
+         appPin: appPin,
+       );
 
   bool get isAuthenticated => outcome == TransactionAuthOutcome.success;
 
@@ -108,19 +108,14 @@ class TransactionAuthGate {
 
     if (effectiveProfile.requiresPasskey && !needsManualFactors) {
       onAuthenticated?.call();
-      return TransactionAuthResult.success(
-        appPin: appPinOutcome?.appPin,
-      );
+      return TransactionAuthResult.success(appPin: appPinOutcome?.appPin);
     }
 
     if (!effectiveProfile.requiresPasskey) {
       final deviceAuthOutcome =
           appPinOutcome?.status == TransactionDeviceAuthStatus.authenticated
-              ? appPinOutcome!
-              : await _showDevicePinFallback(
-                  context,
-                  BiometricService(),
-                );
+          ? appPinOutcome!
+          : await _showDevicePinFallback(context, BiometricService());
 
       if (!context.mounted ||
           deviceAuthOutcome.status == TransactionDeviceAuthStatus.rejected) {
@@ -136,11 +131,10 @@ class TransactionAuthGate {
 
     final TransactionAuthResult result;
     if (!needsManualFactors) {
-      result = TransactionAuthResult.success(
-        appPin: appPinOutcome?.appPin,
-      );
+      result = TransactionAuthResult.success(appPin: appPinOutcome?.appPin);
     } else if (effectiveProfile.requiresShamirShares) {
-      final shamirResult = await showModalBottomSheet<TransactionAuthResult>(
+      final shamirResult =
+          await showModalBottomSheet<TransactionAuthResult>(
             context: context,
             backgroundColor: Colors.transparent,
             isScrollControlled: true,
@@ -159,7 +153,8 @@ class TransactionAuthGate {
         result = const TransactionAuthResult.cancelled();
       }
     } else {
-      final factorResult = await showModalBottomSheet<TransactionAuthResult>(
+      final factorResult =
+          await showModalBottomSheet<TransactionAuthResult>(
             context: context,
             backgroundColor: Colors.transparent,
             isScrollControlled: true,
@@ -354,8 +349,9 @@ class _FactorAuthorizationSheetState extends State<_FactorAuthorizationSheet> {
     Navigator.pop(
       context,
       TransactionAuthResult.success(
-        confirmationPassphrase:
-            needsPassphrase ? _passphraseController.text.trim() : null,
+        confirmationPassphrase: needsPassphrase
+            ? _passphraseController.text.trim()
+            : null,
         totpCode: needsTotp ? _totpController.text.trim() : null,
       ),
     );
@@ -461,8 +457,10 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
   @override
   void initState() {
     super.initState();
-    _shareControllers =
-        List.generate(_threshold, (_) => TextEditingController());
+    _shareControllers = List.generate(
+      _threshold,
+      (_) => TextEditingController(),
+    );
   }
 
   @override
@@ -482,8 +480,9 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
 
     if (shares.length != _threshold) {
       setState(() {
-        _recoveryError =
-            context.tr.transactionAuthShamirRecoveryError(_threshold);
+        _recoveryError = context.tr.transactionAuthShamirRecoveryError(
+          _threshold,
+        );
       });
       return;
     }
@@ -509,8 +508,9 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
         context,
         TransactionAuthResult.success(
           confirmationPassphrase: recoveredMnemonic,
-          totpCode:
-              widget.profile.requiresTotp ? _totpController.text.trim() : null,
+          totpCode: widget.profile.requiresTotp
+              ? _totpController.text.trim()
+              : null,
         ),
       );
     } catch (_) {
@@ -553,8 +553,9 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
           ...List.generate(_shareControllers.length, (index) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom:
-                    index == _shareControllers.length - 1 ? 0 : AppSpacing.sm,
+                bottom: index == _shareControllers.length - 1
+                    ? 0
+                    : AppSpacing.sm,
               ),
               child: _ShareField(
                 controller: _shareControllers[index],
@@ -578,9 +579,9 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
             SizedBox(height: 12),
             Text(
               _recoveryError!,
-              style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    color: Colors.redAccent,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall!.copyWith(color: Colors.redAccent),
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
@@ -683,13 +684,13 @@ class _AuthorizationSheetBase extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.lock_outline_rounded,
+                  KeroseneIcons.lock,
                   size: 14,
                   color: KeroseneBrandTokens.success,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Conexão Criptografada Ponto a Ponta',
+                  context.tr.transactionAuthEncryptedTitle,
                   style: AppTypography.inter(
                     color: KeroseneBrandTokens.success,
                     fontSize: 12,
@@ -735,9 +736,9 @@ class _FactorChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ],
       ),
@@ -816,10 +817,7 @@ class _ShareField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
 
-  const _ShareField({
-    required this.controller,
-    required this.label,
-  });
+  const _ShareField({required this.controller, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -835,14 +833,17 @@ class _ShareField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.md),
           borderSide: BorderSide(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.12),
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.md),
           borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.primary, width: 2),
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
         ),
       ),
     );
@@ -853,10 +854,7 @@ class _ConfirmButton extends StatelessWidget {
   final VoidCallback onTap;
   final String text;
 
-  const _ConfirmButton({
-    required this.onTap,
-    required this.text,
-  });
+  const _ConfirmButton({required this.onTap, required this.text});
 
   @override
   Widget build(BuildContext context) {

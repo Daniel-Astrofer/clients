@@ -5,14 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/core/providers/session_invalidation_provider.dart';
 import 'package:kerosene/core/services/background_service.dart';
-import 'package:kerosene/core/services/native_notification_presenter.dart';
-import 'package:kerosene/core/services/notification_service.dart';
+import 'package:kerosene/app/notifications/native_notification_presenter.dart';
+import 'package:kerosene/app/notifications/notification_service.dart';
 import 'package:kerosene/features/auth/controller/auth_local_provider.dart';
 import '../../../../core/services/balance_websocket_service.dart';
 import '../../../../core/providers/tor_providers.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
-import 'package:kerosene/core/security/local_transaction_history_store.dart';
+import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
@@ -20,7 +20,7 @@ import 'package:kerosene/features/financial_accounts/presentation/state/wallet_s
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/incoming_transfer_theater.dart';
-import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import '../../../../core/utils/device_helper.dart';
 import 'financial_dirty_provider.dart';
@@ -244,8 +244,7 @@ final balanceWebSocketServiceProvider =
     deviceHash: deviceHash,
     resolveAuthToken: () async {
       try {
-        final fresh =
-            await ref.read(authLocalDataSourceProvider).getToken();
+        final fresh = await ref.read(authLocalDataSourceProvider).getToken();
         return _normalizeSessionToken(fresh);
       } catch (_) {
         return null;
@@ -280,10 +279,9 @@ final balanceWebSocketServiceProvider =
         final scope = ref.read(sessionStorageScopeProvider);
         if (scope != null) {
           unawaited(
-            ref
-                .read(localTransactionHistoryStoreProvider)
-                .mergeAndPersist(sessionScope: scope, incoming: [tx])
-                .catchError((_) => <Transaction>[]),
+            ref.read(localTransactionHistoryStoreProvider).mergeAndPersist(
+                sessionScope: scope,
+                incoming: [tx]).catchError((_) => <Transaction>[]),
           );
         }
         // Primary theater path — same id as extrato row.
@@ -420,6 +418,13 @@ final balanceWebSocketServiceProvider =
         ref.read(sessionNotificationFeedProvider.notifier).add(notification);
       }
 
+      // The in-app banner is the foreground acknowledgement surface. Incoming
+      // transfers already have a dedicated Home theater celebration, so they
+      // stay out of the banner to avoid presenting the same event twice.
+      if (appInForeground && !isIncoming && !notification.read) {
+        ref.read(notificationBannerProvider.notifier).show(notification);
+      }
+
       // Single coordinator: balance + extrato (full on financial surfaces).
       // Money notifs assume Tor-latent fan-out — always full history catch-up.
       _scheduleFinancialRefreshForEvent(
@@ -439,10 +444,9 @@ final balanceWebSocketServiceProvider =
           final scope = ref.read(sessionStorageScopeProvider);
           if (scope != null) {
             unawaited(
-              ref
-                  .read(localTransactionHistoryStoreProvider)
-                  .mergeAndPersist(sessionScope: scope, incoming: [optimistic])
-                  .catchError((_) => <Transaction>[]),
+              ref.read(localTransactionHistoryStoreProvider).mergeAndPersist(
+                  sessionScope: scope,
+                  incoming: [optimistic]).catchError((_) => <Transaction>[]),
             );
           }
         }
@@ -645,11 +649,11 @@ Transaction? optimisticTransactionFromNotification(
   final confs = int.tryParse(meta['confirmations'] ?? '') ?? 0;
   final rail = (meta['rail'] ?? meta['network'] ?? 'ONCHAIN').toUpperCase();
   final walletId = (meta['walletId'] ?? meta['wallet_id'] ?? '').trim();
-  final settled = notification.kind ==
-          SessionNotificationItem.kindDepositConfirmed ||
-      notification.kind == SessionNotificationItem.kindTransferReceived ||
-      notification.kind == SessionNotificationItem.kindPaymentRequestPaid ||
-      confs >= 3;
+  final settled =
+      notification.kind == SessionNotificationItem.kindDepositConfirmed ||
+          notification.kind == SessionNotificationItem.kindTransferReceived ||
+          notification.kind == SessionNotificationItem.kindPaymentRequestPaid ||
+          confs >= 3;
 
   return Transaction(
     id: id,

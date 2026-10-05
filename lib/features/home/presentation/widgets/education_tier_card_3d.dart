@@ -69,7 +69,7 @@ class _EducationTierCard3DState extends ConsumerState<EducationTierCard3D>
     super.initState();
     _tilt = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4200),
+      duration: KeroseneMotion.educationHold,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

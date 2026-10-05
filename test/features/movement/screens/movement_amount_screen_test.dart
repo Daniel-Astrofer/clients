@@ -18,9 +18,22 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/movement/presentation/shared/movement_amount_screen.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_method.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_request_flow_screen.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/core/providers/shared_preferences_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  late SharedPreferences preferences;
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({
+      'app_locale': 'pt',
+      'app_currency': 'BRL',
+    });
+    preferences = await SharedPreferences.getInstance();
+  });
+
   testWidgets('shows payment link configuration before generating link',
       (tester) async {
     final repository = _ReceiveAmountRepository();
@@ -28,6 +41,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
           transactionRepositoryProvider.overrideWithValue(repository),
           latestBtcPriceProvider.overrideWith((ref) => 65000),
           btcEurPriceProvider.overrideWith((ref) => 60000),
@@ -54,17 +68,18 @@ void main() {
     expect(find.text('15 Minutos'), findsOneWidget);
     expect(find.text('1 Hora'), findsOneWidget);
     expect(find.text('24 Horas'), findsOneWidget);
-    expect(find.text('GERAR LINK DE PAGAMENTO'), findsOneWidget);
+    expect(find.text('Gerar link de pagamento'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('movement-amount-input')),
-      '100000000',
+      '1',
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Gerar link de pagamento'));
     await tester.pump();
-    await tester.ensureVisible(find.text('GERAR LINK DE PAGAMENTO'));
-    await tester.pump();
-    await tester.tap(find.text('GERAR LINK DE PAGAMENTO'));
-    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('transaction-value-entry-cta-hit-target')),
+    );
     await tester.pump(const Duration(milliseconds: 360));
 
     expect(repository.createPaymentLinkCalls, 1);
@@ -78,6 +93,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
           transactionRepositoryProvider.overrideWithValue(repository),
           latestBtcPriceProvider.overrideWith((ref) => 65000),
           btcEurPriceProvider.overrideWith((ref) => 60000),
@@ -103,25 +119,27 @@ void main() {
 
     await tester.enterText(
       find.byKey(const ValueKey('movement-amount-input')),
-      '100000000',
+      '1',
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('350.000,00'));
     await tester.pump();
 
     expect(find.text('≈ ₿ 1'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('CONTINUAR'));
+    final continueButton =
+        find.byKey(const ValueKey('transaction-value-entry-cta-hit-target'));
+    await tester.ensureVisible(continueButton);
     await tester.pump();
-    await tester.tap(find.text('CONTINUAR'));
+    await tester.tap(continueButton);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 360));
 
     expect(repository.createPaymentLinkCalls, 1);
     expect(repository.lastAmount, 1);
-    expect(repository.lastMetadata?['rail'], 'INTERNAL');
+    expect(repository.lastMetadata?['rail'], 'ONCHAIN');
     expect(repository.lastMetadata?['method'], 'qrCode');
-    expect(find.text('Receber na Kerosene'), findsOneWidget);
+    expect(find.byType(ReceiveRequestFlowScreen), findsOneWidget);
   });
 
   testWidgets('creates a public request before starting NFC write',
@@ -132,6 +150,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
           transactionRepositoryProvider.overrideWithValue(repository),
           latestBtcPriceProvider.overrideWith((ref) => 65000),
           btcEurPriceProvider.overrideWith((ref) => 60000),
@@ -162,14 +181,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
 
     await tester.enterText(
       find.byKey(const ValueKey('movement-amount-input')),
       '1',
     );
     await tester.pump();
-    await tester.ensureVisible(find.text('CONTINUAR'));
-    await tester.tap(find.text('CONTINUAR'));
+    final continueButton =
+        find.byKey(const ValueKey('transaction-value-entry-cta'));
+    await tester.ensureVisible(continueButton);
+    await tester.tap(continueButton);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -215,30 +237,44 @@ class _ReceiveAmountRepository implements TransactionRepository {
     lastAmount = amount;
     lastMetadata = metadata;
     lastExpiresInMinutes = expiresInMinutes;
+    final rail = metadata?['rail'] ?? 'INTERNAL';
+    final onChain = rail == 'ONCHAIN';
     return PaymentLink(
       id: 'receive-link-1',
       userId: 1,
       amountBtc: amount,
       description: description ?? '',
-      depositAddress: 'kerosene:wallet-1',
-      paymentUri: 'https://kerosene.test/pay/receive-link-1',
+      depositAddress: onChain
+          ? 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x'
+          : 'kerosene:wallet-1',
+      paymentUri: onChain
+          ? 'bitcoin:tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x'
+              '?amount=${amount.toStringAsFixed(8)}'
+          : 'https://kerosene.test/pay/receive-link-1',
       status: 'pending',
-      paymentRail: metadata?['rail'] ?? 'INTERNAL',
+      paymentRail: rail,
       createdAt: DateTime(2026, 6, 1),
     );
   }
 
   @override
   Future<PaymentLink> getPaymentLink(String linkId) async {
+    final rail = lastMetadata?['rail'] ?? 'INTERNAL';
+    final onChain = rail == 'ONCHAIN';
     return PaymentLink(
       id: linkId,
       userId: 1,
       amountBtc: lastAmount ?? 1,
       description: 'Recebimento Carteira Global',
-      depositAddress: 'kerosene:wallet-1',
-      paymentUri: 'https://kerosene.test/pay/$linkId',
+      depositAddress: onChain
+          ? 'tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x'
+          : 'kerosene:wallet-1',
+      paymentUri: onChain
+          ? 'bitcoin:tb1q52vwlegjq4duevxfwkjxc07huencvuv3hygt4x'
+              '?amount=${(lastAmount ?? 1).toStringAsFixed(8)}'
+          : 'https://kerosene.test/pay/$linkId',
       status: 'pending',
-      paymentRail: 'INTERNAL',
+      paymentRail: rail,
       createdAt: DateTime(2026, 6, 1),
     );
   }

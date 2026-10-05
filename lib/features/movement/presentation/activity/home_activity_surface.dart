@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 
 /// Shared circular reveal used by notifications and transaction detail.
 Route<T> keroseneCircularRevealRoute<T>({
@@ -11,17 +12,18 @@ Route<T> keroseneCircularRevealRoute<T>({
 }) {
   return PageRouteBuilder<T>(
     opaque: true,
-    transitionDuration: transitionDuration ?? const Duration(milliseconds: 420),
+    transitionDuration: transitionDuration ?? KeroseneMotion.long,
     reverseTransitionDuration:
-        reverseTransitionDuration ?? const Duration(milliseconds: 260),
+        reverseTransitionDuration ?? KeroseneMotion.pageIn,
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final reduce = MediaQuery.maybeOf(context)?.disableAnimations == true ||
+      final reduce =
+          MediaQuery.maybeOf(context)?.disableAnimations == true ||
           MediaQuery.maybeOf(context)?.accessibleNavigation == true;
       final curved = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
+        curve: KeroseneMotion.standard,
+        reverseCurve: KeroseneMotion.exit,
       );
       if (reduce) {
         return FadeTransition(opacity: curved, child: child);
@@ -42,13 +44,10 @@ Route<T> keroseneCircularRevealRoute<T>({
           final opacity = const Interval(
             0.10,
             0.78,
-            curve: Curves.easeOutCubic,
+            curve: KeroseneMotion.standard,
           ).transform(curved.value);
           return ClipPath(
-            clipper: _KeroCircularRevealClipper(
-              center: center,
-              radius: radius,
-            ),
+            clipper: _KeroCircularRevealClipper(center: center, radius: radius),
             child: Opacity(opacity: opacity, child: child),
           );
         },

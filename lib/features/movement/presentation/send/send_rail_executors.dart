@@ -17,7 +17,7 @@ import 'package:bitcoin_base/bitcoin_base.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/features/financial_accounts/domain/services/cold_wallet_spend_coordinator.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
-import 'package:kerosene/features/movement/data/entities/tx_status.dart';
+import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 

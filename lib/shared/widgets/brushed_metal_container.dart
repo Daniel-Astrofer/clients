@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/performance/app_interaction_busy.dart';
 import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/shader_provider.dart';
 
@@ -49,8 +49,10 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: KeroseneMotion.ambient);
+    _controller = AnimationController(
+      vsync: this,
+      duration: KeroseneMotion.ambient,
+    );
     _initFallback();
   }
 
@@ -80,7 +82,8 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
   void _syncClock() {
     final policy = ref.read(graphicsPolicyProvider);
     final routeBusy = ref.read(routeTransitionBusyProvider);
-    final allow = widget.animate &&
+    final allow =
+        widget.animate &&
         policy.allowAmbientGpuLoops &&
         !routeBusy &&
         TickerMode.valuesOf(context).enabled &&
@@ -105,7 +108,8 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
     final policy = ref.watch(graphicsPolicyProvider);
     final routeBusy = ref.watch(routeTransitionBusyProvider);
     final ui.Image? activeTexture = widget.textTexture ?? _fallbackTexture;
-    final animate = widget.animate &&
+    final animate =
+        widget.animate &&
         policy.allowAmbientGpuLoops &&
         !routeBusy &&
         TickerMode.valuesOf(context).enabled &&
@@ -124,8 +128,10 @@ class _BrushedMetalContainerState extends ConsumerState<BrushedMetalContainer>
       decoration: BoxDecoration(
         color: widget.baseColor,
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1.0,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -196,9 +202,13 @@ class _MetalFallback extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+            (Theme.of(context).brightness == Brightness.dark
+                ? AppColors.hexFF141517
+                : AppColors.brushedMetalLightSurface),
             Theme.of(context).dividerColor,
-            (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141517) : const Color(0xFFF2F4F7)),
+            (Theme.of(context).brightness == Brightness.dark
+                ? AppColors.hexFF141517
+                : AppColors.brushedMetalLightSurface),
           ],
           stops: const [0.1, 0.5, 0.9],
         ),

@@ -58,12 +58,13 @@ class _EmergencyRecoveryScreenState
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: (Theme.of(context).brightness == Brightness.light
-            ? SystemUiOverlayStyle.dark
-            : SystemUiOverlayStyle.light)
-            .copyWith(
+              ? SystemUiOverlayStyle.dark
+              : SystemUiOverlayStyle.light)
+          .copyWith(
         statusBarColor: Colors.transparent,
         systemNavigationBarColor: Colors.black,
-        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light
+        systemNavigationBarIconBrightness:
+            Theme.of(context).brightness == Brightness.light
                 ? Brightness.dark
                 : Brightness.light,
       ),
@@ -529,7 +530,11 @@ class _RecoveryTitle extends StatelessWidget {
         Text(
           body,
           textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+          style: AppTypography.bodyMedium.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.70)),
         ),
       ],
     );
@@ -608,7 +613,7 @@ class _RecoveryNotice extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         border: Border.all(color: color.withValues(alpha: 0.42)),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.base),
@@ -632,7 +637,10 @@ class _RecoveryNotice extends StatelessWidget {
                   Text(
                     message,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.70),
                     ),
                   ),
                 ],
@@ -660,7 +668,7 @@ class _TotpQrPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border.all(color: AppColors.white10),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.base),
@@ -669,7 +677,7 @@ class _TotpQrPanel extends StatelessWidget {
             DecoratedBox(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.onSurface,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
@@ -690,7 +698,10 @@ class _TotpQrPanel extends StatelessWidget {
               data,
               maxLines: 2,
               style: AppTypography.technicalMono(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.60),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.60),
                 fontSize: 12,
                 height: 1.35,
               ),
@@ -729,7 +740,7 @@ class _BackupCodesGrid extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.bgInput,
               border: Border.all(color: AppColors.white10),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               code,
@@ -737,7 +748,7 @@ class _BackupCodesGrid extends StatelessWidget {
               style: AppTypography.technicalMono(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontWeight: AppTypography.w590,
               ),
             ),
           ),

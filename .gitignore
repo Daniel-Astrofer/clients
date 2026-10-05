@@ -4,6 +4,7 @@
 *.pyc
 *.swp
 .DS_Store
+__pycache__/
 .atom/
 .build/
 .buildlog/
@@ -51,6 +52,7 @@ screenshots/
 .pub/
 /build/
 /coverage/
+/native/target/
 android/local.properties
 
 # Symbolication related
@@ -76,4 +78,16 @@ artifacts/visual_e2e/*.png
 
 # Device session export (may contain real balances)
 test/goldens/real_data/fixtures/device_ui_snapshot.json
+test/goldens/failures/
 .smart_build_state.json
+
+.vscode/
+artifacts/
+design-plans/
+**/.gradle/
+**/build/
+**/local.properties
+**/Generated.xcconfig
+**/ephemeral/
+**/flutter_export_environment.sh
+**/GeneratedPluginRegistrant.*

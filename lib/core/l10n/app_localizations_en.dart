@@ -8608,6 +8608,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeChartRetry => 'Tap to try again';
 
   @override
+  String get homeChartNoDataForPeriod => 'No data for this period';
+
+  @override
   String get homeChartCustomPeriod => 'Custom period';
 
   @override
@@ -9599,4 +9602,120 @@ class AppLocalizationsEn extends AppLocalizations {
       String amount, String moeda, String rede, String status) {
     return 'Transfer of $amount $moeda via $rede is $status.';
   }
+
+  @override
+  String get balanceSyncing => 'Syncing...';
+
+  @override
+  String get transactionNoMovement => 'No activity';
+
+  @override
+  String get transactionViewAll => 'View all';
+
+  @override
+  String get walletSelected => 'Selected';
+
+  @override
+  String get loadingTimeout => 'Timed out';
+
+  @override
+  String offlineLastSync(String time) {
+    return 'Offline — Last synchronization: $time';
+  }
+
+  @override
+  String get offlineReconnectHint =>
+      'Check your internet connection.\nTrying to reconnect automatically...';
+
+  @override
+  String get notificationNotNow => 'Not now';
+
+  @override
+  String get financialHeaderSyncing => 'Syncing...';
+
+  @override
+  String get coldWalletSuccessWarning =>
+      'Important: without the seed on this device, cold sending will not work. Keep the phrase safe and restore it before trying to spend.';
+
+  @override
+  String get sendAction => 'Send';
+
+  @override
+  String get walletSetupNewVault => 'New vault';
+
+  @override
+  String get financialHubAddWallet => 'Add another wallet';
+
+  @override
+  String get financialHubCurrentBalance => 'Current Balance';
+
+  @override
+  String get financialAccountsCreateColdWalletButton => 'Create Cold Wallet';
+
+  @override
+  String get accountDetailsTechnicalTitle => 'Technical details';
+
+  @override
+  String get accountDetailsTechnicalBody =>
+      'Public derivation material, keys, and identifiers.';
+
+  @override
+  String get closeAction => 'Close';
+
+  @override
+  String get walletManageAccountTitle => 'Manage account';
+
+  @override
+  String get walletManageAccountBody => 'Custody-reactive settings and data.';
+
+  @override
+  String get walletManageWalletName => 'Wallet name';
+
+  @override
+  String get walletManageAccountStatus => 'Account status';
+
+  @override
+  String get walletManagePublicMaterial => 'Public material';
+
+  @override
+  String get statementPartialPeriodNotice =>
+      'Partial history — the selected period may exceed what is loaded on the device.';
+
+  @override
+  String get statementLargestShare => 'Largest share';
+
+  @override
+  String get sendSpeedTitle => 'Send speed';
+
+  @override
+  String get sendMethodTitle => 'How would you like to send?';
+
+  @override
+  String get sendMethodSubtitle =>
+      'Choose the transfer method compatible with this recipient.';
+
+  @override
+  String get recommendedLabel => 'Recommended';
+
+  @override
+  String get sendFixedAmountNotice =>
+      'The payment amount is fixed. You can only adjust speed and fees.';
+
+  @override
+  String get securityTotpDescription =>
+      'Configure and validate the TOTP code used to protect sensitive access and transactions.';
+
+  @override
+  String get securityDevicesDescription =>
+      'Device keys linked to your account. Use this device to sign transfers. Block or revoke access you do not recognize.';
+
+  @override
+  String get securityDevicesUpdateKey => 'Update this device key';
+
+  @override
+  String get securityDevicesLegacyKeyNotice =>
+      'We detected a legacy key on this device. Transfers and biometric login now use the Device Key. Tap below to configure it.';
+
+  @override
+  String get transactionAuthEncryptedTitle => 'End-to-end encrypted connection';
 }

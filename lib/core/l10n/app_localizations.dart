@@ -15624,6 +15624,12 @@ abstract class AppLocalizations {
   /// **'Tap to try again'**
   String get homeChartRetry;
 
+  /// No description provided for @homeChartNoDataForPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'No data for this period'**
+  String get homeChartNoDataForPeriod;
+
   /// No description provided for @homeChartCustomPeriod.
   ///
   /// In en, this message translates to:
@@ -17406,6 +17412,216 @@ abstract class AppLocalizations {
   /// **'Transfer of {amount} {moeda} via {rede} is {status}.'**
   String notifTransactionStatusBody(
       String amount, String moeda, String rede, String status);
+
+  /// No description provided for @balanceSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get balanceSyncing;
+
+  /// No description provided for @transactionNoMovement.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity'**
+  String get transactionNoMovement;
+
+  /// No description provided for @transactionViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get transactionViewAll;
+
+  /// No description provided for @walletSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get walletSelected;
+
+  /// No description provided for @loadingTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed out'**
+  String get loadingTimeout;
+
+  /// No description provided for @offlineLastSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — Last synchronization: {time}'**
+  String offlineLastSync(String time);
+
+  /// No description provided for @offlineReconnectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your internet connection.\nTrying to reconnect automatically...'**
+  String get offlineReconnectHint;
+
+  /// No description provided for @notificationNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get notificationNotNow;
+
+  /// No description provided for @financialHeaderSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get financialHeaderSyncing;
+
+  /// No description provided for @coldWalletSuccessWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Important: without the seed on this device, cold sending will not work. Keep the phrase safe and restore it before trying to spend.'**
+  String get coldWalletSuccessWarning;
+
+  /// No description provided for @sendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get sendAction;
+
+  /// No description provided for @walletSetupNewVault.
+  ///
+  /// In en, this message translates to:
+  /// **'New vault'**
+  String get walletSetupNewVault;
+
+  /// No description provided for @financialHubAddWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another wallet'**
+  String get financialHubAddWallet;
+
+  /// No description provided for @financialHubCurrentBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Balance'**
+  String get financialHubCurrentBalance;
+
+  /// No description provided for @financialAccountsCreateColdWalletButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Cold Wallet'**
+  String get financialAccountsCreateColdWalletButton;
+
+  /// No description provided for @accountDetailsTechnicalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get accountDetailsTechnicalTitle;
+
+  /// No description provided for @accountDetailsTechnicalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Public derivation material, keys, and identifiers.'**
+  String get accountDetailsTechnicalBody;
+
+  /// No description provided for @closeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeAction;
+
+  /// No description provided for @walletManageAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage account'**
+  String get walletManageAccountTitle;
+
+  /// No description provided for @walletManageAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Custody-reactive settings and data.'**
+  String get walletManageAccountBody;
+
+  /// No description provided for @walletManageWalletName.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet name'**
+  String get walletManageWalletName;
+
+  /// No description provided for @walletManageAccountStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Account status'**
+  String get walletManageAccountStatus;
+
+  /// No description provided for @walletManagePublicMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Public material'**
+  String get walletManagePublicMaterial;
+
+  /// No description provided for @statementPartialPeriodNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial history — the selected period may exceed what is loaded on the device.'**
+  String get statementPartialPeriodNotice;
+
+  /// No description provided for @statementLargestShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest share'**
+  String get statementLargestShare;
+
+  /// No description provided for @sendSpeedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send speed'**
+  String get sendSpeedTitle;
+
+  /// No description provided for @sendMethodTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How would you like to send?'**
+  String get sendMethodTitle;
+
+  /// No description provided for @sendMethodSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the transfer method compatible with this recipient.'**
+  String get sendMethodSubtitle;
+
+  /// No description provided for @recommendedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get recommendedLabel;
+
+  /// No description provided for @sendFixedAmountNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The payment amount is fixed. You can only adjust speed and fees.'**
+  String get sendFixedAmountNotice;
+
+  /// No description provided for @securityTotpDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure and validate the TOTP code used to protect sensitive access and transactions.'**
+  String get securityTotpDescription;
+
+  /// No description provided for @securityDevicesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Device keys linked to your account. Use this device to sign transfers. Block or revoke access you do not recognize.'**
+  String get securityDevicesDescription;
+
+  /// No description provided for @securityDevicesUpdateKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Update this device key'**
+  String get securityDevicesUpdateKey;
+
+  /// No description provided for @securityDevicesLegacyKeyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'We detected a legacy key on this device. Transfers and biometric login now use the Device Key. Tap below to configure it.'**
+  String get securityDevicesLegacyKeyNotice;
+
+  /// No description provided for @transactionAuthEncryptedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End-to-end encrypted connection'**
+  String get transactionAuthEncryptedTitle;
 }
 
 class _AppLocalizationsDelegate

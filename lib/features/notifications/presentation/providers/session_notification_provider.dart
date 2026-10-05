@@ -9,6 +9,8 @@ import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/domain/entities/device_token.dart';
 import 'package:kerosene/features/notifications/application/providers/notification_data_providers.dart';
+import 'package:kerosene/features/home/domain/home_communication_adapters.dart';
+import 'package:kerosene/features/home/domain/home_communication_coordinator.dart';
 export 'package:kerosene/features/notifications/application/providers/notification_data_providers.dart';
 
 class SessionNotificationFeedNotifier
@@ -44,13 +46,20 @@ class SessionNotificationFeedNotifier
     _replaceState(_merge([item], state));
   }
 
-  Future<void> reloadFromServer() async {
-    final result =
-        await ref.read(notificationRepositoryProvider).getNotifications();
-    result.fold(
-      (_) {},
-      (items) => _replaceState(_merge(items, state)),
-    );
+  Future<bool> reloadFromServer() async {
+    try {
+      final result =
+          await ref.read(notificationRepositoryProvider).getNotifications();
+      return result.fold(
+        (_) => false,
+        (items) {
+          _replaceState(_merge(items, state));
+          return true;
+        },
+      );
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> markRead(String notificationId) async {
@@ -194,28 +203,61 @@ class NotificationSidebarNotifier extends Notifier<bool> {
 
 class NotificationBannerNotifier extends Notifier<SessionNotificationItem?> {
   Timer? _dismissTimer;
+  final HomeCommunicationCoordinator _coordinator =
+      HomeCommunicationCoordinator();
+  final Map<String, SessionNotificationItem> _sourceByKey =
+      <String, SessionNotificationItem>{};
 
   @override
   SessionNotificationItem? build() {
-    ref.onDispose(() => _dismissTimer?.cancel());
+    ref.onDispose(() {
+      _dismissTimer?.cancel();
+      _coordinator.clear();
+      _sourceByKey.clear();
+    });
     return null;
   }
 
   void show(SessionNotificationItem notification) {
+    if (notification.read) return;
     _dismissTimer?.cancel();
-    state = notification;
-    _dismissTimer = Timer(KeroseneMotion.notificationLongHold, dismiss);
+    final communication = communicationFromNotification(notification);
+    _sourceByKey[communication.stableKey] = notification;
+    _coordinator.enqueue(communication);
+    _syncCurrentState();
+    final current = state;
+    if (current != null) _armDismissTimer(current);
   }
 
   void dismiss() {
     _dismissTimer?.cancel();
     _dismissTimer = null;
-    state = null;
+    _coordinator.dismiss();
+    _syncCurrentState();
+    final current = state;
+    if (current != null) _armDismissTimer(current);
   }
 
   void openSidebar() {
-    dismiss();
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+    _coordinator.clear();
+    _sourceByKey.clear();
+    _syncCurrentState();
     ref.read(notificationSidebarProvider.notifier).open();
+  }
+
+  void _armDismissTimer(SessionNotificationItem notification) {
+    if (notification.presentationPolicy !=
+        NotificationPresentationPolicy.autoDismiss) {
+      return;
+    }
+    _dismissTimer = Timer(KeroseneMotion.notificationLongHold, dismiss);
+  }
+
+  void _syncCurrentState() {
+    final current = _coordinator.current;
+    state = current == null ? null : _sourceByKey[current.stableKey];
   }
 }
 
