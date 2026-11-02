@@ -45,6 +45,7 @@ class _TotpInputContainerState extends State<TotpInputContainer>
   late final AnimationController _focusController;
   late final AnimationController _shakeController;
   String _lastCompletedCode = '';
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -68,9 +69,21 @@ class _TotpInputContainerState extends State<TotpInputContainer>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = KeroseneMotion.reduceMotion(context);
+    if (_reduceMotion) {
+      _shakeController.stop();
+      _shakeController.value = 0;
+    }
+    _syncFocusAnimation();
+  }
+
+  @override
   void didUpdateWidget(covariant TotpInputContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.hasError &&
+    if (!_reduceMotion &&
+        widget.hasError &&
         (!oldWidget.hasError ||
             oldWidget.errorPulseKey != widget.errorPulseKey)) {
       _shakeController.forward(from: 0);
@@ -107,7 +120,7 @@ class _TotpInputContainerState extends State<TotpInputContainer>
   }
 
   void _syncFocusAnimation() {
-    if (_focusNode.hasFocus && widget.enabled) {
+    if (!_reduceMotion && _focusNode.hasFocus && widget.enabled) {
       if (!_focusController.isAnimating) {
         _focusController.repeat(reverse: true);
       }
@@ -189,7 +202,8 @@ class _TotpInputContainerState extends State<TotpInputContainer>
                       child: Padding(
                         padding: EdgeInsets.only(right: index == 5 ? 0 : 10),
                         child: AnimatedContainer(
-                          duration: KeroseneMotion.short,
+                          duration: KeroseneMotion.duration(
+                              context, KeroseneMotion.short),
                           curve: KeroseneMotion.standard,
                           height: 72,
                           decoration: BoxDecoration(

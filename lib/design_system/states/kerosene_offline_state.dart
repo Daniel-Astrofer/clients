@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -44,7 +45,7 @@ class KeroseneOfflineBanner extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          KeroseneIcon(
             KeroseneIcons.cloudOff,
             size: 14,
             color: KeroseneBrandTokens.warning,
@@ -122,7 +123,7 @@ class _KeroseneOfflineFullScreenState extends State<KeroseneOfflineFullScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            KeroseneIcon(
               KeroseneIcons.cloudOff,
               size: 48,
               color: palette.textMuted,

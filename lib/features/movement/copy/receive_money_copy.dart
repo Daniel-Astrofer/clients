@@ -1,3 +1,4 @@
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/widgets.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_method.dart';
@@ -36,20 +37,20 @@ class ReceiveMoneyCopy {
     if (showNfc) {
       return switch (_language(context)) {
         'en' =>
-          'Choose Lightning, NFC, P2P, link, QR, or gateway to receive on Kerosene.',
+          'Choose Lightning, NFC, Kerosene accounts, link, QR, or gateway to receive on Kerosene.',
         'es' =>
-          'Elige Lightning, NFC, P2P, link, QR o gateway para recibir en Kerosene.',
+          'Elige Lightning, NFC, Kerosene accounts, link, QR o gateway para recibir en Kerosene.',
         _ =>
-          'Escolha Lightning, NFC, P2P, link, QR Code ou gateway para receber na plataforma.',
+          'Escolha Lightning, NFC, Kerosene accounts, link, QR Code ou gateway para receber na plataforma.',
       };
     }
     return switch (_language(context)) {
       'en' =>
-        'Choose Lightning, P2P, link, QR, or gateway to receive on Kerosene.',
+        'Choose Lightning, Kerosene accounts, link, QR, or gateway to receive on Kerosene.',
       'es' =>
-        'Elige Lightning, P2P, link, QR o gateway para recibir en Kerosene.',
+        'Elige Lightning, Kerosene accounts, link, QR o gateway para recibir en Kerosene.',
       _ =>
-        'Escolha Lightning, P2P, link, QR Code ou gateway para receber na plataforma.',
+        'Escolha Lightning, Kerosene accounts, link, QR Code ou gateway para receber na plataforma.',
     };
   }
 
@@ -143,9 +144,9 @@ class ReceiveMoneyCopy {
       };
 
   static String p2pTitle(BuildContext context) => switch (_language(context)) {
-        'en' => 'P2P',
-        'es' => 'P2P',
-        _ => 'P2P',
+        'en' => 'Between Kerosene accounts',
+        'es' => 'Entre cuentas Kerosene',
+        _ => 'Entre contas Kerosene',
       };
 
   static String amountTitle(
@@ -174,9 +175,9 @@ class ReceiveMoneyCopy {
             _ => 'Receber Lightning',
           },
         ReceiveAmountMethod.p2p => switch (_language(context)) {
-            'en' => 'Receive P2P',
-            'es' => 'Recibir P2P',
-            _ => 'Receber P2P',
+            'en' => 'Receive from another Kerosene account',
+            'es' => 'Recibir de otra cuenta Kerosene',
+            _ => 'Receber de outra conta Kerosene',
           },
       };
 
@@ -197,7 +198,7 @@ class ReceiveMoneyCopy {
   }) {
     return switch (method) {
       ReceiveAmountMethod.p2p => 'Kerosene',
-      ReceiveAmountMethod.lightning => 'Lightning',
+      ReceiveAmountMethod.lightning => context.tr.activityFilterLightning,
       ReceiveAmountMethod.nfc => onChainWallet ? 'On-chain · NFC' : 'NFC',
       ReceiveAmountMethod.qrCode => 'On-chain · QR',
       ReceiveAmountMethod.paymentLink => switch (_language(context)) {

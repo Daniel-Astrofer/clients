@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -155,10 +156,8 @@ class AccountDetailsBottomSheet extends StatelessWidget {
               children: [
                 Text(label, style: FinancialHubTokens.caption()),
                 const SizedBox(height: 2),
-                Text(
+                SelectableText(
                   value,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
                   style: FinancialHubTokens.numberText(fontSize: 13),
                 ),
               ],
@@ -175,7 +174,7 @@ class AccountDetailsBottomSheet extends StatelessWidget {
                   message: '$label copiado para a área de transferência',
                 );
               },
-              icon: Icon(
+              icon: KeroseneIcon(
                 KeroseneIcons.copy,
                 color: Theme.of(context).colorScheme.onSurface,
                 size: 18,

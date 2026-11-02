@@ -241,6 +241,7 @@ class RemoteBitcoinAccountsService implements BitcoinAccountsService {
               : 'KEROSENE_CUSTODIAL',
       'status': wallet['status']?.toString() ?? 'ACTIVE',
       'label': (wallet['label'] ?? wallet['walletName'])?.toString() ?? '',
+      'updatedAt': wallet['updatedAt'],
       'walletTypeDescription': wallet['walletTypeDescription']?.toString(),
       'riskTier': 'BRONZE',
       'cardId': isWatchOnly ? null : id,

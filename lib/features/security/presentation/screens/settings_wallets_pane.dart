@@ -1,5 +1,8 @@
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_wallet_support.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
@@ -19,6 +22,7 @@ class SettingsWalletsPane extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tr = context.tr;
     final accountsAsync = ref.watch(bitcoinAccountsProvider);
+    final sync = ref.watch(bitcoinAccountsSyncProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,10 +49,22 @@ class SettingsWalletsPane extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xxl),
+        if (accountsAsync.hasValue &&
+            (accountsAsync.hasError || sync.hasError)) ...[
+          Text(tr.settingsWalletsSyncFailed, style: AppTypography.bodySmall),
+          TextButton(
+              onPressed: () =>
+                  ref.read(bitcoinAccountsControllerProvider).refresh(),
+              child: Text(tr.tryAgain)),
+        ],
+        if (accountsAsync.hasValue &&
+            (accountsAsync.isLoading || sync.isLoading))
+          const LinearProgressIndicator(),
         accountsAsync.when(
+          skipError: true,
           data: (accounts) {
             final active = accounts
-                .where((a) => a.id.trim().isNotEmpty)
+                .where((a) => a.id.trim().isNotEmpty && a.status != 'ARCHIVED')
                 .toList(growable: false);
             if (active.isEmpty) {
               return SettingsSection(
@@ -75,7 +91,8 @@ class SettingsWalletsPane extends ConsumerWidget {
                   title: tr.settingsWalletsYoursSection,
                   children: [
                     for (final account in active)
-                      _WalletAdminRow(account: account),
+                      _WalletAdminRow(
+                          key: ValueKey(account.id), account: account),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -85,7 +102,7 @@ class SettingsWalletsPane extends ConsumerWidget {
                     bitcoin_accounts.loadLibrary,
                     (_) => bitcoin_accounts.BitcoinAccountsScreen(),
                   ),
-                  icon: const Icon(KeroseneIcons.next, size: 16),
+                  icon: const KeroseneIcon(KeroseneIcons.next, size: 16),
                   label: Text(tr.settingsWalletsOpenFull),
                 ),
               ],
@@ -108,11 +125,8 @@ class SettingsWalletsPane extends ConsumerWidget {
                 icon: KeroseneIcons.warning,
                 title: tr.settingsWalletsLoadErrorTitle,
                 subtitle: tr.settingsWalletsLoadErrorSubtitle,
-                onTap: () => pushSettingsDeferred(
-                  context,
-                  bitcoin_accounts.loadLibrary,
-                  (_) => bitcoin_accounts.BitcoinAccountsScreen(),
-                ),
+                onTap: () =>
+                    ref.read(bitcoinAccountsControllerProvider).refresh(),
               ),
             ],
           ),
@@ -125,7 +139,7 @@ class SettingsWalletsPane extends ConsumerWidget {
 class _WalletAdminRow extends ConsumerStatefulWidget {
   final BitcoinAccount account;
 
-  const _WalletAdminRow({required this.account});
+  const _WalletAdminRow({super.key, required this.account});
 
   @override
   ConsumerState<_WalletAdminRow> createState() => _WalletAdminRowState();
@@ -133,6 +147,7 @@ class _WalletAdminRow extends ConsumerStatefulWidget {
 
 class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
   bool _busy = false;
+  bool _menuOpen = false;
 
   BitcoinAccount get account => widget.account;
 
@@ -151,22 +166,28 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
 
   Future<void> _rename() async {
     if (_busy) return;
+    final scope = ref.read(sessionStorageScopeProvider);
     final next = await askWalletName(context, account);
-    if (next == null || !mounted) return;
+    if (next == null ||
+        !mounted ||
+        scope != ref.read(sessionStorageScopeProvider)) {
+      return;
+    }
     setState(() => _busy = true);
     try {
-      await ref.read(bitcoinAccountsProvider.notifier).renameWallet(
-            accountId: account.id,
-            label: next,
-          );
-      if (!mounted) return;
+      final confirmed =
+          await ref.read(bitcoinAccountsControllerProvider).renameWallet(
+                accountId: account.id,
+                label: next,
+              );
+      if (!mounted || scope != ref.read(sessionStorageScopeProvider)) return;
       AppNotice.showSuccess(
         context,
         title: context.tr.settingsWalletsRenameOk,
-        message: next,
+        message: confirmed.label,
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || scope != ref.read(sessionStorageScopeProvider)) return;
       AppNotice.showError(
         context,
         title: context.tr.settingsWalletsRenameFailTitle,
@@ -179,23 +200,27 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
 
   Future<void> _archive() async {
     if (_busy) return;
+    final scope = ref.read(sessionStorageScopeProvider);
     final ok = await confirmWalletArchive(context, account);
-    if (!ok || !mounted) return;
+    if (!ok || !mounted || scope != ref.read(sessionStorageScopeProvider)) {
+      return;
+    }
     setState(() => _busy = true);
     try {
-      await ref.read(bitcoinAccountsProvider.notifier).archiveWallet(
-            accountId: account.id,
-          );
-      if (!mounted) return;
+      final confirmed =
+          await ref.read(bitcoinAccountsControllerProvider).archiveWallet(
+                accountId: account.id,
+              );
+      if (!mounted || scope != ref.read(sessionStorageScopeProvider)) return;
       AppNotice.showSuccess(
         context,
-        title: account.isWatchOnly
+        title: confirmed.isWatchOnly
             ? context.tr.settingsWalletsArchiveOkWatch
             : context.tr.settingsWalletsArchiveOk,
-        message: _label,
+        message: confirmed.label,
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || scope != ref.read(sessionStorageScopeProvider)) return;
       AppNotice.showError(
         context,
         title: context.tr.settingsWalletsArchiveFailTitle,
@@ -212,45 +237,59 @@ class _WalletAdminRowState extends ConsumerState<_WalletAdminRow> {
     return SettingsSectionRow(
       icon: KeroseneIcons.wallet,
       title: _label,
-      subtitle: _busy ? tr.settingsWalletsProcessing : _kindSubtitle,
-      onTap: _busy
+      subtitle: _busy
+          ? tr.settingsWalletsProcessing
+          : '$_kindSubtitle · ${walletStatusLabel(context, account)}',
+      onTap: _busy || _menuOpen
           ? null
           : () async {
-              HapticFeedback.selectionClick();
-              final action = await showModalBottomSheet<String>(
-                context: context,
-                backgroundColor:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
-                builder: (sheetContext) {
-                  final sheetTr = sheetContext.tr;
-                  return SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          leading: const Icon(KeroseneIcons.edit),
-                          title: Text(sheetTr.settingsWalletsRename),
-                          onTap: () => Navigator.pop(sheetContext, 'rename'),
-                        ),
-                        ListTile(
-                          leading: const Icon(KeroseneIcons.trash),
-                          title: Text(
-                            account.isWatchOnly
-                                ? sheetTr.settingsWalletsArchiveWatch
-                                : sheetTr.settingsWalletsArchive,
+              setState(() => _menuOpen = true);
+              final scope = ref.read(sessionStorageScopeProvider);
+              try {
+                HapticFeedback.selectionClick();
+                final action = await showModalBottomSheet<String>(
+                  context: context,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  builder: (sheetContext) {
+                    final sheetTr = sheetContext.tr;
+                    return SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const KeroseneIcon(KeroseneIcons.edit),
+                            title: Text(sheetTr.settingsWalletsRename),
+                            onTap: () => Navigator.pop(sheetContext, 'rename'),
                           ),
-                          onTap: () => Navigator.pop(sheetContext, 'archive'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-              if (!mounted) return;
-              if (action == 'rename') {
-                await _rename();
-              } else if (action == 'archive') {
-                await _archive();
+                          ListTile(
+                            enabled: walletCanArchive(account),
+                            leading: const KeroseneIcon(KeroseneIcons.trash),
+                            title: Text(
+                              account.isWatchOnly
+                                  ? sheetTr.settingsWalletsArchiveWatch
+                                  : sheetTr.settingsWalletsArchive,
+                            ),
+                            onTap: walletCanArchive(account)
+                                ? () => Navigator.pop(sheetContext, 'archive')
+                                : null,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+                if (!mounted ||
+                    scope != ref.read(sessionStorageScopeProvider)) {
+                  return;
+                }
+                if (action == 'rename') {
+                  await _rename();
+                } else if (action == 'archive') {
+                  await _archive();
+                }
+              } finally {
+                if (mounted) setState(() => _menuOpen = false);
               }
             },
     );

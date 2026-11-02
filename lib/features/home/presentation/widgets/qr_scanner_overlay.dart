@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -119,11 +120,11 @@ class _QrScannerOverlayState extends State<QrScannerOverlay> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(KeroseneIcons.lightning, color: ink),
+                  icon: const KeroseneIcon(KeroseneIcons.lightning, color: ink),
                   onPressed: () => controller.toggleTorch(),
                 ),
                 IconButton(
-                  icon: const Icon(KeroseneIcons.scanner, color: ink),
+                  icon: const KeroseneIcon(KeroseneIcons.scanner, color: ink),
                   onPressed: () => controller.switchCamera(),
                 ),
               ],

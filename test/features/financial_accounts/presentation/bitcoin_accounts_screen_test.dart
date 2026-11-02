@@ -38,8 +38,8 @@ Future<void> _pumpAccounts(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        bitcoinAccountsProvider.overrideWith(
-          () => _AccountsNotifier(accounts),
+        bitcoinAccountsByScopeProvider.overrideWith2(
+          (_) => _AccountsNotifier(accounts),
         ),
         authControllerProvider.overrideWith(() => _AuthTestController()),
         sessionStorageScopeProvider.overrideWithValue('test-user'),

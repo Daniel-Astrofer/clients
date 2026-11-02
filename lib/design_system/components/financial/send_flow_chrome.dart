@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
@@ -88,7 +89,7 @@ class SendFlowPrimaryCta extends StatelessWidget {
                   Text(label),
                   if (icon != null) ...[
                     SizedBox(width: tokens.spaceSm),
-                    Icon(icon, size: 18, color: fg),
+                    KeroseneIcon(icon, size: 18, color: fg),
                   ],
                 ],
               ),

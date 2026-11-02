@@ -24,6 +24,11 @@ final homeSurfaceProvider = NotifierProvider<HomeSurfaceNotifier, HomeSurface>(
   HomeSurfaceNotifier.new,
 );
 
+/// Clock for the visible Home greeting, read when its presentation rebuilds.
+/// Keeping the function live avoids freezing the hour for an entire session.
+final homeGreetingClockProvider =
+    Provider<DateTime Function()>((ref) => DateTime.now);
+
 class HomeSurfaceNotifier extends Notifier<HomeSurface> {
   int _loadGeneration = 0;
 

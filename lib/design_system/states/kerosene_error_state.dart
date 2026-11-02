@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
@@ -56,7 +57,7 @@ class KeroseneErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showIcon) ...[
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.error,
                 size: 32,
                 color: KeroseneBrandTokens.error,

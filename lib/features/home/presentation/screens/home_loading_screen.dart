@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:kerosene/features/auth/presentation/first_access/first_access_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -7,16 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/components/generic/tor_navigation_loading_screen.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
-import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart'
-    deferred as bitcoin_accounts;
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 // Deferred prefixes are consumed through loadLibrary tear-offs below.
 // ignore: unused_import
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
-    deferred as home
-    hide HomeSurfaceThemeContext;
+    deferred as home hide HomeSurfaceThemeContext;
 // ignore: unused_import
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
     deferred as send_money;
@@ -197,13 +195,14 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
     final walletState = ref.read(walletProvider);
     final authState = ref.read(authControllerProvider);
-    final authenticatedUserId = authState is AuthAuthenticated
-        ? authState.user.id
-        : null;
+    final authenticatedUserId =
+        authState is AuthAuthenticated ? authState.user.id : null;
 
     if (walletState is WalletLoaded && !_hasError && _homeLibraryReady) {
-      if (walletState.wallets.isEmpty &&
-          !_hasSeenWalletSetupRedirect(authenticatedUserId)) {
+      if (authenticatedUserId != null &&
+          FirstAccessProgress.shouldShow(
+              ref.read(sharedPreferencesProvider), authenticatedUserId,
+              hasWallets: walletState.wallets.isNotEmpty)) {
         unawaited(_navigateToWalletSetup(authenticatedUserId));
       } else {
         unawaited(_navigateToHome());
@@ -221,6 +220,15 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
 
   Future<void> _navigateToHome({bool allowError = false}) async {
     if (_isNavigating || (_hasError && !allowError)) return;
+    final auth = ref.read(authControllerProvider);
+    if (auth is AuthAuthenticated &&
+        FirstAccessProgress.hasCheckpoint(
+            ref.read(sharedPreferencesProvider), auth.user.id)) {
+      _isNavigating = true;
+      _timeoutTimer?.cancel();
+      context.go('/onboarding/first-access');
+      return;
+    }
     _isNavigating = true;
     _timeoutTimer?.cancel();
 
@@ -239,58 +247,18 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen> {
   }
 
   Future<void> _navigateToWalletSetup(String? userId) async {
-    if (_isNavigating || _hasError || _walletSetupRedirectAttempted) return;
+    if (_isNavigating ||
+        _hasError ||
+        _walletSetupRedirectAttempted ||
+        userId == null) {
+      return;
+    }
     _isNavigating = true;
     _walletSetupRedirectAttempted = true;
     _timeoutTimer?.cancel();
-
-    _markWalletSetupRedirectSeen(userId);
-
     if (!mounted) return;
-
-    try {
-      await bitcoin_accounts.loadLibrary();
-    } catch (_) {}
-
-    if (!mounted) return;
-
-    await Navigator.of(context).push<void>(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            bitcoin_accounts.BitcoinAccountsScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: KeroseneMotion.short,
-      ),
-    );
-
-    if (!mounted) return;
-    await ref.read(walletProvider.notifier).refresh();
-    ref.invalidate(transactionHistoryProvider);
-
-    _isNavigating = false;
-    unawaited(_navigateToHome());
+    context.go('/onboarding/first-access');
   }
-
-  bool _hasSeenWalletSetupRedirect(String? userId) {
-    if (userId == null || userId.isEmpty) {
-      return false;
-    }
-    final prefs = ref.read(sharedPreferencesProvider);
-    return prefs.getBool(_walletSetupRedirectKey(userId)) ?? false;
-  }
-
-  void _markWalletSetupRedirectSeen(String? userId) {
-    if (userId == null || userId.isEmpty) {
-      return;
-    }
-    final prefs = ref.read(sharedPreferencesProvider);
-    unawaited(prefs.setBool(_walletSetupRedirectKey(userId), true));
-  }
-
-  String _walletSetupRedirectKey(String userId) =>
-      'home.wallet_setup_redirect_seen.$userId';
 
   @override
   Widget build(BuildContext context) {

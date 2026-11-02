@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -40,7 +41,7 @@ class LightningTopBar extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: IconButton(
               onPressed: onBack,
-              icon: const Icon(KeroseneIcons.back, size: 22),
+              icon: const KeroseneIcon(KeroseneIcons.back, size: 22),
               tooltip: context.tr.authBackAction,
               style: IconButton.styleFrom(
                 foregroundColor: textColor,

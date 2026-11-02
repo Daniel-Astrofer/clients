@@ -1,9 +1,10 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/buttons/app_button.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
@@ -22,6 +23,7 @@ class KeroseneEducationDialog extends StatelessWidget {
   final VoidCallback? onPrimary;
   final VoidCallback? onSecondary;
   final String? footerNote;
+  final bool asPanel;
 
   const KeroseneEducationDialog({
     super.key,
@@ -35,6 +37,7 @@ class KeroseneEducationDialog extends StatelessWidget {
     this.onPrimary,
     this.onSecondary,
     this.footerNote,
+    this.asPanel = false,
   });
 
   static Future<T?> show<T>({
@@ -51,14 +54,8 @@ class KeroseneEducationDialog extends StatelessWidget {
     String? footerNote,
     bool barrierDismissible = true,
   }) {
-    return showGeneralDialog<T>(
-      context: context,
-      barrierDismissible: barrierDismissible,
-      barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withValues(alpha: 0.72),
-      transitionDuration: KeroseneMotion.medium,
-      pageBuilder: (ctx, anim, secondary) {
-        return KeroseneEducationDialog(
+    Widget surface(BuildContext ctx, {bool panel = false}) =>
+        KeroseneEducationDialog(
           icon: icon,
           tone: tone,
           title: title,
@@ -67,6 +64,7 @@ class KeroseneEducationDialog extends StatelessWidget {
           primaryLabel: primaryLabel,
           secondaryLabel: secondaryLabel,
           footerNote: footerNote,
+          asPanel: panel,
           onPrimary: () {
             Navigator.of(ctx).pop(true);
             onPrimary?.call();
@@ -76,7 +74,34 @@ class KeroseneEducationDialog extends StatelessWidget {
             onSecondary?.call();
           },
         );
-      },
+    if (tone == KeroseneEducationTone.info ||
+        tone == KeroseneEducationTone.security) {
+      return showModalBottomSheet<T>(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        useSafeArea: true,
+        isDismissible: barrierDismissible,
+        enableDrag: barrierDismissible,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 560),
+        backgroundColor: KeroseneBrandTheme.of(context).surface,
+        sheetAnimationStyle: AnimationStyle(
+          duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+          reverseDuration:
+              KeroseneMotion.duration(context, KeroseneMotion.short),
+        ),
+        builder: (ctx) => surface(ctx, panel: true),
+      );
+    }
+    return showGeneralDialog<T>(
+      context: context,
+      barrierDismissible: barrierDismissible,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.6),
+      transitionDuration:
+          KeroseneMotion.duration(context, KeroseneMotion.short),
+      pageBuilder: (ctx, anim, secondary) => surface(ctx),
       transitionBuilder: (ctx, anim, secondary, child) {
         final curved = CurvedAnimation(
           parent: anim,
@@ -93,128 +118,95 @@ class KeroseneEducationDialog extends StatelessWidget {
     );
   }
 
-  Color get _accent {
-    return switch (tone) {
-      KeroseneEducationTone.success => KeroseneBrandTokens.success,
-      KeroseneEducationTone.warning => KeroseneBrandTokens.warning,
-      KeroseneEducationTone.security => AppColors.securityAccent,
-      KeroseneEducationTone.info => KeroseneBrandTokens.info,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
-    final accent = _accent;
-
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Material(
-            color: Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-                decoration: BoxDecoration(
-                  color: AppColors.educationSurface,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: accent.withValues(alpha: 0.28)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      blurRadius: 32,
-                      offset: const Offset(0, 18),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: accent.withValues(alpha: 0.12),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(icon, color: accent, size: 26),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      title,
-                      style: AppTypography.display.copyWith(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w500,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      body,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.78),
-                        fontFamily: AppTypography.bodyFontFamily,
-                        fontSize: 14.5,
-                        height: 1.45,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    if (bullets.isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      for (final bullet in bullets) ...[
-                        _BulletRow(text: bullet, accent: accent),
-                        const SizedBox(height: 8),
-                      ],
-                    ],
-                    if (footerNote != null &&
-                        footerNote!.trim().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        footerNote!,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.45),
-                          fontFamily: AppTypography.bodyFontFamily,
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    AppButton(
-                      label: primaryLabel,
-                      expand: true,
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        onPrimary?.call();
-                      },
-                    ),
-                    if (secondaryLabel != null) ...[
-                      const SizedBox(height: 8),
-                      AppButton(
-                        label: secondaryLabel!,
-                        expand: true,
-                        variant: AppButtonVariant.ghost,
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          onSecondary?.call();
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
+    final colors = KeroseneBrandTheme.of(context);
+    final accent = colors.textPrimary;
+    final content = Container(
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: asPanel ? null : AppRadius.card,
+        border: asPanel ? null : Border.all(color: colors.border),
+      ),
+      child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                    width: 52,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: accent.withValues(alpha: 0.08),
+                        border: Border.all(color: colors.border)),
+                    child: KeroseneIcon(icon, color: accent, size: 26))),
+            const SizedBox(height: 14),
+            Text(title,
+                style: AppTypography.display.copyWith(
+                    color: accent,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2)),
+            const SizedBox(height: 10),
+            Text(body,
+                style: AppTypography.bodyMedium.copyWith(
+                    color: colors.textSecondary, fontSize: 14.5, height: 1.45)),
+            if (bullets.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              for (final bullet in bullets) ...[
+                _BulletRow(text: bullet, accent: accent),
+                const SizedBox(height: 8),
+              ],
+            ],
+            if (footerNote != null && footerNote!.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(footerNote!,
+                  style: AppTypography.bodySmall.copyWith(
+                      color: colors.textMuted, fontSize: 12, height: 1.35)),
+            ],
+            const SizedBox(height: 20),
+            AppButton(
+                label: primaryLabel,
+                expand: true,
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  onPrimary?.call();
+                }),
+            if (secondaryLabel != null) ...[
+              const SizedBox(height: 8),
+              AppButton(
+                  label: secondaryLabel!,
+                  expand: true,
+                  variant: AppButtonVariant.ghost,
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    onSecondary?.call();
+                  }),
+            ],
+          ]),
+    );
+    final scroll = SingleChildScrollView(child: content);
+    return Material(
+      color: Colors.transparent,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
+          child: asPanel
+              ? ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.9),
+                  child: scroll)
+              : Center(
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                          child: scroll))),
         ),
       ),
     );
@@ -245,7 +237,7 @@ class _BulletRow extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.72),
+              color: KeroseneBrandTheme.of(context).textSecondary,
               fontFamily: AppTypography.bodyFontFamily,
               fontSize: 13.5,
               height: 1.4,
@@ -275,20 +267,20 @@ Future<bool?> showTotpEducationDialog(BuildContext context) {
   };
   final bullets = switch (lang) {
     'en' => const [
-      'Works offline — no SMS that can be intercepted',
-      'Required for sensitive actions and stronger account recovery',
-      'Takes about a minute to set up',
-    ],
+        'Works offline — no SMS that can be intercepted',
+        'Required for sensitive actions and stronger account recovery',
+        'Takes about a minute to set up',
+      ],
     'es' => const [
-      'Funciona sin conexión — sin SMS interceptables',
-      'Refuerza acciones sensibles y la recuperación de la cuenta',
-      'Se configura en cerca de un minuto',
-    ],
+        'Funciona sin conexión — sin SMS interceptables',
+        'Refuerza acciones sensibles y la recuperación de la cuenta',
+        'Se configura en cerca de un minuto',
+      ],
     _ => const [
-      'Funciona offline — sem SMS que possam ser interceptados',
-      'Reforça ações sensíveis e a recuperação da conta',
-      'Leva cerca de um minuto para ativar',
-    ],
+        'Funciona offline — sem SMS que possam ser interceptados',
+        'Reforça ações sensíveis e a recuperação da conta',
+        'Leva cerca de um minuto para ativar',
+      ],
   };
   final primary = switch (lang) {
     'en' => 'Enable TOTP',

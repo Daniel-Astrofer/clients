@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -242,16 +243,18 @@ class _NativeIllustrationState extends State<_NativeIllustration>
   Widget build(BuildContext context) {
     final painter = _painterForState(widget.state, _ctrl, widget.color);
 
-    return SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: CustomPaint(painter: painter),
-    ).animate().scale(
-          begin: const Offset(0.6, 0.6),
-          end: const Offset(1.0, 1.0),
-          duration: KeroseneMotion.long,
-          curve: KeroseneMotion.spring,
-        );
+    return KeroseneUiScale.icon(
+        context,
+        SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: CustomPaint(painter: painter),
+        ).animate().scale(
+              begin: const Offset(0.6, 0.6),
+              end: const Offset(1.0, 1.0),
+              duration: KeroseneMotion.long,
+              curve: KeroseneMotion.spring,
+            ));
   }
 
   CustomPainter _painterForState(

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
@@ -158,7 +159,7 @@ class _AnimatedErrorPopupState extends State<AnimatedErrorPopup>
                         ),
                       ],
                     ),
-                    child: Icon(
+                    child: KeroseneIcon(
                       widget.isSuccess
                           ? KeroseneIcons.success
                           : KeroseneIcons.error,
@@ -210,7 +211,7 @@ class _AnimatedErrorPopupState extends State<AnimatedErrorPopup>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      KeroseneIcon(
                         KeroseneIcons.info,
                         color: baseColor,
                         size: 16,

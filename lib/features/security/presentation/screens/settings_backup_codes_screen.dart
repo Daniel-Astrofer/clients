@@ -1,4 +1,12 @@
+import 'security_change_result_screen.dart';
+import 'settings_account_confirmation.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import '../widgets/recovery_codes_sheet.dart';
+import '../widgets/security_change_prompt.dart';
+import '../providers/security_provider.dart'
+    show accountSecurityProfileProvider;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -9,13 +17,16 @@ import 'package:kerosene/features/auth/controller/auth_providers.dart';
 
 import 'security_settings_components.dart';
 import 'security_totp_screen.dart' deferred as security_totp;
-import 'settings_modern_components.dart';
 import 'settings_navigation.dart';
 import 'settings_route_helpers.dart';
+import 'security_lookup.dart';
+import 'package:kerosene/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 
 /// Backup codes management — real API status + regenerate (requires TOTP).
 class SettingsBackupCodesScreen extends ConsumerStatefulWidget {
-  const SettingsBackupCodesScreen({super.key});
+  final String? ownerScope;
+  const SettingsBackupCodesScreen({super.key, this.ownerScope});
 
   @override
   ConsumerState<SettingsBackupCodesScreen> createState() =>
@@ -23,366 +34,309 @@ class SettingsBackupCodesScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsBackupCodesScreenState
-    extends ConsumerState<SettingsBackupCodesScreen> {
+    extends ConsumerState<SettingsBackupCodesScreen>
+    with WidgetsBindingObserver {
   List<String> _latestCodes = const [];
   bool _busy = false;
+  String? _error;
+  late final String? _ownerScope;
+  bool _foreground = true;
+  bool _openingCodes = false;
+  bool _openingTotp = false;
+  final _securityLookup = SecurityLookup<AccountSecurityStatusResult>();
+  final _backupLookup = SecurityLookup<BackupCodesStatusResult>();
+  final _profileLookup = SecurityLookup<AccountSecurityProfile>();
+
+  bool get _protectionCurrent =>
+      _ownsScreen &&
+      _foreground &&
+      securityLookupIsCurrent(ref.read(securityStatusProvider)) &&
+      securityLookupIsCurrent(ref.read(accountSecurityProfileProvider));
+  bool get _backupCurrent =>
+      _protectionCurrent &&
+      securityLookupIsCurrent(ref.read(backupCodesStatusProvider)) &&
+      ref.read(securityStatusProvider).requireValue.totpEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerScope = widget.ownerScope ?? ref.read(sessionStorageScopeProvider);
+    _foreground = WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+    setState(() => _foreground = state == AppLifecycleState.resumed);
+    if (_foreground && _ownsScreen) _refresh();
+  }
+
+  bool get _ownsScreen =>
+      mounted &&
+      _ownerScope != null &&
+      ref.read(sessionStorageScopeProvider) == _ownerScope;
+
+  void _refresh() {
+    ref.invalidate(backupCodesStatusProvider);
+    ref.invalidate(securityStatusProvider);
+    ref.invalidate(accountSecurityProfileProvider);
+  }
 
   Future<void> _regenerate() async {
-    if (_busy) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text(
-          context.tr.securityBackupCodesTitle,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-        ),
-        content: Text(
-          context.tr.securityBackupCodesBody,
-          style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.72)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.tr.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr.securityRegenerateCodesAction),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _busy = true);
+    if (_busy || !_backupCurrent) return;
+    // Lock before opening confirmation, including the before-render tap gap.
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      final result =
-          await ref.read(authRepositoryProvider).regenerateBackupCodes();
-      if (!mounted) return;
-      result.fold(
-        (failure) {
-          AppNotice.showError(
-            context,
+      final confirmed = await confirmAccountSetting(context,
+          ownerScope: _ownerScope!,
+          title: context.tr.securityBackupCodesTitle,
+          body: context.tr.securityRegenerateCodesConfirmation,
+          confirmLabel: context.tr.securityRegenerateCodesAction);
+      if (!mounted || !confirmed || !_backupCurrent) return;
+      final factors = await promptSecurityChange(context, ref, _ownerScope!);
+      if (!mounted || factors == null || !_backupCurrent) return;
+      setState(() => _latestCodes = const []);
+      final result = await ref
+          .read(authRepositoryProvider)
+          .regenerateBackupCodes(factors: factors);
+      if (!mounted || !_ownsScreen) return;
+      _refresh();
+      result.fold((failure) {
+        setState(() => _error = context.tr.securityUpdateUnconfirmedMessage);
+        AppNotice.showError(context,
             title: context.tr.securityBackupRegenerateFailedTitle,
-            message: ErrorTranslator.translate(context.tr, failure.message),
-          );
-        },
-        (status) {
-          setState(() => _latestCodes = status.newlyGeneratedCodes);
-          ref.invalidate(backupCodesStatusProvider);
-          ref.invalidate(securityStatusProvider);
-          if (status.newlyGeneratedCodes.isNotEmpty) {
-            _showCodesSheet(status.newlyGeneratedCodes);
-          }
-        },
-      );
+            message: ErrorTranslator.translate(context.tr, failure.toString()));
+      }, (status) {
+        if (!status.enabled ||
+            !hasUsableRecoveryCodes(status.newlyGeneratedCodes)) {
+          setState(() => _error = context.tr.securityUpdateUnconfirmedMessage);
+          AppNotice.showError(context,
+              title: context.tr.securityBackupRegenerateFailedTitle,
+              message: context.tr.securityUpdateUnconfirmedMessage);
+          return;
+        }
+        setState(() => _latestCodes = status.newlyGeneratedCodes);
+        pushSettingsResultPage<bool>(
+            context,
+            SecurityChangeResultScreen(
+                ownerScope: _ownerScope!,
+                title: context.tr.securityBackupCodesTitle,
+                body: context.tr.securityResultCodesChangedBody,
+                codes: status.newlyGeneratedCodes));
+      });
+    } catch (error) {
+      if (mounted && _ownsScreen) {
+        setState(() => _error = context.tr.securityUpdateUnconfirmedMessage);
+        AppNotice.showError(context,
+            title: context.tr.securityBackupRegenerateFailedTitle,
+            message: context.tr.securityUpdateUnconfirmedMessage);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _showCodesSheet(List<String> codes) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: monochromePanelDecoration(
-              color: monoSurfaceColor,
-              borderColor: monoBorderStrongColor,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  context.tr.securityBackupCodesTitle.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: monoMutedTextColor,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.8,
-                      ),
-                ),
-                SizedBox(height: AppSpacing.sm),
-                Text(
-                  context.tr.securityBackupCodesBody,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: monoMutedTextColor,
-                        height: 1.45,
-                      ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: codes
-                      .map(
-                        (code) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: monochromePanelDecoration(
-                            color: monoSurfaceAltColor,
-                            borderColor: monoBorderStrongColor,
-                            showShadow: false,
-                          ),
-                          child: Text(
-                            code,
-                            style: TextStyle(
-                              color: monoTextColor,
-                              fontFamily: AppTypography.financialFontFamily,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                FilledButton(
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: codes.join('\n')),
-                    );
-                    if (!mounted) return;
-                    AppNotice.showInfo(
-                      context,
-                      title: context.tr.settingsBackupCopiedTitle,
-                      message: context.tr.settingsBackupCopiedMessage,
-                    );
-                  },
-                  child: Text(context.tr.settingsBackupCopyAll),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  Future<void> _showCodesSheet(List<String> codes) async {
+    if (!_ownsScreen || !_foreground || _openingCodes || codes.isEmpty) return;
+    setState(() => _openingCodes = true);
+    try {
+      await showModalBottomSheet<void>(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          sheetAnimationStyle: AnimationStyle(
+              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+              reverseDuration:
+                  KeroseneMotion.duration(context, KeroseneMotion.short)),
+          builder: (_) =>
+              RecoveryCodesSheet(codes: codes, ownerScope: _ownerScope));
+    } finally {
+      if (mounted) setState(() => _openingCodes = false);
+    }
+  }
+
+  Future<void> _openTotp() async {
+    if (_openingTotp || _busy || !_protectionCurrent) return;
+    setState(() => _openingTotp = true);
+    try {
+      await security_totp.loadLibrary();
+      if (!mounted || !_protectionCurrent) return;
+      await pushSettingsResultPage<void>(
+          context, security_totp.SecurityTotpScreen());
+    } catch (_) {
+      if (mounted && _ownsScreen && _foreground) {
+        AppNotice.showError(context,
+            message: context.tr.securityStatusLoadError);
+      }
+    } finally {
+      if (mounted) setState(() => _openingTotp = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(sessionStorageScopeProvider);
+    if (!_ownsScreen) {
+      return Scaffold(
+          body: SafeArea(
+              child: Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(context.tr.securitySessionChangedMessage),
+        TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: Text(context.tr.close)),
+      ]))));
+    }
+    if (!_foreground) {
+      return Scaffold(
+          body: SafeArea(
+              child: Center(
+                  child: Text(context.tr.securitySensitiveHiddenMessage))));
+    }
     final securityAsync = ref.watch(securityStatusProvider);
     final backupAsync = ref.watch(backupCodesStatusProvider);
+    final profileAsync = ref.watch(accountSecurityProfileProvider);
+    _securityLookup.observe(_ownerScope, securityAsync);
+    _backupLookup.observe(_ownerScope, backupAsync);
+    _profileLookup.observe(_ownerScope, profileAsync);
+    final security = _securityLookup.last;
+    final backup = _backupLookup.last;
     final viewPadding = MediaQuery.viewPaddingOf(context);
+    final mayRegenerate = !_busy && _backupCurrent;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.xl2,
-                AppSpacing.md,
-                AppSpacing.xl2,
-                viewPadding.bottom + AppSpacing.xxl,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: Center(
-                  child: ConstrainedBox(
+    return PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(AppSpacing.xl2, AppSpacing.md,
+                      AppSpacing.xl2, viewPadding.bottom + AppSpacing.xxl),
+                  sliver: SliverToBoxAdapter(
+                      child: Center(
+                          child: ConstrainedBox(
                     constraints: context.responsive.appColumnConstraints,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SettingsHeader(
-                          onClose: () {
-                            HapticFeedback.selectionClick();
-                            Navigator.of(context).maybePop();
-                          },
-                        ),
-                        SizedBox(height: AppSpacing.xxl),
-                        Text(
-                          context.tr.settingsBackupTitle,
-                          style: AppTypography.newsreader(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w500,
-                            height: 1.2,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                        SizedBox(height: AppSpacing.md),
-                        Text(
-                          context.tr.settingsBackupSubtitle,
-                          style: AppTypography.inter(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 16,
-                            height: 1.55,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        securityAsync.when(
-                          data: (security) {
-                            if (!security.totpEnabled) {
-                              return SettingsGlassPanel(
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Icon(
-                                      KeroseneIcons.verified,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.70),
-                                      size: 28,
-                                    ),
-                                    SizedBox(height: AppSpacing.md),
-                                    Text(
-                                      context.tr.settingsBackupEnableTotpFirst,
-                                      style: AppTypography.inter(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    SizedBox(height: AppSpacing.sm),
-                                    Text(
-                                      context
-                                          .tr.securityBackupCodesLockedSubtitle,
-                                      style: AppTypography.inter(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                        fontSize: 14,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.lg),
-                                    FilledButton(
-                                      onPressed: () {
-                                        pushSettingsDeferred(
-                                          context,
-                                          security_totp.loadLibrary,
-                                          (_) => security_totp
-                                              .SecurityTotpScreen(),
-                                        );
-                                      },
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                        foregroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .surface,
-                                      ),
-                                      child: Text(
-                                        context.tr.securityEnableTotpAction,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            return backupAsync.when(
-                              data: (backup) => Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  SecuritySectionCard(
-                                    title: context.tr.securityBackupCodesTitle,
-                                    subtitle:
-                                        context.tr.securityBackupCodesRemaining(
-                                      backup.remainingCodes,
-                                    ),
-                                    actionLabel: _busy
-                                        ? '…'
-                                        : context
-                                            .tr.securityRegenerateCodesAction
-                                            .toUpperCase(),
-                                    onAction: _busy ? null : _regenerate,
-                                    trailing: _latestCodes.isNotEmpty
-                                        ? TextButton(
-                                            onPressed: () =>
-                                                _showCodesSheet(_latestCodes),
-                                            child: Text(
-                                              context
-                                                  .tr.securityViewLatestAction,
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                ],
-                              ),
-                              loading: () => Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 48),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.54),
-                                  ),
-                                ),
-                              ),
-                              error: (error, _) => SettingsGlassPanel(
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                child: Text(
-                                  ErrorTranslator.translate(
-                                    context.tr,
-                                    error.toString(),
-                                  ),
-                                  style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.70)),
-                                ),
-                              ),
-                            );
-                          },
-                          loading: () => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 48),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.54),
-                              ),
-                            ),
-                          ),
-                          error: (error, _) => SettingsGlassPanel(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Text(
-                              ErrorTranslator.translate(
-                                context.tr,
-                                error.toString(),
-                              ),
-                              style: TextStyle(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          IgnorePointer(
+                              ignoring: _busy,
+                              child: Opacity(
+                                  opacity: _busy ? .5 : 1,
+                                  child: SettingsHeader(onClose: () {
+                                    HapticFeedback.selectionClick();
+                                    Navigator.of(context).maybePop();
+                                  }))),
+                          const SizedBox(height: AppSpacing.xxl),
+                          Text(context.tr.settingsBackupTitle,
+                              style: AppTypography.playfairDisplay(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2)),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(context.tr.settingsBackupSubtitle,
+                              style: AppTypography.inter(
                                   color: Theme.of(context)
                                       .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.70)),
+                                      .onSurfaceVariant,
+                                  fontSize: 16,
+                                  height: 1.55)),
+                          const SizedBox(height: AppSpacing.xxl),
+                          SecurityLookupNotice(sources: [
+                            (
+                              label: context.tr.twoFactorAuth,
+                              lookup: _securityLookup
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+                            (
+                              label: context.tr.securityBackupCodesTitle,
+                              lookup: _backupLookup
+                            ),
+                            (
+                              label: context.tr.securityScreenTitle,
+                              lookup: _profileLookup
+                            ),
+                          ], onRetry: _busy ? null : _refresh),
+                          if (_error != null)
+                            Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const KeroseneIcon(KeroseneIcons.error,
+                                          size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                          child: Text(_error!,
+                                              key: const ValueKey(
+                                                  'backup-inline-error')))
+                                    ])),
+                          if (security == null)
+                            securityAsync.isLoading
+                                ? const SecurityLoadingCard()
+                                : SecurityErrorCard(
+                                    title: context.tr.securityScreenTitle,
+                                    body: context.tr.securityStatusLoadError)
+                          else if (!security.totpEnabled)
+                            SecuritySectionCard(
+                                title: context.tr.securityBackupCodesTitle,
+                                subtitle: context
+                                    .tr.securityBackupCodesLockedSubtitle,
+                                actionLabel:
+                                    context.tr.securityEnableTotpAction,
+                                disabled: _busy ||
+                                    _openingTotp ||
+                                    !_protectionCurrent,
+                                onAction:
+                                    _busy || _openingTotp || !_protectionCurrent
+                                        ? null
+                                        : _openTotp)
+                          else if (backup == null)
+                            backupAsync.isLoading
+                                ? const SecurityLoadingCard()
+                                : SecurityErrorCard(
+                                    title: context.tr.securityBackupCodesTitle,
+                                    body:
+                                        context.tr.securityBackupCodesLoadError)
+                          else
+                            SecuritySectionCard(
+                                title: context.tr.securityBackupCodesTitle,
+                                subtitle: context.tr
+                                    .securityBackupCodesRemaining(
+                                        backup.remainingCodes),
+                                actionLabel:
+                                    context.tr.securityRegenerateCodesAction,
+                                disabled: !mayRegenerate,
+                                onAction: mayRegenerate ? _regenerate : null,
+                                trailing: _latestCodes.isNotEmpty
+                                    ? TextButton(
+                                        onPressed: _busy || _openingCodes
+                                            ? null
+                                            : () =>
+                                                _showCodesSheet(_latestCodes),
+                                        child: Text(context
+                                            .tr.securityViewLatestAction))
+                                    : null),
+                        ]),
+                  ))),
+                )
+              ]),
         ),
       ),
     );

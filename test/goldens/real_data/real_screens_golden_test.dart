@@ -41,7 +41,8 @@ void main() {
       // so periodic timers cancel cleanly (avoids pending-timer test failure).
       await tester.pump(const Duration(seconds: 55));
       await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
+      // Home schedules its provider cleanup after unmount.
+      await tester.pump(const Duration(milliseconds: 1));
     }
 
     testGoldens('home — real wallets & activity', (tester) async {

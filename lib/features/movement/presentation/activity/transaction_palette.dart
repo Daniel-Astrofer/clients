@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/activity_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
@@ -14,7 +13,7 @@ import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart
 /// - **Amounts** are always near-black for max readability on light card fills.
 /// - Surfaces use expanded [TxVisualVariant] (16 variants: rail × direction +
 ///   product + lifecycle) — not only white/orange/yellow.
-/// - Status accents delegate to [KeroseneBrandTokens.success/warning/error].
+/// - Status uses monochrome ink; icon and text convey the lifecycle.
 /// - Light card surface colors are local (specific to activity statement cards).
 enum TransactionCardSurface { internal, onchain, lightning }
 
@@ -25,7 +24,7 @@ enum TransactionStatusTone { confirmed, confirming, pending, cancelled, failed }
 ///
 /// ## Design rules
 /// - Ink on light surfaces: `inkPrimary`, `inkSecondary`, `inkTertiary`.
-/// - Status: delegates to [KeroseneBrandTokens] (green success, amber warning, red error).
+/// - Status: monochrome ink, with a distinct icon and lifecycle label.
 /// - Card surfaces: light paper per rail (internal/onchain/lightning).
 /// - Amounts always black on card surfaces (no green/red tint).
 abstract final class TransactionPalette {
@@ -37,21 +36,15 @@ abstract final class TransactionPalette {
   static const Color inkOnDark = ActivitySurfaceTokens.inkOnDark;
 
   // ── Status (delegates to brand tokens) ───────────────────────────────────
-  static Color get statusConfirmed => KeroseneBrandTokens.success;
-  static Color get statusConfirmedSoft =>
-      KeroseneBrandTokens.success.withValues(alpha: 0.85);
-  static Color get statusPending => KeroseneBrandTokens.warning;
-  static Color get statusPendingSoft =>
-      KeroseneBrandTokens.warning.withValues(alpha: 0.85);
-  static Color get statusConfirming =>
-      KeroseneBrandTokens.warning.withValues(alpha: 0.9);
-  static Color get statusConfirmingSoft =>
-      KeroseneBrandTokens.warning.withValues(alpha: 0.75);
-  static Color get statusFailed => KeroseneBrandTokens.error;
-  static Color get statusFailedSoft =>
-      KeroseneBrandTokens.error.withValues(alpha: 0.85);
-  static Color get statusCancelled =>
-      KeroseneBrandTokens.error.withValues(alpha: 0.7);
+  static Color get statusConfirmed => inkPrimary;
+  static Color get statusConfirmedSoft => inkPrimary.withValues(alpha: 0.85);
+  static Color get statusPending => inkPrimary;
+  static Color get statusPendingSoft => inkPrimary.withValues(alpha: 0.85);
+  static Color get statusConfirming => inkPrimary.withValues(alpha: 0.9);
+  static Color get statusConfirmingSoft => inkPrimary.withValues(alpha: 0.75);
+  static Color get statusFailed => inkPrimary;
+  static Color get statusFailedSoft => inkPrimary.withValues(alpha: 0.85);
+  static Color get statusCancelled => inkPrimary.withValues(alpha: 0.7);
   static const Color statusTrack = AppColors.activityStatusTrack;
 
   // ── Amounts: always black ────────────────────────────────────────────────
@@ -211,11 +204,7 @@ class TransactionCardColors {
     );
   }
 
-  /// Adapts a compact Home row to the current Home surface contract.
-  ///
-  /// Full statement cards retain their paper treatment for scanability, but
-  /// the Home feed must read as one OLED surface instead of a cream card
-  /// inserted into the dark balance scene.
+  /// Applies the shared Home surface contract to history cards in either theme.
   TransactionCardColors forHomeSurface(HomeSurfaceTheme homeSurface) {
     return TransactionCardColors(
       background: homeSurface.card,
@@ -228,8 +217,8 @@ class TransactionCardColors {
       iconWell: homeSurface.surfaceDim,
       iconWellBorder: homeSurface.surfaceBorder,
       icon: homeSurface.textPrimary,
-      statusStrong: statusStrong,
-      statusSoft: statusSoft,
+      statusStrong: homeSurface.textPrimary,
+      statusSoft: homeSurface.textSecondary,
       statusTrack: homeSurface.textMuted,
       surface: surface,
       tone: tone,

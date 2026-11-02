@@ -1,3 +1,6 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,9 +12,9 @@ import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accoun
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_wallet_support.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
-import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/internal_account_creation_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_details.dart';
 import '../theme/financial_hub_tokens.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
 /// Modal bottom sheet for wallet management (Rename, Status check, Lock/Archive, Public Material, Cold Wallet).
 class WalletManageBottomSheet extends ConsumerStatefulWidget {
@@ -40,8 +43,23 @@ class _WalletManageBottomSheetState
     extends ConsumerState<WalletManageBottomSheet> {
   String? _busyAction;
   String? _expandedKey;
+  late final String? _openedScope;
+  @override
+  void initState() {
+    super.initState();
+    _openedScope = ref.read(sessionStorageScopeProvider);
+  }
 
-  bool get _isLocked => walletIsLocked(widget.account);
+  bool get _sameActor =>
+      mounted && ref.read(sessionStorageScopeProvider) == _openedScope;
+
+  BitcoinAccount get _account =>
+      ref
+          .read(bitcoinAccountsProvider)
+          .value
+          ?.where((a) => a.id == widget.account.id)
+          .firstOrNull ??
+      widget.account;
 
   void _toggle(String key) {
     HapticFeedback.selectionClick();
@@ -90,11 +108,22 @@ class _WalletManageBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    final accountName = widget.account.label.trim().isEmpty
+    final scope = ref.watch(sessionStorageScopeProvider);
+    if (scope != _openedScope) {
+      return SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(context.tr.walletSessionChanged),
+        TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: Text(context.tr.close)),
+      ]));
+    }
+    ref.watch(bitcoinAccountsProvider);
+    final accountName = _account.label.trim().isEmpty
         ? 'Carteira sem nome'
-        : widget.account.label.trim();
-    final statusText = friendlyStatus(context, widget.account.status);
-    final hasPublicMaterial = bitcoinAccountHasPublicMaterial(widget.account);
+        : _account.label.trim();
+    final statusText = walletStatusLabel(context, _account);
+    final hasPublicMaterial = bitcoinAccountHasPublicMaterial(_account);
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -170,12 +199,12 @@ class _WalletManageBottomSheetState
                     ),
                   ),
                   IconButton(
-                    onPressed: _busyAction == 'rename'
+                    onPressed: _busyAction != null
                         ? null
                         : () => _renameWallet(context),
-                    icon: _busyAction == 'rename'
+                    icon: _busyAction != null
                         ? CupertinoActivityIndicator()
-                        : Icon(
+                        : KeroseneIcon(
                             KeroseneIcons.edit,
                             color: Theme.of(context).colorScheme.onSurface,
                             size: 20,
@@ -198,20 +227,22 @@ class _WalletManageBottomSheetState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildDetailRow(
-                    'ID da Conta',
-                    widget.account.id,
+                    context.tr.walletManageIdentifier,
+                    _account.id,
                     copyable: true,
                   ),
-                  if ((widget.account.cardId ?? '').trim().isNotEmpty)
+                  if ((_account.cardId ?? '').trim().isNotEmpty &&
+                      _account.cardId != _account.id)
                     _buildDetailRow(
-                      'Card ID',
-                      widget.account.cardId!,
+                      context.tr.walletManageCardIdentifier,
+                      _account.cardId!,
                       copyable: true,
                     ),
-                  if ((widget.account.coldWalletId ?? '').trim().isNotEmpty)
+                  if ((_account.coldWalletId ?? '').trim().isNotEmpty &&
+                      _account.coldWalletId != _account.id)
                     _buildDetailRow(
-                      'Cold Wallet ID',
-                      widget.account.coldWalletId!,
+                      context.tr.walletManageExternalIdentifier,
+                      _account.coldWalletId!,
                       copyable: true,
                     ),
                 ],
@@ -240,19 +271,28 @@ class _WalletManageBottomSheetState
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _isLocked
-                          ? Colors.red.withValues(alpha: 0.2)
-                          : Colors.green.withValues(alpha: 0.2),
+                      color: KeroseneBrandTokens.textPrimary
+                          .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      statusText,
-                      style: FinancialHubTokens.numberText(
-                        color: _isLocked
-                            ? Colors.redAccent
-                            : Colors.greenAccent,
-                        fontSize: 12,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        KeroseneIcon(
+                            _account.isActive
+                                ? KeroseneIcons.check
+                                : KeroseneIcons.archive,
+                            size: 14,
+                            color: KeroseneBrandTokens.textPrimary),
+                        const SizedBox(width: 6),
+                        Text(
+                          statusText,
+                          style: FinancialHubTokens.numberText(
+                            color: KeroseneBrandTokens.textPrimary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -275,16 +315,14 @@ class _WalletManageBottomSheetState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.account.isWatchOnly
-                              ? 'Arquivar acompanhamento'
-                              : 'Bloquear carteira',
+                          _account.isWatchOnly
+                              ? context.tr.settingsWalletsArchiveWatch
+                              : context.tr.settingsWalletsArchive,
                           style: FinancialHubTokens.numberText(fontSize: 14),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _isLocked
-                              ? 'A carteira já está bloqueada para uso.'
-                              : 'Confira os detalhes antes de confirmar.',
+                          context.tr.walletArchiveReview,
                           style: FinancialHubTokens.caption(),
                         ),
                       ],
@@ -295,11 +333,12 @@ class _WalletManageBottomSheetState
                     const CupertinoActivityIndicator(radius: 12)
                   else
                     TextButton(
-                      onPressed: _isLocked
-                          ? null
-                          : () => _archiveWallet(context),
+                      onPressed:
+                          !walletCanArchive(_account) || _busyAction != null
+                              ? null
+                              : () => _archiveWallet(context),
                       child: Text(
-                        widget.account.isWatchOnly ? 'Arquivar' : 'Bloquear',
+                        context.tr.walletArchiveAction,
                       ),
                     ),
                 ],
@@ -326,18 +365,18 @@ class _WalletManageBottomSheetState
                     _buildDetailRow(
                       'Fingerprint',
                       bitcoinAccountDisplayValue(
-                        widget.account.xpubFingerprint,
+                        _account.xpubFingerprint,
                       ),
                       copyable: true,
                     ),
                     _buildDetailRow(
                       'Derivation',
-                      bitcoinAccountDisplayValue(widget.account.derivationPath),
+                      bitcoinAccountDisplayValue(_account.derivationPath),
                       copyable: true,
                     ),
                     _buildDetailRow(
                       'Script policy',
-                      bitcoinAccountDisplayValue(widget.account.scriptPolicy),
+                      bitcoinAccountDisplayValue(_account.scriptPolicy),
                       copyable: true,
                     ),
                   ],
@@ -345,7 +384,7 @@ class _WalletManageBottomSheetState
               ),
             ],
 
-            if (widget.account.isWatchOnly) ...[
+            if (_account.isWatchOnly) ...[
               SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -354,7 +393,7 @@ class _WalletManageBottomSheetState
                     context,
                   ).copyWith(dividerColor: Colors.transparent),
                   child: ColdWalletBackendOptions(
-                    account: widget.account,
+                    account: _account,
                     expandedKey: _expandedKey,
                     onToggle: _toggle,
                   ),
@@ -370,26 +409,27 @@ class _WalletManageBottomSheetState
   }
 
   Future<void> _renameWallet(BuildContext context) async {
-    final nextLabel = await askWalletName(context, widget.account);
-    if (nextLabel == null || !context.mounted) return;
+    if (_busyAction != null || !_sameActor) return;
+    final nextLabel = await askWalletName(context, _account);
+    if (nextLabel == null || !context.mounted || !_sameActor) return;
 
     setState(() => _busyAction = 'rename');
     try {
-      await ref
-          .read(bitcoinAccountsProvider.notifier)
-          .renameWallet(accountId: widget.account.id, label: nextLabel);
-      if (!context.mounted) return;
+      final confirmed = await ref
+          .read(bitcoinAccountsControllerProvider)
+          .renameWallet(accountId: _account.id, label: nextLabel);
+      if (!context.mounted || !_sameActor) return;
       AppNotice.showSuccess(
         context,
-        title: 'Nome Atualizado',
-        message: nextLabel,
+        title: context.tr.settingsWalletsRenameOk,
+        message: confirmed.label,
       );
     } catch (_) {
-      if (!context.mounted) return;
+      if (!context.mounted || !_sameActor) return;
       AppNotice.showError(
         context,
-        title: 'Erro ao Atualizar',
-        message: 'Não foi possível atualizar o nome da conta.',
+        title: context.tr.settingsWalletsRenameFailTitle,
+        message: context.tr.settingsWalletsRenameFailMessage,
       );
     } finally {
       if (mounted) {
@@ -399,27 +439,28 @@ class _WalletManageBottomSheetState
   }
 
   Future<void> _archiveWallet(BuildContext context) async {
-    final confirmed = await confirmWalletArchive(context, widget.account);
-    if (!confirmed || !context.mounted) return;
+    if (_busyAction != null || !_sameActor) return;
+    final confirmed = await confirmWalletArchive(context, _account);
+    if (!confirmed || !context.mounted || !_sameActor) return;
 
     setState(() => _busyAction = 'archive');
     try {
       await ref
-          .read(bitcoinAccountsProvider.notifier)
-          .archiveWallet(accountId: widget.account.id);
-      if (!context.mounted) return;
+          .read(bitcoinAccountsControllerProvider)
+          .archiveWallet(accountId: _account.id);
+      if (!context.mounted || !_sameActor) return;
       AppNotice.showSuccess(
         context,
-        title: 'Carteira Atualizada',
-        message: 'A carteira foi bloqueada com sucesso.',
+        title: context.tr.settingsWalletsArchiveOk,
+        message: _account.label,
       );
       Navigator.pop(context);
     } catch (_) {
-      if (!context.mounted) return;
+      if (!context.mounted || !_sameActor) return;
       AppNotice.showError(
         context,
-        title: 'Erro',
-        message: 'Falha ao alterar estado da carteira.',
+        title: context.tr.settingsWalletsArchiveFailTitle,
+        message: context.tr.settingsWalletsArchiveFailMessage,
       );
     } finally {
       if (mounted) {

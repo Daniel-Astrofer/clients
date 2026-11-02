@@ -3,6 +3,13 @@ import 'package:equatable/equatable.dart';
 /// Status de uma transação Bitcoin na blockchain
 class TxStatus extends Equatable {
   final String txid;
+  final String? transactionId;
+  final DateTime? occurredAt;
+  final DateTime? updatedAt;
+  final bool hasAmount;
+  final bool hasNetworkFee;
+  final bool hasPlatformFee;
+  final bool hasTotalDebited;
   final String status;
   final int feeSatoshis;
   final double amountReceived;
@@ -18,6 +25,13 @@ class TxStatus extends Equatable {
 
   const TxStatus({
     required this.txid,
+    this.transactionId,
+    this.occurredAt,
+    this.updatedAt,
+    this.hasAmount = false,
+    this.hasNetworkFee = false,
+    this.hasPlatformFee = false,
+    this.hasTotalDebited = false,
     required this.status,
     required this.feeSatoshis,
     required this.amountReceived,
@@ -56,17 +70,12 @@ class TxStatus extends Equatable {
         .map((e) => e?.toString())
         .firstWhere((e) => e != null && e.isNotEmpty, orElse: () => null);
     final networkFeeSats = (data['networkFeeSats'] as num?)?.toInt();
-    final keroseneFeeSats = (data['keroseneFeeSats'] as num?)?.toInt() ?? 0;
+    final keroseneFeeSats = (data['keroseneFeeSats'] as num?)?.toInt();
     final rawReceiverAmountSats = (data['receiverAmountSats'] as num?)?.toInt();
     final rawGrossAmountSats = (data['grossAmountSats'] as num?)?.toInt() ??
         (data['amountSats'] as num?)?.toInt() ??
         (data['amountSatoshis'] as num?)?.toInt();
-    final receiverAmountSats =
-        (rawReceiverAmountSats != null && rawReceiverAmountSats > 0)
-            ? rawReceiverAmountSats
-            : (rawGrossAmountSats != null && rawGrossAmountSats > 0
-                ? rawGrossAmountSats
-                : rawReceiverAmountSats);
+    final receiverAmountSats = rawReceiverAmountSats ?? rawGrossAmountSats;
     final totalDebitSats = (data['totalDebitSats'] as num?)?.toInt();
 
     return TxStatus(
@@ -75,12 +84,28 @@ class TxStatus extends Equatable {
           data['externalReference']?.toString() ??
           data['id']?.toString() ??
           '',
-      status: data['status']?.toString() ?? 'confirmed',
+      transactionId:
+          data['id']?.toString() ?? data['transactionId']?.toString(),
+      occurredAt: _serverTime(data['createdAt'] ?? data['timestamp']),
+      updatedAt: _serverTime(data['updatedAt']),
+      hasAmount: receiverAmountSats != null ||
+          data['amount'] != null ||
+          data['amountReceived'] != null ||
+          data['amountBtc'] != null,
+      hasNetworkFee:
+          data['networkFeeSats'] != null || data['networkFeeBtc'] != null,
+      hasPlatformFee:
+          data['keroseneFeeSats'] != null || data['platformFeeBtc'] != null,
+      hasTotalDebited:
+          data['totalDebitSats'] != null || data['totalDebitedBtc'] != null,
+      status: data['status']?.toString() ?? 'unknown',
       feeSatoshis: (data['feeSatoshis'] as num?)?.toInt() ??
-          (networkFeeSats == null ? null : networkFeeSats + keroseneFeeSats) ??
+          (networkFeeSats == null
+              ? null
+              : networkFeeSats + (keroseneFeeSats ?? 0)) ??
           (((data['networkFeeBtc'] as num?)?.toDouble() ?? 0) * 100000000)
               .round(),
-      amountReceived: (receiverAmountSats == null || receiverAmountSats <= 0)
+      amountReceived: receiverAmountSats == null
           ? ((data['amount'] as num?)?.toDouble() ??
               (data['amountReceived'] as num?)?.toDouble() ??
               (data['amountBtc'] as num?)?.toDouble() ??
@@ -89,7 +114,7 @@ class TxStatus extends Equatable {
       networkFeeBtc: networkFeeSats == null
           ? ((data['networkFeeBtc'] as num?)?.toDouble() ?? 0)
           : networkFeeSats / 100000000.0,
-      platformFeeBtc: keroseneFeeSats == 0
+      platformFeeBtc: keroseneFeeSats == null
           ? ((data['platformFeeBtc'] as num?)?.toDouble() ?? 0)
           : keroseneFeeSats / 100000000.0,
       totalDebitedBtc: totalDebitSats == null
@@ -112,9 +137,32 @@ class TxStatus extends Equatable {
     );
   }
 
+  static DateTime? _serverTime(Object? raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw.toUtc();
+    if (raw is int) {
+      final milliseconds = raw > 20000000000 ? raw : raw * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: true);
+    }
+    final text = raw.toString().trim().replaceFirst(' ', 'T');
+    final parsed = DateTime.tryParse(text);
+    if (parsed == null) return null;
+    if (parsed.isUtc) return parsed;
+    // KFE's legacy LocalDateTime responses use a UTC server clock.
+    return DateTime.utc(parsed.year, parsed.month, parsed.day, parsed.hour,
+        parsed.minute, parsed.second, parsed.millisecond, parsed.microsecond);
+  }
+
   @override
   List<Object?> get props => [
         txid,
+        transactionId,
+        occurredAt,
+        updatedAt,
+        hasAmount,
+        hasNetworkFee,
+        hasPlatformFee,
+        hasTotalDebited,
         status,
         feeSatoshis,
         amountReceived,

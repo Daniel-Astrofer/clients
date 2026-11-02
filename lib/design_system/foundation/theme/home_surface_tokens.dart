@@ -315,10 +315,10 @@ abstract class HomeTypography {
 
   /// Large hero title: onboarding, welcome, statement.
   static TextStyle heroTitle({Color? color, double fontSize = 32}) =>
-      AppTypography.inter(
+      AppTypography.playfairDisplay(
         color: color,
         fontSize: fontSize,
-        fontWeight: FontWeight.w600,
+        fontWeight: AppTypography.w510,
         height: 1.2,
         letterSpacing: -0.5,
       );

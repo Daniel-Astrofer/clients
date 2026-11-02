@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'package:flutter/material.dart';
@@ -76,7 +77,7 @@ class AuthColors {
 }
 
 class LoginTopBar extends StatelessWidget {
-  final VoidCallback onBack;
+  final VoidCallback? onBack;
 
   const LoginTopBar({required this.onBack});
 
@@ -92,7 +93,7 @@ class LoginTopBar extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: IconButton(
               onPressed: onBack,
-              icon: const Icon(KeroseneIcons.back, size: 24),
+              icon: const KeroseneIcon(KeroseneIcons.back, size: 24),
               color: colors.text.withValues(alpha: 0.86),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
@@ -155,7 +156,8 @@ class LoginInlineFeedback extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: colors.text.withValues(alpha: 0.82)),
+          KeroseneIcon(icon,
+              size: 18, color: colors.text.withValues(alpha: 0.82)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -299,7 +301,7 @@ class LoginTotpPanel extends StatelessWidget {
                     color: colors.text.withValues(alpha: 0.10),
                   ),
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.passkey,
                   color: colors.text,
                   size: 20,
@@ -458,11 +460,11 @@ class LoginTypography {
   const LoginTypography._();
 
   static TextStyle title(AuthColors colors) {
-    return AppTypography.newsreader(
+    return AppTypography.inter(
       color: colors.text,
-      fontSize: 32,
-      fontWeight: FontWeight.w500,
-      height: 1.08,
+      fontSize: 30,
+      fontWeight: FontWeight.w600,
+      height: 1.18,
       letterSpacing: 0,
     );
   }
@@ -471,7 +473,7 @@ class LoginTypography {
     return TextStyle(
       fontFamily: AppTypography.fontFamily,
       color: colors.muted,
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: FontWeight.w400,
       height: 1.45,
       letterSpacing: 0,

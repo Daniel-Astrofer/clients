@@ -220,7 +220,7 @@ class SettingsNavigationTile extends StatelessWidget {
                         ? AppColors.hexFF1C1C1E
                         : Theme.of(context).colorScheme.surface,
                   ),
-                  child: Icon(
+                  child: KeroseneIcon(
                     spec.icon,
                     color: selected
                         ? Theme.of(context).colorScheme.onSurface
@@ -258,7 +258,7 @@ class SettingsNavigationTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
+                KeroseneIcon(
                   KeroseneIcons.chevronRight,
                   color:
                       Theme.of(context).colorScheme.onSurfaceVariant.withValues(

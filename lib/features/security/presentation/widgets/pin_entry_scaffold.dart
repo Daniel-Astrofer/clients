@@ -1,17 +1,25 @@
+import 'dart:math' as math;
+
+import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/monochrome_theme.dart';
 
 class PinEntryScaffold extends StatefulWidget {
   final String instruction;
+  final String? subtitle;
   final int valueLength;
   final int maxLength;
   final String? error;
   final bool busy;
+  final String? busyLabel;
   final bool enabled;
   final ValueChanged<String> onDigit;
   final VoidCallback onDelete;
@@ -23,10 +31,12 @@ class PinEntryScaffold extends StatefulWidget {
   const PinEntryScaffold({
     super.key,
     required this.instruction,
+    this.subtitle,
     required this.valueLength,
     required this.maxLength,
     required this.error,
     required this.busy,
+    this.busyLabel,
     required this.onDigit,
     required this.onDelete,
     required this.onConfirm,
@@ -62,7 +72,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
   void didUpdateWidget(covariant PinEntryScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.valueLength != oldWidget.valueLength) {
+    if (widget.valueLength < _textController.text.length) {
       _isUpdatingController = true;
       if (widget.valueLength == 0) {
         _textController.clear();
@@ -73,6 +83,10 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
         );
       }
       _isUpdatingController = false;
+    }
+
+    if (widget.error != null && widget.error != oldWidget.error) {
+      HapticFeedback.mediumImpact();
     }
 
     if (widget.busy && !oldWidget.busy) {
@@ -98,7 +112,7 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
   void _handleTextChanged(String text) {
     if (!widget.enabled || widget.busy) {
       _isUpdatingController = true;
-      _textController.text = text.substring(0, widget.valueLength);
+      _textController.text = '0' * widget.valueLength;
       _isUpdatingController = false;
       return;
     }
@@ -108,9 +122,6 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
     if (text.length > widget.valueLength) {
       for (int i = widget.valueLength; i < text.length; i++) {
         widget.onDigit(text[i]);
-      }
-      if (text.length == widget.maxLength) {
-        _focusNode.unfocus();
       }
     } else if (text.length < widget.valueLength) {
       final diff = widget.valueLength - text.length;
@@ -122,25 +133,17 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
 
   void _confirm() {
     if (!widget.enabled || widget.busy) return;
+    HapticFeedback.selectionClick();
     widget.onConfirm?.call();
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final compactWidth = size.width < 380;
-    final instructionFontSize = compactWidth ? 31.0 : 36.0;
-
-    // System back must match the cancel button so payment auth returns
-    // rejectedOutcome consistently (no orphaned dialog / ugly error path).
+    final mono = MonochromeColors.of(context);
     return PopScope(
       canPop: widget.onCancel == null,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        final cancel = widget.onCancel;
-        if (cancel != null) {
-          cancel();
-        }
+        if (!didPop) widget.onCancel?.call();
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -150,18 +153,19 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
           }
         },
         child: Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: mono.background,
           body: SafeArea(
             child: Stack(
               children: [
-                // Must stay in the tree with Opacity 0 so autofocus / requestFocus
-                // open the keyboard. Visibility(visible: false) breaks input.
+                // Keep the native secure numeric input mounted. Removing it
+                // would also remove keyboard, hardware-key and autofill support.
                 Opacity(
                   opacity: 0,
                   child: SizedBox(
                     width: 1,
                     height: 1,
                     child: TextField(
+                      key: const ValueKey('pin-secure-input'),
                       focusNode: _focusNode,
                       controller: _textController,
                       autofocus: true,
@@ -170,8 +174,14 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                         signed: false,
                       ),
                       textInputAction: TextInputAction.done,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(widget.maxLength),
+                      ],
                       obscureText: true,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      enableIMEPersonalizedLearning: false,
                       showCursor: false,
                       enableInteractiveSelection: false,
                       decoration: const InputDecoration(
@@ -184,116 +194,184 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                     ),
                   ),
                 ),
+                LayoutBuilder(builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 420,
+                          minHeight: math.max(0, constraints.maxHeight - 96),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AuthMotionEntrance(
+                              child: Center(
+                                child: AnimatedContainer(
+                                  duration: KeroseneMotion.duration(
+                                      context, KeroseneMotion.short),
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: mono.surfaceAlt,
+                                    border: Border.all(color: mono.border),
+                                  ),
+                                  child: KeroseneIcon(
+                                    KeroseneIcons.lock,
+                                    size: 26,
+                                    color: widget.error != null
+                                        ? mono.text
+                                        : mono.mutedText,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            AnimatedSwitcher(
+                              duration: KeroseneMotion.duration(
+                                  context, KeroseneMotion.short),
+                              child: Text(
+                                widget.instruction,
+                                key: ValueKey(widget.instruction),
+                                textAlign: TextAlign.center,
+                                style: AppTypography.h1.copyWith(
+                                  color: mono.text,
+                                  fontSize:
+                                      constraints.maxWidth < 380 ? 28 : 30,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.2,
+                                  letterSpacing: -0.6,
+                                ),
+                              ),
+                            ),
+                            if (widget.subtitle != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                widget.subtitle!,
+                                textAlign: TextAlign.center,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: mono.mutedText,
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 32),
+                            Center(
+                              child: AuthMotionShake(
+                                key: const ValueKey('pin-error-motion'),
+                                triggerKey: widget.error?.hashCode ?? 0,
+                                enabled: widget.error != null,
+                                child: LoadingErrorBorderWrapper(
+                                  busy: widget.busy,
+                                  hasError: widget.error != null,
+                                  child: PinEntryDots(
+                                    length: widget.valueLength,
+                                    maxLength: widget.maxLength,
+                                    dotSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 40),
+                              child: AnimatedSwitcher(
+                                duration: KeroseneMotion.duration(
+                                    context, KeroseneMotion.short),
+                                child: widget.busy && widget.busyLabel != null
+                                    ? Semantics(
+                                        key: const ValueKey('pin-working'),
+                                        liveRegion: true,
+                                        child: Text(
+                                          widget.busyLabel!,
+                                          textAlign: TextAlign.center,
+                                          style:
+                                              AppTypography.bodySmall.copyWith(
+                                            color: mono.mutedText,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      )
+                                    : widget.error == null
+                                        ? const SizedBox.shrink()
+                                        : Semantics(
+                                            key: ValueKey(widget.error),
+                                            liveRegion: true,
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                KeroseneIcon(
+                                                  KeroseneIcons.error,
+                                                  size: 18,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    widget.error!,
+                                                    textAlign: TextAlign.center,
+                                                    style: AppTypography
+                                                        .bodySmall
+                                                        .copyWith(
+                                                      color: mono.text,
+                                                      fontSize: 14,
+                                                      height: 1.45,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (widget.onConfirm != null)
+                              AuthPrimaryCta(
+                                label: widget.confirmLabel ??
+                                    MaterialLocalizations.of(context)
+                                        .okButtonLabel,
+                                onPressed: widget.enabled && !widget.busy
+                                    ? _confirm
+                                    : null,
+                                haptic: false,
+                                backgroundColor: mono.text,
+                                foregroundColor: mono.background,
+                              ),
+                            if (widget.footer != null) ...[
+                              const SizedBox(height: 16),
+                              widget.footer!,
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
                 if (widget.onCancel != null)
                   Positioned(
                     top: 8,
-                    left: 8,
+                    left: 16,
                     child: IconButton(
-                      icon: Icon(
+                      tooltip:
+                          MaterialLocalizations.of(context).backButtonTooltip,
+                      icon: KeroseneIcon(
                         KeroseneIcons.arrowBack,
-                        color: monoTextColor,
-                        size: 28,
+                        color: mono.text,
+                        size: 24,
                       ),
-                      onPressed: widget.onCancel,
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        widget.onCancel?.call();
+                      },
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Center(
-                    child: SingleChildScrollView(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final availableWidth = constraints.maxWidth;
-                          double dotSize = 48.0;
-                          final maxDotWidth = dotSize * 1.5;
-                          final spacing = dotSize * 0.25;
-                          final padding = dotSize * 0.8;
-                          final requiredWidth =
-                              widget.maxLength * maxDotWidth +
-                              (widget.maxLength - 1) * spacing +
-                              padding +
-                              4.0;
-                          if (requiredWidth > availableWidth) {
-                            // Solves the equation: availableWidth = dotSize * (maxLength * 1.75 + 0.55) + 4.0
-                            dotSize =
-                                (availableWidth - 4.0) /
-                                (widget.maxLength * 1.75 + 0.55);
-                            if (dotSize < 16) dotSize = 16;
-                          }
-
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              const SizedBox(height: 60),
-                              Text(
-                                widget.instruction,
-                                textAlign: TextAlign.center,
-                                style: AppTypography.newsreader(
-                                  color: monoTextColor,
-                                  fontSize: instructionFontSize,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.15,
-                                  letterSpacing: -0.35,
-                                  decoration: TextDecoration.none,
-                                ),
-                              ),
-                              const SizedBox(height: 48),
-                              LoadingErrorBorderWrapper(
-                                busy: widget.busy,
-                                hasError: widget.error != null,
-                                child: PinEntryDots(
-                                  length: widget.valueLength,
-                                  maxLength: widget.maxLength,
-                                  dotSize: dotSize,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              SizedBox(
-                                height: 48,
-                                child: AnimatedSwitcher(
-                                  duration: KeroseneMotion.short,
-                                  child: widget.error == null
-                                      ? const SizedBox.shrink()
-                                      : Text(
-                                          widget.error!,
-                                          key: ValueKey(widget.error),
-                                          textAlign: TextAlign.center,
-                                          style: AppTypography.caption.copyWith(
-                                            color: Colors.red.shade400,
-                                            height: 1.28,
-                                            letterSpacing: 0,
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w600,
-                                            decoration: TextDecoration.none,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (widget.onConfirm != null)
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton(
-                                    onPressed: widget.enabled && !widget.busy
-                                        ? _confirm
-                                        : null,
-                                    child: Text(
-                                      widget.confirmLabel ??
-                                          MaterialLocalizations.of(
-                                            context,
-                                          ).okButtonLabel,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 60),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -318,18 +396,18 @@ class PinEntryDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = maxLength.clamp(4, 8);
-    final spacing = dotSize * 0.25;
+    final spacing = dotSize;
     return Semantics(
-      label: '$length de $total dígitos preenchidos',
+      label: context.tr.pinEntryDigitsFilled(length, total),
       child: AnimatedContainer(
-        duration: KeroseneMotion.short,
+        duration: KeroseneMotion.duration(context, KeroseneMotion.short),
         curve: KeroseneMotion.standard,
         padding: EdgeInsets.symmetric(
-          horizontal: dotSize * 0.4,
-          vertical: dotSize * 0.3,
+          horizontal: dotSize,
+          vertical: dotSize,
         ),
         decoration: BoxDecoration(
-          color: monoSurfaceAltColor,
+          color: MonochromeColors.of(context).surface,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -337,15 +415,17 @@ class PinEntryDots extends StatelessWidget {
           children: List.generate(total, (index) {
             final filled = index < length;
             return AnimatedContainer(
-              duration: KeroseneMotion.short,
+              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
               curve: KeroseneMotion.standard,
               margin: EdgeInsets.only(right: index == total - 1 ? 0 : spacing),
-              width: filled ? dotSize * 1.5 : dotSize,
+              width: dotSize,
               height: dotSize,
               decoration: BoxDecoration(
                 color: filled
-                    ? monoTextColor
-                    : monoFaintTextColor.withValues(alpha: 0.26),
+                    ? MonochromeColors.of(context).text
+                    : MonochromeColors.of(context)
+                        .faintText
+                        .withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(999),
               ),
             );
@@ -401,10 +481,9 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
   }
 
   void _syncSpin() {
-    final allow =
-        widget.busy &&
+    final allow = widget.busy &&
         TickerMode.valuesOf(context).enabled &&
-        !(MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+        !KeroseneMotion.reduceMotion(context);
     if (allow) {
       if (!_rotationController.isAnimating) {
         _rotationController.repeat();
@@ -422,19 +501,19 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
 
   @override
   Widget build(BuildContext context) {
-    final allowSpin =
-        widget.busy &&
+    final allowSpin = widget.busy &&
         TickerMode.valuesOf(context).enabled &&
         !(MediaQuery.maybeOf(context)?.disableAnimations ?? false);
 
     if (!allowSpin) {
       return AnimatedContainer(
-        duration: KeroseneMotion.pinTransition,
+        duration:
+            KeroseneMotion.duration(context, KeroseneMotion.pinTransition),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: widget.hasError
-                ? Colors.red.shade800
+                ? Theme.of(context).colorScheme.onSurface
                 : monoBorderStrongColor,
             width: 2,
           ),
@@ -458,7 +537,8 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
             strokeWidth: 2,
           ),
           child: AnimatedContainer(
-            duration: KeroseneMotion.pinTransition,
+            duration:
+                KeroseneMotion.duration(context, KeroseneMotion.pinTransition),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: Colors.transparent, width: 2),

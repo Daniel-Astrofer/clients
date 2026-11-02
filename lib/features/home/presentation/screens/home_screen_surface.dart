@@ -1,9 +1,8 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'dart:math' as math;
 import 'dart:ui' as ui;
-
-import 'package:kerosene/design_system/components/buttons/app_button.dart';
 
 import 'home_screen_dependencies.dart';
 
@@ -202,7 +201,7 @@ class HomeHeaderIconButton extends StatelessWidget {
                 width: homeSize(48), // Bumped touch target to 48px min
                 height: homeSize(48),
                 child: Center(
-                  child: Icon(
+                  child: KeroseneIcon(
                     icon,
                     size: homeSize(24),
                     color: Theme.of(
@@ -223,7 +222,7 @@ class HomeHeaderIconButton extends StatelessWidget {
               height: homeSize(9),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: homeAmberColor,
+                color: Theme.of(context).colorScheme.onSurface,
                 border: Border.all(
                   color: Theme.of(context).dividerColor,
                   width: 1.5,
@@ -253,13 +252,28 @@ class HomeBalanceActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: homeSize(54),
-      child: AppButton(
-        label: label,
+      child: OutlinedButton(
         onPressed: onTap,
-        variant:
-            primary ? AppButtonVariant.primary : AppButtonVariant.secondary,
-        icon: Icon(icon, size: homeSize(20)),
-        expand: true,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: Colors.transparent,
+          side: BorderSide(color: HomeSurfaceTheme.of(context).surfaceBorder),
+          shape: const StadiumBorder(),
+          textStyle: AppTypography.buttonText.copyWith(
+            fontSize: homeFontSize(14),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            KeroseneIcon(icon, size: homeSize(20)),
+            SizedBox(width: homeSize(8)),
+            Flexible(
+                child:
+                    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ],
+        ),
       ),
     );
   }
@@ -531,7 +545,7 @@ class HomeSetupNotice extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.only(top: homeSize(2)),
-            child: Icon(
+            child: KeroseneIcon(
               icon,
               size: homeSize(24),
               color: Theme.of(
@@ -569,7 +583,7 @@ class HomeSetupNotice extends StatelessWidget {
                 SizedBox(height: homeSize(12)),
                 TextButton.icon(
                   onPressed: onAction,
-                  icon: Icon(KeroseneIcons.next, size: homeSize(15)),
+                  icon: KeroseneIcon(KeroseneIcons.next, size: homeSize(15)),
                   label: Text(actionLabel),
                   style: TextButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -589,7 +603,7 @@ class HomeSetupNotice extends StatelessWidget {
           SizedBox(width: homeSize(12)),
           Padding(
             padding: EdgeInsets.only(top: homeSize(2)),
-            child: Icon(
+            child: KeroseneIcon(
               KeroseneIcons.chevronRight,
               size: homeSize(18),
               color: Theme.of(

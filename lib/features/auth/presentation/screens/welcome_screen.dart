@@ -1,74 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../widgets/auth_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import '../../controller/auth_controller.dart';
-
-class _AuthColors {
-  final bool isLight;
-  final Color background;
-  final Color surface;
-  final Color field;
-  final Color border;
-  final Color borderSoft;
-  final Color text;
-  final Color muted;
-  final Color dim;
-  final Color success;
-  final Color errorText;
-
-  const _AuthColors({
-    required this.isLight,
-    required this.background,
-    required this.surface,
-    required this.field,
-    required this.border,
-    required this.borderSoft,
-    required this.text,
-    required this.muted,
-    required this.dim,
-    required this.success,
-    required this.errorText,
-  });
-
-  factory _AuthColors.of(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    if (isLight) {
-      return const _AuthColors(
-        isLight: true,
-        background: AppColors.hexFFF7F7F5,
-        surface: AppColors.hexFFFFFFFF,
-        field: AppColors.hexFFF0F1EE,
-        border: AppColors.hexFFDDE0D8,
-        borderSoft: AppColors.hexFFE2E4DE,
-        text: AppColors.hexFF141517,
-        muted: AppColors.hexFF62675F,
-        dim: AppColors.hexFF8B9087,
-        success: AppColors.hexFF16A34A,
-        errorText: AppColors.hexFFDC2626,
-      );
-    }
-    return const _AuthColors(
-      isLight: false,
-      background: AppColors.hexFF000000,
-      surface: AppColors.hexFF0A0A0A,
-      field: AppColors.hexFF1A1A1A,
-      border: AppColors.hexFF333333,
-      borderSoft: AppColors.hexFF27272A,
-      text: AppColors.hexFFFFFFFF,
-      muted: AppColors.hexFFA1A1AA,
-      dim: AppColors.hexFF71717A,
-      success: AppColors.hexFF4ADE80,
-      errorText: AppColors.hexFFF4C7C7,
-    );
-  }
-
-  BorderRadius get radiusMedium => BorderRadius.circular(16);
-  BorderRadius get radiusButton => BorderRadius.circular(999);
-}
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -79,6 +18,18 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   static const _phoneMockupAsset = 'assets/welcome_phone_mockup.png';
+  bool _openingRoute = false;
+
+  Future<void> _open(String route) async {
+    if (_openingRoute) return;
+    HapticFeedback.selectionClick();
+    setState(() => _openingRoute = true);
+    try {
+      await context.push<void>(route);
+    } finally {
+      if (mounted) setState(() => _openingRoute = false);
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -97,7 +48,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       }
     });
 
-    final colors = _AuthColors.of(context);
+    final colors = KeroseneBrandTheme.of(context);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -115,21 +66,23 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 42, 24, 28),
-                      child: Column(
+                      child: AuthMotionStagger(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const _WelcomeHeader(),
                           const SizedBox(height: 28),
-                          SizedBox(
-                            height: (constraints.maxHeight * 0.42)
-                                .clamp(280.0, 440.0)
-                                .toDouble(),
-                            child: const Center(child: _PhoneHeroImage()),
+                          _WelcomeActions(
+                            onCreateAccount:
+                                _openingRoute ? null : () => _open('/signup'),
+                            onSignIn:
+                                _openingRoute ? null : () => _open('/login'),
                           ),
                           const SizedBox(height: 34),
-                          _WelcomeActions(
-                            onCreateAccount: () => context.push('/signup'),
-                            onSignIn: () => context.push('/login'),
+                          SizedBox(
+                            height: (constraints.maxHeight * 0.36)
+                                .clamp(220.0, 340.0)
+                                .toDouble(),
+                            child: const Center(child: _PhoneHeroImage()),
                           ),
                         ],
                       ),
@@ -150,7 +103,8 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _AuthColors.of(context);
+    final colors = KeroseneBrandTheme.of(context);
+    final titleSize = context.responsive.isTinyPhone ? 28.0 : 30.0;
     return Column(
       children: [
         Text.rich(
@@ -159,9 +113,9 @@ class _WelcomeHeader extends StatelessWidget {
               TextSpan(text: context.tr.welcomeHeaderTitleCustody),
               TextSpan(
                 text: context.tr.welcomeHeaderTitleSimplicity,
-                style: AppTypography.newsreader(
-                  color: colors.muted,
-                  fontSize: 40,
+                style: AppTypography.inter(
+                  color: colors.textSecondary,
+                  fontSize: titleSize,
                   fontWeight: FontWeight.w500,
                   height: 1.05,
                   letterSpacing: 0,
@@ -170,9 +124,9 @@ class _WelcomeHeader extends StatelessWidget {
             ],
           ),
           textAlign: TextAlign.center,
-          style: AppTypography.newsreader(
-            color: colors.text,
-            fontSize: 40,
+          style: AppTypography.inter(
+            color: colors.textPrimary,
+            fontSize: titleSize,
             fontWeight: FontWeight.w500,
             height: 1.05,
             letterSpacing: 0,
@@ -183,7 +137,7 @@ class _WelcomeHeader extends StatelessWidget {
           context.tr.welcomeHeaderSubtitle,
           textAlign: TextAlign.center,
           style: AppTypography.inter(
-            color: colors.muted,
+            color: colors.textSecondary,
             fontSize: 14,
             fontWeight: FontWeight.w400,
             height: 1.45,
@@ -200,41 +154,28 @@ class _PhoneHeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _AuthColors.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final imageSize =
-            constraints.biggest.shortestSide.clamp(280.0, 500.0).toDouble();
+            constraints.biggest.shortestSide.clamp(0.0, 340.0).toDouble();
 
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Image.asset(
+        // The existing illustration depicts the dark interface. Keep its
+        // background intentional in both themes and remove legacy rail colors.
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: ColoredBox(
+            color: Colors.black,
+            child: Image.asset(
               _WelcomeScreenState._phoneMockupAsset,
               width: imageSize,
               height: imageSize,
               fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
+              color: Colors.grey,
+              colorBlendMode: BlendMode.saturation,
+              excludeFromSemantics: true,
             ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.transparent,
-                        colors.background.withValues(alpha: 0.72),
-                      ],
-                      stops: const [0, 0.62, 1],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -247,29 +188,29 @@ class _WelcomeActions extends StatelessWidget {
     required this.onSignIn,
   });
 
-  final VoidCallback onCreateAccount;
-  final VoidCallback onSignIn;
+  final VoidCallback? onCreateAccount;
+  final VoidCallback? onSignIn;
 
   @override
   Widget build(BuildContext context) {
-    final colors = _AuthColors.of(context);
+    final colors = KeroseneBrandTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _WelcomeButton(
           label: context.tr.welcomeCreateAccountButton,
           onPressed: onCreateAccount,
-          backgroundColor: colors.text,
+          backgroundColor: colors.textPrimary,
           foregroundColor: colors.background,
-          borderColor: colors.text,
+          borderColor: colors.textPrimary,
         ),
         const SizedBox(height: 14),
         _WelcomeButton(
           label: context.tr.welcomeAlreadyHaveAccountButton,
           onPressed: onSignIn,
           backgroundColor: Colors.transparent,
-          foregroundColor: colors.text,
-          borderColor: colors.borderSoft,
+          foregroundColor: colors.textPrimary,
+          borderColor: colors.border,
         ),
       ],
     );
@@ -286,19 +227,20 @@ class _WelcomeButton extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color backgroundColor;
   final Color foregroundColor;
   final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
-    final colors = _AuthColors.of(context);
-    return SizedBox(
-      height: 58,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 58),
       child: TextButton(
         onPressed: onPressed,
         style: ButtonStyle(
+          padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 20, vertical: 16)),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.pressed)) {
               return Color.alphaBlend(
@@ -314,22 +256,19 @@ class _WelcomeButton extends StatelessWidget {
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
-              borderRadius: colors.radiusButton,
+              borderRadius: BorderRadius.circular(999),
               side: BorderSide(color: borderColor),
             ),
           ),
           textStyle: WidgetStateProperty.all(
             AppTypography.inter(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
               letterSpacing: 0,
             ),
           ),
         ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(label),
-        ),
+        child: Text(label, textAlign: TextAlign.center),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,7 +28,13 @@ class BalanceSettings {
 
   String formatBalance(double balance, {String suffix = ' BTC'}) {
     if (isHidden) return '••••••••$suffix';
-    return '${balance.toStringAsFixed(decimalPlaces)}$suffix';
+    final formatted = balance.toStringAsFixed(decimalPlaces);
+    if (balance != 0 && double.parse(formatted) == 0) {
+      final minimum =
+          (1 / math.pow(10, decimalPlaces)).toStringAsFixed(decimalPlaces);
+      return balance > 0 ? '< $minimum$suffix' : '> -$minimum$suffix';
+    }
+    return '$formatted$suffix';
   }
 }
 

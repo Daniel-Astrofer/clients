@@ -105,6 +105,8 @@ class DeviceKeyService {
     required String username,
     required String sessionId,
     bool appPinConfigured = false,
+    bool activateImmediately = true,
+    bool requireStrictUserPresence = false,
   }) async {
     _validateChallenge(challenge);
     final normalizedUsername = _normalizeUsername(username);
@@ -155,12 +157,14 @@ class DeviceKeyService {
     final signature = await _signPayload(
       payload,
       privateKeySeed: privateKeySeed,
+      strictUserPresence: requireStrictUserPresence,
     );
     await _saveKeyMaterial(
       username: normalizedUsername,
       credentialId: credentialId,
       privateKeySeed: privateKeySeed,
       publicKey: publicKey,
+      activate: activateImmediately,
     );
 
     await DeviceCredentialTelemetry.recordEnroll(
@@ -188,6 +192,7 @@ class DeviceKeyService {
   Future<Map<String, dynamic>> authenticate({
     required DeviceKeyChallenge challenge,
     required String username,
+    bool requireStrictUserPresence = false,
   }) async {
     _validateChallenge(challenge);
     final normalizedUsername = _normalizeUsername(username);
@@ -231,6 +236,7 @@ class DeviceKeyService {
     final signature = await _signPayload(
       payload,
       privateKeySeed: privateKeySeed,
+      strictUserPresence: requireStrictUserPresence,
     );
 
     await DeviceCredentialTelemetry.recordAssertion(
@@ -322,8 +328,9 @@ class DeviceKeyService {
   Future<String> _signPayload(
     String payload, {
     required Uint8List privateKeySeed,
+    bool strictUserPresence = false,
   }) async {
-    await _verifyUserPresence();
+    await _verifyUserPresence(strict: strictUserPresence);
     final keyPair = await _algorithm.newKeyPairFromSeed(privateKeySeed);
     final signature = await _algorithm.sign(
       utf8.encode(payload),
@@ -352,10 +359,15 @@ class DeviceKeyService {
     }
   }
 
-  Future<void> _verifyUserPresence() async {
+  Future<void> _verifyUserPresence({bool strict = false}) async {
     // Linux (and some desktops) have no local_auth implementation.
     // App entry PIN already gated this session; signing proceeds without biometrics.
     if (!_localAuthSupported) {
+      if (strict) {
+        throw const DeviceKeyException(
+            'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS',
+            'Não foi possível confirmar a presença neste aparelho.');
+      }
       debugPrint(
         'DeviceKey: presence gate skipped (local_auth unavailable on this platform).',
       );
@@ -365,6 +377,11 @@ class DeviceKeyService {
       final canCheck = await _localAuthentication.canCheckBiometrics;
       final supported = await _localAuthentication.isDeviceSupported();
       if (!canCheck && !supported) {
+        if (strict) {
+          throw const DeviceKeyException(
+              'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS',
+              'Configure um bloqueio de tela neste aparelho antes de continuar.');
+        }
         debugPrint(
           'DeviceKey: presence gate skipped (no biometrics / device lock).',
         );
@@ -382,9 +399,18 @@ class DeviceKeyService {
         );
       }
     } on MissingPluginException {
+      if (strict) {
+        throw const DeviceKeyException(
+            'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS',
+            'A confirmação deste aparelho não está disponível.');
+      }
       debugPrint(
           'DeviceKey: local_auth plugin missing — skipping presence gate.');
     } on PlatformException catch (error) {
+      if (strict) {
+        throw const DeviceKeyException('ERR_AUTH_DEVICE_KEY_AUTH_FAILED',
+            'Não foi possível confirmar a autorização neste aparelho.');
+      }
       debugPrint('DeviceKey: local_auth PlatformException: $error — skipping.');
     }
   }
@@ -404,6 +430,7 @@ class DeviceKeyService {
     required String credentialId,
     required Uint8List privateKeySeed,
     required Uint8List publicKey,
+    bool activate = true,
   }) async {
     await _secureStorage.write(
       key: _storageKey(_privateSeedKey, username, credentialId),
@@ -421,6 +448,7 @@ class DeviceKeyService {
       lOptions: _linuxOptions(),
       wOptions: _windowsOptions(),
     );
+    if (!activate) return;
     await _secureStorage.write(
       key: _activeCredentialStorageKey(username),
       value: credentialId,
@@ -429,6 +457,25 @@ class DeviceKeyService {
       lOptions: _linuxOptions(),
       wOptions: _windowsOptions(),
     );
+  }
+
+  /// Promotes prepared material only after the server has acknowledged this exact credential.
+  Future<void> activateRegistration(
+      {required String username, required String credentialId}) async {
+    final owner = _normalizeUsername(username);
+    final seed =
+        await _readPrivateKeySeed(username: owner, credentialId: credentialId);
+    if (seed == null || seed.length != 32) {
+      throw const DeviceKeyException('ERR_AUTH_DEVICE_KEY_STORAGE_UNAVAILABLE',
+          'A chave preparada não está disponível neste aparelho.');
+    }
+    await _secureStorage.write(
+        key: _activeCredentialStorageKey(owner),
+        value: credentialId,
+        iOptions: _iosOptions(),
+        aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions());
   }
 
   Future<Uint8List?> _readPrivateKeySeed({

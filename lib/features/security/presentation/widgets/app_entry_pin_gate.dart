@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/app_cold_start_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
@@ -35,28 +36,32 @@ class AppEntryPinGate extends ConsumerStatefulWidget {
 }
 
 class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
-  bool _statusSyncKicked = false;
+  String? _statusSyncScope;
 
   void _kickServerStatusSyncOnce() {
-    if (_statusSyncKicked) return;
+    final scope = ref.read(sessionStorageScopeProvider);
+    if (scope == null || _statusSyncScope == scope) return;
     if (!ref.read(torSettledProvider)) return;
     if (ref.read(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked) {
       return;
     }
-    _statusSyncKicked = true;
+    _statusSyncScope = scope;
     // Fire-and-forget — never watch AsyncValue (would rebuild the pad).
     unawaited(ref.read(appPinGateServerSyncProvider.future));
   }
 
   @override
   Widget build(BuildContext context) {
+    final scope = ref.watch(sessionStorageScopeProvider);
     final unlocked =
         ref.watch(appEntryPinUnlockedProvider) || AppEntryPinSession.unlocked;
-    if (unlocked) {
+    if (scope != null && unlocked) {
       if (!ref.read(appEntryPinUnlockedProvider) &&
           AppEntryPinSession.unlocked) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
+          if (!mounted || ref.read(sessionStorageScopeProvider) != scope) {
+            return;
+          }
           if (AppEntryPinSession.unlocked) {
             ref.read(appEntryPinUnlockedProvider.notifier).unlock();
           }
@@ -68,7 +73,7 @@ class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
     // Safety net: if this gate is mounted before Tor (e.g. named route), hold
     // dots instead of showing a pad that will be remounted when Tor settles.
     final torSettled = ref.watch(torSettledProvider);
-    if (!torSettled) {
+    if (scope == null || !torSettled) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
@@ -89,7 +94,7 @@ class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
 
     if (status.requiresSetup) {
       return _AppEntryPinSetupScreen(
-        key: const ValueKey('app-entry-pin-setup'),
+        key: ValueKey(('app-entry-pin-setup', scope)),
         status: status,
       );
     }
@@ -97,7 +102,7 @@ class _AppEntryPinGateState extends ConsumerState<AppEntryPinGate> {
       return widget.child;
     }
     return _AppEntryPinLockScreen(
-      key: const ValueKey('app-entry-pin-lock'),
+      key: ValueKey(('app-entry-pin-lock', scope)),
       status: status,
     );
   }
@@ -114,20 +119,57 @@ class _AppEntryPinSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _AppEntryPinSetupScreenState
-    extends ConsumerState<_AppEntryPinSetupScreen> {
+    extends ConsumerState<_AppEntryPinSetupScreen> with WidgetsBindingObserver {
+  late final String? _ownerScope;
+  Object? _request;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerScope = ref.read(sessionStorageScopeProvider);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  bool get _ownsSession =>
+      mounted &&
+      _ownerScope != null &&
+      ref.read(sessionStorageScopeProvider) == _ownerScope;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed || !mounted) return;
+    if (_request case final request?) AppEntryPinSession.endPinRequest(request);
+    _request = null;
+    setState(() {
+      _pin = '';
+      _confirmation = '';
+      _confirming = false;
+      _busy = false;
+      _error = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_request case final request?) AppEntryPinSession.endPinRequest(request);
+    _pin = '';
+    _confirmation = '';
+    super.dispose();
+  }
+
   bool _busy = false;
   bool _confirming = false;
   bool _handoffApplied = false;
   String _pin = '';
   String _confirmation = '';
   String? _error;
-  int? _handoffLength;
+  static const int _pinLength = 4;
 
-  int get _pinLength {
-    final handoff = _handoffLength;
-    if (handoff != null) return handoff.clamp(4, 8);
-    return widget.status.minPinLength.clamp(4, 8);
-  }
+  bool get _supportsFourDigitPin =>
+      widget.status.minPinLength > 0 &&
+      widget.status.minPinLength <= _pinLength &&
+      widget.status.maxPinLength >= _pinLength;
 
   String get _currentInput => _confirming ? _confirmation : _pin;
 
@@ -146,16 +188,22 @@ class _AppEntryPinSetupScreenState
     _handoffApplied = true;
     // AUTH_018 path: user already typed a PIN on the unlock pad — only confirm.
     final handoff = AppPinSetupHandoff.take();
-    if (handoff != null && handoff.length >= 4) {
+    if (handoff != null &&
+        handoff.length == _pinLength &&
+        _supportsFourDigitPin) {
       _pin = handoff;
-      _handoffLength = handoff.length;
       _confirming = true;
       _confirmation = '';
     }
   }
 
   void _appendDigit(String digit) {
-    if (_busy || _currentInput.length >= _pinLength) return;
+    if (_busy ||
+        !_ownsSession ||
+        !_supportsFourDigitPin ||
+        _currentInput.length >= _pinLength) {
+      return;
+    }
     HapticFeedback.selectionClick();
     setState(() {
       _currentInput = _currentInput + digit;
@@ -176,6 +224,7 @@ class _AppEntryPinSetupScreenState
   }
 
   Future<void> _submit() async {
+    if (_busy || !_ownsSession || !_supportsFourDigitPin) return;
     final input = _currentInput;
     if (input.length != _pinLength) {
       setState(() {
@@ -208,50 +257,70 @@ class _AppEntryPinSetupScreenState
       _busy = true;
       _error = null;
     });
-    AppEntryPinSession.pinRequestInFlight = true;
-
-    final torReady =
-        await ref.read(appColdStartProvider.notifier).waitUntilTorReadyForApi();
-    if (!mounted) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      return;
+    final request = _request = AppEntryPinSession.beginPinRequest();
+    bool current() =>
+        _ownsSession && AppEntryPinSession.isCurrentPinRequest(request);
+    try {
+      final torReady = await ref
+          .read(appColdStartProvider.notifier)
+          .waitUntilTorReadyForApi();
+      if (!mounted || !current()) return;
+      if (!torReady) {
+        setState(() => _error = _torStillWarmingMessage(context));
+        return;
+      }
+      final result = await ref
+          .read(securityRepositoryProvider)
+          .configureAppPin(enabled: true, pin: pinToConfigure);
+      if (!current()) return;
+      result.fold(
+        (failure) => setState(() =>
+            _error = ErrorTranslator.translate(context.tr, failure.toString())),
+        (status) {
+          if (!status.enabled || !status.configured || status.locked) {
+            setState(
+                () => _error = context.tr.securityUpdateUnconfirmedMessage);
+            ref.invalidate(appPinStatusProvider);
+            return;
+          }
+          _pin = '';
+          _confirmation = '';
+          ref.read(appEntryPinUnlockedProvider.notifier).unlock();
+          _persistPinConfiguredHint(ref,
+              configured: true, pinLength: pinToConfigure.length);
+        },
+      );
+    } catch (error) {
+      if (current()) {
+        setState(() =>
+            _error = ErrorTranslator.translate(context.tr, error.toString()));
+      }
+    } finally {
+      final ownsRequest = identical(_request, request);
+      AppEntryPinSession.endPinRequest(request);
+      if (ownsRequest) {
+        _request = null;
+        if (_ownsSession) setState(() => _busy = false);
+      } else if (_ownsSession &&
+          _request == null &&
+          !ref.read(appEntryPinUnlockedProvider)) {
+        // Backgrounding discards the input and ignores this response, but an
+        // already-sent write can still commit. Reconcile through a fresh server
+        // read; a late setup response must never unlock the application.
+        unawaited(_refreshAfterUnconfirmedWrite());
+      }
     }
-    if (!torReady) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      setState(() {
-        _busy = false;
-        _error = _torStillWarmingMessage(context);
-      });
-      return;
-    }
+  }
 
-    final result = await ref.read(securityRepositoryProvider).configureAppPin(
-          enabled: true,
-          pin: pinToConfigure,
-        );
-
-    AppEntryPinSession.pinRequestInFlight = false;
-    if (!mounted) return;
-    result.fold(
-      (failure) {
-        setState(() {
-          _busy = false;
-          _error = ErrorTranslator.translate(context.tr, failure.message);
-        });
-      },
-      (status) {
-        // Unlock first so a prefs/epoch bump cannot re-show the pad.
-        ref.read(appEntryPinUnlockedProvider.notifier).unlock();
-        _persistPinConfiguredHint(
-          ref,
-          configured: true,
-          pinLength: pinToConfigure.length,
-        );
-      },
-    );
-
-    if (mounted && !ref.read(appEntryPinUnlockedProvider)) {
-      setState(() => _busy = false);
+  Future<void> _refreshAfterUnconfirmedWrite() async {
+    try {
+      ref.invalidate(appPinGateServerSyncProvider);
+      await ref.read(appPinGateServerSyncProvider.future);
+    } catch (error) {
+      if (_ownsSession) {
+        setState(() =>
+            _error = ErrorTranslator.translate(context.tr, error.toString()));
+      }
     }
   }
 
@@ -261,14 +330,42 @@ class _AppEntryPinSetupScreenState
       instruction: _confirming
           ? _appEntryPinConfirmInstruction(context)
           : _appEntryPinCreateInstruction(context),
+      subtitle: _confirming
+          ? context.tr.appEntryPinConfirmSubtitle
+          : context.tr.appEntryPinCreateSubtitle,
       valueLength: _currentInput.length,
       maxLength: _pinLength,
-      error: _error,
+      error: _supportsFourDigitPin
+          ? _error
+          : context.tr.appEntryPinUnavailableMessage,
+      enabled: _supportsFourDigitPin,
       busy: _busy,
+      busyLabel: context.tr.pinEntrySaving,
       onDigit: _appendDigit,
       onDelete: _deleteDigit,
-      onConfirm: _busy ? null : _submit,
+      onConfirm:
+          _busy || !_supportsFourDigitPin || _currentInput.length != _pinLength
+              ? null
+              : _submit,
+      confirmLabel: context.tr.confirm,
       onCancel: () async {
+        if (_confirming) {
+          final interrupted = _busy;
+          if (_request case final request?) {
+            AppEntryPinSession.endPinRequest(request);
+          }
+          _request = null;
+          setState(() {
+            _pin = '';
+            _confirmation = '';
+            _confirming = false;
+            _busy = false;
+            _error = interrupted
+                ? context.tr.securityUpdateUnconfirmedMessage
+                : null;
+          });
+          return;
+        }
         await ref.read(authControllerProvider.notifier).logout();
       },
     );
@@ -285,8 +382,22 @@ class _AppEntryPinLockScreen extends ConsumerStatefulWidget {
       _AppEntryPinLockScreenState();
 }
 
-class _AppEntryPinLockScreenState
-    extends ConsumerState<_AppEntryPinLockScreen> {
+class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen>
+    with WidgetsBindingObserver {
+  late final String? _ownerScope;
+  Object? _request;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerScope = ref.read(sessionStorageScopeProvider);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  bool get _ownsSession =>
+      mounted &&
+      _ownerScope != null &&
+      ref.read(sessionStorageScopeProvider) == _ownerScope;
   final ValueNotifier<String> _pinNotifier = ValueNotifier('');
   final ValueNotifier<String?> _errorNotifier = ValueNotifier(null);
 
@@ -307,14 +418,28 @@ class _AppEntryPinLockScreenState
       _fixedLength ? _minPinLength : _maxPinLength;
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed || !mounted) return;
+    if (_request case final request?) AppEntryPinSession.endPinRequest(request);
+    _request = null;
+    setState(() {
+      _pin = '';
+      _errorMessage = null;
+      _busy = false;
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_request case final request?) AppEntryPinSession.endPinRequest(request);
     _pinNotifier.dispose();
     _errorNotifier.dispose();
     super.dispose();
   }
 
   void _appendDigit(String digit) {
-    if (_busy || _pin.length >= _pinTargetLength) return;
+    if (_busy || !_ownsSession || _pin.length >= _pinTargetLength) return;
     HapticFeedback.selectionClick();
     _pin += digit;
     _errorMessage = null;
@@ -333,7 +458,7 @@ class _AppEntryPinLockScreenState
   }
 
   Future<void> _submit() async {
-    if (_busy || widget.status.locked) return;
+    if (_busy || !_ownsSession || widget.status.locked) return;
     if (_pin.length < _minPinLength || _pin.length > _maxPinLength) {
       _errorMessage = context.tr.appEntryPinLengthError(
         _minPinLength,
@@ -349,94 +474,38 @@ class _AppEntryPinLockScreenState
       _errorMessage = null;
     });
     // Block GET /app-pin sync from remounting the pad while verify runs.
-    AppEntryPinSession.pinRequestInFlight = true;
-
-    final torReady =
-        await ref.read(appColdStartProvider.notifier).waitUntilTorReadyForApi();
-    if (!mounted) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      return;
-    }
-
-    if (!torReady) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      setState(() {
-        _busy = false;
+    final request = _request = AppEntryPinSession.beginPinRequest();
+    bool current() =>
+        _ownsSession && AppEntryPinSession.isCurrentPinRequest(request);
+    try {
+      final torReady = await ref
+          .read(appColdStartProvider.notifier)
+          .waitUntilTorReadyForApi();
+      if (!mounted || !current()) return;
+      if (!torReady) {
         _errorMessage = _torStillWarmingMessage(context);
-      });
-      return;
+        return;
+      }
+      final result = await ref
+          .read(securityRepositoryProvider)
+          .verifyAppPin(pin: pinToVerify);
+      if (!current()) return;
+      result.fold(
+          _applyVerifyFailure,
+          (status) =>
+              _applyVerifySuccess(status, pinLength: pinToVerify.length));
+    } catch (error) {
+      if (mounted && current()) {
+        _errorMessage = ErrorTranslator.translate(context.tr, error.toString());
+      }
+    } finally {
+      final ownsRequest = identical(_request, request);
+      AppEntryPinSession.endPinRequest(request);
+      if (ownsRequest) {
+        _request = null;
+        if (_ownsSession) setState(() => _busy = false);
+      }
     }
-
-    final result = await ref
-        .read(securityRepositoryProvider)
-        .verifyAppPin(pin: pinToVerify);
-    if (!mounted) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      return;
-    }
-
-    result.fold(
-      (failure) {
-        final msg = failure.message.toLowerCase();
-        final code = failure.errorCode ?? '';
-
-        if (_isTorNotReadyFailure(code, msg)) {
-          // Stay on dots and retry once more — do not flash pad mid-flow.
-          unawaited(_retryVerifyAfterTor(pinToVerify));
-          return;
-        }
-
-        AppEntryPinSession.pinRequestInFlight = false;
-        _applyVerifyFailure(failure);
-        setState(() => _busy = false);
-      },
-      (status) {
-        AppEntryPinSession.pinRequestInFlight = false;
-        _applyVerifySuccess(status, pinLength: pinToVerify.length);
-      },
-    );
-
-    if (mounted && !ref.read(appEntryPinUnlockedProvider) && !_busy) {
-      setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _retryVerifyAfterTor(String pinToVerify) async {
-    final ready = await ref
-        .read(appColdStartProvider.notifier)
-        .waitUntilTorReadyForApi(timeout: const Duration(seconds: 30));
-    if (!mounted) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      return;
-    }
-
-    if (!ready) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      setState(() {
-        _busy = false;
-        _errorMessage = _torStillWarmingMessage(context);
-      });
-      return;
-    }
-
-    final retry = await ref
-        .read(securityRepositoryProvider)
-        .verifyAppPin(pin: pinToVerify);
-    if (!mounted) {
-      AppEntryPinSession.pinRequestInFlight = false;
-      return;
-    }
-
-    AppEntryPinSession.pinRequestInFlight = false;
-    retry.fold(
-      (failure) {
-        _applyVerifyFailure(failure);
-        setState(() => _busy = false);
-      },
-      (status) {
-        _applyVerifySuccess(status, pinLength: pinToVerify.length);
-      },
-    );
   }
 
   void _applyVerifySuccess(AppPinStatus status, {required int pinLength}) {
@@ -490,10 +559,10 @@ class _AppEntryPinLockScreenState
     final base = isLocked
         ? context.tr.appEntryLockedHelper
         : isWrongPin
-            ? 'PIN incorreto. Tente novamente.'
+            ? context.tr.pinIncorrect
             : ErrorTranslator.translate(
                 context.tr,
-                failure.errorCode ?? failure.message,
+                failure.toString(),
               );
 
     setState(() {
@@ -513,10 +582,12 @@ class _AppEntryPinLockScreenState
           instruction: widget.status.locked
               ? context.tr.appEntryLockedHelper
               : _appEntryPinUnlockInstruction(context),
+          subtitle: context.tr.appEntryPinUnlockSubtitle,
           valueLength: _pin.length,
           maxLength: _pinTargetLength,
           error: _errorMessage,
           busy: _busy,
+          busyLabel: context.tr.pinEntryChecking,
           enabled: !widget.status.locked && !_busy,
           onDigit: _appendDigit,
           onDelete: _deleteDigit,
@@ -526,6 +597,23 @@ class _AppEntryPinLockScreenState
               widget.status.locked || _busy || _pin.length < _minPinLength
                   ? null
                   : _submit,
+          confirmLabel: context.tr.confirm,
+          footer: TextButton(
+            key: const ValueKey('app-entry-forgot-pin'),
+            style: TextButton.styleFrom(
+              foregroundColor: MonochromeColors.of(context).mutedText,
+              minimumSize: const Size(48, 48),
+            ),
+            onPressed: _busy
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    _pin = '';
+                    _errorMessage = null;
+                    context.push('/recovery/app-pin');
+                  },
+            child: Text(context.tr.appEntryForgotPin),
+          ),
           onCancel: () async {
             await ref.read(authControllerProvider.notifier).logout();
           },
@@ -546,17 +634,6 @@ String _appEntryPinUnlockInstruction(BuildContext context) =>
 
 String _torStillWarmingMessage(BuildContext context) =>
     context.tr.appEntryPinTorWarming;
-
-bool _isTorNotReadyFailure(String code, String messageLower) {
-  if (code == 'ERR_NETWORK' || code == 'NETWORK') return true;
-  return messageLower.contains('tor ainda não está pronta') ||
-      messageLower.contains('tor ainda nao esta pronta') ||
-      messageLower.contains('rede tor') ||
-      messageLower.contains('tempo de conexão esgotado') ||
-      messageLower.contains('connection') ||
-      messageLower.contains('socket') ||
-      messageLower.contains('network');
-}
 
 void _persistPinConfiguredHint(
   WidgetRef ref, {
@@ -610,7 +687,7 @@ class _TotpResetSheetState extends ConsumerState<_TotpResetSheet> {
         if (!mounted) return;
         setState(() {
           _busy = false;
-          _error = ErrorTranslator.translate(context.tr, failure.message);
+          _error = ErrorTranslator.translate(context.tr, failure.toString());
         });
       },
       (_) {

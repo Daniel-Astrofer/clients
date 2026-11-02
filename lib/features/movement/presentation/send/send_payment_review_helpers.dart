@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/money_display.dart';
@@ -53,11 +54,19 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
   required double? btcEur,
   required double? btcBrl,
   required bool isPaymentLink,
+  MovementMoney? money,
   required Future<dynamic> Function(
     BuildContext confirmationContext, {
     required bool firstSendAcknowledgedInReview,
   }) onConfirm,
 }) async {
+  final displayMoney = money ??
+      MovementMoney(
+        btcUsd: btcUsd,
+        btcEur: btcEur,
+        btcBrl: btcBrl,
+        locale: MoneyDisplay.boundAppLocale,
+      );
   final coldSource =
       wallet.isColdWallet || wallet.isSelfCustody || !wallet.spendable;
   final transferAmountBtc =
@@ -65,22 +74,7 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
   final totalDebitedBtc =
       destination.isExternal ? feeQuote.totalDebitedBtc : requestedAmount;
   final btcAmountLabel = formatBtcValue(transferAmountBtc);
-  final totalAmountLabel = formatBtcValue(totalDebitedBtc);
-  // Uses bound app locale + language-default fiat (pt BRL / es EUR / en USD).
-  final fiatAmountLabel = formatFiatReference(
-    btcAmount: transferAmountBtc,
-    btcUsd: btcUsd,
-    btcEur: btcEur,
-    btcBrl: btcBrl,
-    appLocale: MoneyDisplay.boundAppLocale,
-  );
-  final totalFiatLabel = formatFiatReference(
-    btcAmount: totalDebitedBtc,
-    btcUsd: btcUsd,
-    btcEur: btcEur,
-    btcBrl: btcBrl,
-    appLocale: MoneyDisplay.boundAppLocale,
-  );
+  const fiatAmountLabel = '';
   final networkLabel = _sendNetworkLabel(
     context,
     destination,
@@ -102,6 +96,7 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
     networkLabel: networkLabel,
     fiatAmountLabel: fiatAmountLabel,
     coldSource: coldSource,
+    money: displayMoney,
   );
 
   // First-send lives on the review surface (checkbox), not a post-CTA dialog.
@@ -122,43 +117,18 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
   final showPlatformFee = destination.isExternal &&
       (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading);
   final showMiningFee = destination.isExternal;
-  final canShowMiningFeeFiat = showMiningFee &&
-      feeQuote.networkFeeCertainty != NetworkFeeCertainty.unknownUntilPay &&
-      feeQuote.networkFeeCertainty != NetworkFeeCertainty.loading;
   final card = SendPaymentReviewCardData(
     recipientName: partyLabel,
     recipientAddress: compactSendReceiptValue(toAddress, head: 14, tail: 8),
-    transferAmountLabel: '$btcAmountLabel BTC',
-    transferFiatLabel: _displayFiatLabel(fiatAmountLabel),
-    totalAmountLabel: '$totalAmountLabel BTC',
-    totalFiatLabel: _displayFiatLabel(totalFiatLabel),
+    transferAmountLabel: displayMoney.primary(transferAmountBtc),
+    transferFiatLabel: '',
+    totalAmountLabel: displayMoney.primary(totalDebitedBtc),
+    totalFiatLabel: '',
     networkLabel: networkLabel,
-    transactionFeeLabel: showPlatformFee
-        ? '${formatBtcValue(feeQuote.platformFeeBtc)} BTC'
-        : null,
-    transactionFeeFiatLabel: showPlatformFee
-        ? _displayFiatLabel(
-            formatFiatReference(
-              btcAmount: feeQuote.platformFeeBtc,
-              btcUsd: btcUsd,
-              btcEur: btcEur,
-              btcBrl: btcBrl,
-              appLocale: MoneyDisplay.boundAppLocale,
-            ),
-          )
-        : null,
-    miningFeeLabel:
-        showMiningFee ? _networkFeeLabel(context, destination, feeQuote) : null,
-    miningFeeFiatLabel: canShowMiningFeeFiat
-        ? _displayFiatLabel(
-            formatFiatReference(
-              btcAmount: feeQuote.networkFeeBtc,
-              btcUsd: btcUsd,
-              btcEur: btcEur,
-              btcBrl: btcBrl,
-              appLocale: MoneyDisplay.boundAppLocale,
-            ),
-          )
+    transactionFeeLabel:
+        showPlatformFee ? displayMoney.primary(feeQuote.platformFeeBtc) : null,
+    miningFeeLabel: showMiningFee
+        ? _networkFeeLabel(context, destination, feeQuote, money: displayMoney)
         : null,
     isInternal: destination.isInternal || destination.isPaymentLink,
     isLightning: destination.isLightning,
@@ -203,6 +173,7 @@ Future<InternalTransferReviewArgs<dynamic>?> prepareSendPaymentReview({
         toAddress: toAddress,
         recipientLabel: recipientLabel,
         networkLabel: networkLabel,
+        money: displayMoney,
       );
     },
   );
@@ -258,6 +229,7 @@ List<SendPaymentReviewRowData> _buildReviewRows({
   required String networkLabel,
   required String fiatAmountLabel,
   bool coldSource = false,
+  required MovementMoney money,
 }) {
   final receiverGets =
       destination.isExternal ? feeQuote.receiverAmountBtc : requestedAmount;
@@ -291,19 +263,19 @@ List<SendPaymentReviewRowData> _buildReviewRows({
       ),
     SendPaymentReviewRowData(
       label: context.tr.sendReviewRecipientGets,
-      value: '${formatBtcValue(receiverGets)} BTC',
+      value: money.primary(receiverGets),
       numeric: true,
     ),
     if (destination.isExternal) ...[
       SendPaymentReviewRowData(
         label: context.tr.sendReviewNetworkFee,
-        value: _networkFeeLabel(context, destination, feeQuote),
+        value: _networkFeeLabel(context, destination, feeQuote, money: money),
         numeric: true,
       ),
       if (feeQuote.platformFeeBtc > 0 || feeQuote.isLoading)
         SendPaymentReviewRowData(
           label: context.tr.sendReviewKeroseneFee,
-          value: '${formatBtcValue(feeQuote.platformFeeBtc)} BTC',
+          value: money.primary(feeQuote.platformFeeBtc),
           numeric: true,
         ),
     ],
@@ -322,7 +294,7 @@ List<SendPaymentReviewRowData> _buildReviewRows({
     // Bank-style total last — always visible so user sees full debit.
     SendPaymentReviewRowData(
       label: context.tr.sendReviewYouPay,
-      value: '${formatBtcValue(youPay)} BTC',
+      value: money.primary(youPay),
       numeric: true,
       emphasize: true,
     ),
@@ -341,22 +313,25 @@ SendPaymentReceiptData _buildReceiptData({
   required String toAddress,
   required String recipientLabel,
   required String networkLabel,
+  required MovementMoney money,
 }) {
-  final occurredAt = DateTime.now();
+  final occurredAt = status.occurredAt;
   final amountFallback =
       destination.isExternal ? feeQuote.receiverAmountBtc : requestedAmount;
-  final amountLabel = receiptAmountLabelFromStatus(
-    status: status,
-    fallbackAmountBtc: amountFallback,
+  final amountLabel = money.primary(
+    status.hasAmount || status.amountReceived > 0
+        ? status.amountReceived
+        : amountFallback,
   );
   final sender = _firstNotEmpty(status.sender, wallet.address, wallet.name);
   final receiver = _firstNotEmpty(status.receiver, toAddress, recipientLabel);
-  final networkFee =
-      status.networkFeeBtc > 0 ? status.networkFeeBtc : feeQuote.networkFeeBtc;
-  final platformFee = status.platformFeeBtc > 0
+  final networkFee = status.hasNetworkFee || status.networkFeeBtc > 0
+      ? status.networkFeeBtc
+      : feeQuote.networkFeeBtc;
+  final platformFee = status.hasPlatformFee || status.platformFeeBtc > 0
       ? status.platformFeeBtc
       : feeQuote.platformFeeBtc;
-  final totalDebited = status.totalDebitedBtc > 0
+  final totalDebited = status.hasTotalDebited || status.totalDebitedBtc > 0
       ? status.totalDebitedBtc
       : feeQuote.totalDebitedBtc;
 
@@ -381,12 +356,14 @@ SendPaymentReceiptData _buildReceiptData({
     ),
   ];
 
-  if (networkFee > 0) {
+  if (networkFee > 0 || (destination.isExternal && status.hasNetworkFee)) {
     rows.add(
       SendPaymentReceiptRowData(
         label: context.tr.sendReviewNetworkFee,
-        value: '${formatBtcValue(networkFee)} BTC',
+        value: money.primary(networkFee),
+        secondaryValue: money.secondary(networkFee),
         numeric: true,
+        kind: SendPaymentReceiptRowKind.networkFee,
       ),
     );
   }
@@ -395,18 +372,24 @@ SendPaymentReceiptData _buildReceiptData({
     rows.add(
       SendPaymentReceiptRowData(
         label: context.tr.sendReviewKeroseneFee,
-        value: '${formatBtcValue(platformFee)} BTC',
+        value: money.primary(platformFee),
+        secondaryValue: money.secondary(platformFee),
         numeric: true,
+        kind: SendPaymentReceiptRowKind.platformFee,
       ),
     );
   }
 
-  if (totalDebited > 0 && (totalDebited - amountFallback).abs() > 0.000000009) {
+  if (status.hasTotalDebited || networkFee > 0 || platformFee > 0) {
     rows.add(
       SendPaymentReceiptRowData(
-        label: context.tr.sendReviewTotalDebited,
-        value: '${formatBtcValue(totalDebited)} BTC',
+        label: status.isConfirmed
+            ? context.tr.sendReviewTotalDebited
+            : context.tr.receiptExpectedTotal,
+        value: money.primary(totalDebited),
+        secondaryValue: money.secondary(totalDebited),
         numeric: true,
+        kind: SendPaymentReceiptRowKind.total,
       ),
     );
   }
@@ -415,7 +398,8 @@ SendPaymentReceiptData _buildReceiptData({
     rows.add(
       SendPaymentReceiptRowData(
         label: context.tr.sendReviewStatus,
-        value: _statusLabel(status.status),
+        value: _statusLabel(context, status.status),
+        kind: SendPaymentReceiptRowKind.status,
       ),
     );
   }
@@ -427,6 +411,7 @@ SendPaymentReceiptData _buildReceiptData({
         value: compactSendReceiptValue(status.txid, head: 10, tail: 8),
         numeric: true,
         technical: true,
+        kind: SendPaymentReceiptRowKind.networkReference,
       ),
     );
   }
@@ -439,10 +424,18 @@ SendPaymentReceiptData _buildReceiptData({
       : SendMoneyCopy.receiptSubtitlePending(context);
 
   return SendPaymentReceiptData(
+    money: money,
     title: title,
     subtitle: subtitle,
+    confirmed: status.isConfirmed,
+    transactionId: status.transactionId,
     amountLabel: amountLabel,
+    secondaryAmountLabel: money.secondary(
+        status.hasAmount || status.amountReceived > 0
+            ? status.amountReceived
+            : amountFallback),
     occurredAt: occurredAt,
+    updatedAt: status.updatedAt,
     rows: rows,
     shareText: _receiptShareText(
       context: context,
@@ -470,8 +463,9 @@ String _sendNetworkLabel(
 String _networkFeeLabel(
   BuildContext context,
   SendDestinationAnalysis destination,
-  SendFeeQuote feeQuote,
-) {
+  SendFeeQuote feeQuote, {
+  MovementMoney? money,
+}) {
   if (!destination.isExternal) return SendMoneyCopy.feeFree(context);
   if (feeQuote.networkFeeCertainty == NetworkFeeCertainty.unknownUntilPay) {
     return SendMoneyCopy.feeEstimatedAtPayment(context);
@@ -479,7 +473,8 @@ String _networkFeeLabel(
   if (feeQuote.networkFeeCertainty == NetworkFeeCertainty.loading) {
     return SendMoneyCopy.feeCalculating(context);
   }
-  final fee = '${formatBtcValue(feeQuote.networkFeeBtc)} BTC';
+  final fee = money?.primary(feeQuote.networkFeeBtc) ??
+      '${formatBtcValue(feeQuote.networkFeeBtc)} BTC';
   return fee;
 }
 
@@ -496,10 +491,7 @@ String _resolveReviewRecipientName({
   return _displayParty(recipientLabel, toAddress);
 }
 
-String _displayFiatLabel(String value) {
-  final trimmed = value.trim();
-  return trimmed.startsWith('≈ ') ? trimmed.substring(2).trim() : trimmed;
-}
+String _displayFiatLabel(String value) => value.trim();
 
 String _displayParty(String label, String value) {
   final cleanLabel = label.trim();
@@ -515,24 +507,40 @@ String _firstNotEmpty(String first, String second, String third) {
   return 'Kerosene';
 }
 
-String _statusLabel(String value) {
-  final normalized = value.trim().toUpperCase();
-  if (normalized.isEmpty) return 'CONFIRMADO';
-  return normalized;
+String _statusLabel(BuildContext context, String value) {
+  switch (value.trim().toUpperCase()) {
+    case 'SETTLED':
+    case 'COMPLETED':
+    case 'CONFIRMED':
+    case 'PAID':
+      return context.tr.txListConfirmed;
+    case 'REQUIRES_RECONCILIATION':
+      return context.tr.txListNeedsReview;
+    case 'CANCELLED':
+    case 'CANCELED':
+      return context.tr.txListCancelled;
+    case 'FAILED':
+    case 'REJECTED':
+      return context.tr.txListFailed;
+    default:
+      return context.tr.txListPending;
+  }
 }
 
 String _receiptShareText({
   required BuildContext context,
   required String title,
   required String amountLabel,
-  required DateTime occurredAt,
+  required DateTime? occurredAt,
   required List<SendPaymentReceiptRowData> rows,
 }) {
   final lines = <String>[
     title,
-    '${SendMoneyCopy.receiptShareAmount(context)}: $amountLabel BTC',
-    '${SendMoneyCopy.receiptDateLabel(context)}: ${_shareDate(occurredAt)}',
-    for (final row in rows) '${row.label}: ${row.value}',
+    '${SendMoneyCopy.receiptShareAmount(context)}: $amountLabel',
+    if (occurredAt != null)
+      '${SendMoneyCopy.receiptDateLabel(context)}: ${_shareDate(occurredAt)}',
+    for (final row in rows)
+      '${row.label}: ${row.value}${row.secondaryValue.isEmpty ? '' : ' (${row.secondaryValue})'}',
   ];
   return lines.join('\n');
 }

@@ -89,3 +89,45 @@ String signupSuccessBody(BuildContext context) =>
 
 String signupStartAction(BuildContext context) =>
     context.tr.flowSignupStartAction;
+
+String _signupCopy(BuildContext context, String pt, String en, String es) =>
+    switch (Localizations.localeOf(context).languageCode) {
+      'en' => en,
+      'es' => es,
+      _ => pt,
+    };
+
+String signupConfirmingPasskeyTitle(BuildContext context) => _signupCopy(
+      context,
+      'Confirmando passkey',
+      'Confirming passkey',
+      'Confirmando passkey',
+    );
+
+String signupConfirmingPasskeySubtitle(BuildContext context) => _signupCopy(
+      context,
+      'Confirme com a biometria ou o bloqueio de tela do seu dispositivo.',
+      'Confirm using biometrics or your device screen lock.',
+      'Confirma con la biometría o el bloqueo de pantalla de tu dispositivo.',
+    );
+
+String signupPasskeyRequiredBody(BuildContext context) => _signupCopy(
+      context,
+      'Sua passkey é obrigatória para concluir o cadastro. A confirmação é feita com segurança pelo seu dispositivo.',
+      'A passkey is required to complete sign-up. Your device handles confirmation securely.',
+      'Tu passkey es obligatoria para completar el registro. Tu dispositivo realiza la confirmación de forma segura.',
+    );
+
+String signupSetupNextBody(BuildContext context) => _signupCopy(
+      context,
+      'Sua conta está protegida. Agora crie seu PIN de 4 dígitos e escolha como começar.',
+      'Your account is protected. Now create your 4-digit PIN and choose how to get started.',
+      'Tu cuenta está protegida. Ahora crea tu PIN de 4 dígitos y elige cómo empezar.',
+    );
+
+String signupProgressSaveError(BuildContext context) => _signupCopy(
+      context,
+      'Não foi possível salvar esta etapa no dispositivo. Tente continuar novamente.',
+      'We could not save this step on your device. Try continuing again.',
+      'No se pudo guardar esta etapa en tu dispositivo. Intenta continuar de nuevo.',
+    );

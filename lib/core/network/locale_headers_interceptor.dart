@@ -21,14 +21,20 @@ class LocaleHeadersInterceptor extends Interceptor {
     try {
       final prefs = _ref.read(appDisplayPreferencesProvider);
       final language = prefs.locale.languageCode;
-      final timeZone = prefs.timeZoneId;
+      final timeZone = prefs.timeZoneFollowDevice
+          ? AppTimezone.detectId()
+          : prefs.timeZoneId;
       final currency = prefs.currency.code;
+      final offsetMinutes = AppTimezone.convert(DateTime.now(),
+              timeZoneId: prefs.timeZoneFollowDevice ? null : timeZone)
+          .timeZoneOffset
+          .inMinutes
+          .toString();
 
       options.headers[acceptLanguageHeader] = language;
       options.headers[localeHeader] = language;
       options.headers[timezoneHeader] = timeZone;
-      options.headers[timezoneOffsetHeader] =
-          AppTimezone.deviceOffsetMinutes().toString();
+      options.headers[timezoneOffsetHeader] = offsetMinutes;
       options.headers[currencyHeader] = currency;
     } catch (_) {
       // Preferences may not be ready during early bootstrap — still send device TZ.

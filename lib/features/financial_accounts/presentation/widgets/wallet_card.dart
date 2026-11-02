@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
@@ -78,7 +79,7 @@ class _WalletCardState extends State<WalletCard> {
             ),
             SizedBox(height: AppSpacing.md),
             ListTile(
-              leading: Icon(KeroseneIcons.edit,
+              leading: KeroseneIcon(KeroseneIcons.edit,
                   color: Theme.of(context).colorScheme.onSurface),
               title: Text(context.tr.walletEditNameAction.toUpperCase(),
                   style: Theme.of(context)
@@ -91,7 +92,7 @@ class _WalletCardState extends State<WalletCard> {
               },
             ),
             ListTile(
-              leading: Icon(KeroseneIcons.trash,
+              leading: KeroseneIcon(KeroseneIcons.trash,
                   color: Theme.of(context).colorScheme.error),
               title: Text(context.tr.removeWallet.toUpperCase(),
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
@@ -155,7 +156,7 @@ class _WalletCardState extends State<WalletCard> {
                     Positioned(
                       right: AppSpacing.lg,
                       bottom: AppSpacing.lg,
-                      child: Icon(KeroseneIcons.lightning,
+                      child: KeroseneIcon(KeroseneIcons.lightning,
                           color: surface.textMuted.withValues(alpha: 0.45),
                           size: 32),
                     ),
@@ -265,7 +266,7 @@ class _WalletCardState extends State<WalletCard> {
                                           text: widget.wallet.address));
                                       widget.onAddressCopied?.call();
                                     },
-                                    icon: Icon(KeroseneIcons.copy,
+                                    icon: KeroseneIcon(KeroseneIcons.copy,
                                         size: 14, color: surface.textSecondary),
                                     style: IconButton.styleFrom(
                                       backgroundColor: surface.surfaceDim,

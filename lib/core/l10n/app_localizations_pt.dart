@@ -253,6 +253,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get error => 'Erro';
 
   @override
+  String get genericActionFailureTitle => 'Não conseguimos continuar agora';
+
+  @override
   String get success => 'Sucesso';
 
   @override
@@ -356,14 +359,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'O primeiro banco internacional de bitcoin focado em privacidade do mundo.';
 
   @override
-  String get welcomeHeaderTitleCustody => 'Custódia institucional.\n';
+  String get welcomeHeaderTitleCustody => 'Sua conta Bitcoin.\n';
 
   @override
-  String get welcomeHeaderTitleSimplicity => 'Simplicidade absoluta.';
+  String get welcomeHeaderTitleSimplicity => 'Envie e receba.';
 
   @override
   String get welcomeHeaderSubtitle =>
-      'Segurança de nível superior para seu patrimônio digital. Projetado para quem exige o melhor.';
+      'Acompanhe seu saldo, envios e recebimentos em uma conta custodial.';
 
   @override
   String get welcomeCreateAccountButton => 'Criar conta';
@@ -469,6 +472,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get copy => 'COPIAR';
+
+  @override
+  String get copyDataFailed =>
+      'Não foi possível copiar estes dados. Tente novamente.';
 
   @override
   String get share => 'PARTILHAR';
@@ -4253,6 +4260,50 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível gerar novos códigos';
 
   @override
+  String get securitySensitiveHiddenMessage =>
+      'Os dados de recuperação estão ocultos.';
+
+  @override
+  String get securityRevealCodesAction => 'Mostrar códigos';
+
+  @override
+  String get securityCopyFailedMessage =>
+      'Não foi possível copiar os códigos. Tente novamente.';
+
+  @override
+  String get securityAuthorizationUnavailableMessage =>
+      'Este aparelho não conseguiu confirmar sua identidade. Revise a configuração de segurança.';
+
+  @override
+  String get securityRegenerateCodesConfirmation =>
+      'Ao gerar novos códigos, os anteriores deixam de funcionar. Guarde o novo conjunto fora deste aparelho.';
+
+  @override
+  String get securityDisableTotpConfirmation =>
+      'Ao desativar o autenticador, os códigos de recuperação também deixam de funcionar. Deseja continuar?';
+
+  @override
+  String get securityTotpRequiredSubtitle =>
+      'Este perfil de segurança exige o autenticador. Altere o perfil antes de desativá-lo.';
+
+  @override
+  String get securityUpdateUnconfirmedMessage =>
+      'Não foi possível confirmar a alteração. Consulte o estado atual antes de tentar novamente.';
+
+  @override
+  String get securitySessionChangedMessage =>
+      'A sessão mudou. Feche esta tela e abra novamente para consultar sua conta.';
+
+  @override
+  String get securityAuthenticatorActive => 'Ativo';
+
+  @override
+  String get securityAuthenticatorInactive => 'Inativo';
+
+  @override
+  String get securityTotpRequiredTitle => 'Autenticador obrigatório';
+
+  @override
   String get securityBackupCodesTitle => 'Códigos de recuperação';
 
   @override
@@ -4347,11 +4398,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get securityTotpEnabledSubtitle =>
-      'Autenticador ativo. O aviso de conta não protegida não aparece.';
+      'Gerencie esta proteção e guarde os códigos de recuperação em local seguro.';
 
   @override
   String get securityTotpDisabledSubtitle =>
-      'Sem autenticador. A conta fica marcada como não protegida.';
+      'Configure o autenticador para usar códigos temporários nas ações que os exigem.';
 
   @override
   String get securityDisableTotpAction => 'Desativar autenticador';
@@ -4496,17 +4547,17 @@ class AppLocalizationsPt extends AppLocalizations {
       'O novo PIN e a confirmação precisam ser iguais.';
 
   @override
-  String get securityPinEnableTitle => 'Ativar PIN de entrada';
+  String get securityPinEnableTitle => 'Configurar PIN';
 
   @override
-  String get securityPinChangeTitle => 'Alterar PIN deste dispositivo';
+  String get securityPinChangeTitle => 'Alterar PIN';
 
   @override
   String get securityPinDisableTitle => 'Desativar PIN de entrada';
 
   @override
   String get securityPinEnableBody =>
-      'O PIN será exigido sempre que o app abrir com esta sessão neste dispositivo.';
+      'Configure o PIN deste aparelho para as etapas de acesso que o exigem.';
 
   @override
   String get securityPinChangeBody =>
@@ -4514,13 +4565,16 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get securityPinDisableBody =>
-      'Use o PIN atual ou um código do autenticador para remover a barreira de entrada deste dispositivo.';
+      'Esta ação desativa a preferência de PIN deste aparelho. As exigências de acesso da conta continuam sendo aplicadas.';
 
   @override
-  String get securityCurrentPinLabel => 'PIN atual ou código do autenticador';
+  String get securityCurrentPinLabel => 'PIN atual';
 
   @override
   String get securityTotpCodeLabel => 'Código do autenticador';
+
+  @override
+  String get securityPinTotpCodeLabel => 'Código de 6 dígitos';
 
   @override
   String securityNewPinLabel(int min, int max) {
@@ -5977,21 +6031,21 @@ class AppLocalizationsPt extends AppLocalizations {
       'Receba direto no endereço Bitcoin da sua carteira de casa';
 
   @override
-  String get receiveMethodKeroseneTitle => 'Receber na Kerosene';
+  String get receiveMethodKeroseneTitle => 'Entre contas Kerosene';
 
   @override
   String get receiveMethodKeroseneSubtitle =>
       'Escolha QR Code, link de pagamento ou NFC para sua carteira interna.';
 
   @override
-  String get receiveMethodOnchainTitle => 'Receber on-chain';
+  String get receiveMethodOnchainTitle => 'Bitcoin — rede';
 
   @override
   String get receiveMethodOnchainSubtitle =>
       'Escolha QR Code, link de pagamento ou NFC para sua carteira fria.';
 
   @override
-  String get receiveMethodGatewayTitle => 'Gateway de pagamento';
+  String get receiveMethodGatewayTitle => 'Comprar Bitcoin';
 
   @override
   String get receiveMethodGatewaySubtitle =>
@@ -6018,7 +6072,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get receiveMethodNfcSubtitle => 'Preparar recebimento por aproximação';
 
   @override
-  String get receiveGatewayProvidersTitle => 'Provedores';
+  String get receiveGatewayProvidersTitle => 'Comprar Bitcoin';
 
   @override
   String get receiveGatewayRecommendedBrazil => 'Recomendados para Brasil';
@@ -6412,11 +6466,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get receivePaymentLinkCancelled => 'Link de pagamento cancelado.';
 
   @override
-  String get receivePaymentLinkCancelTitle => 'Cancelar link';
+  String get receivePaymentLinkCancelTitle => 'Cancelar pedido';
 
   @override
   String get receivePaymentLinkCancelMessage =>
-      'Se quiser, informe um motivo para aparecer no seu histórico.';
+      'O pedido será marcado como cancelado na Kerosene. Confira os dados abaixo antes de confirmar.';
 
   @override
   String get receivePaymentLinkCancelReason => 'Motivo do cancelamento';
@@ -7827,7 +7881,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsNotifSubtitle =>
-      'Controle local de alertas financeiros, segurança e dispositivos autorizados para push notifications.';
+      'Escolha quais avisos receber e gerencie os dispositivos autorizados.';
 
   @override
   String get settingsNotifAlertsSection => 'Alertas';
@@ -7848,52 +7902,52 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsNotifFinancialSubtitle =>
-      'Transações, recebimentos e payment requests.';
+      'Envios, recebimentos e solicitações de pagamento.';
 
   @override
   String get settingsNotifSecurityEventsTitle => 'Eventos de segurança';
 
   @override
   String get settingsNotifSecurityEventsSubtitle =>
-      'Login, recovery e tentativas de acesso sensíveis.';
+      'Acessos, recuperação da conta e alterações de segurança.';
 
   @override
   String get settingsNotifMarketTitle => 'Mercado Bitcoin';
 
   @override
-  String get settingsNotifMarketOn => 'Alertas reais de variação 24h ativados.';
+  String get settingsNotifMarketOn =>
+      'Alertas sobre o mercado Bitcoin ativados.';
 
   @override
   String get settingsNotifMarketOff =>
-      'Desativado por padrão. Sem mock e sem fallback.';
+      'Alertas sobre o mercado Bitcoin desativados.';
 
   @override
-  String get settingsNotifDevicesSection => 'Dispositivos';
+  String get settingsNotifDevicesSection => 'Aparelhos de notificações';
 
   @override
   String get settingsNotifDevicesLoading =>
-      'Carregando dispositivos autorizados.';
+      'Consultando registros de notificações.';
 
   @override
-  String get settingsNotifDevicesUnavailableTitle =>
-      'Dispositivos indisponíveis';
+  String get settingsNotifDevicesUnavailableTitle => 'Lista indisponível';
 
   @override
   String get settingsNotifDevicesUnavailableSubtitle =>
-      'Não conseguimos consultar os tokens registrados agora.';
+      'Não conseguimos consultar os registros de notificações agora. Tente novamente.';
 
   @override
-  String get settingsNotifNoDevicesTitle => 'Nenhum dispositivo registrado';
+  String get settingsNotifNoDevicesTitle => 'Nenhum registro ativo';
 
   @override
   String get settingsNotifNoDevicesSubtitle =>
-      'Ao permitir push notifications, o backend exibirá o dispositivo aqui.';
+      'Os aparelhos registrados para receber notificações da Kerosene aparecem aqui.';
 
   @override
   String get settingsNotifDeviceFallback => 'Dispositivo';
 
   @override
-  String get settingsNotifRevoke => 'Revogar';
+  String get settingsNotifRevoke => 'Desativar';
 
   @override
   String get settingsNotifPermissionTitle => 'Permissão necessária';
@@ -7903,14 +7957,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Autorize notificações no Android para receber alertas.';
 
   @override
-  String get settingsNotifRevokeFailedTitle => 'Não conseguimos revogar';
+  String get settingsNotifRevokeFailedTitle => 'Alteração não confirmada';
 
   @override
-  String get settingsNotifRevokedTitle => 'Dispositivo revogado';
+  String get settingsNotifRevokedTitle => 'Notificações desativadas';
 
   @override
   String get settingsNotifRevokedMessage =>
-      'Este token não receberá novas notificações.';
+      'A Kerosene confirmou a desativação deste registro de notificações.';
 
   @override
   String get settingsNotifBackgroundDialogTitle =>
@@ -7956,14 +8010,15 @@ class AppLocalizationsPt extends AppLocalizations {
       'Configure um código de 4 dígitos';
 
   @override
-  String get settingsSecurityBiometricsTitle => 'Biometria';
+  String get settingsSecurityBiometricsTitle => 'Chave de acesso';
 
   @override
-  String get settingsSecurityBiometricsOn => 'Usar digital para entrar no app';
+  String get settingsSecurityBiometricsOn =>
+      'Há uma chave vinculada à conta. Consulte os aparelhos autorizados.';
 
   @override
   String get settingsSecurityBiometricsOff =>
-      'Registre uma passkey neste dispositivo';
+      'Vincule este aparelho para configurar sua chave de acesso.';
 
   @override
   String get settingsSecurityTotpTitle => 'Autenticação em 2 fatores';
@@ -8053,14 +8108,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsSecurityWipeLedgerSubtitle =>
-      'Remove o histórico guardado neste aparelho. O logout não apaga o extrato — só esta ação. Ao entrar de novo, o app puxa o remoto.';
+      'Remove a cópia do extrato deste aparelho para esta conta. O histórico no servidor continua disponível para sincronização.';
 
   @override
   String get settingsSecurityWipeConfirmTitle => 'Apagar extrato local?';
 
   @override
   String get settingsSecurityWipeConfirmBody =>
-      'Isso apaga até 500 lançamentos salvos neste aparelho. Não cancela transações na rede. Continuar?';
+      'Apaga a cópia do extrato guardada neste aparelho para esta conta. As transações e o histórico no servidor continuam disponíveis.';
 
   @override
   String get settingsSecurityWipeConfirmAction => 'Apagar';
@@ -8077,7 +8132,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsSecurityWipeOkMessage =>
-      'O histórico neste aparelho foi removido. Puxe para sincronizar de novo.';
+      'A cópia local foi removida. Abra o extrato para consultar e sincronizar novamente.';
 
   @override
   String get settingsSecurityWipeFailTitle => 'Não foi possível apagar';
@@ -8087,7 +8142,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsWalletsSubtitle =>
-      'Renomeie ou arquive carteiras desta sessão. Ações usam a mesma API da tela de contas Bitcoin.';
+      'Gerencie os nomes e o acompanhamento das suas carteiras. Confira o resultado de cada alteração.';
 
   @override
   String get settingsWalletsSection => 'Carteiras';
@@ -8110,16 +8165,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsWalletsLoadErrorSubtitle =>
-      'Toque para abrir a gestão completa.';
+      'Toque para tentar atualizar novamente.';
 
   @override
-  String get settingsWalletsWatchOnly => 'Watch-only / cold';
+  String get settingsWalletsWatchOnly => 'Carteira somente para consulta';
 
   @override
-  String get settingsWalletsCustodialOnchain => 'Custodial on-chain';
+  String get settingsWalletsCustodialOnchain =>
+      'Bitcoin — rede · custódia Kerosene';
 
   @override
-  String get settingsWalletsInternal => 'Conta assegurada (interna)';
+  String get settingsWalletsInternal => 'Conta Kerosene';
 
   @override
   String get settingsWalletsProcessing => 'Processando…';
@@ -8131,17 +8187,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsWalletsArchiveWatch => 'Arquivar acompanhamento';
 
   @override
-  String get settingsWalletsArchive => 'Arquivar / bloquear carteira';
+  String get settingsWalletsArchive => 'Arquivar carteira';
 
   @override
   String get settingsWalletsRenameOk => 'Nome atualizado';
 
   @override
-  String get settingsWalletsRenameFailTitle => 'Nome não atualizado';
+  String get settingsWalletsRenameFailTitle => 'Alteração não confirmada';
 
   @override
   String get settingsWalletsRenameFailMessage =>
-      'Revise o nome e tente novamente.';
+      'Atualize suas carteiras para conferir o nome antes de tentar novamente.';
 
   @override
   String get settingsWalletsArchiveOkWatch => 'Acompanhamento arquivado';
@@ -8150,11 +8206,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsWalletsArchiveOk => 'Carteira arquivada';
 
   @override
-  String get settingsWalletsArchiveFailTitle => 'Não foi possível arquivar';
+  String get settingsWalletsArchiveFailTitle => 'Arquivamento não confirmado';
 
   @override
   String get settingsWalletsArchiveFailMessage =>
-      'Tente novamente em instantes.';
+      'Atualize suas carteiras para conferir o estado antes de tentar novamente.';
 
   @override
   String get settingsNotifBackgroundDialogDismiss => 'Agora não';
@@ -8213,6 +8269,31 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get flowSignupCreatingSecurityProgress =>
       'Garantindo a segurança da sua conta...';
+
+  @override
+  String get flowSignupUnknownTitle => 'Resultado ainda não confirmado';
+
+  @override
+  String get flowSignupUnknownSubtitle =>
+      'Não foi possível confirmar a conclusão do cadastro. Sua conta pode ter sido criada. Entre com o mesmo usuário para verificar o resultado.';
+
+  @override
+  String get flowSignupConfirmByLoginAction => 'Verificar pelo login';
+
+  @override
+  String get flowSignupTotpRequiredTitle => 'Configure o autenticador';
+
+  @override
+  String get flowSignupTotpRequiredSubtitle =>
+      'O código do autenticador é obrigatório para o perfil de segurança desta conta.';
+
+  @override
+  String get flowSignupTotpFinishedTitle =>
+      'Guarde seus códigos de recuperação';
+
+  @override
+  String get flowSignupTotpFinishedSubtitle =>
+      'A etapa do autenticador foi encerrada. Confira seus códigos antes de vincular o dispositivo.';
 
   @override
   String get flowSignupTotpTitle => 'Eleve a segurança de sua conta (opcional)';
@@ -8350,6 +8431,41 @@ class AppLocalizationsPt extends AppLocalizations {
       'A rede segura ainda está conectando. Seu PIN foi mantido — tente de novo em instantes.';
 
   @override
+  String get pinEntryChecking => 'Verificando PIN…';
+
+  @override
+  String get pinEntrySaving => 'Salvando PIN…';
+
+  @override
+  String get errSelectedWalletInsufficientBalance =>
+      'Saldo insuficiente na carteira escolhida.';
+
+  @override
+  String get errDeviceKeyConfigurationRequired =>
+      'Configure a chave do dispositivo neste aparelho para continuar.';
+
+  @override
+  String get historySyncUpdating => 'Atualizando histórico';
+
+  @override
+  String get historySyncUnavailable => 'Não foi possível atualizar o histórico';
+
+  @override
+  String get historySyncSavedData => 'Exibindo os últimos dados disponíveis';
+
+  @override
+  String get historySyncKeptData =>
+      'Os últimos dados disponíveis continuam visíveis.';
+
+  @override
+  String get historySyncRefreshAction => 'Atualizar histórico';
+
+  @override
+  String historySyncLastQuery(String time) {
+    return 'Última atualização: $time.';
+  }
+
+  @override
   String get notifBannerNow => 'Agora';
 
   @override
@@ -8397,25 +8513,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get emergencyRecoveryUnableContinue => 'Não foi possível continuar';
 
   @override
-  String get emergencyRecoveryTitleStart => 'Rotacione o acesso da conta';
+  String get emergencyRecoveryTitleStart => 'Recupere o acesso à conta';
 
   @override
   String get emergencyRecoveryTitleVerify => 'Configure o novo autenticador';
 
   @override
-  String get emergencyRecoveryTitleComplete => 'Recovery concluído';
+  String get emergencyRecoveryTitleComplete => 'Recuperação concluída';
 
   @override
   String get emergencyRecoveryBodyStart =>
-      'Use códigos de recuperação salvos offline para criar uma nova senha, novo TOTP e nova passkey neste dispositivo.';
+      'Use seus códigos de recuperação guardados para definir uma nova senha, configurar outro autenticador e registrar uma nova chave de acesso neste aparelho.';
 
   @override
   String get emergencyRecoveryBodyVerify =>
-      'Escaneie o QR no autenticador, digite o código de 6 dígitos e confirme a nova passkey local.';
+      'Adicione esta conta ao autenticador pelo QR, digite o código de 6 dígitos e confirme a nova chave de acesso neste aparelho.';
 
   @override
   String get emergencyRecoveryBodyComplete =>
-      'Guarde os novos códigos offline antes de entrar novamente. Eles não devem ficar no app de notas, email ou nuvem.';
+      'Guarde estes códigos em um local seguro antes de entrar. Eles substituem os códigos anteriores e são exibidos apenas nesta etapa.';
 
   @override
   String get emergencyRecoveryNewPassword => 'Nova senha da conta';
@@ -8435,7 +8551,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get emergencyRecoveryAddCode => 'Adicionar código';
 
   @override
-  String get emergencyRecoveryStartAction => 'Iniciar recovery';
+  String get emergencyRecoveryStartAction => 'Iniciar recuperação';
 
   @override
   String get emergencyRecoveryTempSession => 'Sessão temporária';
@@ -8446,13 +8562,13 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get emergencyRecoveryConfirmPasskey => 'Confirmar nova passkey';
+  String get emergencyRecoveryConfirmPasskey => 'Confirmar nova chave';
 
   @override
   String get emergencyRecoveryGoBackReview => 'Voltar e revisar dados';
 
   @override
-  String get emergencyRecoveryCredentialsRotated => 'Credenciais rotacionadas';
+  String get emergencyRecoveryCredentialsRotated => 'Acesso atualizado';
 
   @override
   String get emergencyRecoveryCopyNewCodes => 'Copiar novos códigos';
@@ -8462,7 +8578,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get emergencyRecoveryTotpInstruction =>
-      'Digite o TOTP de 6 dígitos do novo autenticador.';
+      'Digite o código de 6 dígitos do novo autenticador.';
 
   @override
   String get emergencyRecoveryPasswordMin =>
@@ -8526,7 +8642,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get notifCenterReadAll => 'Ler tudo';
+  String get notifCenterReadAll => 'Marcar como lidas';
 
   @override
   String get notifCenterClear => 'Limpar';
@@ -8554,7 +8670,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get notifSidebarTitle => 'Notificações push';
 
   @override
-  String get notifSidebarSubtitle => 'Alertas recentes da sessão.';
+  String get notifSidebarSubtitle => 'Atividade e avisos da sua conta.';
 
   @override
   String get notifSidebarEmptyHint =>
@@ -8574,7 +8690,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String emergencyRecoveryAccountRotatedBody(String username) {
-    return 'A conta $username agora usa a nova senha, novo TOTP e nova passkey deste dispositivo.';
+    return 'A conta $username passou a usar a nova senha, o novo autenticador e a chave de acesso registrada neste aparelho.';
   }
 
   @override
@@ -8597,8 +8713,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsDevicesInUse => 'Dispositivo em uso';
 
   @override
-  String get settingsDevicesRegisterPasskey =>
-      'Registrar passkey neste aparelho';
+  String get settingsDevicesRegisterPasskey => 'Vincular este aparelho';
 
   @override
   String get settingsDevicesLoadError =>
@@ -8636,7 +8751,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsRecoveryHubSubtitle =>
-      'Caminhos reais de recuperação disponíveis para o modo de segurança desta conta.';
+      'Consulte a proteção da conta e escolha como recuperar seu acesso.';
 
   @override
   String get settingsRecoveryStatus => 'Status';
@@ -8726,7 +8841,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sendReviewEstimatedTime => 'Tempo estimado';
 
   @override
-  String get sendReviewYouPay => 'Você paga';
+  String get sendReviewYouPay => 'Total debitado';
 
   @override
   String get sendReviewSender => 'Remetente';
@@ -8766,25 +8881,28 @@ class AppLocalizationsPt extends AppLocalizations {
   String get walletSetupCreateOnDevice => 'Criar no aparelho';
 
   @override
-  String get walletSetupGenerateBip39 => 'Gerar semente BIP39';
+  String get walletSetupGenerateBip39 =>
+      'Criar uma frase de recuperação neste aparelho';
 
   @override
-  String get walletSetupImportSeed => 'Importar seed';
+  String get walletSetupImportSeed => 'Importar carteira';
 
   @override
-  String get walletSetupImportSeedHint => '12 ou 24 palavras';
+  String get walletSetupImportSeedHint =>
+      'Usar sua frase de recuperação existente';
 
   @override
   String get walletSetupWatchOnly => 'Somente observar';
 
   @override
-  String get walletSetupXpubSoon => 'Em breve · xpub';
+  String get walletSetupXpubSoon =>
+      'Importação por chave pública ainda não disponível';
 
   @override
-  String get walletSetupMultisig => 'Multisig';
+  String get walletSetupMultisig => 'Várias assinaturas — Multisig';
 
   @override
-  String get walletSetupSoon => 'Em breve';
+  String get walletSetupSoon => 'Ainda não disponível no aplicativo';
 
   @override
   String get walletSetupRegistering => 'Registrando';
@@ -8797,7 +8915,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get walletSetupImportFail => 'Falha ao importar';
 
   @override
-  String get walletSetupNameExample => 'Ex.: Cold principal';
+  String get walletSetupNameExample => 'Ex.: Minha reserva';
 
   @override
   String get walletSetupContinue => 'Continuar';
@@ -9025,11 +9143,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get statementExportLongAddressesNote =>
-      'Endereços longos são encurtados. CSV é melhor para reconciliar.';
+      'Identificadores completos. O PDF inclui valores exatos em BTC e sats; o CSV preserva os números em sats.';
 
   @override
   String get statementExportShareLimit =>
-      'Até 200 linhas · legível para compartilhar';
+      'Todos os movimentos selecionados que estão carregados no aparelho';
 
   @override
   String get statementEmptyOnDevice => 'O extrato está vazio neste aparelho.';
@@ -9070,7 +9188,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get statementExportPdfFailed => 'Não foi possível compartilhar o PDF.';
+  String get statementExportPdfFailed =>
+      'O PDF foi gerado, mas o sistema não confirmou o compartilhamento.';
 
   @override
   String get movementHubReceiveInternal =>
@@ -9089,7 +9208,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get btcAccountsReceiveAddressLabel => 'Endereço de recebimento';
 
   @override
-  String get seedPassphrase25th => 'Passphrase / 25ª palavra (não são as 12)';
+  String get seedPassphrase25th =>
+      'Senha adicional (passphrase), se seu backup usar uma';
 
   @override
   String get coldSendAuthIncompleteTitle => 'Autorização incompleta';
@@ -9107,7 +9227,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsRecoveryEmergencyBody =>
-      'Rotaciona senha, TOTP e passkey com códigos offline. Encerra a sessão atual.';
+      'Use seus códigos de recuperação para substituir senha, autenticador e chave de acesso. Depois, entre novamente.';
 
   @override
   String get securityTotpValidating => 'Validando segurança da conta';
@@ -9208,10 +9328,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeInternalCustody => 'Interno + custódia · frio não incluso';
 
   @override
-  String get homeOnchainTab => 'Onchain';
+  String get homeOnchainTab => 'Conta on-chain';
 
   @override
-  String get homeColdTab => 'Frio';
+  String get homeColdTab => 'Conta de visualização';
 
   @override
   String get homeOnchainWalletCardTitle => 'Carteira Onchain';
@@ -9223,10 +9343,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get activityFilterInstant => 'Instantâneo';
 
   @override
-  String get activityFilterOnchain => 'On-chain';
+  String get activityFilterOnchain => 'Bitcoin — rede';
 
   @override
-  String get activityFilterLightning => 'Lightning';
+  String get activityFilterLightning => 'Bitcoin — Lightning';
 
   @override
   String get activityFilterCold => 'Cold';
@@ -9313,7 +9433,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get txDetailCancelBody =>
-      'Invoice ou envio pendente será encerrado. O item permanece no extrato como cancelado até você abrir os detalhes (depois vai para Arquivadas).';
+      'O servidor verificará se esta operação ainda pode ser cancelada. Isso não estorna Bitcoin já enviado. O movimento permanece no extrato até você escolher arquivá-lo.';
 
   @override
   String get txDetailCancelConfirm => 'Sim, cancelar';
@@ -9322,7 +9442,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get txDetailCancelSuccess => 'Movimentação cancelada';
 
   @override
-  String get txDetailCancelError => 'Não foi possível cancelar';
+  String get txDetailCancelError =>
+      'Não conseguimos confirmar o cancelamento. Atualize o extrato para conferir o estado atual.';
 
   @override
   String get activityArchiveNow => 'Arquivar agora';
@@ -9355,7 +9476,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get txListSwap => 'Swap';
 
   @override
-  String get txListInstant => 'Instantâneo';
+  String get txListInstant => 'Entre contas Kerosene';
 
   @override
   String get txListId => 'ID';
@@ -9720,7 +9841,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sendAction => 'Enviar';
 
   @override
-  String get walletSetupNewVault => 'Novo cofre';
+  String get walletSetupNewVault => 'Criar ou importar carteira';
 
   @override
   String get financialHubAddWallet => 'Adicionar outra carteira';
@@ -9799,4 +9920,1233 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get transactionAuthEncryptedTitle =>
       'Conexão criptografada ponto a ponto';
+
+  @override
+  String get activityFilterInternal => 'Entre contas Kerosene';
+
+  @override
+  String get walletRegisteredTitle => 'Carteira registrada';
+
+  @override
+  String get walletRegisteredBody =>
+      'A carteira aparece na sua lista. Confira o saldo e a disponibilidade antes de enviar ou receber.';
+
+  @override
+  String get settingsPreferenceSaveFailed =>
+      'Não foi possível salvar a alteração. A preferência anterior foi mantida.';
+
+  @override
+  String get coldWalletReadyTitle => 'Carteira no aparelho registrada';
+
+  @override
+  String get coldWalletObserveTitle => 'Carteira somente para consulta';
+
+  @override
+  String get coldWalletSeedStoredBody =>
+      'As chaves ficam neste aparelho. Guarde sua frase de recuperação para restaurar a carteira.';
+
+  @override
+  String get coldWalletSeedMissingBody =>
+      'A frase de recuperação não foi salva neste aparelho. Você pode consultar o saldo, mas precisa restaurar as chaves antes de enviar.';
+
+  @override
+  String get coldWalletObserveAction => 'Concluir — somente consulta';
+
+  @override
+  String get gatewayLinksSubtitle =>
+      'Escolha um link de compra disponível. O pagamento acontece no provedor externo.';
+
+  @override
+  String get gatewayLoadFailed =>
+      'Não foi possível carregar os provedores. Tente novamente ou escolha outro método de recebimento.';
+
+  @override
+  String get gatewayEmpty =>
+      'Nenhum provedor de compra está configurado neste ambiente.';
+
+  @override
+  String get receiptViewOperation => 'Acompanhar operação';
+
+  @override
+  String get receiptExpectedTotal => 'Total previsto';
+
+  @override
+  String get receiptFailedSubtitle =>
+      'Esta operação falhou. Confira os detalhes antes de enviar novamente.';
+
+  @override
+  String get receiptCancelledSubtitle =>
+      'Esta operação foi cancelada. Confira os detalhes para verificar o saldo final.';
+
+  @override
+  String get receiptReconcilingSubtitle =>
+      'O resultado final está em análise. Valores ainda podem estar reservados; não envie novamente.';
+
+  @override
+  String get recoverySubmissionTitle => 'Envios em acompanhamento';
+
+  @override
+  String get recoverySubmissionPending =>
+      'O resultado ainda está em verificação. Confira antes de enviar novamente.';
+
+  @override
+  String get recoverySubmissionUnavailable =>
+      'Não foi possível consultar o envio agora. Sua identificação foi preservada.';
+
+  @override
+  String get recoverySubmissionStorage =>
+      'Não foi possível ler os envios em acompanhamento. Tente novamente.';
+
+  @override
+  String get recoverySubmissionVerify => 'Verificar resultado';
+
+  @override
+  String get recoverySubmissionSaveBlocked =>
+      'Não foi possível guardar a identificação do envio. Esta tentativa não foi enviada.';
+
+  @override
+  String get recoverySubmissionAccountChanged =>
+      'Sua conta mudou. Reabra o envio na conta correta.';
+
+  @override
+  String get recoverySubmissionEmpty =>
+      'Não há envios em acompanhamento aqui. Confira seus movimentos na atividade.';
+
+  @override
+  String get recoverySubmissionExisting =>
+      'Há um envio igual aguardando sua conferência. Acompanhe o resultado antes de iniciar outro.';
+
+  @override
+  String walletSetupNetwork(String network) {
+    return 'Rede: $network';
+  }
+
+  @override
+  String get walletImportRetryBody =>
+      'Não foi possível concluir o registro. A frase validada foi mantida apenas nesta tela para você tentar novamente.';
+
+  @override
+  String get walletImportResume => 'Retomar importação';
+
+  @override
+  String get walletImportedDefaultName => 'Carteira importada';
+
+  @override
+  String get seedWordByWord => 'Palavra a palavra';
+
+  @override
+  String get seedPastePhrase => 'Colar frase';
+
+  @override
+  String get seedPasteTitle => 'Frase de recuperação';
+
+  @override
+  String get seedReadyTitle => 'Frase validada';
+
+  @override
+  String seedWordCount(int count) {
+    return '$count palavras';
+  }
+
+  @override
+  String seedWordProgress(int index, int total) {
+    return 'Palavra $index de $total';
+  }
+
+  @override
+  String get seedPasteBody =>
+      'Cole as palavras do seu backup BIP39 ou Electrum, na ordem original. A senha adicional é informada separadamente.';
+
+  @override
+  String get seedEntryBody =>
+      'Digite as palavras do backup em inglês e na ordem original. Depois você poderá informar uma senha adicional.';
+
+  @override
+  String get seedWordNotInList =>
+      'Há uma palavra fora da lista BIP39 em inglês. Confira o backup.';
+
+  @override
+  String get seedChooseValidWord => 'Escolha uma palavra válida da lista.';
+
+  @override
+  String get seedInvalidWord => 'Palavra inválida';
+
+  @override
+  String get seedNoWords => 'Informe as palavras da frase de recuperação.';
+
+  @override
+  String get seedChooseSuggestion =>
+      'Digite a palavra completa ou selecione uma sugestão.';
+
+  @override
+  String get seedPhraseValidated =>
+      'Frase BIP39 validada. Continue para importar a carteira.';
+
+  @override
+  String get seedLiteralImportNotice =>
+      'A frase não passou na verificação BIP39. Você escolheu importar o conteúdo literal, sem corrigir as palavras.';
+
+  @override
+  String get seedHideExtraPassword => 'Ocultar senha adicional';
+
+  @override
+  String get seedAddExtraPassword => 'Adicionar senha adicional (passphrase)';
+
+  @override
+  String get seedHiddenTitle => 'Frase oculta';
+
+  @override
+  String get seedHiddenBody =>
+      'As palavras foram ocultadas quando o aplicativo saiu do primeiro plano.';
+
+  @override
+  String get seedRevealWords => 'Mostrar palavras';
+
+  @override
+  String get seedConcealWords => 'Ocultar palavras';
+
+  @override
+  String get seedElectrumDetected =>
+      'Frase Electrum reconhecida. Continue para importar a carteira.';
+
+  @override
+  String get seedInvalidCount =>
+      'Use 12, 15, 18, 21 ou 24 palavras para uma frase BIP39.';
+
+  @override
+  String get seedChecksumMismatch =>
+      'A frase não passou na verificação BIP39. Confira as palavras e a ordem no seu backup.';
+
+  @override
+  String get seedSuggestionTitle => 'Conferir sugestão';
+
+  @override
+  String get seedSuggestionWarning =>
+      'Uma frase válida não prova que ela corresponde à sua carteira. Alterar uma palavra pode criar outra carteira. Confira o backup antes de usar a sugestão.';
+
+  @override
+  String seedReviewSuggestion(String word) {
+    return 'Conferir sugestão: $word';
+  }
+
+  @override
+  String seedUseSuggestion(String word) {
+    return 'Usar $word';
+  }
+
+  @override
+  String get walletSelectedUnavailable =>
+      'Não foi possível carregar a carteira escolhida. Atualize os dados antes de continuar.';
+
+  @override
+  String get receiveRequestCancelled => 'Cobrança cancelada';
+
+  @override
+  String get receiveRequestFailed => 'Cobrança não concluída';
+
+  @override
+  String get receiveRequestExpired => 'Prazo da cobrança encerrado';
+
+  @override
+  String get receiveClosedBody =>
+      'Esta cobrança não está disponível para novos pagamentos. Confira o resultado no servidor; valores identificados ainda podem estar em processamento.';
+
+  @override
+  String get receiveObservedAmount => 'Valor identificado pelo servidor';
+
+  @override
+  String get receivePartialBody =>
+      'Este valor identificado não comprova a conclusão da cobrança nem o crédito final na carteira.';
+
+  @override
+  String get receiveCheckStatus => 'Verificar resultado';
+
+  @override
+  String get receiveStatusUnavailable =>
+      'Não foi possível atualizar o acompanhamento agora. O último estado foi mantido.';
+
+  @override
+  String get receiveCreditValidating =>
+      'Confirmações atingidas; validando crédito';
+
+  @override
+  String get receiveExpiredTracking =>
+      'O prazo da cobrança terminou. O pagamento identificado continua em acompanhamento.';
+
+  @override
+  String get walletPublicImportTitle => 'Importar chave pública';
+
+  @override
+  String get walletPublicImportHint =>
+      'Receber e consultar com a chave pública da conta';
+
+  @override
+  String get walletPublicImportBody =>
+      'Importe a chave pública de uma conta SegWit nativa (BIP84) para receber e acompanhar suas movimentações. Confira os dados exportados pela carteira de origem.';
+
+  @override
+  String get walletPublicName => 'Nome da carteira';
+
+  @override
+  String get walletPublicKey => 'Chave pública da conta';
+
+  @override
+  String get walletPublicKeyHint =>
+      'Use xpub/zpub na Mainnet ou tpub/vpub na Testnet. Use somente material público.';
+
+  @override
+  String get walletPublicFingerprint => 'Identificador de origem (fingerprint)';
+
+  @override
+  String get walletPublicOriginHint =>
+      'Copie os 8 caracteres do identificador mestre informado pela carteira de origem.';
+
+  @override
+  String get walletPublicPath => 'Origem da conta (caminho)';
+
+  @override
+  String get walletPublicPathHint =>
+      'Confira rede e número da conta. O caminho precisa corresponder à chave exportada.';
+
+  @override
+  String get walletPublicRequired => 'Preencha este campo.';
+
+  @override
+  String get walletPublicInvalidKey =>
+      'Chave pública inválida ou formato não compatível com SegWit nativo. Confira a exportação.';
+
+  @override
+  String get walletPublicPrivateKey =>
+      'Foi inserida uma chave privada. Use apenas a chave pública da conta.';
+
+  @override
+  String get walletPublicWrongNetwork =>
+      'A rede da chave ou do caminho difere da rede deste aplicativo.';
+
+  @override
+  String get walletPublicInvalidFingerprint =>
+      'O identificador de origem precisa ter 8 caracteres hexadecimais (0–9, a–f).';
+
+  @override
+  String get walletPublicInvalidPath =>
+      'Use o caminho da conta BIP84, no formato m/84\'/rede\'/conta\'.';
+
+  @override
+  String get walletPublicAccountMismatch =>
+      'A profundidade ou o número da conta na chave não corresponde ao caminho. Confira a chave da conta e sua origem.';
+
+  @override
+  String get walletPublicRegister => 'Importar para consulta';
+
+  @override
+  String get walletPublicResultUnknown =>
+      'Não foi possível confirmar o resultado do registro. Ele pode ter sido concluído. Confira suas carteiras antes de iniciar outra importação.';
+
+  @override
+  String get walletPublicCheckWallets => 'Ver minhas carteiras';
+
+  @override
+  String get walletPublicOnlyBody =>
+      'Esta carteira foi importada somente com dados públicos. Você pode receber e acompanhar saldo e movimentações. Para enviar, use a carteira que guarda as chaves.';
+
+  @override
+  String get settingsWalletsSyncFailed =>
+      'Não foi possível atualizar as carteiras. Os últimos dados conhecidos foram mantidos.';
+
+  @override
+  String get walletStateActive => 'Ativa';
+
+  @override
+  String get walletStateArchived => 'Arquivada';
+
+  @override
+  String get walletStateCreating => 'Em criação';
+
+  @override
+  String get walletStateRotating => 'Atualizando endereço';
+
+  @override
+  String get walletStateFailed => 'Criação não concluída';
+
+  @override
+  String get walletStateQuorum => 'Aguardando disponibilidade para operar';
+
+  @override
+  String get walletStateFrozen => 'Movimentações bloqueadas';
+
+  @override
+  String get walletStateUnknown => 'Estado não informado';
+
+  @override
+  String get walletArchiveAction => 'Arquivar';
+
+  @override
+  String get walletArchiveReview =>
+      'Confira a carteira e o efeito desta ação antes de confirmar.';
+
+  @override
+  String get walletArchiveMessage =>
+      'Esta carteira sairá das operações ativas. O arquivamento não transfere valores. Confira a carteira escolhida antes de confirmar.';
+
+  @override
+  String get walletArchiveWatchMessage =>
+      'Esta carteira sairá do acompanhamento ativo. Os fundos continuam na carteira de origem.';
+
+  @override
+  String get walletArchiveHasFunds =>
+      'Há saldo ou movimentações pendentes nesta carteira. Movimente o saldo e conclua as operações antes de arquivar.';
+
+  @override
+  String get walletSessionChanged =>
+      'A sessão mudou. Abra novamente a gestão de carteiras.';
+
+  @override
+  String get walletManageIdentifier => 'Identificador da carteira';
+
+  @override
+  String get walletManageCardIdentifier => 'Identificador do cartão';
+
+  @override
+  String get walletManageExternalIdentifier =>
+      'Identificador da carteira externa';
+
+  @override
+  String get runtimeBgTitle => 'Estado neste aparelho';
+
+  @override
+  String get runtimeBgDisabled => 'Alertas em segundo plano desativados.';
+
+  @override
+  String get runtimeBgSignedOut => 'Entre na conta para iniciar os alertas.';
+
+  @override
+  String get runtimeBgUnsupported =>
+      'O monitoramento em segundo plano está disponível no Android e no iOS.';
+
+  @override
+  String get runtimeBgWaiting => 'Abra o aplicativo para concluir a ativação.';
+
+  @override
+  String get runtimeBgStarting => 'Iniciando o serviço de alertas…';
+
+  @override
+  String get runtimeBgRunning => 'Serviço de alertas iniciado neste aparelho.';
+
+  @override
+  String get runtimeBgPermission =>
+      'Permita notificações nas configurações do sistema para receber alertas.';
+
+  @override
+  String get runtimeBgStartFailed =>
+      'Não foi possível iniciar o serviço de alertas. Tente novamente.';
+
+  @override
+  String get runtimeBgStopFailed =>
+      'O aparelho não confirmou a interrupção dos alertas. Tente novamente.';
+
+  @override
+  String get runtimeBgSessionStopFailed =>
+      'Não foi possível encerrar os alertas da sessão anterior. Tente novamente antes de trocar de conta.';
+
+  @override
+  String get runtimeBgPreferenceOn =>
+      'Preferência ativada. Confira o estado do serviço abaixo.';
+
+  @override
+  String get errReserveCoverageInsufficient =>
+      'O servidor recusou esta tentativa porque a cobertura de reservas exigida não foi atendida. A Kerosene precisa reconciliar as reservas antes de liberar o envio.';
+
+  @override
+  String get errReserveVerificationUnavailable =>
+      'O servidor recusou esta tentativa porque não conseguiu validar as reservas necessárias. Aguarde a normalização do serviço.';
+
+  @override
+  String get errSettlementGateRejected =>
+      'O servidor recusou esta tentativa nas verificações de segurança financeira. Confira os dados e o acompanhamento do envio.';
+
+  @override
+  String get emergencyRecoverySessionClosedTitle => 'Esta sessão terminou';
+
+  @override
+  String get emergencyRecoverySessionClosedBody =>
+      'Inicie uma nova sessão de recuperação. O QR anterior não pode ser usado para concluir este processo.';
+
+  @override
+  String get emergencyRecoveryRestartAction => 'Reiniciar recuperação';
+
+  @override
+  String get emergencyRecoveryUnknownTitle => 'Resultado ainda não confirmado';
+
+  @override
+  String get emergencyRecoveryUnknownBody =>
+      'A confirmação foi enviada, mas não foi possível obter um resultado válido. O acesso pode ter sido atualizado. Confira se consegue entrar antes de iniciar outra recuperação; os novos códigos não foram recebidos.';
+
+  @override
+  String get emergencyRecoveryCodesSaved =>
+      'Guardei os novos códigos de recuperação em um local seguro.';
+
+  @override
+  String get emergencyRecoveryReveal => 'Mostrar dados da recuperação';
+
+  @override
+  String get emergencyRecoveryCopyAuthenticator =>
+      'Copiar configuração do autenticador';
+
+  @override
+  String get emergencyRecoveryAccountChanged =>
+      'A sessão da conta mudou. Inicie novamente a recuperação.';
+
+  @override
+  String get emergencyRecoveryInvalidResponse =>
+      'O servidor não retornou uma sessão de recuperação válida. Inicie novamente.';
+
+  @override
+  String get emergencyRecoveryRejected =>
+      'O servidor recusou a recuperação. Confira os dados e inicie uma nova sessão.';
+
+  @override
+  String get emergencyRecoveryRateLimited =>
+      'Aguarde antes de iniciar outra recuperação.';
+
+  @override
+  String get emergencyRecoveryInvalidRequest =>
+      'Confira os dados informados para a recuperação.';
+
+  @override
+  String get emergencyRecoveryConfirmingTitle => 'Confirmando a recuperação';
+
+  @override
+  String get emergencyRecoveryConfirmingBody =>
+      'Conclua a autorização neste aparelho e aguarde a resposta do servidor.';
+
+  @override
+  String get emergencyRecoveryAuthenticatorCopyFailed =>
+      'Não foi possível copiar a configuração do autenticador. Tente novamente.';
+
+  @override
+  String get emergencyRecoveryDeviceActivationTitle =>
+      'Confira a chave deste aparelho';
+
+  @override
+  String get emergencyRecoveryDeviceActivationFailed =>
+      'A recuperação foi concluída, mas não foi possível ativar a chave neste aparelho. Guarde os novos códigos e entre com a nova senha e o novo autenticador para revisar os dispositivos.';
+
+  @override
+  String get emergencyRecoveryDeviceKeyUnsupported =>
+      'Esta forma de recuperação ainda não está disponível no servidor. Nenhuma confirmação foi enviada.';
+
+  @override
+  String get emergencyRecoveryDeviceKeyPreparationFailed =>
+      'Não foi possível preparar a confirmação. Confira o autenticador e a sessão antes de tentar novamente.';
+
+  @override
+  String get emergencyRecoverySessionExitFailed =>
+      'Não foi possível encerrar a sessão anterior. Seus códigos continuam nesta tela. Tente novamente antes de entrar.';
+
+  @override
+  String get gatewaySelectedWallet => 'Carteira selecionada (referência)';
+
+  @override
+  String get gatewayWalletReference => 'Identificador da carteira';
+
+  @override
+  String get gatewayProvider => 'Provedor';
+
+  @override
+  String get gatewayDomain => 'Domínio de destino';
+
+  @override
+  String get gatewayFullLink => 'Link completo';
+
+  @override
+  String get gatewayCheckoutTitle => 'Confira o checkout';
+
+  @override
+  String get gatewayCheckoutTerms =>
+      'Confira o valor em moeda local, a quantidade de Bitcoin, as taxas e os meios de pagamento no checkout do provedor antes de pagar.';
+
+  @override
+  String get gatewayDestinationUnconfirmed =>
+      'Este link não confirma a carteira de destino, a reserva de Bitcoin ou a entrega. Confira o destino no provedor. Voltar à Kerosene não confirma o pagamento.';
+
+  @override
+  String gatewayExternalPending(String provider) {
+    return 'O link de $provider foi aberto. A abertura não confirma o pagamento ou o recebimento de Bitcoin. Consulte o extrato para acompanhar os recebimentos confirmados.';
+  }
+
+  @override
+  String gatewayUpdatedAt(String time) {
+    return 'Links consultados em $time';
+  }
+
+  @override
+  String get gatewayLoading => 'Atualizando links de compra…';
+
+  @override
+  String get gatewayStale =>
+      'Não conseguimos atualizar os links. Mostramos a última consulta; atualize antes de abrir um checkout.';
+
+  @override
+  String get gatewayRefresh => 'Atualizar links';
+
+  @override
+  String get gatewayInvalidLink =>
+      'Link inválido ou sem conexão HTTPS. Indisponível para abertura.';
+
+  @override
+  String get gatewayOpen => 'Abrir provedor';
+
+  @override
+  String get gatewayCopy => 'Copiar link';
+
+  @override
+  String get gatewayOpenFailed =>
+      'Não conseguimos abrir o provedor. Tente novamente ou copie o link para abrir no navegador.';
+
+  @override
+  String get gatewayCheckoutLinkCopied => 'Link de checkout copiado.';
+
+  @override
+  String get statementExportDocumentTitle => 'Extrato';
+
+  @override
+  String statementPdfGeneratedAt(String time) {
+    return 'Gerado em $time (UTC)';
+  }
+
+  @override
+  String statementPdfSummary(int count) {
+    return '$count movimentos selecionados';
+  }
+
+  @override
+  String statementPdfPage(int page, int total) {
+    return 'Página $page de $total';
+  }
+
+  @override
+  String get statementPdfLoadedHistoryNote =>
+      'Este extrato reúne os movimentos carregados e selecionados no aplicativo. O histórico pode ser parcial. Os estados refletem a consulta disponível e não confirmam movimentos pendentes. Cada movimento apresenta valores exatos em BTC e sats. Valores em moeda local aparecem somente quando registrados na operação.';
+
+  @override
+  String get statementPdfAmountSats => 'Valor exato (sats)';
+
+  @override
+  String get statementPdfCounterparty => 'Contraparte';
+
+  @override
+  String get statementPdfFailureCode => 'Código da falha';
+
+  @override
+  String get statementExportDismissedTitle => 'Compartilhamento fechado';
+
+  @override
+  String statementExportDismissedMessage(String format) {
+    return 'O arquivo $format foi gerado. Nenhum compartilhamento foi confirmado.';
+  }
+
+  @override
+  String get statementIncludeLoaded => 'Incluir todos os movimentos carregados';
+
+  @override
+  String get statementLoadedActivity => 'Histórico carregado no aparelho';
+
+  @override
+  String get movementOperationTotal => 'Total da operação';
+
+  @override
+  String get activityArchiveTitle => 'Arquivar este movimento?';
+
+  @override
+  String get activityArchiveEffect =>
+      'O movimento será movido para Arquivadas neste aparelho. Isso organiza a visualização e não altera saldo, pagamento ou histórico do servidor.';
+
+  @override
+  String get activityArchiveConfirm => 'Arquivar';
+
+  @override
+  String get activityArchiveFailed =>
+      'Não conseguimos confirmar o arquivamento. O movimento permanece visível; tente novamente.';
+
+  @override
+  String get activityActionSessionRequired =>
+      'Entre novamente na sua conta para alterar este movimento.';
+
+  @override
+  String get activityActionChanged =>
+      'O estado mudou enquanto você conferia os dados. Revise o movimento antes de continuar.';
+
+  @override
+  String get activityArchiveLoading =>
+      'Carregando a organização local do histórico…';
+
+  @override
+  String get activityArchiveUnavailable =>
+      'Não conseguimos atualizar as informações de arquivamento. A visualização pode estar desatualizada.';
+
+  @override
+  String activityArchiveCheckedAt(String time) {
+    return 'Última consulta local: $time';
+  }
+
+  @override
+  String get settingsConfirmationAccount => 'Conta';
+
+  @override
+  String get settingsPrivacyLoadFailed =>
+      'Não foi possível consultar a preferência. Toque para tentar novamente.';
+
+  @override
+  String get settingsPrivacyCaptureEnabled =>
+      'Proteção de capturas ativada para as telas financeiras no Android.';
+
+  @override
+  String get settingsPrivacyCaptureDisabled =>
+      'Proteção de capturas desativada neste aplicativo.';
+
+  @override
+  String get settingsSecurityWipeFailMessage =>
+      'Não conseguimos confirmar a remoção. Confira o extrato e tente novamente.';
+
+  @override
+  String get settingsSecurityViewStatement => 'Ver extrato';
+
+  @override
+  String get securityCredentialWorkingTitle => 'Vinculando este aparelho';
+
+  @override
+  String get securityCredentialWorkingBody =>
+      'Confirme a solicitação de acesso que aparecer neste aparelho. A conclusão depende da resposta do servidor.';
+
+  @override
+  String get securityCredentialDoneTitle => 'Chave de acesso vinculada';
+
+  @override
+  String get securityCredentialDoneBody =>
+      'Este aparelho foi vinculado à sua conta. Consulte os dispositivos autorizados para conferir os dados.';
+
+  @override
+  String get securityCredentialSessionTitle => 'A sessão mudou';
+
+  @override
+  String get securityCredentialSessionBody =>
+      'Esta vinculação não pode continuar nesta sessão. Consulte os dispositivos da conta atual antes de iniciar outra tentativa.';
+
+  @override
+  String get securityCredentialCancelledTitle =>
+      'Troca de conta não confirmada';
+
+  @override
+  String get securityCredentialCancelledBody =>
+      'Você não confirmou a transferência deste aparelho para esta conta. A confirmação de vinculação não foi concluída.';
+
+  @override
+  String get securityCredentialUnconfirmedTitle => 'Vinculação não confirmada';
+
+  @override
+  String get securityCredentialUnconfirmedBody =>
+      'Não conseguimos confirmar a vinculação. Consulte os dispositivos autorizados antes de tentar novamente.';
+
+  @override
+  String get securityCredentialBusyBody =>
+      'Há uma vinculação em andamento neste aparelho. Aguarde a conclusão antes de iniciar outra tentativa.';
+
+  @override
+  String get securityCredentialViewDevices => 'Ver dispositivos';
+
+  @override
+  String get securityProfileUpdating =>
+      'Atualizando os dados de segurança. Os últimos dados conhecidos continuam visíveis.';
+
+  @override
+  String get securityProfileStale =>
+      'Não foi possível atualizar os dados de segurança. Atualize para continuar.';
+
+  @override
+  String securityProfileCheckedAt(String time) {
+    return 'Última consulta: $time';
+  }
+
+  @override
+  String get securityCredentialSystemSetup =>
+      'Configure a biometria ou o bloqueio de tela deste aparelho antes de tentar novamente.';
+
+  @override
+  String get securityCredentialPinSetup =>
+      'Defina um PIN do aplicativo nas configurações de segurança antes de tentar novamente.';
+
+  @override
+  String get securityCredentialDoneAction => 'Concluir';
+
+  @override
+  String securityPinLengthError(int min, int max) {
+    return 'Use de $min a $max dígitos no novo PIN.';
+  }
+
+  @override
+  String get securityPinAuthorizationMissing =>
+      'Informe o PIN atual ou um código válido do autenticador, quando essa opção estiver disponível.';
+
+  @override
+  String get securityPinEnabledResult => 'PIN configurado';
+
+  @override
+  String get securityPinChangedResult => 'PIN atualizado';
+
+  @override
+  String get securityPinDisabledResult => 'Preferência de PIN desativada';
+
+  @override
+  String get securityPinSavedResultBody =>
+      'A configuração de PIN deste aparelho foi confirmada. Use o PIN atualizado nas próximas solicitações de acesso.';
+
+  @override
+  String get securityPinDisabledResultBody =>
+      'A preferência de PIN foi desativada neste aparelho. As exigências de acesso à conta continuam sendo aplicadas.';
+
+  @override
+  String securityResultCodesReady(int count) {
+    return '$count códigos recebidos. Abra a lista e guarde-os em um lugar seguro.';
+  }
+
+  @override
+  String get securityResultCodesChangedBody =>
+      'Os novos códigos foram gerados. Os anteriores deixam de valer; guarde a nova lista antes de concluir.';
+
+  @override
+  String get securityTotpActiveStatusTitle => 'Autenticador ativo';
+
+  @override
+  String get securityTotpInactiveStatusTitle => 'Autenticador desativado';
+
+  @override
+  String get securityTotpSetupStatusTitle => 'Configuração em andamento';
+
+  @override
+  String get securityTotpActiveStatusBody =>
+      'Use os códigos temporários do seu autenticador quando forem solicitados.';
+
+  @override
+  String get securityTotpInactiveStatusBody =>
+      'Adicione a conta ao seu autenticador e valide um código de 6 dígitos para concluir.';
+
+  @override
+  String get securityAuthenticatorTitle => 'Autenticador';
+
+  @override
+  String get securityTotpPreparingMessage => 'Preparando o autenticador…';
+
+  @override
+  String get securityChangeProcessingMessage => 'Confirmando a alteração…';
+
+  @override
+  String get recoveryNavigationFailed =>
+      'Não conseguimos abrir a recuperação. Tente novamente.';
+
+  @override
+  String get recoveryModeStandard => 'Padrão';
+
+  @override
+  String get recoveryModePasskey => 'Chave de acesso — Passkey';
+
+  @override
+  String get recoveryModeShamir => 'Recuperação compartilhada — Shamir';
+
+  @override
+  String get recoveryModeMultisig => 'Assinaturas múltiplas — Multisig 2FA';
+
+  @override
+  String get recoveryManageCodesBody =>
+      'Consulte seus códigos e gere uma nova lista quando precisar.';
+
+  @override
+  String get recoveryPassphraseTitle => 'Frase de acesso';
+
+  @override
+  String get recoverySharesBody =>
+      'A recuperação desta conta usa partes de recuperação SLIP39.';
+
+  @override
+  String get recoveryPassphraseBody =>
+      'Esta conta exige a frase de acesso nas ações sensíveis.';
+
+  @override
+  String get recoverySharesTitle => 'Partes de recuperação — SLIP39';
+
+  @override
+  String get recoveryStatusLookupFailure =>
+      'Não conseguimos consultar o estado da conta. Você pode abrir as opções de recuperação.';
+
+  @override
+  String get securityPinCheckStatusAction => 'Consultar estado do PIN';
+
+  @override
+  String get securityPinChangePinOnlyBody =>
+      'Informe o PIN atual e escolha o novo PIN deste aparelho.';
+
+  @override
+  String get securityPinLockedResetBody =>
+      'O PIN está bloqueado. Use um código do autenticador para definir o novo PIN.';
+
+  @override
+  String get transactionExplorerOpenFailed =>
+      'Não conseguimos abrir o explorador. Tente novamente. O hash continua disponível nos detalhes técnicos.';
+
+  @override
+  String get transactionExplorerInvalidHash =>
+      'Explorador indisponível: o identificador informado não é um hash Bitcoin válido.';
+
+  @override
+  String get transactionExplorerLocalNetwork =>
+      'Esta operação usa uma rede local, sem explorador público.';
+
+  @override
+  String get transactionExplorerUnknownNetwork =>
+      'Explorador indisponível: os dados desta operação não identificam a rede Bitcoin.';
+
+  @override
+  String get receiveReceiptShareTitle => 'Comprovante de recebimento';
+
+  @override
+  String get receiveReceiptOperationId => 'Identificador da operação';
+
+  @override
+  String get receiveReceiptRequestId => 'Identificador do pedido';
+
+  @override
+  String get receiveShareCompleted => 'Compartilhamento concluído.';
+
+  @override
+  String get receiveShareUnconfirmed =>
+      'Não conseguimos confirmar o compartilhamento. Você pode copiar os dados.';
+
+  @override
+  String get receiveShareFailed =>
+      'Não foi possível compartilhar. Tente novamente ou copie os dados.';
+
+  @override
+  String get receiveReceiptDateUnavailable =>
+      'Data do recebimento não informada';
+
+  @override
+  String get receiveBackgroundHidden =>
+      'Os dados de recebimento estão ocultos enquanto o aplicativo está em segundo plano.';
+
+  @override
+  String get receiveNetworkUnknown => 'Rede não informada';
+
+  @override
+  String get receiveNetworkTestFamily => 'Rede de teste não identificada';
+
+  @override
+  String get receiveCancelUnconfirmed =>
+      'Ainda não conseguimos confirmar o cancelamento. Estamos consultando o estado do pedido.';
+
+  @override
+  String get receiveCancelBackAction => 'Voltar';
+
+  @override
+  String get receiveCancelNoLongerAvailable =>
+      'Este pedido não pode ser cancelado agora. Confira o estado atualizado na tela.';
+
+  @override
+  String get receiveReceiptRequestStatus => 'Estado do pedido';
+
+  @override
+  String get settingsNotifDisableConfirmTitle => 'Desativar neste aparelho?';
+
+  @override
+  String get settingsNotifDisableConfirmBody =>
+      'A Kerosene deixará de enviar notificações para este registro.';
+
+  @override
+  String get settingsNotifDeviceRecordId => 'ID do registro';
+
+  @override
+  String get settingsNotifDeviceReference => 'Referência do aparelho';
+
+  @override
+  String get settingsNotifDeviceTokenReference => 'Referência de notificações';
+
+  @override
+  String get settingsNotifDeviceAppVersion => 'Versão do aplicativo';
+
+  @override
+  String get settingsNotifDeviceLastSeen => 'Última atividade informada';
+
+  @override
+  String get settingsNotifDevicesUpdating =>
+      'Atualizando a lista. Os últimos registros conhecidos continuam visíveis.';
+
+  @override
+  String get settingsNotifDevicesStale =>
+      'Não foi possível atualizar a lista. Confira os registros antes de fazer uma alteração.';
+
+  @override
+  String get settingsNotifRevokeUnconfirmed =>
+      'Não conseguimos confirmar a alteração. Atualize a lista antes de tentar novamente.';
+
+  @override
+  String get settingsNotifRefreshDevices => 'Atualizar lista';
+
+  @override
+  String get settingsNotifDeviceDecisionChanged =>
+      'Confira a lista atualizada e confirme este aparelho novamente.';
+
+  @override
+  String get settingsNotifDisabling => 'Desativando…';
+
+  @override
+  String get notifDialogAmount => 'Valor';
+
+  @override
+  String get notifDialogBtcAmount => 'Valor (BTC)';
+
+  @override
+  String get notifDialogWallet => 'Carteira';
+
+  @override
+  String get notifDialogFrom => 'Origem';
+
+  @override
+  String get notifDialogTo => 'Destino';
+
+  @override
+  String get notifDialogPayer => 'Pagador';
+
+  @override
+  String get notifDialogLink => 'Link de pagamento';
+
+  @override
+  String get notifDialogDevice => 'Dispositivo';
+
+  @override
+  String get notifDialogLocation => 'Local';
+
+  @override
+  String get notifDialogIp => 'Endereço IP';
+
+  @override
+  String get notifDialogTime => 'Horário registrado';
+
+  @override
+  String get notifDialogPrice => 'Preço (USD)';
+
+  @override
+  String get notifDialogChange => 'Variação em 24h (%)';
+
+  @override
+  String get notifDialogThreshold => 'Limite do alerta (%)';
+
+  @override
+  String get notifDialogSource => 'Fonte';
+
+  @override
+  String get notifDialogMode => 'Tipo de carteira';
+
+  @override
+  String get notifDialogNetwork => 'Rede';
+
+  @override
+  String get notifDialogMaterial => 'Dados públicos';
+
+  @override
+  String get notifDialogReference => 'Referência';
+
+  @override
+  String get notifDialogOpenSecurity => 'Ver segurança';
+
+  @override
+  String get notifDialogOpenLink => 'Ver link';
+
+  @override
+  String get notifDialogOpenMarket => 'Ver mercado';
+
+  @override
+  String get notifDialogOpenWallet => 'Ver carteira';
+
+  @override
+  String get notifDialogSecurityNote =>
+      'Se não reconhecer esta atividade, revise seus acessos e proteja a conta.';
+
+  @override
+  String get notifDialogMarketNote =>
+      'Abra a tela de mercado para consultar a cotação atual.';
+
+  @override
+  String get notifDialogWalletNote =>
+      'Abra a carteira para consultar a atividade e as ações disponíveis.';
+
+  @override
+  String get notifDialogWatchedWallet => 'Carteira monitorada';
+
+  @override
+  String get notifDialogOpenFailedTitle => 'Não foi possível abrir';
+
+  @override
+  String get notifDialogOpenFailedMessage =>
+      'Tente abrir esta tela novamente pela central de notificações.';
+
+  @override
+  String get notifDateNotProvided => 'Data não informada';
+
+  @override
+  String get notifSyncUpdating => 'Atualizando notificações';
+
+  @override
+  String get notifSyncUnavailable => 'Atualização indisponível';
+
+  @override
+  String get notifSyncSavedData => 'Dados salvos neste aparelho.';
+
+  @override
+  String get notifSyncKeptData =>
+      'As notificações conhecidas continuam disponíveis.';
+
+  @override
+  String notifSyncLastQuery(String time) {
+    return 'Última consulta: $time.';
+  }
+
+  @override
+  String get notifSyncReading => 'Carregando os dados salvos';
+
+  @override
+  String get notifSyncNoQuery =>
+      'Consulte novamente para verificar os avisos da conta.';
+
+  @override
+  String get notifOperationDataIncomplete =>
+      'Consulte os detalhes para ver os dados desta operação.';
+
+  @override
+  String notifOperationAmountNotice(String amount, String currency) {
+    return 'Valor registrado: $amount $currency. Consulte os detalhes desta operação.';
+  }
+
+  @override
+  String get notifSyncRefreshAction => 'Atualizar notificações';
+
+  @override
+  String get notifUntitledNotice => 'Notificação';
+
+  @override
+  String get notifSignInToView =>
+      'Entre na sua conta para consultar as notificações.';
+
+  @override
+  String get appEntryForgotPin => 'Esqueci meu PIN';
+
+  @override
+  String get appEntryPinCreateSubtitle =>
+      'Escolha 4 dígitos para proteger o acesso ao app.';
+
+  @override
+  String get appEntryPinConfirmSubtitle =>
+      'Digite novamente o PIN que você acabou de criar.';
+
+  @override
+  String get appEntryPinUnlockSubtitle =>
+      'Use seu PIN para desbloquear este dispositivo.';
+
+  @override
+  String get firstAccessChoiceTitle => 'Escolha como começar';
+
+  @override
+  String get firstAccessChoiceBody =>
+      'Configure sua primeira conta ou explore o app antes. Você pode criar outras contas depois.';
+
+  @override
+  String get firstAccessAccountLabel => 'Nome da conta (opcional)';
+
+  @override
+  String get firstAccessOnchainBody =>
+      'Envie e receba Bitcoin em uma conta on-chain.';
+
+  @override
+  String get firstAccessWatchBody =>
+      'Acompanhe uma carteira usando apenas seus dados públicos.';
+
+  @override
+  String get firstAccessReadyTitle => 'Sua conta está pronta';
+
+  @override
+  String get firstAccessReadyBody =>
+      'Tudo configurado. Você pode acessar a Home e acompanhar sua conta.';
+
+  @override
+  String get firstAccessPreparing => 'Verificando sua conta…';
+
+  @override
+  String get firstAccessCheckStatus => 'Verificar disponibilidade';
+
+  @override
+  String get firstAccessExplore => 'Conhecer o app primeiro';
+
+  @override
+  String get firstAccessGoHome => 'Ir para a Home';
+
+  @override
+  String get firstAccessNotReady =>
+      'A conta ainda não está disponível. Verifique novamente ou explore o app.';
+
+  @override
+  String get firstAccessCreationUnknown =>
+      'Ainda não confirmamos a criação. Verifique novamente para evitar criar uma conta duplicada.';
+
+  @override
+  String get firstAccessSignIn => 'Entrar na conta';
+
+  @override
+  String get pinRecoveryTitle => 'Recupere seu acesso';
+
+  @override
+  String get pinRecoveryBody =>
+      'Confirme a senha da conta e sua passkey para definir um novo PIN de 4 dígitos.';
+
+  @override
+  String get pinRecoveryPassword => 'Senha da conta';
+
+  @override
+  String get pinRecoveryPasswordRequired => 'Digite a senha da conta.';
+
+  @override
+  String get pinRecoveryNewPin => 'Novo PIN de 4 dígitos';
+
+  @override
+  String get pinRecoveryConfirmPin => 'Confirme o novo PIN';
+
+  @override
+  String get pinRecoveryFourDigits => 'O PIN deve ter exatamente 4 dígitos.';
+
+  @override
+  String get pinRecoveryMismatch => 'Os PINs não coincidem.';
+
+  @override
+  String get pinRecoveryContinue => 'Confirmar com passkey';
+
+  @override
+  String get pinRecoveryConfirming => 'Confirme sua identidade no dispositivo…';
+
+  @override
+  String get pinRecoveryDone => 'PIN redefinido';
+
+  @override
+  String get pinRecoveryDoneBody => 'Use seu novo PIN para desbloquear o app.';
+
+  @override
+  String get pinRecoveryBack => 'Voltar para entrar';
+
+  @override
+  String get pinRecoveryInterrupted =>
+      'A recuperação foi interrompida. Tente seu novo PIN antes de repetir.';
+
+  @override
+  String get pinRecoveryUnknownHint =>
+      'Se a confirmação foi interrompida, tente entrar com o novo PIN. Se não funcionar, reinicie a recuperação.';
+
+  @override
+  String pinEntryDigitsFilled(int filled, int total) {
+    return '$filled de $total dígitos preenchidos';
+  }
 }

@@ -1,9 +1,11 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 
-/// Back affordance inline to the left of a Newsreader H1 — receive flow chrome.
+/// Back affordance beside the Home editorial title in receive and purchase flows.
 class ReceiveFlowTitleBar extends StatelessWidget {
   final VoidCallback? onBack;
   final String title;
@@ -26,7 +28,8 @@ class ReceiveFlowTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseH1 = AppTypography.h1.copyWith(
+    final baseH1 = HomeTypography.heroTitle(
+      fontSize: 32,
       color: Theme.of(context).colorScheme.onSurface,
     );
     final baseDescription = AppTypography.description.copyWith(
@@ -67,7 +70,7 @@ class ReceiveFlowTitleBar extends StatelessWidget {
                     tooltip:
                         MaterialLocalizations.of(context).backButtonTooltip,
                     onPressed: onBack,
-                    icon: Icon(KeroseneIcons.back, size: 22),
+                    icon: KeroseneIcon(KeroseneIcons.back, size: 22),
                     style: IconButton.styleFrom(
                       foregroundColor: Theme.of(context).colorScheme.onSurface,
                       minimumSize: const Size.square(48),

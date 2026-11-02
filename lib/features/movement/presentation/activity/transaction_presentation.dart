@@ -168,6 +168,7 @@ final class TransactionPresentation {
     required double? btcEur,
     required double? btcBrl,
     Locale? appLocale,
+    int btcDecimalPlaces = 8,
 
     /// When false, skips dossier / expand field lists (home row scan path).
     bool includeExpandPayload = true,
@@ -194,37 +195,25 @@ final class TransactionPresentation {
 
     final includeFeesInDebit =
         tx.isDebit && (tx.showsNetworkFee || tx.showsServiceFee);
-    final amount = MoneyDisplay.formatFrozenAmountFromBtc(
-      btcAmount: tx.signedDisplayAmountBTC,
-      currency: displayCurrency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      displayAmountUsd: includeFeesInDebit ? null : tx.displayAmountUsd,
-      displayAmountEur: includeFeesInDebit ? null : tx.displayAmountEur,
-      displayAmountBrl: includeFeesInDebit ? null : tx.displayAmountBrl,
-      displayBtcUsd: tx.displayBtcUsd,
-      displayBtcEur: tx.displayBtcEur,
-      displayBtcBrl: tx.displayBtcBrl,
-      signed: true,
-      appLocale: appLocale,
-    );
-
-    final principalLabel = MoneyDisplay.formatFrozenAmountFromBtc(
-      btcAmount: tx.signedAmountBTC,
-      currency: displayCurrency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      displayAmountUsd: tx.displayAmountUsd,
-      displayAmountEur: tx.displayAmountEur,
-      displayAmountBrl: tx.displayAmountBrl,
-      displayBtcUsd: tx.displayBtcUsd,
-      displayBtcEur: tx.displayBtcEur,
-      displayBtcBrl: tx.displayBtcBrl,
-      signed: true,
-      appLocale: appLocale,
-    );
+    final recordedFiat = switch (displayCurrency) {
+      Currency.usd => tx.displayAmountUsd,
+      Currency.eur => tx.displayAmountEur,
+      Currency.brl => tx.displayAmountBrl,
+      Currency.btc => null,
+    };
+    final amount = MoneyDisplay.formatOperationAmount(
+        satoshis:
+            tx.isDebit ? -tx.signedDisplaySatoshis : tx.signedDisplaySatoshis,
+        currency: displayCurrency,
+        recordedFiat: includeFeesInDebit ? null : recordedFiat,
+        signed: true,
+        appLocale: appLocale);
+    final principalLabel = MoneyDisplay.formatOperationAmount(
+        satoshis: tx.isDebit ? -tx.amountSatoshis : tx.amountSatoshis,
+        currency: displayCurrency,
+        recordedFiat: recordedFiat,
+        signed: true,
+        appLocale: appLocale);
 
     final from = resolveTransactionFromParty(
       tx,
@@ -360,7 +349,9 @@ final class TransactionPresentation {
       expanded.add(
         PresentationField(
           key: 'total',
-          label: copy.totalDebited,
+          label: tx.isConfirmed
+              ? copy.totalDebited
+              : context.tr.movementOperationTotal,
           value: amount,
         ),
       );
@@ -394,6 +385,91 @@ final class TransactionPresentation {
     }
 
     return expanded;
+  }
+
+  /// Complete identifiers for the persistent detail, each with its own meaning.
+  /// Compact card fields remain unchanged; internal and network ids are distinct.
+  List<PresentationField> detailTechnicalFields(
+    BuildContext context,
+    Transaction tx, {
+    Locale? appLocale,
+  }) {
+    final copy = TransactionPresentationCopy.of(context);
+    final fields = <PresentationField>[];
+    void add(String key, String label, String? raw,
+        {bool copyable = false, bool technical = false}) {
+      final value = raw?.trim() ?? '';
+      if (value.isEmpty) return;
+      fields.add(PresentationField(
+          key: key,
+          label: label,
+          value: value,
+          copyable: copyable,
+          technical: technical));
+    }
+
+    add('onchain-txid', copy.onchainTxid, tx.blockchainTxid,
+        copyable: true, technical: true);
+    add('payment-hash', copy.paymentHash, tx.paymentHash,
+        copyable: true, technical: true);
+    if ((tx.blockHeight ?? 0) > 0) {
+      add('block', copy.block, '#${tx.blockHeight}', technical: true);
+    }
+    if (tx.showsOnchainConfirmations) {
+      add('block-hash', copy.blockHash, tx.blockHash,
+          copyable: true, technical: true);
+    }
+    add('invoice-id', copy.invoiceId, tx.invoiceId, copyable: true);
+    add('lightning-invoice', copy.lightningInvoice, tx.lightningInvoice,
+        copyable: true, technical: true);
+    add('external-reference', copy.externalRef, tx.externalReference,
+        copyable: true);
+    add('external-transfer-id', copy.externalTransferId, tx.externalTransferId,
+        copyable: true);
+    add('external-status', copy.externalStatus, tx.externalTransferStatus);
+    add('external-type', copy.externalType, tx.externalTransferType);
+    add('wallet-id', copy.yourWallet, tx.walletId, copyable: true);
+    add('source-wallet-id', copy.sourceWallet, tx.sourceWalletId,
+        copyable: true);
+    add('destination-wallet-id', copy.destinationWallet, tx.destinationWalletId,
+        copyable: true);
+    bool alreadyShown(String key, String? raw) => expandedFields
+        .any((field) => field.key == key && field.value.trim() == raw?.trim());
+    if (!alreadyShown('from', tx.senderDisplayName)) {
+      add('sender-name', context.tr.sendReviewSender, tx.senderDisplayName);
+    }
+    if (!alreadyShown('to', tx.receiverDisplayName)) {
+      add('receiver-name', context.tr.sendReviewDestination,
+          tx.receiverDisplayName);
+    }
+    add('from-address', copy.fromAddress, tx.fromAddress,
+        copyable: true, technical: true);
+    add('to-address', copy.toAddress, tx.toAddress,
+        copyable: true, technical: true);
+    add('description', copy.description, tx.description);
+    add('internal-id', copy.internalId, tx.id, copyable: true, technical: true);
+
+    final principal = tx.isDebit ? -tx.amountSatoshis : tx.amountSatoshis;
+    for (final entry in [
+      (Currency.usd, tx.displayAmountUsd, copy.frozenUsd),
+      (Currency.brl, tx.displayAmountBrl, copy.frozenBrl),
+      (Currency.eur, tx.displayAmountEur, copy.frozenEur),
+    ]) {
+      final recorded = entry.$2;
+      if (recorded != null && recorded.isFinite) {
+        final value = recorded == 0
+            ? MoneyDisplay.format(
+                amount: recorded, currency: entry.$1, appLocale: appLocale)
+            : MoneyDisplay.formatOperationAmount(
+                satoshis: principal,
+                currency: entry.$1,
+                recordedFiat: recorded,
+                appLocale: appLocale);
+        add('recorded-${entry.$1.code.toLowerCase()}', entry.$3,
+            recorded < 0 ? '-$value' : value);
+      }
+    }
+    return fields;
   }
 
   static List<PresentationField> _buildTechnicalFields({
@@ -478,6 +554,10 @@ final class TransactionPresentation {
     add('status', copy.status, copy.lifecycleLabel(axes.lifecycle));
     add('network', copy.network, copy.railShort(axes.rail));
     add('amount', copy.amountLabel, principalLabel);
+    if (!principalLabel.contains('BTC')) {
+      add('exact-btc', copy.amountBtc,
+          formatSatsAsBtc(tx.isDebit ? -tx.amountSatoshis : tx.amountSatoshis));
+    }
 
     final isLink = axes.product == TxProduct.paymentLink;
     final isLightning = axes.rail == TxRail.lightning;
@@ -505,32 +585,26 @@ final class TransactionPresentation {
       }
     }
 
-    // Lightning: invoice / hash (short display, copy full).
+    // Lightning identifiers stay complete for both display and copying.
     if (isLightning || (isLink && tx.isLightningEffective)) {
       final invoice = (tx.lightningInvoice ?? '').trim();
       if (invoice.isNotEmpty) {
-        final short = invoice.length > 22
-            ? '${invoice.substring(0, 12)}…${invoice.substring(invoice.length - 8)}'
-            : invoice;
         fields.add(
           PresentationField(
             key: 'invoice',
             label: copy.lightningInvoice,
-            value: short,
+            value: invoice,
             copyable: true,
           ),
         );
       }
       final hash = (tx.paymentHash ?? '').trim();
-      if (hash.isNotEmpty && invoice.isEmpty) {
-        final short = hash.length > 18
-            ? '${hash.substring(0, 10)}…${hash.substring(hash.length - 6)}'
-            : hash;
+      if (hash.isNotEmpty) {
         fields.add(
           PresentationField(
             key: 'payment-hash',
             label: copy.paymentHash,
-            value: short,
+            value: hash,
             copyable: true,
           ),
         );
@@ -550,18 +624,19 @@ final class TransactionPresentation {
           formatSatsAsBtc(tx.serviceFeeSatoshis));
     }
     if (includeFeesInDebit) {
-      add('total', copy.totalDebited, totalLabel);
+      add(
+          'total',
+          tx.isConfirmed
+              ? copy.totalDebited
+              : context.tr.movementOperationTotal,
+          totalLabel);
     }
 
     // On-chain only: confirmations (+ progress bar metadata) and txid.
     if (tx.showsOnchainConfirmations) {
       final target = tx.onchainConfirmationTarget.clamp(1, 6);
       final conf = tx.confirmations.clamp(0, target);
-      final confLabel = '$conf/$target';
-      final open = conf < target;
-      final value = open
-          ? '$confLabel · ~${((target - conf) * 10).clamp(10, 120)} min'
-          : confLabel;
+      final value = '${tx.confirmations.clamp(0, 2147483647)}/$target';
       fields.add(
         PresentationField(
           key: 'confirmations',
@@ -574,26 +649,32 @@ final class TransactionPresentation {
 
       final txid = (tx.blockchainTxid ?? '').trim();
       if (txid.isNotEmpty) {
-        final short = txid.length > 18
-            ? '${txid.substring(0, 10)}…${txid.substring(txid.length - 6)}'
-            : txid;
         fields.add(
           PresentationField(
             key: 'txid',
             label: copy.onchainTxid,
-            value: short,
+            value: txid,
             copyable: true,
           ),
         );
       }
     }
 
-    // Cap list expand so home stays scannable.
-    const maxRows = 10;
-    if (fields.length > maxRows) {
-      return fields.sublist(0, maxRows);
-    }
     return fields;
+  }
+
+  /// Persistent detail keeps the operation name separate from its status.
+  String detailTitle(BuildContext context) {
+    final copy = TransactionPresentationCopy.of(context);
+    if (axes.product == TxProduct.fee) return copy.fee;
+    if (axes.product == TxProduct.swap) return copy.swap;
+    // Rail has its own visible label; do not repeat it in the heading.
+    final action = axes.direction == TxDirection.incoming
+        ? context.tr.typeReceive
+        : context.tr.typeSend;
+    return axes.product == TxProduct.paymentLink
+        ? '$action · ${copy.link}'
+        : action;
   }
 
   static String _title(
@@ -606,13 +687,13 @@ final class TransactionPresentation {
       return copy.unconfirmed;
     }
     if (axes.lifecycle == TxLifecycle.reconciling) return copy.needsReview;
-
     if (axes.product == TxProduct.fee) return copy.fee;
     if (axes.product == TxProduct.swap) return copy.swap;
 
     // Always Envio / Recebimento (never "Saque" / "Depósito" as list title).
-    final action =
-        axes.direction == TxDirection.incoming ? copy.received : copy.sent;
+    final action = axes.direction == TxDirection.incoming
+        ? copy.context.tr.typeReceive
+        : copy.context.tr.typeSend;
 
     if (axes.product == TxProduct.paymentLink) {
       return '$action · ${copy.link}';

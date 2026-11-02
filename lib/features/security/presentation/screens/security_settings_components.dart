@@ -1,8 +1,11 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
@@ -35,19 +38,21 @@ class SecurityBannerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mono = MonochromeColors.of(context);
     final borderTone =
-        Color.lerp(monoBorderStrongColor, color, 0.08) ?? monoBorderStrongColor;
+        Color.lerp(mono.borderStrong, color, 0.08) ?? mono.borderStrong;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: monochromePanelDecoration(
-        color: monoSurfaceAltColor,
+        context: context,
+        color: mono.surfaceAlt,
         borderColor: borderTone,
-      ),
+      ).copyWith(borderRadius: BorderRadius.circular(HomeRadius.card)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: monoTextColor),
+          KeroseneIcon(icon, color: mono.text),
           SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -56,7 +61,7 @@ class SecurityBannerCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: monoTextColor,
+                        color: mono.text,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -64,7 +69,7 @@ class SecurityBannerCard extends StatelessWidget {
                 Text(
                   body,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: monoMutedTextColor,
+                        color: mono.mutedText,
                         height: 1.45,
                       ),
                 ),
@@ -209,7 +214,7 @@ class PasskeyInventoryCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(KeroseneIcons.devices, color: summaryColor),
+                KeroseneIcon(KeroseneIcons.devices, color: summaryColor),
                 SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
@@ -286,10 +291,10 @@ class PasskeyInventoryCard extends StatelessWidget {
       return KeroseneBrandTokens.textMuted;
     }
     if (inventory.compatibleForCurrentLogin) {
-      return KeroseneBrandTokens.success;
+      return KeroseneBrandTokens.textPrimary;
     }
     if (inventory.legacyCredentialsPresent) {
-      return KeroseneBrandTokens.warning;
+      return KeroseneBrandTokens.textPrimary;
     }
     return KeroseneBrandTokens.textMuted;
   }
@@ -396,6 +401,7 @@ class InventoryContextChip extends StatelessWidget {
         showShadow: false,
       ),
       child: RichText(
+        textScaler: MediaQuery.textScalerOf(context),
         text: TextSpan(
           style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35),
           children: [
@@ -514,12 +520,12 @@ class PasskeyDeviceRowState extends ConsumerState<PasskeyDeviceRow> {
           if (device.firstAccessAt != null)
             DeviceMetaLine(
               label: context.tr.securityDeviceFirstAccessLabel,
-              value: _dateLabel(device.firstAccessAt!),
+              value: _dateLabel(context, device.firstAccessAt!),
             ),
           if (device.lastAccessAt != null)
             DeviceMetaLine(
               label: context.tr.securityDeviceLastAccessLabel,
-              value: _dateLabel(device.lastAccessAt!),
+              value: _dateLabel(context, device.lastAccessAt!),
             ),
           if (device.originHost.isNotEmpty)
             DeviceMetaLine(
@@ -570,7 +576,7 @@ class PasskeyDeviceRowState extends ConsumerState<PasskeyDeviceRow> {
                         : () => _updateDeviceStatus(
                               revoke: false,
                             ),
-                    icon: const Icon(KeroseneIcons.blocked, size: 16),
+                    icon: const KeroseneIcon(KeroseneIcons.blocked, size: 16),
                     label: Text(
                       context.tr.securityDeviceBlockAction.toUpperCase(),
                     ),
@@ -583,7 +589,7 @@ class PasskeyDeviceRowState extends ConsumerState<PasskeyDeviceRow> {
                         : () => _updateDeviceStatus(
                               revoke: true,
                             ),
-                    icon: const Icon(KeroseneIcons.linkOff, size: 16),
+                    icon: const KeroseneIcon(KeroseneIcons.linkOff, size: 16),
                     label: Text(
                       context.tr.securityDeviceRevokeAction.toUpperCase(),
                     ),
@@ -666,8 +672,8 @@ class PasskeyDeviceRowState extends ConsumerState<PasskeyDeviceRow> {
     }
   }
 
-  static String _dateLabel(DateTime value) {
-    final local = value.toLocal();
+  static String _dateLabel(BuildContext context, DateTime value) {
+    final local = AppDateTime.inDisplayZone(context, value);
     String two(int input) => input.toString().padLeft(2, '0');
     return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
   }
@@ -687,6 +693,7 @@ class DeviceMetaLine extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: 6),
       child: RichText(
+        textScaler: MediaQuery.textScalerOf(context),
         text: TextSpan(
           style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35),
           children: [
@@ -773,19 +780,21 @@ class SecuritySectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mono = MonochromeColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: monochromePanelDecoration(
-        color: monoSurfaceColor,
-        borderColor: monoBorderStrongColor,
-      ),
+        context: context,
+        color: mono.surface,
+        borderColor: mono.border,
+      ).copyWith(borderRadius: BorderRadius.circular(HomeRadius.card)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             title,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: monoTextColor,
+                  color: mono.text,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -793,7 +802,7 @@ class SecuritySectionCard extends StatelessWidget {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: monoMutedTextColor,
+                  color: mono.mutedText,
                   height: 1.45,
                 ),
           ),
@@ -804,6 +813,7 @@ class SecuritySectionCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
             style: monochromeFilledButtonStyle(
+              context: context,
               emphasis: !disabled && !destructive,
               destructive: destructive,
             ),
@@ -821,6 +831,7 @@ class TotpSetupCard extends StatelessWidget {
   final String setupSecret;
   final TextEditingController controller;
   final bool busy;
+  final bool enabled;
   final VoidCallback onVerify;
 
   const TotpSetupCard({
@@ -829,23 +840,26 @@ class TotpSetupCard extends StatelessWidget {
     required this.controller,
     required this.busy,
     required this.onVerify,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final mono = MonochromeColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: monochromePanelDecoration(
-        color: monoSurfaceColor,
-        borderColor: monoBorderStrongColor,
-      ),
+        context: context,
+        color: mono.surface,
+        borderColor: mono.border,
+      ).copyWith(borderRadius: BorderRadius.circular(HomeRadius.card)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             context.tr.securityTotpSetupTitle,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: monoTextColor,
+                  color: mono.text,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -855,7 +869,7 @@ class TotpSetupCard extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(color: monoBorderStrongColor),
+                border: Border.all(color: mono.borderStrong),
               ),
               child: QrImageView(
                 data: setupUri,
@@ -869,25 +883,29 @@ class TotpSetupCard extends StatelessWidget {
             setupSecret,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: monoTextColor,
+                  color: mono.text,
                   fontFamily: AppTypography.financialFontFamily,
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
+            enabled: enabled && !busy,
             controller: controller,
             keyboardType: TextInputType.number,
-            style: TextStyle(color: monoTextColor),
+            style: TextStyle(color: mono.text),
             decoration: monochromeInputDecoration(
+              context: context,
               label: context.tr.securityTotpCodeLabel,
               hintText: '000000',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
-            onPressed: busy ? null : onVerify,
-            style: monochromeFilledButtonStyle(),
+            onPressed: busy || !enabled ? null : onVerify,
+            style: monochromeFilledButtonStyle(
+              context: context,
+            ),
             child: busy
                 ? const SizedBox(
                     height: 18,
@@ -898,7 +916,7 @@ class TotpSetupCard extends StatelessWidget {
                       color: Colors.black,
                     ),
                   )
-                : Text(context.tr.securityValidateTotpAction.toUpperCase()),
+                : Text(context.tr.securityValidateTotpAction),
           ),
         ],
       ),
@@ -911,25 +929,27 @@ class SecurityLoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mono = MonochromeColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: monochromePanelDecoration(
-        color: monoSurfaceColor,
-        borderColor: monoBorderStrongColor,
-      ),
+        context: context,
+        color: mono.surface,
+        borderColor: mono.border,
+      ).copyWith(borderRadius: BorderRadius.circular(HomeRadius.card)),
       child: Row(
         children: [
-          Icon(
+          KeroseneIcon(
             KeroseneIcons.security,
-            color: monoMutedTextColor,
+            color: mono.mutedText,
             size: 20,
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              context.tr.securityScreenTitle,
+              context.tr.settingsSecurityLoading,
               style: AppTypography.bodyMedium.copyWith(
-                color: monoMutedTextColor,
+                color: mono.mutedText,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -952,7 +972,7 @@ class SecurityErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SecurityBannerCard(
-      color: AppColors.white20,
+      color: MonochromeColors.of(context).border,
       icon: KeroseneIcons.error,
       title: title,
       body: body,

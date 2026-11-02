@@ -25,6 +25,8 @@ void main() {
   setUp(() {
     AppEntryPinSession.clear();
     AppPinSetupHandoff.clear();
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 
   testWidgets('shows the requested PIN setup and unlock copy', (tester) async {
@@ -187,6 +189,7 @@ void main() {
     final scaffoldFinder = find.byType(PinEntryScaffold);
     expect(scaffoldFinder, findsOneWidget);
     expect((tester.widget(scaffoldFinder) as PinEntryScaffold).busy, isTrue);
+    expect(find.text('Verificando PIN…'), findsOneWidget);
 
     repository.completeVerify(
       const Left(
@@ -199,69 +202,339 @@ void main() {
     await tester.pumpAndSettle();
 
     expect((tester.widget(scaffoldFinder) as PinEntryScaffold).busy, isFalse);
+    expect(find.text('Verificando PIN…'), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Digite o PIN para acessar sua conta'), findsOneWidget);
   });
 
-  testWidgets('retains a full PIN and exposes retry after transient failure',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final repository = _SequencedPinVerifySecurityRepository([
-      const Left(
-        AuthFailure(message: 'upstream unavailable', errorCode: 'SYS_500'),
-      ),
-      const Right(
-        AppPinStatus(enabled: true, configured: true),
-      ),
-    ]);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _AuthenticatedAuthController(),
-          ),
-          securityRepositoryProvider.overrideWithValue(repository),
-          appPinGateStatusProvider.overrideWithValue(
-            const AppPinStatus(
-              enabled: true,
-              configured: true,
-              minPinLength: 4,
-              maxPinLength: 4,
-            ),
-          ),
-          appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          balanceWebSocketServiceProvider.overrideWith((ref) async => null),
-        ],
-        child: const MaterialApp(
-          locale: Locale('pt'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: AppEntryPinGate(child: Text('home ready')),
+  for (final failureCode in ['SYS_500', 'ERR_NETWORK']) {
+    testWidgets(
+        'retains a full PIN and waits for manual retry after $failureCode',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final sharedPreferences = await SharedPreferences.getInstance();
+      final repository = _SequencedPinVerifySecurityRepository([
+        Left(
+          AuthFailure(message: 'upstream unavailable', errorCode: failureCode),
         ),
-      ),
-    );
+        const Right(
+          AppPinStatus(enabled: true, configured: true),
+        ),
+      ]);
 
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _AuthenticatedAuthController(),
+            ),
+            securityRepositoryProvider.overrideWithValue(repository),
+            appPinGateStatusProvider.overrideWithValue(
+              const AppPinStatus(
+                enabled: true,
+                configured: true,
+                minPinLength: 4,
+                maxPinLength: 4,
+              ),
+            ),
+            appColdStartProvider.overrideWith(() => _TorReadyColdStart()),
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            balanceWebSocketServiceProvider.overrideWith((ref) async => null),
+          ],
+          child: const MaterialApp(
+            locale: Locale('pt'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AppEntryPinGate(child: Text('home ready')),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.pumpAndSettle();
+
+      expect(repository.verifyCalls, 1);
+      expect(
+        (tester.widget(find.byType(PinEntryScaffold)) as PinEntryScaffold)
+            .valueLength,
+        4,
+      );
+      expect(find.byType(FilledButton), findsOneWidget);
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+
+      expect(repository.verifyCalls, 2);
+      expect(repository.pins, everyElement('1234'));
+      expect(find.text('home ready'), findsOneWidget);
+    });
+  }
+
+  for (final setup in [false, true]) {
+    testWidgets('entry PIN clears input on account change, setup=$setup',
+        (tester) async {
+      final repo = _ScopedPinRepository();
+      final container = await _pumpScopedGate(tester, repo, setup: setup);
+      await tester.enterText(find.byType(TextField), '12');
+      await tester.pump();
+      (container.read(authControllerProvider.notifier)
+              as _SwitchableAuthController)
+          .setUser(_otherUser);
+      await tester.pumpAndSettle();
+      final scaffold =
+          tester.widget<PinEntryScaffold>(find.byType(PinEntryScaffold));
+      expect(scaffold.valueLength, 0);
+      expect(repo.pending, isEmpty);
+    });
+
+    testWidgets('late PIN success cannot unlock another account, setup=$setup',
+        (tester) async {
+      final repo = _ScopedPinRepository();
+      final container = await _pumpScopedGate(tester, repo, setup: setup);
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.pump();
+      if (setup) {
+        await tester.pumpAndSettle();
+        expect(
+            tester
+                .widget<TextField>(find.byType(TextField))
+                .focusNode!
+                .hasFocus,
+            isTrue);
+        await tester.enterText(find.byType(TextField), '1234');
+        await tester.pump();
+      }
+      expect(repo.pending, hasLength(1));
+      (container.read(authControllerProvider.notifier)
+              as _SwitchableAuthController)
+          .setUser(_otherUser);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      repo.pending.single
+          .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+      await tester.pumpAndSettle();
+      expect(container.read(appEntryPinUnlockedProvider), isFalse);
+      expect(AppEntryPinSession.unlocked, isFalse);
+      expect(find.text('home ready'), findsNothing);
+      final scope = container.read(sessionStorageScopeProvider)!;
+      expect(
+          container
+              .read(sharedPreferencesProvider)
+              .getBool(appPinConfiguredPrefsKey(scope)),
+          isNull);
+    });
+  }
+
+  testWidgets('an earlier completion cannot clear a newer PIN request',
+      (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo);
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    (container.read(authControllerProvider.notifier)
+            as _SwitchableAuthController)
+        .setUser(_otherUser);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    expect(repo.pending, hasLength(2));
+    repo.pending.first
+        .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+    await tester.pump();
+    expect(AppEntryPinSession.pinRequestInFlight, isTrue);
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+    repo.pending.last
+        .complete(const Right(AppPinStatus(enabled: true, configured: true)));
     await tester.pumpAndSettle();
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+    expect(AppEntryPinSession.pinRequestInFlight, isFalse);
+  });
+
+  testWidgets('a superseded response cannot unlock after A to B to A',
+      (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo);
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    final auth = container.read(authControllerProvider.notifier)
+        as _SwitchableAuthController;
+    auth.setUser(_otherUser);
+    auth.setUser(_testUser);
+    await tester.pump();
+    repo.pending.single
+        .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+    await tester.pumpAndSettle();
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+    expect(find.text('home ready'), findsNothing);
+  });
+
+  testWidgets('repository exceptions stop waiting and require explicit retry',
+      (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo);
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    repo.pending.single.completeError(StateError('DioException: /api/private'));
+    await tester.pumpAndSettle();
+    expect(repo.pending, hasLength(1));
+    expect(AppEntryPinSession.pinRequestInFlight, isFalse);
+    expect(tester.widget<PinEntryScaffold>(find.byType(PinEntryScaffold)).busy,
+        isFalse);
+    expect(find.textContaining('/api/private'), findsNothing);
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+    expect(repo.pending, hasLength(2));
+    repo.pending.last
+        .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+    await tester.pumpAndSettle();
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new setup uses exactly four digits within the server bounds',
+      (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo,
+        setup: true,
+        status: const AppPinStatus(minPinLength: 4, maxPinLength: 8));
+    expect(
+        tester
+            .widget<PinEntryScaffold>(find.byType(PinEntryScaffold))
+            .maxLength,
+        4);
+    await tester.enterText(find.byType(TextField), '12345');
+    await tester.pumpAndSettle();
+    expect(find.text('Confirme o PIN'), findsOneWidget);
+    expect(repo.pending, isEmpty);
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    expect(repo.configurePins, ['1234']);
+    repo.pending.single
+        .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+    await tester.pumpAndSettle();
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+  });
+
+  testWidgets('setup refuses an incompatible server policy', (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo,
+        setup: true,
+        status: const AppPinStatus(minPinLength: 6, maxPinLength: 8));
+    final scaffold =
+        tester.widget<PinEntryScaffold>(find.byType(PinEntryScaffold));
+    expect(scaffold.enabled, isFalse);
+    expect(scaffold.onConfirm, isNull);
+    scaffold.onDigit('1');
+    await tester.pump();
+    expect(repo.pending, isEmpty);
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+  });
+
+  testWidgets('PIN mismatch returns to creation without configuring anything',
+      (tester) async {
+    final repo = _ScopedPinRepository();
+    await _pumpScopedGate(tester, repo, setup: true);
     await tester.enterText(find.byType(TextField), '1234');
     await tester.pumpAndSettle();
-
-    expect(repository.verifyCalls, 1);
-    expect(
-      (tester.widget(find.byType(PinEntryScaffold)) as PinEntryScaffold)
-          .valueLength,
-      4,
-    );
-    expect(find.byType(FilledButton), findsOneWidget);
-
-    await tester.tap(find.byType(FilledButton));
+    await tester.enterText(find.byType(TextField), '1235');
     await tester.pumpAndSettle();
+    expect(find.text('Crie um PIN para acessar a conta'), findsOneWidget);
+    expect(
+        tester
+            .widget<PinEntryScaffold>(find.byType(PinEntryScaffold))
+            .valueLength,
+        0);
+    expect(repo.pending, isEmpty);
+    expect(tester.widget<PinEntryScaffold>(find.byType(PinEntryScaffold)).error,
+        isNotNull);
+  });
 
-    expect(repository.verifyCalls, 2);
-    expect(repository.pins, everyElement('1234'));
-    expect(find.text('home ready'), findsOneWidget);
+  testWidgets('back from pending setup ignores a late success', (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo, setup: true);
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    expect(repo.pending, hasLength(1));
+    tester.widget<PinEntryScaffold>(find.byType(PinEntryScaffold)).onCancel!();
+    await tester.pumpAndSettle();
+    expect(find.text('Crie um PIN para acessar a conta'), findsOneWidget);
+    repo.pending.single
+        .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+    await tester.pumpAndSettle();
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+    expect(find.text('home ready'), findsNothing);
+  });
+
+  testWidgets('unconfirmed setup response cannot unlock the account',
+      (tester) async {
+    final repo = _ScopedPinRepository();
+    final container = await _pumpScopedGate(tester, repo, setup: true);
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '1234');
+    await tester.pump();
+    repo.pending.single.complete(const Right(AppPinStatus()));
+    await tester.pumpAndSettle();
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+    expect(find.text('home ready'), findsNothing);
+    expect(tester.widget<PinEntryScaffold>(find.byType(PinEntryScaffold)).error,
+        isNotNull);
+  });
+
+  for (final setup in [false, true]) {
+    testWidgets(
+        'backgrounding clears secrets and ignores late PIN success, setup=$setup',
+        (tester) async {
+      final repo = _ScopedPinRepository();
+      final container = await _pumpScopedGate(tester, repo, setup: setup);
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.pump();
+      if (setup) {
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), '1234');
+        await tester.pump();
+      }
+      expect(repo.pending, hasLength(1));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<PinEntryScaffold>(find.byType(PinEntryScaffold))
+              .valueLength,
+          0);
+      repo.pending.single
+          .complete(const Right(AppPinStatus(enabled: true, configured: true)));
+      await tester.pumpAndSettle();
+      expect(container.read(appEntryPinUnlockedProvider), isFalse);
+      expect(find.text('home ready'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test('unlocked PIN cannot cross accounts through AuthLoading', () async {
+    final container = ProviderContainer(overrides: [
+      authControllerProvider
+          .overrideWith(() => _SwitchableAuthController(_testUser)),
+    ]);
+    addTearDown(container.dispose);
+    container.read(appEntryPinUnlockedProvider.notifier).unlock();
+    final auth = container.read(authControllerProvider.notifier)
+        as _SwitchableAuthController;
+    auth.setLoading();
+    expect(container.read(appEntryPinUnlockedProvider), isTrue);
+    auth.setUser(_otherUser);
+    expect(container.read(appEntryPinUnlockedProvider), isFalse);
+    expect(AppEntryPinSession.unlocked, isFalse);
   });
 
   test('reloads app PIN status when the authenticated session changes',
@@ -437,6 +710,70 @@ void main() {
   });
 }
 
+Future<ProviderContainer> _pumpScopedGate(
+    WidgetTester tester, _ScopedPinRepository repository,
+    {bool setup = false, AppPinStatus? status}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authControllerProvider
+            .overrideWith(() => _SwitchableAuthController(_testUser)),
+        securityRepositoryProvider.overrideWithValue(repository),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        appPinGateStatusProvider.overrideWithValue(status ??
+            AppPinStatus(
+              enabled: !setup,
+              configured: !setup,
+              minPinLength: 4,
+              maxPinLength: 4,
+            )),
+        appColdStartProvider.overrideWith(_TorReadyColdStart.new),
+        balanceWebSocketServiceProvider.overrideWith((ref) async => null),
+      ],
+      child: const MaterialApp(
+          locale: Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AppEntryPinGate(child: Text('home ready')))));
+  await tester.pumpAndSettle();
+  return ProviderScope.containerOf(
+      tester.element(find.byType(AppEntryPinGate)));
+}
+
+class _ScopedPinRepository implements SecurityRepository {
+  @override
+  Future<Either<Failure, AppPinStatus>> getAppPinStatus() async =>
+      const Left(NetworkFailure());
+
+  final configurePins = <String?>[];
+  final pending = <Completer<Either<Failure, AppPinStatus>>>[];
+  Future<Either<Failure, AppPinStatus>> _request() {
+    final request = Completer<Either<Failure, AppPinStatus>>();
+    pending.add(request);
+    return request.future;
+  }
+
+  @override
+  Future<Either<Failure, AppPinStatus>> verifyAppPin({required String pin}) =>
+      _request();
+  @override
+  Future<Either<Failure, AppPinStatus>> configureAppPin(
+      {required bool enabled,
+      String? pin,
+      String? currentPin,
+      String? totpCode}) {
+    configurePins.add(pin);
+    return _request();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final _otherUser =
+    User(id: 'user-2', username: 'hal', createdAt: DateTime(2026, 1, 2));
+
 class _AuthenticatedAuthController extends AuthController {
   @override
   AuthState build() => AuthAuthenticated(_testUser);
@@ -447,7 +784,6 @@ class _TorReadyColdStart extends AppColdStartNotifier {
   AppColdStartState build() {
     return const AppColdStartState(
       torSettled: true,
-      minSplashElapsed: true,
     );
   }
 

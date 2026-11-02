@@ -1,3 +1,5 @@
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +45,7 @@ void main() {
     final sharedPreferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       overrides: [
+        sessionStorageScopeProvider.overrideWithValue('fixture-account'),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
       ],
     );

@@ -40,8 +40,10 @@ class TokenInterceptor extends QueuedInterceptor {
       return false;
     }
 
-    final apiHost = Uri.tryParse(baseUrl)?.host.toLowerCase();
-    final onionHost = Uri.tryParse(onionBaseUrl)?.host.toLowerCase();
+    final apiHost =
+        Uri.tryParse(AppConfig.normalizeUrl(baseUrl))?.host.toLowerCase();
+    final onionHost =
+        Uri.tryParse(AppConfig.normalizeUrl(onionBaseUrl))?.host.toLowerCase();
     if (apiHost == null || onionHost == null || onionHost.isEmpty) {
       return false;
     }
@@ -88,6 +90,15 @@ class TokenInterceptor extends QueuedInterceptor {
 
     if (_isExplicitSessionInvalidation(errorCode, responseDataText)) {
       return true;
+    }
+
+    final securityPath = Uri.tryParse(path)?.path ?? path;
+    if ((securityPath == AppConfig.authBackupCodesRegenerate ||
+            securityPath == AppConfig.authTotpVerify ||
+            securityPath == AppConfig.authTotpDisable) &&
+        const {'AUTH_008', 'AUTH_009', 'AUTH_023'}.contains(errorCode)) {
+      // A rejected account-security factor does not revoke the bearer session.
+      return false;
     }
 
     if (isKfeTransactionStepUpPath(path)) {
@@ -256,7 +267,8 @@ class TokenInterceptor extends QueuedInterceptor {
         baseUrl: apiClient.dio.options.baseUrl,
         onionBaseUrl: AppConfig.onionBaseUrl,
       )) {
-        options.headers['Host'] = Uri.parse(AppConfig.onionBaseUrl).host;
+        options.headers['Host'] =
+            Uri.parse(AppConfig.normalizeUrl(AppConfig.onionBaseUrl)).host;
       }
 
       // Inject X-Device-Hash on ALL platforms (including web) so the backend

@@ -51,6 +51,8 @@ void main() {
     expect(find.text('Carteira assegurada'), findsOneWidget);
     expect(find.text('DISPONÍVEL'), findsWidgets);
     expect(find.text('Adicionar\ncarteira'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets('cold wallet creation story renders the first flow screen',

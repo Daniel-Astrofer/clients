@@ -12,6 +12,9 @@ void main() {
     AppConfig.authDeviceKeyOnboardingFinish,
     AppConfig.authDeviceKeyVerify,
     AppConfig.authDeviceKeyRegisterFinish,
+    AppConfig.authEmergencyRecoveryStart,
+    AppConfig.authEmergencyRecoveryFinish,
+    AppConfig.authEmergencyRecoveryDeviceKeyChallenge,
   ]) {
     test('retry policy does not replay one-time proof for $path', () {
       expect(ApiClient.shouldRetryRequest(method: 'POST', path: path), isFalse);

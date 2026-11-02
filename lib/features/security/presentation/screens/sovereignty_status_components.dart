@@ -1,7 +1,8 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'package:flutter/material.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 
 class SecurityInfoRow {
@@ -31,7 +32,9 @@ class SummaryPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ok ? AppColors.success : Theme.of(context).colorScheme.error;
+    final color = ok
+        ? Theme.of(context).colorScheme.onSurface
+        : Theme.of(context).colorScheme.error;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -55,12 +58,19 @@ class SummaryPill extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTypography.bodySmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              KeroseneIcon(ok ? KeroseneIcons.success : KeroseneIcons.warning,
+                  color: color, size: 14),
+              const SizedBox(width: 6),
+              Flexible(
+                  child: Text(value,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                      ))),
+            ],
           ),
         ],
       ),
@@ -166,7 +176,7 @@ class KfeReserveDetailRow extends StatelessWidget {
             textAlign: TextAlign.right,
             style: AppTypography.bodySmall.copyWith(
               color: highlight
-                  ? AppColors.success
+                  ? Theme.of(context).colorScheme.onSurface
                   : Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
               height: 1.35,
@@ -199,8 +209,9 @@ class SecurityStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor =
-        statusOk ? AppColors.success : Theme.of(context).colorScheme.error;
+    final statusColor = statusOk
+        ? Theme.of(context).colorScheme.onSurface
+        : Theme.of(context).colorScheme.error;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -223,7 +234,7 @@ class SecurityStatusCard extends StatelessWidget {
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   icon,
                   color: statusColor,
                   size: 18,
@@ -308,7 +319,7 @@ class SecurityStatusCard extends StatelessWidget {
                             : AppTypography.bodySmall)
                         .copyWith(
                       color: row.isHighlight
-                          ? AppColors.success
+                          ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),

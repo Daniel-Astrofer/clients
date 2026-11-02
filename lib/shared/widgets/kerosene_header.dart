@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,7 +42,7 @@ class KeroseneHeader extends ConsumerWidget implements PreferredSizeWidget {
                 if (showBackButton)
                   IconButton(
                     onPressed: onBackPressed ?? () => Navigator.pop(context),
-                    icon: Icon(
+                    icon: KeroseneIcon(
                       KeroseneIcons.back,
                       color: Theme.of(context).colorScheme.onSurface,
                       size: 24,

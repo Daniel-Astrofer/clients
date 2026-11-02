@@ -15,13 +15,13 @@ import 'package:kerosene/core/services/tor_network_bootstrap.dart';
 import 'package:kerosene/core/services/tor_service.dart';
 
 bool _isLoopbackUrl(String baseUrl) {
-  final uri = Uri.tryParse(baseUrl);
+  final uri = Uri.tryParse(AppConfig.normalizeUrl(baseUrl));
   final host = uri?.host.toLowerCase();
   return host == '127.0.0.1' || host == 'localhost' || host == '::1';
 }
 
 bool _isOnionUrl(String baseUrl) {
-  final uri = Uri.tryParse(baseUrl);
+  final uri = Uri.tryParse(AppConfig.normalizeUrl(baseUrl));
   return uri?.host.toLowerCase().endsWith('.onion') ?? false;
 }
 

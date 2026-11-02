@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -207,7 +208,7 @@ class _FlowNavigation extends StatelessWidget {
               style: TextStyle(
                   color: KeroseneBrandTokens.textPrimary, fontSize: 13),
               decoration: InputDecoration(
-                prefixIcon: Icon(
+                prefixIcon: KeroseneIcon(
                   KeroseneIcons.search,
                   color: KeroseneBrandTokens.textMuted,
                   size: 18,
@@ -336,7 +337,7 @@ class _FlowNavigationTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(item.icon, size: 18, color: foreground),
+            KeroseneIcon(item.icon, size: 18, color: foreground),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -409,7 +410,7 @@ class _FlowHeader extends StatelessWidget {
               border: Border.all(color: KeroseneBrandTokens.borderStrong),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(item.icon,
+            child: KeroseneIcon(item.icon,
                 color: KeroseneBrandTokens.textPrimary, size: 19),
           ),
           const SizedBox(width: 14),
@@ -445,7 +446,7 @@ class _FlowHeader extends StatelessWidget {
             message: 'Tela anterior',
             child: IconButton(
               onPressed: onPrevious,
-              icon: const Icon(KeroseneIcons.chevronLeft),
+              icon: const KeroseneIcon(KeroseneIcons.chevronLeft),
               color: KeroseneBrandTokens.textPrimary,
             ),
           ),
@@ -453,7 +454,7 @@ class _FlowHeader extends StatelessWidget {
             message: 'Próxima tela',
             child: IconButton(
               onPressed: onNext,
-              icon: const Icon(KeroseneIcons.chevronRight),
+              icon: const KeroseneIcon(KeroseneIcons.chevronRight),
               color: KeroseneBrandTokens.textPrimary,
             ),
           ),
@@ -756,7 +757,7 @@ class _UnknownRoutePane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(KeroseneIcons.error,
+              KeroseneIcon(KeroseneIcons.error,
                   color: KeroseneBrandTokens.textSecondary),
               const SizedBox(height: 12),
               Text(

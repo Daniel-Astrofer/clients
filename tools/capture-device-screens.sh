@@ -8,7 +8,7 @@
 #
 # A) Android (telefone com app já logado):
 #      adb devices
-#      bash tools/capture-device-screens.sh --android --guided --bring-front
+#      bash tools/capture-device-screens.sh --android --record --bring-front
 #
 # B) Linux (app com sua sessão local + botão de câmera no app):
 #      bash tools/capture-device-screens.sh --linux-app
@@ -24,6 +24,7 @@
 #   bash tools/capture-device-screens.sh --linux-app   # flutter run + in-app camera FAB
 #   bash tools/capture-device-screens.sh --now         # single shot of current screen
 #   bash tools/capture-device-screens.sh --guided      # multi-shot: you navigate, Enter to shoot
+#   bash tools/capture-device-screens.sh --android --record # video + named shots, with touch markers
 #   bash tools/capture-device-screens.sh --bring-front # start/resume app (keeps data)
 #   bash tools/capture-device-screens.sh --device=SERIAL
 #
@@ -43,6 +44,7 @@ APP_ID="${KEROSENE_ANDROID_APPLICATION_ID:-com.kerosene.app}"
 DEVICE_ID="${DEVICE_ID:-}"
 MODE="auto"          # auto | android | linux | linux-app
 SHOT_MODE="now"      # now | guided
+RECORD=0
 BRING_FRONT=0
 WINDOW_NAME_RE="${KEROSENE_WINDOW_RE:-[Kk]erosene}"
 
@@ -54,6 +56,7 @@ for arg in "$@"; do
     --auto) MODE="auto" ;;
     --now) SHOT_MODE="now" ;;
     --guided) SHOT_MODE="guided" ;;
+    --record) RECORD=1; SHOT_MODE="guided" ;;
     --bring-front) BRING_FRONT=1 ;;
     --device=*) DEVICE_ID="${arg#--device=}" ;;
     --app-id=*) APP_ID="${arg#--app-id=}" ;;
@@ -142,12 +145,74 @@ android_screencap() {
   info "OK Android → $dest ($(wc -c <"$dest") bytes)"
 }
 
+android_record_session() {
+  local s="$1"
+  local remote="/sdcard/kerosene_capture_${STAMP}.mp4"
+  local video="$OUT_DIR/device_session.mp4"
+  local old_touches
+  old_touches="$(adb -s "$s" shell settings get system show_touches 2>/dev/null | tr -d '\r' || true)"
+  local recorder_pid=""
+
+  restore_touch_setting() {
+    if [[ -z "$old_touches" || "$old_touches" == "null" ]]; then
+      adb -s "$s" shell settings delete system show_touches >/dev/null 2>&1 || true
+    else
+      adb -s "$s" shell settings put system show_touches "$old_touches" >/dev/null 2>&1 || true
+    fi
+  }
+  stop_recording() {
+    if [[ -n "$recorder_pid" ]] && kill -0 "$recorder_pid" 2>/dev/null; then
+      kill -INT "$recorder_pid" 2>/dev/null || true
+      wait "$recorder_pid" 2>/dev/null || true
+    fi
+    restore_touch_setting
+  }
+  trap stop_recording EXIT INT TERM
+
+  adb -s "$s" shell settings put system show_touches 1 >/dev/null 2>&1 \
+    || info "Não foi possível habilitar marcadores de toque; o vídeo ainda será gravado."
+  info "Gravando sessão do dispositivo (limite de 30 min); navegue pelo app e pressione Enter para capturar cada tela."
+  info "Digite q + Enter ou Ctrl+C para encerrar e salvar o vídeo."
+  adb -s "$s" shell screenrecord --bit-rate 6000000 --time-limit 1800 "$remote" \
+    >/dev/null 2>&1 &
+  recorder_pid=$!
+  sleep 2
+  if ! kill -0 "$recorder_pid" 2>/dev/null; then
+    wait "$recorder_pid" || true
+    die "Não foi possível iniciar screenrecord no device $s"
+  fi
+
+  local n=1 label
+  while true; do
+    printf "Nome do shot [%02d] (Enter=shot_%02d, q=sair): " "$n" "$n"
+    if ! read -r label; then break; fi
+    case "${label:-}" in
+      q|Q|quit|exit) break ;;
+      "") label=$(printf 'shot_%02d' "$n") ;;
+    esac
+    android_screencap "$s" "$label"
+    n=$((n + 1))
+  done
+
+  stop_recording
+  trap - EXIT INT TERM
+  adb -s "$s" pull "$remote" "$video" >/dev/null \
+    || die "Vídeo não foi salvo; verifique se o device encerrou screenrecord corretamente."
+  adb -s "$s" shell rm -f "$remote" >/dev/null 2>&1 || true
+  info "OK Android → $video ($(wc -c <"$video") bytes)"
+}
+
 run_android() {
   local s
   s="$(android_serial)"
   info "Device Android: $s (dados do app já instalado — sessão real)"
   if [[ "$BRING_FRONT" == "1" ]]; then
     android_bring_front "$s"
+  fi
+
+  if [[ "$RECORD" == "1" ]]; then
+    android_record_session "$s"
+    return
   fi
 
   if [[ "$SHOT_MODE" == "now" ]]; then

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 import 'package:bip39_mnemonic/bip39_mnemonic.dart';
 import 'package:flutter/material.dart';
@@ -43,10 +44,10 @@ class TransactionAuthResult {
   });
 
   const TransactionAuthResult.cancelled()
-    : this._(outcome: TransactionAuthOutcome.cancelled);
+      : this._(outcome: TransactionAuthOutcome.cancelled);
 
   const TransactionAuthResult.unavailable()
-    : this._(outcome: TransactionAuthOutcome.unavailable);
+      : this._(outcome: TransactionAuthOutcome.unavailable);
 
   const TransactionAuthResult.success({
     String? confirmationPassphrase,
@@ -54,12 +55,12 @@ class TransactionAuthResult {
     String? passkeyAssertionJson,
     String? appPin,
   }) : this._(
-         outcome: TransactionAuthOutcome.success,
-         confirmationPassphrase: confirmationPassphrase,
-         totpCode: totpCode,
-         passkeyAssertionJson: passkeyAssertionJson,
-         appPin: appPin,
-       );
+          outcome: TransactionAuthOutcome.success,
+          confirmationPassphrase: confirmationPassphrase,
+          totpCode: totpCode,
+          passkeyAssertionJson: passkeyAssertionJson,
+          appPin: appPin,
+        );
 
   bool get isAuthenticated => outcome == TransactionAuthOutcome.success;
 
@@ -114,8 +115,8 @@ class TransactionAuthGate {
     if (!effectiveProfile.requiresPasskey) {
       final deviceAuthOutcome =
           appPinOutcome?.status == TransactionDeviceAuthStatus.authenticated
-          ? appPinOutcome!
-          : await _showDevicePinFallback(context, BiometricService());
+              ? appPinOutcome!
+              : await _showDevicePinFallback(context, BiometricService());
 
       if (!context.mounted ||
           deviceAuthOutcome.status == TransactionDeviceAuthStatus.rejected) {
@@ -133,8 +134,7 @@ class TransactionAuthGate {
     if (!needsManualFactors) {
       result = TransactionAuthResult.success(appPin: appPinOutcome?.appPin);
     } else if (effectiveProfile.requiresShamirShares) {
-      final shamirResult =
-          await showModalBottomSheet<TransactionAuthResult>(
+      final shamirResult = await showModalBottomSheet<TransactionAuthResult>(
             context: context,
             backgroundColor: Colors.transparent,
             isScrollControlled: true,
@@ -153,8 +153,7 @@ class TransactionAuthGate {
         result = const TransactionAuthResult.cancelled();
       }
     } else {
-      final factorResult =
-          await showModalBottomSheet<TransactionAuthResult>(
+      final factorResult = await showModalBottomSheet<TransactionAuthResult>(
             context: context,
             backgroundColor: Colors.transparent,
             isScrollControlled: true,
@@ -349,9 +348,8 @@ class _FactorAuthorizationSheetState extends State<_FactorAuthorizationSheet> {
     Navigator.pop(
       context,
       TransactionAuthResult.success(
-        confirmationPassphrase: needsPassphrase
-            ? _passphraseController.text.trim()
-            : null,
+        confirmationPassphrase:
+            needsPassphrase ? _passphraseController.text : null,
         totpCode: needsTotp ? _totpController.text.trim() : null,
       ),
     );
@@ -508,9 +506,8 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
         context,
         TransactionAuthResult.success(
           confirmationPassphrase: recoveredMnemonic,
-          totpCode: widget.profile.requiresTotp
-              ? _totpController.text.trim()
-              : null,
+          totpCode:
+              widget.profile.requiresTotp ? _totpController.text.trim() : null,
         ),
       );
     } catch (_) {
@@ -539,7 +536,7 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
               _FactorChip(
                 label: '$_threshold/$_totalShares SLIP-39',
                 icon: KeroseneIcons.shares,
-                color: KeroseneBrandTokens.warning,
+                color: KeroseneBrandTokens.textPrimary,
               ),
               if (widget.profile.requiresTotp)
                 _FactorChip(
@@ -553,9 +550,8 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
           ...List.generate(_shareControllers.length, (index) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom: index == _shareControllers.length - 1
-                    ? 0
-                    : AppSpacing.sm,
+                bottom:
+                    index == _shareControllers.length - 1 ? 0 : AppSpacing.sm,
               ),
               child: _ShareField(
                 controller: _shareControllers[index],
@@ -581,7 +577,10 @@ class _ShamirAuthorizationSheetState extends State<_ShamirAuthorizationSheet> {
               _recoveryError!,
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall!.copyWith(color: Colors.redAccent),
+              )
+                  .textTheme
+                  .bodySmall!
+                  .copyWith(color: Theme.of(context).colorScheme.onSurface),
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
@@ -650,7 +649,8 @@ class _AuthorizationSheetBase extends StatelessWidget {
                 width: 1.5,
               ),
             ),
-            child: Icon(icon, color: theme.colorScheme.primary, size: 28),
+            child:
+                KeroseneIcon(icon, color: theme.colorScheme.primary, size: 28),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
@@ -674,25 +674,25 @@ class _AuthorizationSheetBase extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: KeroseneBrandTokens.success.withValues(alpha: 0.1),
+              color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: KeroseneBrandTokens.success.withValues(alpha: 0.2),
+                color: KeroseneBrandTokens.textPrimary.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                KeroseneIcon(
                   KeroseneIcons.lock,
                   size: 14,
-                  color: KeroseneBrandTokens.success,
+                  color: KeroseneBrandTokens.textPrimary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   context.tr.transactionAuthEncryptedTitle,
                   style: AppTypography.inter(
-                    color: KeroseneBrandTokens.success,
+                    color: KeroseneBrandTokens.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -731,14 +731,14 @@ class _FactorChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          KeroseneIcon(icon, size: 14, color: color),
           SizedBox(width: 6),
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall!.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
           ),
         ],
       ),
@@ -801,11 +801,13 @@ class _LabeledField extends StatelessWidget {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.md),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+          borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.onSurface, width: 2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.md),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+          borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.onSurface, width: 2),
         ),
       ),
       onChanged: onChanged,

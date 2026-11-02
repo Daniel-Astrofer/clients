@@ -1,4 +1,5 @@
 import 'package:kerosene/core/constants/localized_copy.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -8,9 +9,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
-import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_settings_provider.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
@@ -549,11 +550,11 @@ class _HomeSceneHostState extends ConsumerState<HomeSceneHost>
 
         final currentBody = current != null
             ? _bodyCache['${_sceneCacheKey(current)}|live=true|i=true'] ??
-                  _cachedBody(current, interactive: true, liveContent: true)
+                _cachedBody(current, interactive: true, liveContent: true)
             : null;
         final previousBody = previous != null
             ? _bodyCache['${_sceneCacheKey(previous)}|live=false|i=false'] ??
-                  _cachedBody(previous, interactive: false, liveContent: false)
+                _cachedBody(previous, interactive: false, liveContent: false)
             : null;
 
         final animatedGreeting = Opacity(
@@ -634,32 +635,32 @@ class _HeaderSceneLayout extends StatelessWidget {
       if (!hasActions) return idleLeading;
       return switch (placement) {
         HomeStageActionsPlacement.belowStage => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            idleLeading,
-            SizedBox(height: homeSize(12)),
-            Align(alignment: Alignment.centerRight, child: chrome),
-          ],
-        ),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              idleLeading,
+              SizedBox(height: homeSize(12)),
+              Align(alignment: Alignment.centerRight, child: chrome),
+            ],
+          ),
         HomeStageActionsPlacement.overlayEnd => Stack(
-          alignment: Alignment.topRight,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                right: homeSize(actionCount * 48 + (actionCount - 1) * 8 + 8),
+            alignment: Alignment.topRight,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  right: homeSize(actionCount * 48 + (actionCount - 1) * 8 + 8),
+                ),
+                child: idleLeading,
               ),
-              child: idleLeading,
-            ),
-            chrome,
-          ],
-        ),
+              chrome,
+            ],
+          ),
         _ => Row(
-          children: [
-            Expanded(child: idleLeading),
-            chrome,
-          ],
-        ),
+            children: [
+              Expanded(child: idleLeading),
+              chrome,
+            ],
+          ),
       };
     }
 
@@ -671,67 +672,68 @@ class _HeaderSceneLayout extends StatelessWidget {
 
     return switch (placement) {
       HomeStageActionsPlacement.trailing => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(child: activeLeading ?? const SizedBox.shrink()),
-              if (hasActions) chrome,
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: sceneTopPadding),
-            child: sceneBody,
-          ),
-        ],
-      ),
-      HomeStageActionsPlacement.belowStage => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (leadingRow != null) leadingRow,
-          Padding(
-            padding: EdgeInsets.only(top: sceneTopPadding),
-            child: sceneBody,
-          ),
-          if (hasActions) ...[
-            SizedBox(height: homeSize(12)),
-            Align(alignment: Alignment.centerRight, child: chrome),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(child: activeLeading ?? const SizedBox.shrink()),
+                if (hasActions) chrome,
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.only(top: sceneTopPadding),
+              child: sceneBody,
+            ),
           ],
-        ],
-      ),
-      HomeStageActionsPlacement.overlayEnd => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (leadingRow != null) leadingRow,
-          Stack(
-            alignment: Alignment.topRight,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(
-                  top: math.max(sceneTopPadding, homeSize(56)),
-                ),
-                child: sceneBody,
-              ),
-              if (hasActions) chrome,
+        ),
+      HomeStageActionsPlacement.belowStage => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leadingRow != null) leadingRow,
+            Padding(
+              padding: EdgeInsets.only(top: sceneTopPadding),
+              child: sceneBody,
+            ),
+            if (hasActions) ...[
+              SizedBox(height: homeSize(12)),
+              Align(alignment: Alignment.centerRight, child: chrome),
             ],
-          ),
-        ],
-      ),
+          ],
+        ),
+      HomeStageActionsPlacement.overlayEnd => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leadingRow != null) leadingRow,
+            Stack(
+              alignment: Alignment.topRight,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: math.max(sceneTopPadding, homeSize(56)),
+                  ),
+                  child: sceneBody,
+                ),
+                if (hasActions) chrome,
+              ],
+            ),
+          ],
+        ),
       HomeStageActionsPlacement.hidden ||
-      HomeStageActionsPlacement.unknown => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (leadingRow != null) leadingRow,
-          Padding(
-            padding: EdgeInsets.only(top: sceneTopPadding),
-            child: sceneBody,
-          ),
-        ],
-      ),
+      HomeStageActionsPlacement.unknown =>
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leadingRow != null) leadingRow,
+            Padding(
+              padding: EdgeInsets.only(top: sceneTopPadding),
+              child: sceneBody,
+            ),
+          ],
+        ),
     };
   }
 }
@@ -867,19 +869,18 @@ class _HeaderChrome extends ConsumerWidget {
     final actions = <Widget>[
       if (showBalance)
         HomeHeaderIconButton(
-          semanticLabel:
-              (balanceSettings.isHidden
-                      ? const LocalizedCopy(
-                          en: 'Show balance',
-                          pt: 'Mostrar saldo',
-                          es: 'Mostrar saldo',
-                        )
-                      : const LocalizedCopy(
-                          en: 'Hide balance',
-                          pt: 'Ocultar saldo',
-                          es: 'Ocultar saldo',
-                        ))
-                  .resolve(context),
+          semanticLabel: (balanceSettings.isHidden
+                  ? const LocalizedCopy(
+                      en: 'Show balance',
+                      pt: 'Mostrar saldo',
+                      es: 'Mostrar saldo',
+                    )
+                  : const LocalizedCopy(
+                      en: 'Hide balance',
+                      pt: 'Ocultar saldo',
+                      es: 'Ocultar saldo',
+                    ))
+              .resolve(context),
           icon: balanceSettings.isHidden
               ? KeroseneIcons.eyeOff
               : KeroseneIcons.eye,
@@ -933,48 +934,74 @@ class _HeaderChrome extends ConsumerWidget {
   }
 }
 
-class _RestingGreetingText extends StatelessWidget {
+class _RestingGreetingText extends ConsumerWidget {
   final String userName;
   final HomeRestingHeader resting;
 
   const _RestingGreetingText({required this.userName, required this.resting});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final responsive = context.responsive;
-    final hour = DateTime.now().hour;
+    final now = ref.watch(homeGreetingClockProvider)();
+    final hour = AppDateTime.inDisplayZone(context, now).hour;
     final text = !resting.includeName
         ? (hour < 12
-              ? context.tr.homeGreetingMorning('').trim()
-              : hour < 18
-              ? context.tr.homeGreetingAfternoon('').trim()
-              : context.tr.homeGreetingEvening('').trim())
+                ? context.tr.homeGreetingMorning('').trim()
+                : hour < 18
+                    ? context.tr.homeGreetingAfternoon('').trim()
+                    : context.tr.homeGreetingEvening('').trim())
+            .replaceAll(RegExp(r'[,\s]+$'), '')
         : hour < 12
-        ? context.tr.homeGreetingMorning(userName)
-        : hour < 18
-        ? context.tr.homeGreetingAfternoon(userName)
-        : context.tr.homeGreetingEvening(userName);
+            ? context.tr.homeGreetingMorning(userName)
+            : hour < 18
+                ? context.tr.homeGreetingAfternoon(userName)
+                : context.tr.homeGreetingEvening(userName);
 
-    final fontSize = responsive.compactFontSize(
-      tiny: homeFontSize(18),
-      compact: homeFontSize(20),
-      regular: homeFontSize(22),
-    );
+    final greeting = (hour < 12
+            ? context.tr.homeGreetingMorning('')
+            : hour < 18
+                ? context.tr.homeGreetingAfternoon('')
+                : context.tr.homeGreetingEvening(''))
+        .trim()
+        .replaceAll(RegExp(r'[,\s]+$'), '');
 
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style:
-          HomeTypography.heroTitle(
-            color: theme.colorScheme.onSurface,
-            fontSize: fontSize,
-          ).copyWith(
-            fontWeight: FontWeight.w500,
-            letterSpacing: -0.2,
-            height: 1.15,
+    return Semantics(
+      label: text,
+      excludeSemantics: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            resting.includeName ? '$greeting,' : greeting,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: homeFontSize(12),
+              fontWeight: FontWeight.w400,
+              height: 1.45,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
+          if (resting.includeName && userName.trim().isNotEmpty) ...[
+            SizedBox(height: homeSize(10)),
+            Text(
+              userName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: homeFontSize(20),
+                fontWeight: FontWeight.w600,
+                height: 1.45,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

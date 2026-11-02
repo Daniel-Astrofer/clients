@@ -74,7 +74,7 @@ class ColdWalletKeyVault {
       iOptions: _iosOptions(),
       aOptions: _androidOptions(),
     );
-    final pass = passphrase.trim();
+    final pass = passphrase;
     if (pass.isNotEmpty) {
       await _secureStorage.write(
         key: _passphraseStorageKey(id),
@@ -127,7 +127,7 @@ class ColdWalletKeyVault {
     );
 
     final passphrase =
-        (await _readStorageValue(_passphraseStorageKey(id)))?.trim() ?? '';
+        (await _readStorageValue(_passphraseStorageKey(id))) ?? '';
     final fingerprint =
         (await _readStorageValue(_fingerprintStorageKey(id)))?.trim() ?? '';
     final kindRaw =

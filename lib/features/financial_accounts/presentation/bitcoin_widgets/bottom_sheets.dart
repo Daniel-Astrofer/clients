@@ -1,7 +1,8 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import '../bitcoin_accounts_dependencies.dart';
-
 
 class SheetScaffold extends StatelessWidget {
   final String title;
@@ -204,7 +205,7 @@ class IconFrame extends StatelessWidget {
         borderRadius: colors.iconRadius,
         border: Border.all(color: colors.borderStrong),
       ),
-      child: Icon(icon, color: colors.text, size: 19),
+      child: KeroseneIcon(icon, color: colors.text, size: 19),
     );
   }
 }
@@ -417,8 +418,7 @@ String cardExpiryLabel(BitcoinAccount account) {
 
 String shortText(String value) {
   final text = value.trim();
-  if (text.length <= 18) return text;
-  return '${text.substring(0, 8)}...${text.substring(text.length - 8)}';
+  return text;
 }
 
 String cardCode(BitcoinAccount account) {
@@ -444,11 +444,15 @@ String transactionTitle(Transaction transaction) {
   };
 }
 
-String relativeTransactionDate(DateTime timestamp) {
-  final now = DateTime.now();
-  final local = timestamp.toLocal();
-  final today = DateTime(now.year, now.month, now.day);
-  final day = DateTime(local.year, local.month, local.day);
+String relativeTransactionDate(DateTime timestamp, {BuildContext? context}) {
+  final now = context == null
+      ? DateTime.now()
+      : AppDateTime.inDisplayZone(context, DateTime.now());
+  final local = context == null
+      ? timestamp.toLocal()
+      : AppDateTime.inDisplayZone(context, timestamp);
+  final today = DateTime.utc(now.year, now.month, now.day);
+  final day = DateTime.utc(local.year, local.month, local.day);
   final difference = today.difference(day).inDays;
   if (difference == 0) return 'Hoje';
   if (difference == 1) return 'Ontem';
@@ -614,8 +618,10 @@ String historyDetail(Transaction transaction) {
   return 'Movimento Bitcoin';
 }
 
-String historyTimestampLabel(DateTime timestamp) {
-  final local = timestamp.toLocal();
+String historyTimestampLabel(DateTime timestamp, {BuildContext? context}) {
+  final local = context == null
+      ? timestamp.toLocal()
+      : AppDateTime.inDisplayZone(context, timestamp);
   final day = local.day.toString().padLeft(2, '0');
   final month = local.month.toString().padLeft(2, '0');
   final hour = local.hour.toString().padLeft(2, '0');

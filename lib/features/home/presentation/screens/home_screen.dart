@@ -325,6 +325,11 @@ class HomeScreenState extends ConsumerState<HomeScreen>
     String? initialAddress,
     double? initialAmountBtc,
   }) async {
+    final walletState = ref.read(walletProvider);
+    if (walletState is WalletLoaded && walletState.wallets.isEmpty) {
+      await context.push('/onboarding/first-access');
+      return;
+    }
     // Ensure the deferred send unit is loaded before the slide starts — otherwise
     // the first Enviar animates a placeholder and swaps mid-transition (jank).
     try {
@@ -369,6 +374,11 @@ class HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _openReceiveFlowAsync() async {
+    final walletState = ref.read(walletProvider);
+    if (walletState is WalletLoaded && walletState.wallets.isEmpty) {
+      await context.push('/onboarding/first-access');
+      return;
+    }
     // Ensure the deferred receive unit is loaded before the slide starts —
     // otherwise the first Receber animates a placeholder and swaps mid-transition.
     try {

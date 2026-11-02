@@ -68,8 +68,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    final pair = tester.widget<Text>(find.text('BTC/BRL'));
-    expect(pair.style!.fontFamily, AppTypography.numericFontFamily);
+    expect(find.text('Bitcoin'), findsOneWidget);
+    expect(find.text('BTC/BRL'), findsNothing);
+    expect(find.textContaining('% ·'), findsOneWidget);
 
     final numericTexts = tester.widgetList<Text>(
       find.byWidgetPredicate(

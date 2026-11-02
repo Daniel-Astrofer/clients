@@ -70,23 +70,23 @@ class _KeroseneLoadingStateState extends State<KeroseneLoadingState> {
 
     return switch (widget.variant) {
       KeroseneLoadingVariant.fullScreen => _FullScreenLoader(
-        message: widget.message,
-        showRetry: _showRetry,
-        onRetry: widget.onTimeout,
-        palette: palette,
-      ),
+          message: widget.message,
+          showRetry: _showRetry,
+          onRetry: widget.onTimeout,
+          palette: palette,
+        ),
       KeroseneLoadingVariant.inline => _InlineLoader(
-        message: widget.message,
-        showRetry: _showRetry,
-        onRetry: widget.onTimeout,
-        palette: palette,
-      ),
+          message: widget.message,
+          showRetry: _showRetry,
+          onRetry: widget.onTimeout,
+          palette: palette,
+        ),
       KeroseneLoadingVariant.subtle => _SubtleLoader(
-        message: widget.message,
-        showRetry: _showRetry,
-        onRetry: widget.onTimeout,
-        palette: palette,
-      ),
+          message: widget.message,
+          showRetry: _showRetry,
+          onRetry: widget.onTimeout,
+          palette: palette,
+        ),
     };
   }
 }
@@ -110,8 +110,6 @@ class _FullScreenLoader extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Branded loading indicator — use existing KeroseneLogoLoadingView
-          // or custom animated glyph
           if (!showRetry) ...[
             SizedBox(
               width: 48,

@@ -1,3 +1,5 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,40 +87,23 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
         : FinancialStatusBadge.transaction(context, transaction!.status);
     final amountBtc = paymentLink?.amountBtc ?? transaction!.signedAmountBTC;
     final money = ref.watch(moneyFormatConfigProvider);
-    final selectedCurrency = money.currency;
     final btcUsd = ref.watch(latestBtcPriceProvider);
     final btcEur = ref.watch(btcEurPriceProvider);
     final btcBrl = ref.watch(btcBrlPriceProvider);
     final primaryAmount = transaction != null
         ? money.formatFrozenAmountFromBtc(
             btcAmount: amountBtc,
-            btcUsd: btcUsd,
-            btcEur: btcEur,
-            btcBrl: btcBrl,
+            btcUsd: null,
+            btcEur: null,
+            btcBrl: null,
             displayAmountUsd: transaction!.displayAmountUsd,
             displayAmountEur: transaction!.displayAmountEur,
             displayAmountBrl: transaction!.displayAmountBrl,
-            displayBtcUsd: transaction!.displayBtcUsd,
-            displayBtcEur: transaction!.displayBtcEur,
-            displayBtcBrl: transaction!.displayBtcBrl,
-            signed: true,
-          )
-        : money.formatAmountFromBtc(
-            btcAmount: amountBtc,
-            btcUsd: btcUsd,
-            btcEur: btcEur,
-            btcBrl: btcBrl,
-          );
-    final secondaryAmount = selectedCurrency == Currency.btc
+            signed: true)
+        : MovementMoney(locale: money.locale).asset(amountBtc);
+    final secondaryAmount = primaryAmount.contains('BTC')
         ? null
-        : money.formatAmountFromBtc(
-            btcAmount: amountBtc,
-            currency: Currency.btc,
-            btcUsd: btcUsd,
-            btcEur: btcEur,
-            btcBrl: btcBrl,
-            signed: transaction != null,
-          );
+        : MovementMoney(locale: money.locale).asset(amountBtc);
     final createdAt =
         paymentLink?.createdAt ?? paymentLink?.paidAt ?? transaction?.timestamp;
     final hasAdvancedDetails = (_secondaryAddress != null &&
@@ -183,6 +168,7 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                       value: money.formatAmountFromBtc(
                         btcAmount: transaction!.amountBTC,
                         currency: Currency.btc,
+                        decimalPlaces: 8,
                         btcUsd: btcUsd,
                         btcEur: btcEur,
                         btcBrl: btcBrl,
@@ -199,6 +185,7 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                         value: money.formatAmountFromBtc(
                           btcAmount: transaction!.feeBTC,
                           currency: Currency.btc,
+                          decimalPlaces: 8,
                           btcUsd: btcUsd,
                           btcEur: btcEur,
                           btcBrl: btcBrl,
@@ -215,6 +202,7 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                         value: money.formatAmountFromBtc(
                           btcAmount: transaction!.serviceFeeBTC,
                           currency: Currency.btc,
+                          decimalPlaces: 8,
                           btcUsd: btcUsd,
                           btcEur: btcEur,
                           btcBrl: btcBrl,
@@ -241,6 +229,7 @@ class FinancialActivityDetailsSheet extends ConsumerWidget {
                                     : 0)) /
                             100000000.0,
                         currency: Currency.btc,
+                        decimalPlaces: 8,
                         btcUsd: btcUsd,
                         btcEur: btcEur,
                         btcBrl: btcBrl,
@@ -678,7 +667,7 @@ class _CopyablePanel extends StatelessWidget {
                 message: context.tr.apiDisplayCopied,
               );
             },
-            icon: const Icon(KeroseneIcons.copy, size: 18),
+            icon: const KeroseneIcon(KeroseneIcons.copy, size: 18),
             color: monoTextColor,
             visualDensity: VisualDensity.compact,
             style: IconButton.styleFrom(
@@ -742,7 +731,7 @@ class _SummaryHero extends StatelessWidget {
               showShadow: false,
             ),
             alignment: Alignment.center,
-            child: Icon(leadingIcon, color: monoTextColor, size: 16),
+            child: KeroseneIcon(leadingIcon, color: monoTextColor, size: 16),
           ),
           Wrap(
             spacing: 8,

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -264,7 +265,7 @@ class _CaptureOption extends StatelessWidget {
                   color: tokens.background.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: tokens.textPrimary, size: 22),
+                child: KeroseneIcon(icon, color: tokens.textPrimary, size: 22),
               ),
               SizedBox(width: tokens.spaceMd - 4),
               Expanded(
@@ -292,7 +293,7 @@ class _CaptureOption extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.chevronRight,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

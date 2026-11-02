@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
@@ -173,7 +174,7 @@ class _BitcoinAccountsEmptyBackButton extends StatelessWidget {
         child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(KeroseneIcons.back, color: colors.text, size: 24),
+          child: KeroseneIcon(KeroseneIcons.back, color: colors.text, size: 24),
         ),
       ),
     );
@@ -198,7 +199,8 @@ class _BitcoinAccountsEmptyContent extends StatelessWidget {
             color: colors.text.withValues(alpha: 0.05),
             border: Border.all(color: colors.text.withValues(alpha: 0.10)),
           ),
-          child: Icon(KeroseneIcons.wallet, color: colors.text, size: 32),
+          child:
+              KeroseneIcon(KeroseneIcons.wallet, color: colors.text, size: 32),
         ),
         const SizedBox(height: 28),
         Padding(

@@ -34,29 +34,31 @@ class SettingsSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: Border.all(color: KeroseneBrandTokens.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                for (var index = 0; index < children.length; index++) ...[
-                  children[index],
-                  if (index != children.length - 1)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.base,
-                      ),
-                      child: Divider(
-                        height: 1,
-                        thickness: 1,
-                        color:
-                            KeroseneBrandTokens.border.withValues(alpha: 0.20),
-                      ),
-                    ),
-                ],
-              ],
-            ),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: Border.all(color: KeroseneBrandTheme.of(context).border),
+                borderRadius: BorderRadius.circular(12)),
+            child: Material(
+                type: MaterialType.transparency,
+                textStyle: DefaultTextStyle.of(context).style,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < children.length; index++) ...[
+                      children[index],
+                      if (index != children.length - 1)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.base,
+                          ),
+                          child: Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: KeroseneBrandTheme.of(context).border
+                                .withValues(alpha: 0.20),
+                          ),
+                        ),
+                    ],
+                  ],
+                )),
           ),
         ),
       ],
@@ -85,74 +87,93 @@ class SettingsSectionRow extends StatelessWidget {
     final trailingWidget = trailing ??
         (onTap == null
             ? SizedBox.shrink()
-            : Icon(
+            : KeroseneIcon(
                 KeroseneIcons.chevronRight,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 20,
               ));
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap == null
-            ? null
-            : () {
-                HapticFeedback.selectionClick();
-                onTap!();
-              },
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.base),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.hexFF201F1F,
-                  border: Border.all(color: AppColors.hexFF353534),
-                ),
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.onSurface,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.base),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
-                      ),
+    return MergeSemantics(
+      child: Semantics(
+        toggled: trailing is SettingsReadonlySwitch
+            ? (trailing as SettingsReadonlySwitch).value
+            : null,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap == null
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    onTap!();
+                  },
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.base),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.hexFF201F1F
+                          : Color.lerp(
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              Theme.of(context).colorScheme.onSurface,
+                              0.06),
+                      border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.hexFF353534
+                              : Color.lerp(
+                                  Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                  Theme.of(context).colorScheme.onSurface,
+                                  0.18)!),
                     ),
-                    SizedBox(height: AppSpacing.xs),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.inter(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        height: 1.25,
-                        letterSpacing: 0,
-                      ),
+                    child: KeroseneIcon(
+                      icon,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      size: 20,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: AppSpacing.base),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: AppTypography.inter(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.xs),
+                        Text(
+                          subtitle,
+                          style: AppTypography.inter(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            height: 1.25,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  trailingWidget,
+                ],
               ),
-              const SizedBox(width: AppSpacing.md),
-              trailingWidget,
-            ],
+            ),
           ),
         ),
       ),
@@ -168,7 +189,7 @@ class SettingsReadonlySwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: KeroseneMotion.short,
+      duration: KeroseneMotion.duration(context, KeroseneMotion.short),
       width: 44,
       height: 24,
       decoration: BoxDecoration(
@@ -178,7 +199,7 @@ class SettingsReadonlySwitch extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: AnimatedAlign(
-        duration: KeroseneMotion.short,
+        duration: KeroseneMotion.duration(context, KeroseneMotion.short),
         curve: KeroseneMotion.standard,
         alignment: value ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(

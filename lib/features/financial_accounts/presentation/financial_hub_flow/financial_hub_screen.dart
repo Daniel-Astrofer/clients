@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -45,14 +46,15 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(bitcoinAccountsProvider);
+    final sync = ref.watch(bitcoinAccountsSyncProvider);
     final bottom = AppPrimaryNavigationBar.scaffoldBottomClearance(context);
     final responsive = context.responsive;
     final authState = ref.watch(authControllerProvider);
-    final userDisplayName = authState is AuthAuthenticated
-        ? authState.user.name.trim()
-        : '';
+    final userDisplayName =
+        authState is AuthAuthenticated ? authState.user.name.trim() : '';
 
     return accounts.when(
+      skipError: true,
       loading: () => TorNavigationLoadingScreen(),
       error: (_, __) => Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -68,12 +70,12 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () =>
-                      ref.read(bitcoinAccountsProvider.notifier).refresh(),
+                      ref.read(bitcoinAccountsControllerProvider).refresh(),
                   child: Text(context.tr.tryAgain),
                 ),
                 TextButton(
                   onPressed: _handleBack,
-                  child: Icon(KeroseneIcons.back),
+                  child: KeroseneIcon(KeroseneIcons.back),
                 ),
               ],
             ),
@@ -95,7 +97,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                   unawaited(_openColdWalletFlow());
                 },
                 onRefresh: () =>
-                    ref.read(bitcoinAccountsProvider.notifier).refresh(),
+                    ref.read(bitcoinAccountsControllerProvider).refresh(),
               ),
             ),
           );
@@ -120,7 +122,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
 
         final currentReceiveRequest =
             _receiveAddressOverrides[selectedAccount.id] ??
-            firstBitcoinReceiveRequest(requestsAsync);
+                firstBitcoinReceiveRequest(requestsAsync);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -133,7 +135,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                     context,
                   ).colorScheme.surfaceContainerHighest,
                   onRefresh: () =>
-                      ref.read(bitcoinAccountsProvider.notifier).refresh(),
+                      ref.read(bitcoinAccountsControllerProvider).refresh(),
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
@@ -148,6 +150,17 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            if (accounts.hasError || sync.hasError) ...[
+                              Text(context.tr.settingsWalletsSyncFailed,
+                                  style: FinancialHubTokens.caption()),
+                              TextButton(
+                                  onPressed: () => ref
+                                      .read(bitcoinAccountsControllerProvider)
+                                      .refresh(),
+                                  child: Text(context.tr.tryAgain)),
+                            ],
+                            if (accounts.isLoading || sync.isLoading)
+                              const LinearProgressIndicator(),
                             BitcoinAccountsHeader(onBack: _handleBack),
                             const SizedBox(height: 16),
                             Center(
@@ -281,7 +294,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(
+                  leading: KeroseneIcon(
                     KeroseneIcons.wallet,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -293,7 +306,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(
+                  leading: KeroseneIcon(
                     KeroseneIcons.security,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -332,7 +345,7 @@ class _FinancialHubScreenState extends ConsumerState<FinancialHubScreen> {
   Future<void> _reloadAfterCreate({bool force = false}) async {
     if (!mounted) return;
     _receiveAddressOverrides.clear();
-    await ref.read(bitcoinAccountsProvider.notifier).refresh();
+    await ref.read(bitcoinAccountsControllerProvider).refresh();
     if (!mounted) return;
     if (force) {
       setState(() => _selectedAccountIndex = 0);

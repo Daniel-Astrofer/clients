@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
@@ -45,7 +46,7 @@ class KerosenePaymentStatusVisual extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Status icon
-        Icon(status.icon,
+        KeroseneIcon(status.icon,
             size: 48, color: status.color, semanticLabel: status.semanticLabel),
         SizedBox(height: AppSpacing.base),
 

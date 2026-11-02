@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -212,7 +213,7 @@ class _WalletHoldSelectionTileState extends State<WalletHoldSelectionTile>
                             : AppColors.hexFF333333,
                       ),
                     ),
-                    child: Icon(
+                    child: KeroseneIcon(
                       _walletIcon(widget.wallet),
                       color: foreground,
                       size: compact ? 23 : 26,
@@ -348,7 +349,7 @@ class _LightningCapabilityChip extends StatelessWidget {
         message: 'Lightning',
         child: Semantics(
           label: 'Lightning',
-          child: Icon(
+          child: KeroseneIcon(
             KeroseneIcons.lightning,
             size: compact ? 14 : 16,
             color: fg,
@@ -391,7 +392,7 @@ class _SafeToSpendChip extends StatelessWidget {
         message: 'Seguro para gastar',
         child: Semantics(
           label: 'Seguro para gastar',
-          child: Icon(
+          child: KeroseneIcon(
             KeroseneIcons.security,
             size: compact ? 14 : 16,
             color: fg,

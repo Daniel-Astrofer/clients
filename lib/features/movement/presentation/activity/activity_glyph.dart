@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -185,73 +186,75 @@ class ActivityGlyph extends StatelessWidget {
     final pipSize = size * 0.34;
     final pipIconSize = size * 0.17;
 
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          if (showWell)
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: wellColor,
-                  border: Border.all(color: wellBorder, width: 1),
+    return KeroseneUiScale.icon(
+        context,
+        SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (showWell)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: wellColor,
+                      border: Border.all(color: wellBorder, width: 1),
+                    ),
+                  ),
                 ),
+              // Primary — rail (tx) or QR (open payment link).
+              Icon(
+                spec.primary,
+                size: primarySize,
+                color: iconColor,
               ),
-            ),
-          // Primary — rail (tx) or QR (open payment link).
-          Icon(
-            spec.primary,
-            size: primarySize,
-            color: iconColor,
+              // Direction badge — bottom-end (secondary; never alone).
+              if (spec.direction != null)
+                Positioned(
+                  right: showWell ? -1 : 0,
+                  bottom: showWell ? -1 : 0,
+                  child: Container(
+                    width: badgeSize,
+                    height: badgeSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: badgeWellColor,
+                      border: Border.all(color: wellBorder, width: 1.2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      spec.direction,
+                      size: badgeIconSize,
+                      color: badgeIconColor,
+                    ),
+                  ),
+                ),
+              // Product or rail pip — top-end.
+              if (spec.productPip != null)
+                Positioned(
+                  right: showWell ? -1 : 0,
+                  top: showWell ? -1 : 0,
+                  child: Container(
+                    width: pipSize,
+                    height: pipSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: pipWellColor ?? badgeWellColor,
+                      border: Border.all(color: wellBorder, width: 1.1),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      spec.productPip,
+                      size: pipIconSize,
+                      color: pipIconColor ?? badgeIconColor,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          // Direction badge — bottom-end (secondary; never alone).
-          if (spec.direction != null)
-            Positioned(
-              right: showWell ? -1 : 0,
-              bottom: showWell ? -1 : 0,
-              child: Container(
-                width: badgeSize,
-                height: badgeSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: badgeWellColor,
-                  border: Border.all(color: wellBorder, width: 1.2),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  spec.direction,
-                  size: badgeIconSize,
-                  color: badgeIconColor,
-                ),
-              ),
-            ),
-          // Product or rail pip — top-end.
-          if (spec.productPip != null)
-            Positioned(
-              right: showWell ? -1 : 0,
-              top: showWell ? -1 : 0,
-              child: Container(
-                width: pipSize,
-                height: pipSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: pipWellColor ?? badgeWellColor,
-                  border: Border.all(color: wellBorder, width: 1.1),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  spec.productPip,
-                  size: pipIconSize,
-                  color: pipIconColor ?? badgeIconColor,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+        ));
   }
 }

@@ -1,54 +1,74 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Opens a public explorer for a Bitcoin txid / address when possible.
-///
-/// Network is inferred from address/txid context; defaults to testnet-friendly
-/// mempool.space paths used by local/regtest-adjacent builds.
+typedef BlockchainExplorerLauncher = Future<bool> Function(Uri uri);
+
+final blockchainExplorerLauncherProvider = Provider<BlockchainExplorerLauncher>(
+  (ref) => (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
+);
+
+/// Public explorer links require a known network; a txid does not encode it.
 class BlockchainExplorer {
   const BlockchainExplorer._();
 
+  static bool hasValidTxid(String? value) =>
+      RegExp(r'^[0-9a-fA-F]{64}$').hasMatch((value ?? '').trim());
+
+  static String? _path(String? networkHint) =>
+      switch ((networkHint ?? '').trim().toLowerCase()) {
+        'mainnet' || 'bitcoin' => '',
+        'testnet' || 'testnet3' => '/testnet',
+        'testnet4' => '/testnet4',
+        'signet' => '/signet',
+        _ => null,
+      };
+
+  /// Mainnet and regtest Bech32 prefixes are distinct. Test prefixes alone
+  /// cannot distinguish testnet3, testnet4, signet and legacy regtest addresses.
+  static String? networkFromAddresses(Iterable<String> addresses) {
+    final networks = addresses
+        .where(looksLikeBitcoinAddress)
+        .map(inferBitcoinNetworkFromAddress)
+        .toSet();
+    if (networks.length != 1) return null;
+    return switch (networks.single) {
+      BitcoinNetworkKind.mainnet => 'mainnet',
+      BitcoinNetworkKind.regtest => 'regtest',
+      _ => null,
+    };
+  }
+
   static Uri? txUri(String? blockchainTxid, {String? networkHint}) {
-    final txid = (blockchainTxid ?? '').trim().toLowerCase();
-    if (txid.isEmpty || txid.length < 16) return null;
-    final net = (networkHint ?? '').toLowerCase();
-    if (net.contains('main')) {
-      return Uri.parse('https://mempool.space/tx/$txid');
-    }
-    if (net.contains('signet')) {
-      return Uri.parse('https://mempool.space/signet/tx/$txid');
-    }
-    // Default: testnet (local/dev often uses testnet-style explorers).
-    return Uri.parse('https://mempool.space/testnet/tx/$txid');
+    if (!hasValidTxid(blockchainTxid)) return null;
+    final path = _path(networkHint);
+    if (path == null) return null;
+    return Uri.parse(
+        'https://mempool.space$path/tx/${blockchainTxid!.trim().toLowerCase()}');
   }
 
   static Uri? addressUri(String? address, {String? networkHint}) {
-    final addr = (address ?? '').trim();
-    if (addr.isEmpty || addr.length < 14) return null;
-    final lower = addr.toLowerCase();
-    // regtest has no public explorer.
-    if (lower.startsWith('bcrt1')) return null;
-    final net = (networkHint ?? '').toLowerCase();
-    if (net.contains('main') || lower.startsWith('bc1')) {
-      return Uri.parse('https://mempool.space/address/$addr');
+    final addr = normalizeBitcoinAddressForDisplay(address ?? '');
+    if (!looksLikeBitcoinAddress(addr)) return null;
+    final hint = networkHint ?? networkFromAddresses([addr]);
+    final path = _path(hint);
+    if (path == null) return null;
+    final detected = inferBitcoinNetworkFromAddress(addr);
+    if (detected == BitcoinNetworkKind.regtest ||
+        (detected == BitcoinNetworkKind.mainnet) != (path.isEmpty)) {
+      return null;
     }
-    if (net.contains('signet')) {
-      return Uri.parse('https://mempool.space/signet/address/$addr');
-    }
-    // tb1… and most non-mainnet → testnet explorer.
-    return Uri.parse('https://mempool.space/testnet/address/$addr');
+    return Uri.parse('https://mempool.space$path/address/$addr');
   }
 
   static Future<bool> openTx(String? blockchainTxid,
-      {String? networkHint}) async {
+      {String? networkHint, BlockchainExplorerLauncher? launcher}) async {
     final uri = txUri(blockchainTxid, networkHint: networkHint);
     if (uri == null) return false;
     try {
-      return launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BlockchainExplorer.openTx failed: $e');
-      }
+      return await (launcher ??
+          (uri) => launchUrl(uri, mode: LaunchMode.externalApplication))(uri);
+    } catch (_) {
       return false;
     }
   }

@@ -103,55 +103,71 @@ class NativeNotificationPresenter {
     final resolvedTitle = NotificationTranslator.resolveTitle(null, dummyItem);
     final resolvedBody = NotificationTranslator.resolveBody(null, dummyItem);
 
-    final composed = switch (family) {
-      NativeNotificationFamily.transactionIncoming => _incoming(
-          serverTitle: title,
-          serverBody: body,
-          amount: amount,
-          wallet: wallet,
-          network: network,
-          confs: confs,
-          kind: normalizedKind,
-        ),
-      NativeNotificationFamily.transactionOutgoing => _outgoing(
-          serverTitle: title,
-          serverBody: body,
-          amount: amount,
-          wallet: wallet,
-          network: network,
-          confs: confs,
-          kind: normalizedKind,
-        ),
-      NativeNotificationFamily.transactionPending => _pending(
-          serverTitle: title,
-          serverBody: body,
-          amount: amount,
-          wallet: wallet,
-          network: network,
-          confs: confs,
-        ),
-      NativeNotificationFamily.security => (
-          _shortTitle(resolvedTitle, fallback: 'Alerta de segurança'),
-          _securityBody(resolvedBody),
-          'Segurança',
-        ),
-      NativeNotificationFamily.system => (
-          _shortTitle(resolvedTitle, fallback: 'Kerosene'),
-          resolvedBody.trim().isEmpty
-              ? 'Atualização da plataforma.'
-              : resolvedBody.trim(),
-          'Kerosene',
-        ),
-    };
+    final lifecycle = const {
+      SessionNotificationItem.kindPaymentProcessing,
+      SessionNotificationItem.kindPaymentBroadcast,
+      SessionNotificationItem.kindPaymentConfirmed,
+      SessionNotificationItem.kindPaymentFailed,
+      SessionNotificationItem.kindPaymentReconciliationRequired,
+      SessionNotificationItem.kindDepositDropped,
+      SessionNotificationItem.kindDepositReversed,
+    }.contains(normalizedKind);
+    final composed = lifecycle
+        ? (
+            _shortTitle(resolvedTitle, fallback: 'Kerosene'),
+            resolvedBody,
+            network,
+          )
+        : switch (family) {
+            NativeNotificationFamily.transactionIncoming => _incoming(
+                serverTitle: title,
+                serverBody: body,
+                amount: amount,
+                wallet: wallet,
+                network: network,
+                confs: confs,
+                kind: normalizedKind,
+              ),
+            NativeNotificationFamily.transactionOutgoing => _outgoing(
+                serverTitle: title,
+                serverBody: body,
+                amount: amount,
+                wallet: wallet,
+                network: network,
+                confs: confs,
+                kind: normalizedKind,
+              ),
+            NativeNotificationFamily.transactionPending => _pending(
+                serverTitle: title,
+                serverBody: body,
+                amount: amount,
+                wallet: wallet,
+                network: network,
+                confs: confs,
+              ),
+            NativeNotificationFamily.security => (
+                _shortTitle(resolvedTitle, fallback: 'Alerta de segurança'),
+                _securityBody(resolvedBody),
+                'Segurança',
+              ),
+            NativeNotificationFamily.system => (
+                _shortTitle(resolvedTitle, fallback: 'Kerosene'),
+                resolvedBody.trim().isEmpty
+                    ? 'Atualização da plataforma.'
+                    : resolvedBody.trim(),
+                'Kerosene',
+              ),
+          };
 
-    final dedupe = _dedupeKey(
-      kind: normalizedKind,
-      entityType: entityType,
-      entityId: entityId,
-      id: id,
-      title: composed.$1,
-      body: composed.$2,
-    );
+    final dedupe = metadata['eventId'] ??
+        _dedupeKey(
+          kind: normalizedKind,
+          entityType: entityType,
+          entityId: entityId,
+          id: id,
+          title: composed.$1,
+          body: composed.$2,
+        );
 
     return NativeNotificationPresentation(
       title: composed.$1,
@@ -211,6 +227,21 @@ class NativeNotificationPresenter {
   }
 
   static NativeNotificationFamily _familyFor(String kind) {
+    if (const {
+      SessionNotificationItem.kindPaymentProcessing,
+      SessionNotificationItem.kindPaymentBroadcast,
+      SessionNotificationItem.kindPaymentConfirmed,
+      SessionNotificationItem.kindPaymentFailed,
+      SessionNotificationItem.kindPaymentReconciliationRequired,
+    }.contains(kind)) {
+      return NativeNotificationFamily.transactionOutgoing;
+    }
+    if (const {
+      SessionNotificationItem.kindDepositDropped,
+      SessionNotificationItem.kindDepositReversed,
+    }.contains(kind)) {
+      return NativeNotificationFamily.transactionPending;
+    }
     if (kind.contains('security') ||
         kind == SessionNotificationItem.kindSecurityLoginDetected ||
         kind == SessionNotificationItem.kindSecurityAdminAccessAttempt ||

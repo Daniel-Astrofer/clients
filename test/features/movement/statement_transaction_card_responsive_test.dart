@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/design_system/components/feedback/app_notice.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golden_toolkit/golden_toolkit.dart' show loadAppFonts;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
+    hide transactionRepositoryProvider;
+import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/features/movement/providers/transaction_provider.dart'
+    show transactionRepositoryProvider;
+import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
+import 'package:kerosene/design_system/components/buttons/app_button.dart';
+import 'package:kerosene/app/storage/activity_archive_store.dart';
+import 'package:kerosene/core/security/secure_storage_service.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
+import 'package:kerosene/core/providers/appearance_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_list_item.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_palette.dart';
+import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -85,6 +103,8 @@ void main() {
     required Size size,
     required Widget child,
     ThemeData? theme,
+    bool reactiveMoney = false,
+    TransactionRepository? actionRepo,
   }) async {
     SharedPreferences.setMockInitialValues(const {});
     final sharedPreferences = await SharedPreferences.getInstance();
@@ -94,6 +114,16 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          bitcoinAccountsProvider.overrideWithValue(const AsyncData([])),
+          walletProvider.overrideWith(_EmptyWallets.new),
+          if (actionRepo != null) ...[
+            transactionRepositoryProvider.overrideWithValue(actionRepo),
+            sessionStorageScopeProvider.overrideWithValue('action-fixture'),
+            activityArchiveStoreProvider.overrideWithValue(_ReadyArchive()),
+          ],
+          if (reactiveMoney)
+            moneyFormatConfigProvider
+                .overrideWith((ref) => ref.watch(_testMoneyProvider)),
           backendBtcRatesProvider.overrideWith(
             (ref) async => const BackendBtcRates(
               btcUsd: 76500,
@@ -108,6 +138,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: theme,
+          locale: actionRepo != null ? const Locale('pt') : null,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -120,21 +151,220 @@ void main() {
     await tester.pump();
   }
 
-  group('StatementTransactionCard responsiveness', () {
-    testWidgets('home density consumes the OLED surface palette',
+  for (final mode in StatementTransactionCardMode.values) {
+    testWidgets('acknowledged cancellation updates the actual card: $mode',
         (tester) async {
+      final current =
+          Transaction.fromJson({...transaction.toJson(), 'cancellable': true});
+      final cancelled = Transaction.fromJson({
+        ...current.toJson(),
+        'status': 'cancelled',
+        'cancellable': false,
+        'updatedAt': DateTime.utc(2030).toIso8601String()
+      });
+      final repo = _AckRepo(cancelled);
+      await pumpCard(tester,
+          size: regularPortrait,
+          theme: AppTheme.darkTheme,
+          actionRepo: repo,
+          child: SingleChildScrollView(
+              child: StatementTransactionCard(
+                  transaction: current,
+                  mode: mode,
+                  expanded: true,
+                  density: StatementTransactionCardDensity.home)));
+      final cancel = find.byKey(const ValueKey('activity-cancel'));
+      await tester.ensureVisible(cancel);
+      await tester.pump();
+      await tester.tap(cancel);
+      await tester.pump(const Duration(milliseconds: 200));
+      final confirm = find.byKey(const ValueKey('activity-confirm-action'));
+      await tester.ensureVisible(confirm);
+      await tester.pump();
+      tester.widget<AppButton>(confirm).onPressed!();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(repo.calls, 1);
+      expect(find.text('Movimentação cancelada'), findsOneWidget);
+      expect(find.text('Cancelada'), findsWidgets);
+      expect(find.byKey(const ValueKey('activity-cancel')), findsNothing);
+      expect(find.byKey(const ValueKey('activity-archive')), findsOneWidget);
+      AppScreenFeedbackBus.clear();
+      expect(takeAllExceptions(tester), isEmpty);
+    });
+  }
+
+  testWidgets(
+      'collapsed Home preserves exact operations when balance precision changes',
+      (tester) async {
+    await pumpCard(tester,
+        size: regularPortrait,
+        theme: AppTheme.darkTheme,
+        reactiveMoney: true,
+        child: SingleChildScrollView(
+            child: StatementTransactionCard(
+                transaction: transaction,
+                density: StatementTransactionCardDensity.home)));
+    expect(find.textContaining('9.87657531'), findsOneWidget);
+    expect(find.textContaining('≈'), findsNothing);
+    final container = ProviderScope.containerOf(
+        tester.element(find.byType(StatementTransactionCard)));
+    container.read(_testMoneyProvider.notifier).setPrecision(8);
+    await tester.pump();
+    expect(find.textContaining('9.87657531'), findsOneWidget);
+    expect(find.textContaining('9.88'), findsNothing);
+    expect(takeAllExceptions(tester), isEmpty);
+  });
+
+  testWidgets('expanded Home rows follow updated confirmation data',
+      (tester) async {
+    StateSetter? update;
+    Transaction current = transaction;
+    await pumpCard(tester, size: regularPortrait, theme: AppTheme.darkTheme,
+        child: SingleChildScrollView(
+            child: StatefulBuilder(builder: (context, setState) {
+      update = setState;
+      return StatementTransactionCard(
+          transaction: current,
+          density: StatementTransactionCardDensity.home,
+          expanded: true);
+    })));
+    expect(find.widgetWithText(SelectableText, '1/6'), findsOneWidget);
+    expect(find.textContaining('~'), findsNothing);
+    update!(() => current = Transaction(
+        id: transaction.id,
+        fromAddress: transaction.fromAddress,
+        toAddress: transaction.toAddress,
+        amountSatoshis: transaction.amountSatoshis,
+        feeSatoshis: transaction.feeSatoshis,
+        status: transaction.status,
+        type: transaction.type,
+        confirmations: 3,
+        timestamp: transaction.timestamp,
+        blockchainTxid: transaction.blockchainTxid));
+    await tester.pump();
+    expect(find.widgetWithText(SelectableText, '3/6'), findsOneWidget);
+    expect(find.widgetWithText(SelectableText, '1/6'), findsNothing);
+    expect(takeAllExceptions(tester), isEmpty);
+  });
+
+  testWidgets('expanded Home exposes and copies the complete TXID',
+      (tester) async {
+    await pumpCard(tester,
+        size: compactPortrait,
+        theme: AppTheme.darkTheme,
+        child: SingleChildScrollView(
+            child: StatementTransactionCard(
+                transaction: transaction,
+                density: StatementTransactionCardDensity.home,
+                expanded: true)));
+    expect(find.text(transaction.blockchainTxid!), findsOneWidget);
+    final copy = find.byKey(const ValueKey('statement-copy-txid'));
+    await tester.ensureVisible(copy);
+    await tester.pump();
+    await tester.tap(copy);
+    await tester.pump();
+    expect(clipboardText, transaction.blockchainTxid);
+    expect(AppScreenFeedbackBus.current.value?.type, AppNoticeType.success);
+    expect(tester.getSize(copy).width, greaterThanOrEqualTo(48));
+    await tester.pump(const Duration(seconds: 4));
+    expect(AppScreenFeedbackBus.current.value, isNull);
+    expect(takeAllExceptions(tester), isEmpty);
+  });
+
+  testWidgets('failed copying a field produces an explicit error',
+      (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        throw PlatformException(code: 'denied');
+      }
+      return null;
+    });
+    await pumpCard(tester,
+        size: compactPortrait,
+        theme: AppTheme.darkTheme,
+        child: SingleChildScrollView(
+            child: StatementTransactionCard(
+                transaction: transaction,
+                density: StatementTransactionCardDensity.home,
+                expanded: true)));
+    final copy = find.byKey(const ValueKey('statement-copy-txid'));
+    await tester.ensureVisible(copy);
+    await tester.pump();
+    await tester.tap(copy);
+    await tester.pump();
+    expect(AppScreenFeedbackBus.current.value?.type, AppNoticeType.error);
+    AppScreenFeedbackBus.clear();
+    expect(takeAllExceptions(tester), isEmpty);
+  });
+
+  group('StatementTransactionCard responsiveness', () {
+    for (final status in TransactionStatus.values) {
+      testWidgets('expanded history keeps the rail and direction: $status',
+          (tester) async {
+        final tx = Transaction(
+            id: 'rail-and-direction',
+            fromAddress: 'own-wallet',
+            toAddress: 'bc1qpublic-destination',
+            amountSatoshis: 50000,
+            feeSatoshis: 100,
+            status: status,
+            type: TransactionType.send,
+            confirmations: status == TransactionStatus.confirmed ? 6 : 1,
+            timestamp: DateTime.utc(2026, 10, 10),
+            rail: 'ONCHAIN');
+        await pumpCard(tester,
+            size: regularPortrait,
+            theme: AppTheme.darkTheme,
+            child: SingleChildScrollView(
+                child:
+                    StatementTransactionCard(transaction: tx, expanded: true)));
+        final glyph = tester
+            .widget<ActivityGlyph>(find.byKey(const ValueKey('icon-glyph')));
+        expect(glyph.spec.primary, KeroseneIcons.railOnchain);
+        expect(glyph.spec.direction, KeroseneIcons.dirOut);
+        expect(takeAllExceptions(tester), isEmpty);
+      });
+    }
+
+    for (final dark in [false, true]) {
+      testWidgets('full account history follows the Home palette: dark=$dark',
+          (tester) async {
+        await pumpCard(tester,
+            size: regularPortrait,
+            theme: AppTheme.themeFor(
+                dark ? AppThemeVariant.dark : AppThemeVariant.light),
+            child: SingleChildScrollView(
+                child: StatementTransactionCard(
+                    transaction: transaction, expanded: true)));
+        final surface = dark ? HomeSurfaceTheme.dark : HomeSurfaceTheme.light;
+        final card = find.byType(StatementTransactionCard);
+        final ink = tester.widget<Ink>(
+            find.descendant(of: card, matching: find.byType(Ink)).first);
+        final decoration = ink.decoration! as BoxDecoration;
+        expect(decoration.color, surface.card);
+        expect(decoration.border!.top.color, surface.surfaceBorder);
+        expect(decoration.boxShadow, isNull);
+        expect(takeAllExceptions(tester), isEmpty);
+      });
+    }
+
+    testWidgets('Home restores the original paper card and compact layout',
+        (tester) async {
+      await loadAppFonts();
       await pumpCard(
         tester,
         size: regularPortrait,
         theme: AppTheme.darkTheme,
-        child: SizedBox(
+        child: SingleChildScrollView(
+            child: SizedBox(
           width: 340,
-          height: 174,
           child: StatementTransactionCard(
             transaction: transaction,
             density: StatementTransactionCardDensity.home,
           ),
-        ),
+        )),
       );
 
       final card = find.byType(StatementTransactionCard);
@@ -146,22 +376,26 @@ void main() {
       );
       final decoration = ink.decoration! as BoxDecoration;
 
-      expect(material.color, HomeSurfaceTheme.dark.card);
-      expect(decoration.color, HomeSurfaceTheme.dark.card);
-      expect(decoration.border!.top.color, HomeSurfaceTheme.dark.surfaceBorder);
+      final original = TransactionCardColors.resolve(transaction);
+      expect(material.color, original.background);
+      expect(decoration.color, original.background);
+      expect(decoration.border!.top.color, original.border);
       expect(decoration.boxShadow, isNull);
       expect(takeAllExceptions(tester), isEmpty);
+      await expectLater(
+          card, matchesGoldenFile('goldens/home_transaction_original.png'));
     });
 
-    testWidgets('stacked card fits its fixed stack extent', (tester) async {
+    testWidgets('stacked card grows for complete identifiers', (tester) async {
       for (final size in [compactPortrait, compactLandscape, regularPortrait]) {
         await pumpCard(
           tester,
           size: size,
-          child: SizedBox(
-            width: 340,
-            height: 174,
-            child: StatementTransactionCard(transaction: transaction),
+          child: SingleChildScrollView(
+            child: SizedBox(
+              width: 340,
+              child: StatementTransactionCard(transaction: transaction),
+            ),
           ),
         );
 
@@ -170,6 +404,10 @@ void main() {
           isEmpty,
           reason: 'Stacked transaction card overflowed at $size',
         );
+        final party = tester
+            .widget<Text>(find.textContaining(transaction.toAddress).first);
+        expect(party.maxLines, isNull);
+        expect(party.overflow, isNot(TextOverflow.ellipsis));
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -214,16 +452,19 @@ void main() {
       await pumpCard(
         tester,
         size: regularPortrait,
-        child: SizedBox(
+        child: SingleChildScrollView(
+            child: SizedBox(
           width: 340,
-          height: 174,
           child: StatementTransactionCard(transaction: failedOutgoing),
-        ),
+        )),
       );
 
       expect(
         find.byWidgetPredicate(
-          (widget) => widget is Text && (widget.data?.startsWith('-') ?? false),
+          (widget) =>
+              widget is Text &&
+              RegExp(r'(^|\s)(?:-\s*(?:US\$|R\$|\$|€|₿|\d)|>\s*-)')
+                  .hasMatch(widget.data ?? ''),
         ),
         findsOneWidget,
       );
@@ -362,7 +603,10 @@ void main() {
 
       expect(
         find.byWidgetPredicate(
-          (widget) => widget is Text && (widget.data?.startsWith('-') ?? false),
+          (widget) =>
+              widget is Text &&
+              RegExp(r'(^|\s)(?:-\s*(?:US\$|R\$|\$|€|₿|\d)|>\s*-)')
+                  .hasMatch(widget.data ?? ''),
         ),
         findsWidgets,
       );
@@ -370,4 +614,42 @@ void main() {
       await tester.pump();
     });
   });
+}
+
+final _testMoneyProvider =
+    NotifierProvider<_TestMoney, MoneyFormatConfig>(_TestMoney.new);
+
+class _TestMoney extends Notifier<MoneyFormatConfig> {
+  @override
+  MoneyFormatConfig build() => const MoneyFormatConfig(
+      currency: Currency.btc, locale: Locale('en'), btcDecimalPlaces: 2);
+  void setPrecision(int value) => state = MoneyFormatConfig(
+      currency: Currency.btc,
+      locale: const Locale('en'),
+      btcDecimalPlaces: value);
+}
+
+class _AckRepo implements TransactionRepository {
+  final Transaction reply;
+  int calls = 0;
+  _AckRepo(this.reply);
+  @override
+  Future<Transaction> cancelTransaction(String id) async {
+    calls++;
+    return reply;
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ReadyArchive extends ActivityArchiveStore {
+  _ReadyArchive() : super(SecureStorageService());
+  @override
+  Future<Set<String>> load(String scope) async => {};
+}
+
+class _EmptyWallets extends WalletNotifier {
+  @override
+  WalletState build() => const WalletLoaded(wallets: [], btcToUsdRate: 0);
 }

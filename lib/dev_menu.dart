@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
@@ -29,7 +30,7 @@ class DevScreenMenu extends StatelessWidget {
           return ListTile(
             title: Text(name),
             subtitle: Text(route),
-            trailing: const Icon(KeroseneIcons.chevronRight),
+            trailing: const KeroseneIcon(KeroseneIcons.chevronRight),
             onTap: () {
               Navigator.pushNamed(context, route);
             },

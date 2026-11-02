@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -109,7 +110,7 @@ class ServerUnavailableScreen extends ConsumerWidget {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.lg),
-                          child: Icon(
+                          child: KeroseneIcon(
                             KeroseneIcons.serverUnavailable,
                             size: 48,
                             color: Theme.of(context).colorScheme.onSurface,

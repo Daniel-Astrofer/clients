@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,6 +57,7 @@ void main() {
       ProviderScope(
         overrides: overrides(),
         child: MaterialApp(
+          builder: (_, child) => KeroseneUiScale(child: child!),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.darkTheme,
           locale: const Locale('pt'),
@@ -125,6 +127,7 @@ void main() {
       ProviderScope(
         overrides: overrides(),
         child: MaterialApp(
+          builder: (_, child) => KeroseneUiScale(child: child!),
           theme: AppTheme.darkTheme,
           locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,

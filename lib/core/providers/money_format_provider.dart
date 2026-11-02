@@ -4,6 +4,7 @@ import 'package:kerosene/core/providers/app_display_preferences_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/localization/app_localization_manager.dart';
 import 'package:kerosene/core/utils/money_display.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/balance_settings_provider.dart';
 
 /// Snapshot of global money presentation prefs (currency + app locale).
 ///
@@ -12,10 +13,12 @@ import 'package:kerosene/core/utils/money_display.dart';
 class MoneyFormatConfig {
   final Currency currency;
   final Locale locale;
+  final int btcDecimalPlaces;
 
   const MoneyFormatConfig({
     required this.currency,
     required this.locale,
+    this.btcDecimalPlaces = 8,
   });
 
   String get numberLocaleTag => MoneyDisplay.numberLocaleTag(locale);
@@ -30,7 +33,10 @@ class MoneyFormatConfig {
       amount: amount,
       currency: currency ?? this.currency,
       withSymbol: withSymbol,
-      decimalPlaces: decimalPlaces,
+      decimalPlaces: decimalPlaces ??
+          ((currency ?? this.currency) == Currency.btc
+              ? btcDecimalPlaces
+              : null),
       appLocale: locale,
     );
   }
@@ -45,7 +51,10 @@ class MoneyFormatConfig {
       amount: amount,
       currency: currency ?? this.currency,
       withSymbol: withSymbol,
-      maxDecimalPlaces: maxDecimalPlaces,
+      maxDecimalPlaces: maxDecimalPlaces ??
+          ((currency ?? this.currency) == Currency.btc
+              ? btcDecimalPlaces
+              : null),
       appLocale: locale,
     );
   }
@@ -68,7 +77,10 @@ class MoneyFormatConfig {
       btcBrl: btcBrl,
       withSymbol: withSymbol,
       signed: signed,
-      decimalPlaces: decimalPlaces,
+      decimalPlaces: decimalPlaces ??
+          ((currency ?? this.currency) == Currency.btc
+              ? btcDecimalPlaces
+              : null),
       appLocale: locale,
     );
   }
@@ -87,6 +99,7 @@ class MoneyFormatConfig {
     double? displayBtcBrl,
     bool withSymbol = true,
     bool signed = false,
+    int? decimalPlaces,
   }) {
     return MoneyDisplay.formatFrozenAmountFromBtc(
       btcAmount: btcAmount,
@@ -102,6 +115,10 @@ class MoneyFormatConfig {
       displayBtcBrl: displayBtcBrl,
       withSymbol: withSymbol,
       signed: signed,
+      decimalPlaces: decimalPlaces ??
+          ((currency ?? this.currency) == Currency.btc
+              ? btcDecimalPlaces
+              : null),
       appLocale: locale,
     );
   }
@@ -109,12 +126,9 @@ class MoneyFormatConfig {
 
 /// Reactive money formatting bound to [appDisplayPreferencesProvider].
 final moneyFormatConfigProvider = Provider<MoneyFormatConfig>((ref) {
+  final AppDisplayPreferencesState prefs;
   try {
-    final prefs = ref.watch(appDisplayPreferencesProvider);
-    return MoneyFormatConfig(
-      currency: prefs.currency,
-      locale: prefs.locale,
-    );
+    prefs = ref.watch(appDisplayPreferencesProvider);
   } catch (_) {
     // The app bootstrap supplies SharedPreferences before this provider is
     // read. Keep isolated surfaces renderable when a host/test intentionally
@@ -124,4 +138,9 @@ final moneyFormatConfigProvider = Provider<MoneyFormatConfig>((ref) {
       locale: AppLocalizationManager.deviceOrFallback(),
     );
   }
+  return MoneyFormatConfig(
+    currency: prefs.currency,
+    locale: prefs.locale,
+    btcDecimalPlaces: ref.watch(balanceSettingsProvider).decimalPlaces,
+  );
 });

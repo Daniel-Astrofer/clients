@@ -1,3 +1,4 @@
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/widgets.dart';
 
 class SendMoneyCopy {
@@ -380,32 +381,16 @@ class SendMoneyCopy {
       };
 
   static String reviewTransferAmountLabel(BuildContext context) =>
-      switch (_language(context)) {
-        'en' => 'Transfer amount',
-        'es' => 'Valor de la transferencia',
-        _ => 'Valor da transferência',
-      };
+      context.tr.sendReviewRecipientGets;
 
   static String reviewTransactionFeeLabel(BuildContext context) =>
-      switch (_language(context)) {
-        'en' => 'Transaction fee',
-        'es' => 'Tarifa de transacción',
-        _ => 'Taxa de transação',
-      };
+      context.tr.sendReviewKeroseneFee;
 
   static String reviewMiningFeeLabel(BuildContext context) =>
-      switch (_language(context)) {
-        'en' => 'Mining fee',
-        'es' => 'Tarifa de minería',
-        _ => 'Taxa de mineração',
-      };
+      context.tr.sendReviewNetworkFee;
 
   static String reviewTotalLabel(BuildContext context) =>
-      switch (_language(context)) {
-        'en' => 'Total',
-        'es' => 'Total',
-        _ => 'Total',
-      };
+      context.tr.sendReviewYouPay;
 
   static String reviewFraudTipLead(BuildContext context) =>
       switch (_language(context)) {
@@ -599,16 +584,9 @@ class SendMoneyCopy {
     required bool isLightning,
     required bool isOnChain,
   }) {
-    if (isPaymentLink) {
-      return switch (_language(context)) {
-        'en' => 'Internal link',
-        'es' => 'Link interno',
-        _ => 'Link interno',
-      };
-    }
-    if (isLightning) return 'Lightning';
-    if (isOnChain) return 'On-chain';
-    return 'Kerosene';
+    if (isLightning) return context.tr.activityFilterLightning;
+    if (isOnChain) return context.tr.activityFilterOnchain;
+    return context.tr.activityFilterInternal;
   }
 
   static String networkRowLabel(BuildContext context) =>
@@ -719,9 +697,9 @@ class SendMoneyCopy {
 
   static String receiptTitleSubmitted(BuildContext context) =>
       switch (_language(context)) {
-        'en' => 'Transfer sent',
-        'es' => 'Transferencia enviada',
-        _ => 'Transferência enviada',
+        'en' => 'Send registered',
+        'es' => 'Envío registrado',
+        _ => 'Envio registrado',
       };
 
   static String receiptDateLabel(BuildContext context) =>

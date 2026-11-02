@@ -9,6 +9,7 @@ void pushSettingsDeferred(
 ) {
   Navigator.of(context).push(
     _settingsRoute(
+      context: context,
       pageBuilder: (_, __, ___) => DeferredPage(
         loadLibrary: loadLibrary,
         builder: builder,
@@ -20,16 +21,28 @@ void pushSettingsDeferred(
 /// Push a fully built settings feature screen (no deferred library load).
 void pushSettingsPage(BuildContext context, Widget page) {
   Navigator.of(context).push(
-    _settingsRoute(pageBuilder: (_, __, ___) => page),
+    _settingsRoute(context: context, pageBuilder: (_, __, ___) => page),
   );
 }
 
-PageRouteBuilder<void> _settingsRoute({
+Future<T?> pushSettingsResultPage<T>(BuildContext context, Widget page) =>
+    Navigator.of(context).push<T>(
+        _settingsRoute<T>(context: context, pageBuilder: (_, __, ___) => page));
+
+Future<T?> replaceSettingsResultPage<T, TO>(BuildContext context, Widget page,
+        {TO? result}) =>
+    Navigator.of(context).pushReplacement<T, TO>(
+        _settingsRoute<T>(context: context, pageBuilder: (_, __, ___) => page),
+        result: result);
+
+PageRouteBuilder<T> _settingsRoute<T>({
+  required BuildContext context,
   required RoutePageBuilder pageBuilder,
 }) {
-  return PageRouteBuilder<void>(
-    transitionDuration: KeroseneMotion.medium,
-    reverseTransitionDuration: KeroseneMotion.short,
+  return PageRouteBuilder<T>(
+    transitionDuration: KeroseneMotion.duration(context, KeroseneMotion.medium),
+    reverseTransitionDuration:
+        KeroseneMotion.duration(context, KeroseneMotion.short),
     pageBuilder: pageBuilder,
     transitionsBuilder: (context, animation, __, child) {
       if (KeroseneMotion.reduceMotion(context)) return child;

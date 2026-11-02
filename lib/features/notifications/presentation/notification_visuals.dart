@@ -86,6 +86,28 @@ NotificationVisuals resolveNotificationVisuals(
         icon: KeroseneIcons.wallet,
         categoryLabel: tr.notifCategoryReceived,
       );
+    case SessionNotificationItem.kindPaymentProcessing:
+      return NotificationVisuals(
+          tone: AppNotificationTone.info,
+          icon: KeroseneIcons.pending,
+          categoryLabel: tr.notifCategorySent);
+    case SessionNotificationItem.kindPaymentFailed:
+    case SessionNotificationItem.kindPaymentReconciliationRequired:
+      return NotificationVisuals(
+          tone: _toneForSeverity(item.severity),
+          icon: KeroseneIcons.warning,
+          categoryLabel:
+              item.metadata['eventType']?.startsWith('DEPOSIT') == true
+                  ? tr.notifCategoryReceived
+                  : tr.notifCategorySent);
+    case SessionNotificationItem.kindDepositDropped:
+    case SessionNotificationItem.kindDepositReversed:
+      return NotificationVisuals(
+          tone: AppNotificationTone.warning,
+          icon: KeroseneIcons.warning,
+          categoryLabel: tr.notifCategoryReceived);
+    case SessionNotificationItem.kindPaymentBroadcast:
+    case SessionNotificationItem.kindPaymentConfirmed:
     case SessionNotificationItem.kindPaymentSent:
       return NotificationVisuals(
         tone: _toneForSeverity(item.severity),

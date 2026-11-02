@@ -41,7 +41,7 @@ class PushNotificationCard extends StatelessWidget {
       padding: padding,
       borderRadius: borderRadius,
       minHeight: minHeight,
-      maxMessageLines: maxMessageLines ?? 3,
+      maxMessageLines: maxMessageLines,
       onClose: onClose,
     );
 

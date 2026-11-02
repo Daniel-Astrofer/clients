@@ -1,3 +1,7 @@
+import 'package:kerosene/core/localization/app_timezone_scope.dart';
+import 'package:kerosene/core/providers/app_display_preferences_provider.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
+import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'dart:async';
 import 'dart:ui';
 
@@ -46,7 +50,7 @@ import '../core/performance/app_interaction_busy.dart';
 import '../core/performance/graphics_runtime_degrade.dart';
 import '../core/performance/kerosene_graphics_policy.dart';
 import '../core/performance/kerosene_performance_boundary.dart';
-import '../design_system/components/generic/kerosene_logo_loading_view.dart';
+import '../design_system/components/generic/tor_navigation_loading_screen.dart';
 import '../core/providers/shader_provider.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../core/utils/snackbar_helper.dart';
@@ -205,7 +209,7 @@ Future<void> _bootstrapPeripheralServices() async {
         debugPrint('Notification tap navigation failed for "$route": $e');
       }
     };
-    await notif.init();
+    await notif.init(requestPermission: false);
     await initializeBackgroundService();
   } catch (error) {
     debugPrint('Peripheral service bootstrap failed: $error');
@@ -232,6 +236,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final displayPreferences = ref.watch(appDisplayPreferencesProvider);
     final locale = ref.watch(localeProvider).locale;
     final appearance = ref.watch(appearanceProvider);
     MoneyDisplay.bindAppLocale(locale);
@@ -273,15 +278,19 @@ class _MyAppState extends ConsumerState<MyApp> {
         );
         current = GlobalNotificationHost(child: current);
         current = _AppRealtimeBootstrap(child: current);
-        return ScreenCaptureHost(child: current);
+        return AppTimezoneScope(
+          timeZoneId: displayPreferences.timeZoneId,
+          followDevice: displayPreferences.timeZoneFollowDevice,
+          child: KeroseneUiScale(child: ScreenCaptureHost(child: current)),
+        );
       },
     );
   }
 }
 
-/// First shell: brand K beat, then auth shell.
+/// Initial dots loader, then the authentication shell.
 ///
-/// Returning users: K → PIN (stable pad; Tor may still boot) → dots → Home.
+/// Returning users: dots → PIN → dots → Home.
 /// Tor readiness is gated inside PIN verify + HomeLoadingScreen requests.
 ///
 /// Important: only one [AppEntryPinGate] on the home path. Route wrappers use
@@ -303,28 +312,15 @@ class _MobileAppRoot extends ConsumerWidget {
       }
     });
 
-    if (!coldStart.canShowAppShell) {
-      return const KeroseneLogoLoadingView(
-        status: 'INICIANDO',
-        detail: 'Preparando conexão segura',
-      );
-    }
-
     final authState = ref.watch(authControllerProvider);
 
     if (authState is AuthInitial || authState is AuthLoading) {
-      return const KeroseneLogoLoadingView(
-        status: 'INICIANDO',
-        detail: 'Preparando conexão segura',
-      );
+      return const TorNavigationLoadingScreen(usePrimaryKey: false);
     }
 
     if (authState is AuthAuthenticated) {
       if (!coldStart.torSettled && !AppEntryPinSession.unlocked) {
-        return const KeroseneLogoLoadingView(
-          status: 'INICIANDO',
-          detail: 'Preparando conexão segura',
-        );
+        return const TorNavigationLoadingScreen(usePrimaryKey: false);
       }
       return const AppEntryPinGate(
         child: HomeLoadingScreen(),
@@ -333,10 +329,7 @@ class _MobileAppRoot extends ConsumerWidget {
 
     if (authState is AuthServerUnavailable) {
       if (!coldStart.torSettled) {
-        return const KeroseneLogoLoadingView(
-          status: 'INICIANDO',
-          detail: 'Preparando conexão segura',
-        );
+        return const TorNavigationLoadingScreen(usePrimaryKey: false);
       }
       return const ServerUnavailableScreen();
     }
@@ -354,7 +347,7 @@ class _PrivateMobileRoute extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     if (authState is AuthInitial || authState is AuthLoading) {
-      return const Scaffold(backgroundColor: Colors.black);
+      return const TorNavigationLoadingScreen(usePrimaryKey: false);
     }
     if (authState is AuthAuthenticated) {
       final unlocked =
@@ -371,10 +364,7 @@ class _PrivateMobileRoute extends ConsumerWidget {
       }
       final torSettled = ref.watch(torSettledProvider);
       if (!torSettled) {
-        return const KeroseneLogoLoadingView(
-          status: 'INICIANDO',
-          detail: 'Preparando conexão segura',
-        );
+        return const TorNavigationLoadingScreen(usePrimaryKey: false);
       }
       return AppEntryPinGate(child: child);
     }
@@ -416,9 +406,18 @@ class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _applyLifecycle(state);
     if (state == AppLifecycleState.resumed) {
+      unawaited(ref
+          .read(appDisplayPreferencesProvider.notifier)
+          .refreshDeviceTimeZoneIfFollowing()
+          .catchError((Object error) {
+        debugPrint('Device timezone refresh failed (${error.runtimeType}).');
+      }));
       // Pull balance/extrato if WS marked dirty while backgrounded.
       // Under Tor flap, always prefer full catch-up when dirty.
       unawaited(refreshFinancialProjectionIfDirty(ref));
+      unawaited(ref
+          .read(sessionNotificationFeedProvider.notifier)
+          .reloadFromServer());
       // Rearm STOMP after OS kills / exhausted backoff — poll alone is not enough.
       unawaited(_rearmBalanceRealtimeIfNeeded(ref));
       // Refresh sovereign BTC quotes from backend HTTP.

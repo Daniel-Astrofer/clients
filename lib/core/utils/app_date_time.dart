@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:kerosene/core/localization/app_timezone_scope.dart';
 
 /// Coherent date/time formatting using the **app** locale (not only device).
 ///
 /// Backend timestamps are treated as UTC when they lack a zone suffix, then
-/// converted with [DateTime.toLocal] so list headers and history stay consistent
-/// with the user's wall clock (e.g. America/Sao_Paulo vs UTC pods).
+/// parsed without changing the instant. Presentation uses the selected app zone
+/// or follows the device when no override is selected.
 class AppDateTime {
   const AppDateTime._();
+
+  /// Orders known event instants newest first and keeps undated records last.
+  static int compareNewestFirst(DateTime? left, DateTime? right) {
+    if (left == null) return right == null ? 0 : 1;
+    if (right == null) return -1;
+    return right.compareTo(left);
+  }
 
   /// Parse API timestamps robustly into the device local zone.
   static DateTime? parse(dynamic raw) {
@@ -51,22 +59,26 @@ class AppDateTime {
     ).toLocal();
   }
 
+  static DateTime inDisplayZone(BuildContext context, DateTime timestamp) =>
+      AppTimezoneScope.convert(context, timestamp);
+
   static String languageCodeOf(BuildContext context) {
     return Localizations.localeOf(context).languageCode;
   }
 
   static String formatTime(BuildContext context, DateTime timestamp) {
-    final local = timestamp.toLocal();
+    final local = inDisplayZone(context, timestamp);
     final use24 = MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? true;
     final pattern = use24 ? 'HH:mm' : 'h:mm a';
     return DateFormat(pattern, languageCodeOf(context)).format(local);
   }
 
-  static String formatDate(BuildContext context, DateTime timestamp) {
-    final local = timestamp.toLocal();
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(local.year, local.month, local.day);
+  static String formatDate(BuildContext context, DateTime timestamp,
+      {DateTime? now}) {
+    final local = inDisplayZone(context, timestamp);
+    final current = inDisplayZone(context, now ?? DateTime.now());
+    final today = DateTime.utc(current.year, current.month, current.day);
+    final day = DateTime.utc(local.year, local.month, local.day);
     final lang = languageCodeOf(context);
 
     if (day == today) {
@@ -83,7 +95,7 @@ class AppDateTime {
         _ => 'Yesterday',
       };
     }
-    if (local.year == now.year) {
+    if (local.year == current.year) {
       return DateFormat('d MMM', lang).format(local);
     }
     return DateFormat('d MMM y', lang).format(local);
@@ -96,7 +108,7 @@ class AppDateTime {
   static String formatFull(BuildContext context, DateTime timestamp) {
     return DateFormat.yMMMd(languageCodeOf(context))
         .add_Hm()
-        .format(timestamp.toLocal());
+        .format(inDisplayZone(context, timestamp));
   }
 
   /// Human relative time for history cards: "agora", "há 3 min", "há 2 h", "ontem".
@@ -107,8 +119,8 @@ class AppDateTime {
     DateTime? now,
     String? languageCode,
   }) {
-    final local = timestamp.toLocal();
-    final n = (now ?? DateTime.now()).toLocal();
+    final local = inDisplayZone(context, timestamp);
+    final n = inDisplayZone(context, now ?? DateTime.now());
     var diff = n.difference(local);
     final lang = (languageCode ?? languageCodeOf(context)).toLowerCase();
 
@@ -147,7 +159,10 @@ class AppDateTime {
         _ => '${h}h ago',
       };
     }
-    if (diff.inDays == 1) {
+    final calendarDays = DateTime.utc(n.year, n.month, n.day)
+        .difference(DateTime.utc(local.year, local.month, local.day))
+        .inDays;
+    if (diff.inDays == 1 && calendarDays == 1) {
       return switch (lang) {
         'pt' => 'ontem',
         'es' => 'ayer',

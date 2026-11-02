@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // architecture-allow-large-file: statement orchestration preserves export,
 // pagination, and navigation contracts during staged extraction.
 import 'package:kerosene/core/constants/localized_copy.dart';
@@ -5,6 +6,10 @@ import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
+import 'package:kerosene/core/providers/price_provider.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -37,10 +42,13 @@ import 'package:kerosene/features/movement/presentation/activity/statement_pdf_e
 import 'package:kerosene/features/movement/presentation/activity/transaction_address_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_party_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
+import 'package:kerosene/features/movement/presentation/activity/history_sync_notice.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_statement_insights.dart';
 import 'package:kerosene/shared/widgets/bitcoin_refresh_indicator.dart';
 
 enum _StatementTab { statement, insights }
+
+enum _StatementExportPhase { idle, choosing, generating }
 
 /// Same activity set as Home — maps 1:1 to [ActivityFilter].
 enum _StatementFilter {
@@ -96,7 +104,8 @@ class _TransactionStatementScreenState
   _StatementFilter _selectedFilter = _StatementFilter.all;
   String? _expandedTransactionId;
   String _query = '';
-  bool _exporting = false;
+  _StatementExportPhase _exportPhase = _StatementExportPhase.idle;
+  bool get _exporting => _exportPhase == _StatementExportPhase.generating;
 
   @override
   void initState() {
@@ -127,7 +136,10 @@ class _TransactionStatementScreenState
   Future<void> _refreshData() async {
     await HapticFeedback.lightImpact();
     ref.invalidate(statementInsightsReportProvider);
-    await refreshFinancialProjectionUi(ref, forceFullHistory: true);
+    await Future.wait([
+      ref.read(activityArchiveProvider.notifier).reload(),
+      refreshFinancialProjectionUi(ref, forceFullHistory: true),
+    ]);
   }
 
   void _handleBack() {
@@ -162,8 +174,13 @@ class _TransactionStatementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final archiveStatus = ref.watch(activityArchiveReadinessProvider);
     final historyAsync = ref.watch(transactionHistoryProvider);
     final lastHistory = ref.watch(lastTransactionHistoryProvider);
+    final primaryLoaded = ref.watch(
+      transactionHistoryReadinessProvider
+          .select((status) => status.primaryLoaded),
+    );
     final historyValue = historyAsync.asData?.value ??
         (lastHistory.isNotEmpty ? lastHistory : null);
     final bottomPadding =
@@ -216,10 +233,65 @@ class _TransactionStatementScreenState
                     if (_exporting)
                       const SliverToBoxAdapter(
                           child: LinearProgressIndicator(minHeight: 2)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: HistorySyncNotice(
+                            onRefresh: () => unawaited(_refreshData())),
+                      ),
+                    ),
+                    if (archiveStatus.state != ActivityArchiveLoadState.ready)
+                      SliverToBoxAdapter(
+                          child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            KeroseneIcon(
+                                archiveStatus.state ==
+                                        ActivityArchiveLoadState.loading
+                                    ? KeroseneIcons.archive
+                                    : KeroseneIcons.error,
+                                size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Text(
+                                      [
+                                        archiveStatus.state ==
+                                                ActivityArchiveLoadState.loading
+                                            ? context.tr.activityArchiveLoading
+                                            : context
+                                                .tr.activityArchiveUnavailable,
+                                        if (archiveStatus.checkedAt != null)
+                                          context.tr.activityArchiveCheckedAt(
+                                              AppDateTime.formatFull(context,
+                                                  archiveStatus.checkedAt!)),
+                                      ].join('\n'),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall),
+                                  if (archiveStatus.state ==
+                                      ActivityArchiveLoadState.unavailable)
+                                    TextButton(
+                                        key: const ValueKey(
+                                            'activity-archive-retry'),
+                                        onPressed: () => unawaited(ref
+                                            .read(activityArchiveProvider
+                                                .notifier)
+                                            .reload()),
+                                        child: Text(context.tr.tryAgain)),
+                                ])),
+                          ],
+                        ),
+                      )),
                     historyAsync.when(
                       loading: () {
                         // Keep last projection visible while Tor refresh runs.
-                        if (lastHistory.isEmpty) {
+                        if (lastHistory.isEmpty && !primaryLoaded) {
                           return const SliverFillRemaining(
                             hasScrollBody: false,
                             child: Center(child: TorLoadingDots()),
@@ -339,88 +411,104 @@ class _TransactionStatementScreenState
   }
 
   Future<void> _exportCsv(List<Transaction> transactions) async {
-    if (_exporting) return;
+    if (_exportPhase != _StatementExportPhase.idle) return;
     if (transactions.isEmpty) {
       AppNotice.showInfo(context,
           title: context.tr.statementExportNothingTitle,
           message: context.tr.statementEmptyOnDevice);
       return;
     }
-    final filtered = _filteredTransactions(transactions);
+    final selectedSnapshot = List<Transaction>.of(transactions);
+    final filtered = _filteredTransactions(selectedSnapshot);
+    final tr = context.tr;
+    final config = ref.read(moneyFormatConfigProvider);
+    final rates = ref.read(resolvedBackendBtcRatesProvider);
+    final money = MovementMoney(
+        currency: config.currency,
+        locale: config.locale,
+        btcDecimalPlaces: config.btcDecimalPlaces,
+        btcUsd: rates?.btcUsd,
+        btcEur: rates?.btcEur,
+        btcBrl: rates?.btcBrl);
     var includeAll = false;
-    final format = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetContext) => StatefulBuilder(
-          builder: (context, setSheetState) => SafeArea(
-                child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(context.tr.statementExportTitle,
-                              style: Theme.of(context).textTheme.titleLarge),
-                          const SizedBox(height: 12),
-                          CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(const LocalizedCopy(
-                                    en: 'Include all transactions',
-                                    pt: 'Incluir todas as transações',
-                                    es: 'Incluir todas las transacciones')
-                                .resolve(context)),
-                            subtitle: Text(includeAll
-                                ? '${transactions.length} · ${const LocalizedCopy(en: 'All activity', pt: 'Toda a atividade', es: 'Toda la actividad').resolve(context)}'
-                                : '${filtered.length} · ${const LocalizedCopy(en: 'Current selection', pt: 'Seleção atual', es: 'Selección actual').resolve(context)}'),
-                            value: includeAll,
-                            onChanged: (value) => setSheetState(
-                                () => includeAll = value ?? false),
-                          ),
-                          Text(context.tr.statementExportLongAddressesNote,
-                              style: Theme.of(context).textTheme.bodySmall),
-                          const SizedBox(height: 12),
-                          for (final format in ['CSV', 'PDF'])
-                            ListTile(
-                              leading: Icon(KeroseneIcons.download),
-                              title: Text(format),
-                              enabled: includeAll || filtered.isNotEmpty,
-                              onTap: () => Navigator.of(sheetContext)
-                                  .pop(format.toLowerCase()),
-                            ),
-                        ])),
-              )),
-    );
-    if (format == null || !mounted) return;
-    setState(() => _exporting = true);
+    setState(() => _exportPhase = _StatementExportPhase.choosing);
     try {
-      final selected = includeAll ? transactions : filtered;
-      final result = format == 'pdf'
-          ? await exportStatementPdf(selected)
-          : await exportStatementCsv(selected);
-      if (!mounted) return;
-      final tr = context.tr;
-      AppNotice.showInfo(
-        context,
-        title: result.shared
-            ? tr.statementExportSharedTitle
-            : (format == 'csv'
-                ? tr.statementExportCsvCopiedTitle
-                : tr.statementExportGenericTitle),
-        message: result.shared
-            ? tr.statementExportSharedMessage(
-                result.rowCount, format.toUpperCase())
-            : (format == 'csv'
-                ? tr.statementExportCsvCopiedMessage(result.rowCount)
-                : tr.statementExportPdfFailed),
+      final format = await showModalBottomSheet<String>(
+        context: context,
+        useRootNavigator: true,
+        useSafeArea: true,
+        isScrollControlled: true,
+        showDragHandle: true,
+        sheetAnimationStyle: AnimationStyle(
+            duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+            reverseDuration:
+                KeroseneMotion.duration(context, KeroseneMotion.short)),
+        builder: (sheetContext) => StatefulBuilder(
+            builder: (context, setSheetState) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(tr.statementExportTitle,
+                            style: HomeTypography.heroTitle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 24)),
+                        const SizedBox(height: 12),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(tr.statementIncludeLoaded),
+                          subtitle: Text(includeAll
+                              ? '${selectedSnapshot.length} · ${tr.statementLoadedActivity}'
+                              : '${filtered.length} · ${const LocalizedCopy(en: 'Current selection', pt: 'Seleção atual', es: 'Selección actual').resolve(context)}'),
+                          value: includeAll,
+                          onChanged: (value) =>
+                              setSheetState(() => includeAll = value ?? false),
+                        ),
+                        Text(tr.statementExportLongAddressesNote,
+                            style: Theme.of(context).textTheme.bodySmall),
+                        const SizedBox(height: 12),
+                        for (final format in ['CSV', 'PDF'])
+                          ListTile(
+                            leading: const KeroseneIcon(KeroseneIcons.download),
+                            title: Text(format),
+                            enabled: includeAll || filtered.isNotEmpty,
+                            onTap: () => Navigator.of(sheetContext)
+                                .pop(format.toLowerCase()),
+                          ),
+                      ]),
+                )),
       );
+      if (format == null || !mounted) return;
+      setState(() => _exportPhase = _StatementExportPhase.generating);
+      final selected = includeAll ? selectedSnapshot : filtered;
+      final result = format == 'pdf'
+          ? await exportStatementPdf(selected, localizations: tr, money: money)
+          : await exportStatementCsv(selected, localizations: tr);
+      if (!mounted) return;
+      final title = result.shared
+          ? tr.statementExportSharedTitle
+          : result.shareDismissed
+              ? tr.statementExportDismissedTitle
+              : result.copiedToClipboard
+                  ? tr.statementExportCsvCopiedTitle
+                  : tr.statementExportGenericTitle;
+      final message = result.shared
+          ? tr.statementExportSharedMessage(
+              result.rowCount, format.toUpperCase())
+          : result.shareDismissed && !result.copiedToClipboard
+              ? tr.statementExportDismissedMessage(format.toUpperCase())
+              : result.copiedToClipboard
+                  ? tr.statementExportCsvCopiedMessage(result.rowCount)
+                  : tr.statementExportPdfFailed;
+      AppNotice.showInfo(context, title: title, message: message);
     } catch (error) {
       if (!mounted) return;
       AppNotice.showError(context,
-          title: context.tr.statementExportGenericTitle,
-          message: ErrorTranslator.translate(context.tr, error.toString()));
+          title: tr.statementExportGenericTitle,
+          message: ErrorTranslator.translate(tr, error.toString()));
     } finally {
-      if (mounted) setState(() => _exporting = false);
+      if (mounted) setState(() => _exportPhase = _StatementExportPhase.idle);
     }
   }
 
@@ -693,7 +781,7 @@ class _StatementSearchField extends StatelessWidget {
           hintStyle: AppTypography.bodyMedium.copyWith(
             color: _StatementColors.textMuted(context),
           ),
-          prefixIcon: Icon(
+          prefixIcon: KeroseneIcon(
             KeroseneIcons.search,
             color: _StatementColors.textMuted(context),
             size: 20,
@@ -814,15 +902,16 @@ class _GroupedTransactionList extends StatelessWidget {
     DateTime? currentDay;
 
     for (final transaction in transactions) {
-      final local = transaction.timestamp.toLocal();
-      final day = DateTime(local.year, local.month, local.day);
+      final local = AppDateTime.inDisplayZone(context, transaction.timestamp);
+      final day = DateTime.utc(local.year, local.month, local.day);
       if (currentDay != day) {
         currentDay = day;
         if (children.isNotEmpty) {
           children.add(const SizedBox(height: AppSpacing.xl2));
         }
         children.add(
-          _StatementDateHeader(label: _dateGroupLabel(context, day)),
+          _StatementDateHeader(
+              label: _dateGroupLabel(context, transaction.timestamp)),
         );
         children.add(const SizedBox(height: AppSpacing.sm));
       } else {
@@ -922,8 +1011,8 @@ class _RoundIconButton extends StatelessWidget {
       dimension: 48,
       child: IconButton(
         onPressed: onPressed,
-        icon:
-            Icon(icon, color: _StatementColors.textPrimary(context), size: 20),
+        icon: KeroseneIcon(icon,
+            color: _StatementColors.textPrimary(context), size: 20),
         style: IconButton.styleFrom(
           backgroundColor: _StatementColors.surface(context),
           shape: const CircleBorder(),
@@ -956,7 +1045,8 @@ class _StatementMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: _StatementColors.textMuted(context), size: 30),
+            KeroseneIcon(icon,
+                color: _StatementColors.textMuted(context), size: 30),
             const SizedBox(height: AppSpacing.md),
             Text(
               title,

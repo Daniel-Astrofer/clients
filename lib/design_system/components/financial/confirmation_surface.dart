@@ -46,8 +46,8 @@ class MovementConfirmationSurface extends StatelessWidget {
         final width = constraints.maxWidth;
         final titleFontSize = width < 360 ? 28.0 : 34.0;
         final amountFontSize = width < 360 ? 40.0 : 48.0;
-        final ink = KeroseneBrandTokens.textPrimary;
-        final muted = KeroseneBrandTokens.textMuted;
+        final ink = KeroseneBrandTheme.of(context).textPrimary;
+        final muted = KeroseneBrandTheme.of(context).textMuted;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,25 +140,38 @@ class _MovementConfirmationDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ink = KeroseneBrandTokens.textPrimary;
-    final muted = KeroseneBrandTokens.textMuted;
-    final border = KeroseneBrandTokens.border;
+    final ink = KeroseneBrandTheme.of(context).textPrimary;
+    final muted = KeroseneBrandTheme.of(context).textMuted;
+    final border = KeroseneBrandTheme.of(context).border;
     final labelColor = row.emphasize ? ink : muted;
-    final valueStyle = row.numeric || row.technical
-        ? AppTypography.financial(
+    final valueStyle = row.technical
+        ? AppTypography.technicalMono(
             color: ink,
             fontSize:
                 row.emphasize ? (compact ? 15.0 : 16.0) : (compact ? 13.5 : 14),
             fontWeight: row.emphasize ? FontWeight.w700 : FontWeight.w600,
             height: 1.3,
           )
-        : AppTypography.inter(
+        : (row.numeric ? AppTypography.number : AppTypography.bodyMedium)
+            .copyWith(
             color: ink,
             fontSize:
                 row.emphasize ? (compact ? 15.0 : 16.0) : (compact ? 13.5 : 14),
             fontWeight: row.emphasize ? FontWeight.w700 : FontWeight.w400,
             height: 1.3,
+            letterSpacing: 0,
           );
+
+    final label = Text(
+      row.label,
+      style: AppTypography.inter(
+        color: labelColor,
+        fontSize: compact ? 12.5 : 13,
+        fontWeight: row.emphasize ? FontWeight.w600 : FontWeight.w400,
+        height: 1.25,
+        letterSpacing: 0,
+      ),
+    );
 
     return Container(
       padding: EdgeInsets.symmetric(vertical: compact ? 12 : 15),
@@ -169,39 +182,37 @@ class _MovementConfirmationDetailRow extends StatelessWidget {
           ),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: compact ? 120 : 136,
-            child: Text(
-              // Sentence case — softer than bank micro-caps.
-              row.label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.inter(
-                color: labelColor,
-                fontSize: compact ? 12.5 : 13,
-                fontWeight: row.emphasize ? FontWeight.w600 : FontWeight.w400,
-                height: 1.25,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                row.value,
-                maxLines: row.technical ? 1 : 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: valueStyle,
-              ),
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = row.technical ||
+              constraints.maxWidth < 300 ||
+              MediaQuery.textScalerOf(context).scale(14) > 18;
+          final value = row.technical
+              ? SelectableText(
+                  row.value,
+                  textDirection: TextDirection.ltr,
+                  style: valueStyle,
+                )
+              : Text(
+                  row.value,
+                  textAlign: stacked ? TextAlign.left : TextAlign.right,
+                  style: valueStyle,
+                );
+          if (stacked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [label, const SizedBox(height: 6), value],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 2, child: label),
+              const SizedBox(width: 12),
+              Expanded(flex: 3, child: value),
+            ],
+          );
+        },
       ),
     );
   }

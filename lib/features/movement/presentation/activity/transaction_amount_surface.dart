@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 import 'package:flutter/material.dart';
@@ -378,7 +379,8 @@ class TransactionSurfaceHeader extends StatelessWidget {
             color: surfaceColor,
             border: Border.all(color: borderColor.withValues(alpha: 0.72)),
           ),
-          child: Icon(_iconForDirection(), color: mutedTextColor, size: 18),
+          child: KeroseneIcon(_iconForDirection(),
+              color: mutedTextColor, size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -455,7 +457,7 @@ class TransactionPartyRow extends StatelessWidget {
             color: surfaceColor,
             border: Border.all(color: borderColor.withValues(alpha: 0.72)),
           ),
-          child: Icon(data.icon, color: mutedTextColor, size: 20),
+          child: KeroseneIcon(data.icon, color: mutedTextColor, size: 20),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -539,7 +541,7 @@ class TransactionRailConnector extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: borderColor.withValues(alpha: 0.86)),
               ),
-              child: Icon(
+              child: KeroseneIcon(
                 _iconForRail(resolvedLabel),
                 color: mutedTextColor,
                 size: 15,
@@ -578,7 +580,7 @@ class TransactionRailConnector extends StatelessWidget {
                   color: tertiaryTextColor.withValues(alpha: 0.54),
                 ),
                 const SizedBox(width: 8),
-                Icon(
+                KeroseneIcon(
                   KeroseneIcons.moveHorizontal,
                   color: tertiaryTextColor,
                   size: 14,

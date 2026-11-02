@@ -18,7 +18,8 @@ List<Story> bitcoinAdvancedStories() {
           bitcoinAccountsServiceProvider.overrideWithValue(
             MockBitcoinAccountsService(),
           ),
-          bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+          bitcoinAccountsByScopeProvider
+              .overrideWith2(BitcoinAccountsNotifier.new),
         ],
         child: const BitcoinAccountsScreen(),
       ),
@@ -45,7 +46,12 @@ class BitcoinCardsSurfaceStoryPreview extends StatelessWidget {
         bitcoinAccountsServiceProvider.overrideWithValue(
           MockBitcoinAccountsService(),
         ),
-        bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+        bitcoinAccountsByScopeProvider
+            .overrideWith2(BitcoinAccountsNotifier.new),
+        // Resolve this selector in the same scope as the preview service/session.
+        bitcoinAccountsProvider.overrideWith((ref) => ref.watch(
+            bitcoinAccountsByScopeProvider(
+                ref.watch(sessionStorageScopeProvider)))),
       ],
       child: const BitcoinAccountsScreen(),
     );
@@ -63,7 +69,8 @@ class ColdWalletCreationStoryPreview extends StatelessWidget {
         bitcoinAccountsServiceProvider.overrideWithValue(
           MockBitcoinAccountsService(),
         ),
-        bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+        bitcoinAccountsByScopeProvider
+            .overrideWith2(BitcoinAccountsNotifier.new),
       ],
       child: ColdWalletCreationScreen(initialStepName: 'prepare'),
     );

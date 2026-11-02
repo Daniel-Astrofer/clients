@@ -1,5 +1,6 @@
 // architecture-allow-large-file: authentication endpoint mapping and legacy
 // response compatibility remain together to preserve the external API.
+import '../../domain/entities/account_security_change_factors.dart';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -185,9 +186,22 @@ class BackupCodesStatusResult {
     final payload = json['data'] is Map<String, dynamic>
         ? Map<String, dynamic>.from(json['data'] as Map<String, dynamic>)
         : json;
+    final remaining = payload['remainingCodes'];
+    final codes = payload['newlyGeneratedCodes'] ?? const <String>[];
+    if (payload['enabled'] is! bool ||
+        remaining is! num ||
+        !remaining.isFinite ||
+        remaining < 0 ||
+        remaining != remaining.toInt() ||
+        codes is! List ||
+        codes.any((code) => code is! String || code.isEmpty)) {
+      throw const ServerException(
+          message:
+              'Não conseguimos confirmar o estado dos códigos de recuperação.');
+    }
     return BackupCodesStatusResult(
       enabled: payload['enabled'] == true,
-      remainingCodes: (payload['remainingCodes'] as num?)?.toInt() ?? 0,
+      remainingCodes: remaining.toInt(),
       newlyGeneratedCodes:
           ((payload['newlyGeneratedCodes'] ?? const <dynamic>[]) as List)
               .map((item) => item.toString())
@@ -319,11 +333,15 @@ abstract class AuthRemoteDataSource {
     required String totpCode,
   });
 
-  Future<void> disableTotp();
+  Future<void> disableTotp({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  });
 
   Future<BackupCodesStatusResult> getBackupCodesStatus();
 
-  Future<BackupCodesStatusResult> regenerateBackupCodes();
+  Future<BackupCodesStatusResult> regenerateBackupCodes({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  });
 
   /// Confirma a transação enviada para o payment link de onboarding
   Future<OnboardingPaymentLinkDto> confirmOnboardingPayment({
@@ -996,9 +1014,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> disableTotp() async {
+  Future<void> disableTotp({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  }) async {
     try {
-      await apiClient.delete(AppConfig.authTotpDisable);
+      await apiClient.delete(AppConfig.authTotpDisable, data: factors.toJson());
     } catch (e) {
       if (e is AppException) rethrow;
       throw ServerException(
@@ -1027,10 +1047,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<BackupCodesStatusResult> regenerateBackupCodes() async {
+  Future<BackupCodesStatusResult> regenerateBackupCodes({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  }) async {
     try {
-      final response =
-          await apiClient.post(AppConfig.authBackupCodesRegenerate);
+      final response = await apiClient.post(AppConfig.authBackupCodesRegenerate,
+          data: factors.toJson());
       final body = response.data;
       if (body is Map) {
         return BackupCodesStatusResult.fromJson(

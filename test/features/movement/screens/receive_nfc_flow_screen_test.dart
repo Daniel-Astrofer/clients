@@ -33,7 +33,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1100));
     expect(find.text('Pedido NFC preparado'), findsOneWidget);
     expect(find.text('Aguardando pagamento'), findsWidgets);
-    expect(find.text('On-chain'), findsWidgets);
+    expect(find.text('Bitcoin — rede'), findsWidgets);
   });
 }
 

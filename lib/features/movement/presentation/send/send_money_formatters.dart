@@ -6,9 +6,7 @@ import 'package:kerosene/features/movement/copy/send_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
 
 String sendShortHash(String value) {
-  final trimmed = value.trim();
-  if (trimmed.length <= 18) return trimmed;
-  return '${trimmed.substring(0, 10)}...${trimmed.substring(trimmed.length - 8)}';
+  return value.trim();
 }
 
 bool isValidInternalDestination(String value) {
@@ -43,9 +41,7 @@ String normalizeInternalDestination(String value) {
 }
 
 String compactInternalValue(String value) {
-  final trimmed = value.trim();
-  if (trimmed.length <= 18) return trimmed;
-  return '${trimmed.substring(0, 10)}...${trimmed.substring(trimmed.length - 6)}';
+  return value.trim();
 }
 
 String recentInternalDestinationTitle(
@@ -106,39 +102,6 @@ String formatBtcValue(double value,
 
 String walletBalanceLabel(double value) {
   return '${formatBtcValue(value, decimalPlaces: 6)} BTC';
-}
-
-/// Secondary fiat line next to a BTC amount.
-///
-/// Defaults fiat from [appLocale] when [fiatCurrency] is omitted
-/// (pt→BRL, es→EUR, else USD) so send review is not stuck on BRL for EN users.
-Currency preferredFiatForLocale(Locale? locale) {
-  return switch (locale?.languageCode) {
-    'pt' => Currency.brl,
-    'es' => Currency.eur,
-    _ => Currency.usd,
-  };
-}
-
-String formatFiatReference({
-  required double btcAmount,
-  required double? btcUsd,
-  required double? btcEur,
-  required double? btcBrl,
-  bool includeApproxPrefix = true,
-  Currency? fiatCurrency,
-  Locale? appLocale,
-}) {
-  final currency = fiatCurrency ?? preferredFiatForLocale(appLocale);
-  final value = MoneyDisplay.formatAmountFromBtc(
-    btcAmount: btcAmount,
-    currency: currency,
-    btcUsd: btcUsd,
-    btcEur: btcEur,
-    btcBrl: btcBrl,
-    appLocale: appLocale,
-  );
-  return includeApproxPrefix ? '≈ $value' : value;
 }
 
 String estimatedSendTime(

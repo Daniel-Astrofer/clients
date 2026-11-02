@@ -50,6 +50,10 @@ final class Transaction extends Equatable {
   /// Taxa de serviço da plataforma (Kerosene) em satoshis.
   final int serviceFeeSatoshis;
 
+  /// Authoritative debit from the server, including any fee allocation policy.
+  /// Null preserves compatibility with older responses and cached entries.
+  final int? totalDebitedSatoshis;
+
   /// Status da transação
   final TransactionStatus status;
 
@@ -160,6 +164,7 @@ final class Transaction extends Equatable {
     required this.amountSatoshis,
     required this.feeSatoshis,
     this.serviceFeeSatoshis = 0,
+    this.totalDebitedSatoshis,
     required this.status,
     required this.type,
     required this.confirmations,
@@ -204,6 +209,7 @@ final class Transaction extends Equatable {
   /// Debit compact amount: principal + network fee + service fee when present.
   int get signedDisplaySatoshis {
     if (!isDebit) return amountSatoshis;
+    if (totalDebitedSatoshis != null) return totalDebitedSatoshis!.abs();
     var total = amountSatoshis;
     if (showsNetworkFee) total += feeSatoshis;
     if (showsServiceFee) total += serviceFeeSatoshis;
@@ -397,6 +403,7 @@ final class Transaction extends Equatable {
       'amountSatoshis': amountSatoshis,
       'feeSatoshis': feeSatoshis,
       'serviceFeeSatoshis': serviceFeeSatoshis,
+      'totalDebitedSatoshis': totalDebitedSatoshis,
       'status': status.name,
       'type': type.name,
       'confirmations': confirmations,
@@ -434,21 +441,39 @@ final class Transaction extends Equatable {
   }
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
-    if (json.containsKey('grossAmountSats') ||
-        json.containsKey('receiverAmountSats') ||
-        json.containsKey('totalDebitSats') ||
-        json.containsKey('amountSats') ||
-        json.containsKey('amountSatoshis') ||
-        json.containsKey('netAmountSats') ||
-        json.containsKey('creditedSats') ||
-        (json.containsKey('direction') && json.containsKey('rail'))) {
+    // Stored snapshots and KFE responses both use amountSatoshis. Recognize
+    // the complete local shape before applying the API's direction/status rules.
+    final isStoredSnapshot = json['id'] is String &&
+        json['fromAddress'] is String &&
+        json['toAddress'] is String &&
+        json['amountSatoshis'] is num &&
+        json['feeSatoshis'] is num &&
+        TransactionStatus.values.any((value) => value.name == json['status']) &&
+        TransactionType.values.any((value) => value.name == json['type']);
+    if (!isStoredSnapshot &&
+        (json.containsKey('grossAmountSats') ||
+            json.containsKey('receiverAmountSats') ||
+            json.containsKey('totalDebitSats') ||
+            json.containsKey('amountSats') ||
+            json.containsKey('amountSatoshis') ||
+            json.containsKey('netAmountSats') ||
+            json.containsKey('creditedSats') ||
+            (json.containsKey('direction') && json.containsKey('rail')))) {
       return _fromKfeJson(json);
     }
 
     // If it's from local storage (newly added format)
-    if (json.containsKey('status') &&
-        json['status'] is String &&
-        json.containsKey('amountSatoshis')) {
+    if (isStoredSnapshot) {
+      // Local snapshots keep the ISO representation written by toJson. Bare
+      // timestamps in older snapshots are device-local, unlike bare KFE times.
+      final timestamp = DateTime.tryParse(json['timestamp']?.toString() ?? '');
+      final updatedAt = json['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(json['updatedAt'].toString());
+      if (timestamp == null ||
+          (json['updatedAt'] != null && updatedAt == null)) {
+        throw const FormatException('Invalid stored transaction timestamp.');
+      }
       return Transaction(
         id: json['id'],
         fromAddress: json['fromAddress'],
@@ -468,6 +493,7 @@ final class Transaction extends Equatable {
         feeSatoshis: json['feeSatoshis'] is int
             ? json['feeSatoshis']
             : (json['feeSatoshis'] as num).toInt(),
+        totalDebitedSatoshis: _parseInt(json['totalDebitedSatoshis']),
         serviceFeeSatoshis: json['serviceFeeSatoshis'] is int
             ? json['serviceFeeSatoshis'] as int
             : ((json['serviceFeeSatoshis'] as num?)?.toInt() ??
@@ -488,9 +514,8 @@ final class Transaction extends Equatable {
           if (raw is num) return raw.toInt();
           return int.tryParse(raw?.toString() ?? '') ?? 0;
         }(),
-        timestamp: _parseDateTime(json['timestamp'] ?? json['createdAt']) ??
-            DateTime.now(),
-        updatedAt: _parseDateTime(json['updatedAt']),
+        timestamp: timestamp,
+        updatedAt: updatedAt,
         blockHash: json['blockHash'],
         blockHeight: json['blockHeight'],
         blockchainTxid: json['blockchainTxid']?.toString(),
@@ -674,6 +699,7 @@ final class Transaction extends Equatable {
       amountSatoshis: (amountVal.abs() * 100000000).round(),
       feeSatoshis: networkFeeSats,
       serviceFeeSatoshis: _parseServiceFeeSats(json, networkFeeBtc: networkFee),
+      totalDebitedSatoshis: _parseInt(json['totalDebitSats']),
       status: txStatus,
       type: txType,
       confirmations: isInternalLegacy || isLightningLegacy ? 0 : confirmations,
@@ -874,6 +900,7 @@ final class Transaction extends Equatable {
       amountSatoshis: receiverAmountSats.abs(),
       feeSatoshis: effectiveNetworkFee,
       serviceFeeSatoshis: serviceFeeSats.abs(),
+      totalDebitedSatoshis: _parseInt(json['totalDebitSats']),
       status: resolvedStatus,
       type: txType,
       confirmations: effectiveConfs,
@@ -1268,6 +1295,7 @@ final class Transaction extends Equatable {
         amountSatoshis,
         feeSatoshis,
         serviceFeeSatoshis,
+        totalDebitedSatoshis,
         status,
         type,
         confirmations,

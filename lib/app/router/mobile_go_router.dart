@@ -1,3 +1,5 @@
+import 'package:kerosene/features/auth/presentation/first_access/first_access_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/app_pin_recovery_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
@@ -64,7 +66,9 @@ GoRouter buildMobileGoRouter({
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => LoginScreen(
+          username: state.extra is String ? state.extra as String : null,
+        ),
       ),
       GoRoute(
         path: '/recovery/emergency',
@@ -111,6 +115,7 @@ GoRouter buildMobileGoRouter({
                   libraryKey: DeferredLibraryKeys.sendMoney,
                   animateReveal: false,
                   builder: (_) => send_money.SendMoneyScreen(
+                    initialWalletId: state.uri.queryParameters['walletId'],
                     initialAddress: initialAddress,
                     initialAmountBtc: amount,
                   ),
@@ -226,11 +231,23 @@ GoRouter buildMobileGoRouter({
                 loadLibrary: receive.loadLibrary,
                 libraryKey: DeferredLibraryKeys.receive,
                 animateReveal: false,
-                builder: (_) => receive.ReceiveAmountEntryScreen(),
+                builder: (_) => receive.ReceiveAmountEntryScreen(
+                    initialWalletId: state.uri.queryParameters['walletId']),
               ),
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/onboarding/first-access',
+        builder: (context, state) =>
+            privateRouteBuilder(const FirstAccessScreen()),
+      ),
+      // Recovery authenticates both account factors itself; wrapping it in the
+      // PIN gate would recursively show the PIN the user is trying to recover.
+      GoRoute(
+        path: '/recovery/app-pin',
+        builder: (context, state) => const AppPinRecoveryScreen(),
       ),
       GoRoute(
         path: '/onboarding/steps',

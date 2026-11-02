@@ -60,13 +60,13 @@ class SettingsAccountPane extends ConsumerWidget {
             SettingsSectionRow(
               icon: KeroseneIcons.history,
               title: tr.settingsAccountCreatedAtTitle,
-              subtitle: settingsDateLabel(user?.createdAt),
+              subtitle: settingsDateLabel(user?.createdAt, context: context),
               onTap: null,
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.device,
               title: tr.settingsAccountLastAccessTitle,
-              subtitle: settingsDateLabel(user?.lastLogin),
+              subtitle: settingsDateLabel(user?.lastLogin, context: context),
               onTap: null,
             ),
             SettingsSectionRow(

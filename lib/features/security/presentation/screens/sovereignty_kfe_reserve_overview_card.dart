@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -19,11 +20,17 @@ Widget buildKfeReserveOverviewCard({
   return overviewAsync.when(
     loading: () => buildKfeReserveLoadingCard(context: context),
     error: (error, _) => buildKfeReserveUnavailableCard(
-        context: context, message: error.toString(), copy: copy),
+        context: context,
+        message: copy(
+          pt: 'Não foi possível consultar as reservas agora. Atualize para tentar novamente.',
+          en: 'We could not check reserves right now. Refresh to try again.',
+          es: 'No pudimos consultar las reservas ahora. Actualiza para intentarlo de nuevo.',
+        ),
+        copy: copy),
     data: (overview) {
       final liquidityHealthy = overview.lightningSendsAllowed;
       final liquidityColor = liquidityHealthy
-          ? AppColors.success
+          ? Theme.of(context).colorScheme.onSurface
           : Theme.of(context).colorScheme.error;
       final liquidityLabel = liquidityStateLabel(overview.liquidityState);
       final liquiditySummary = liquidityStateSummary(overview);
@@ -51,7 +58,7 @@ Widget buildKfeReserveOverviewCard({
                     color: liquidityColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
+                  child: KeroseneIcon(
                     KeroseneIcons.wallet,
                     color: liquidityColor,
                     size: 20,
@@ -76,9 +83,9 @@ Widget buildKfeReserveOverviewCard({
                       const SizedBox(height: 4),
                       Text(
                         copy(
-                          pt: 'Leitura ao vivo de reservas on-chain, liquidez Lightning e fundos reservados por saídas ainda pendentes.',
-                          en: 'Live readout of on-chain reserves, Lightning liquidity, and funds reserved by pending outflows.',
-                          es: 'Lectura en vivo de reservas on-chain, liquidez Lightning y fondos reservados por salidas aún pendientes.',
+                          pt: 'Reservas on-chain, liquidez Lightning e fundos reservados nesta consulta.',
+                          en: 'On-chain reserves, Lightning liquidity, and reserved funds in this readout.',
+                          es: 'Reservas on-chain, liquidez Lightning y fondos reservados en esta consulta.',
                         ),
                         style: AppTypography.bodySmall.copyWith(
                           color: Theme.of(context)
@@ -221,7 +228,7 @@ Widget buildKfeReserveOverviewCard({
                           es: 'Capacidad disponible para pagos Lightning',
                         ),
                         accentColor: overview.lightningSendsAllowed
-                            ? AppColors.success
+                            ? Theme.of(context).colorScheme.onSurface
                             : Theme.of(context).colorScheme.error,
                       ),
                     ),

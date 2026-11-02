@@ -366,6 +366,9 @@ class _HomeScrollLayerState extends ConsumerState<HomeScrollLayer> {
               // Personal activity stays ahead of market information on mobile.
               HomeSectionHeader(
                 title: homeRecentActivitiesTitle(context),
+                onAction: widget.onOpenStatement,
+                actionLabel: homeSeeYourStatementLabel(context),
+                actionTrailingChevron: true,
               ),
               SizedBox(height: homeSize(AppSpacing.md)),
             ],
@@ -654,6 +657,9 @@ class HomeWideFeedBody extends ConsumerWidget {
         SizedBox(height: gapBeforeFeed),
         HomeSectionHeader(
           title: homeRecentActivitiesTitle(context),
+          onAction: onOpenStatement,
+          actionLabel: homeSeeYourStatementLabel(context),
+          actionTrailingChevron: true,
         ),
         SizedBox(height: homeSize(AppSpacing.md)),
         HomeTransactionsList(

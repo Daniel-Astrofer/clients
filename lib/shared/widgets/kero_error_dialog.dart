@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/components/buttons/app_button.dart';
@@ -199,7 +200,7 @@ class KeroErrorDialog extends StatelessWidget {
                   width: 1.5,
                 ),
               ),
-              child: Icon(errorType.icon, color: color, size: 38),
+              child: KeroseneIcon(errorType.icon, color: color, size: 38),
             ),
 
             const SizedBox(height: 20),

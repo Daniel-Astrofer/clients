@@ -1,3 +1,5 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'package:flutter/cupertino.dart';
@@ -7,22 +9,28 @@ import 'package:kerosene/design_system/components/financial/send_flow_theme.dart
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
-import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 
-SendFlowTheme _receiveTokens() => SendFlowTheme.forVariant(
-    ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark);
+SendFlowTheme _receiveTokens(BuildContext context) =>
+    SendFlowTheme.forVariant(Theme.of(context).brightness);
 
-Color get _receiveBackground => _receiveTokens().background;
-Color get _receiveSurface => _receiveTokens().surface;
-Color get _receiveSurfaceLowest => _receiveTokens().surface;
-Color get _receiveSurfaceHigh => _receiveTokens().surfaceHigh;
-Color get _receiveSurfaceLow => _receiveTokens().surfaceHigh;
-Color get _receiveWarning => _receiveTokens().feedbackWarning;
-Color get _receiveSuccess => _receiveTokens().feedbackSuccess;
-Color get _receiveBorder => _receiveTokens().border;
-Color get _receiveText => _receiveTokens().textPrimary;
-Color get _receiveMuted => _receiveTokens().textMuted;
-Color get _receiveBody => _receiveTokens().textSecondary;
+Color _receiveBackground(BuildContext context) =>
+    _receiveTokens(context).background;
+Color _receiveSurface(BuildContext context) => _receiveTokens(context).surface;
+Color _receiveSurfaceLowest(BuildContext context) =>
+    _receiveTokens(context).surface;
+Color _receiveSurfaceHigh(BuildContext context) =>
+    _receiveTokens(context).surfaceHigh;
+Color _receiveSurfaceLow(BuildContext context) =>
+    _receiveTokens(context).surfaceHigh;
+Color _receiveWarning(BuildContext context) =>
+    _receiveTokens(context).feedbackWarning;
+Color _receiveSuccess(BuildContext context) =>
+    _receiveTokens(context).feedbackSuccess;
+Color _receiveBorder(BuildContext context) => _receiveTokens(context).border;
+Color _receiveText(BuildContext context) => _receiveTokens(context).textPrimary;
+Color _receiveMuted(BuildContext context) => _receiveTokens(context).textMuted;
+Color _receiveBody(BuildContext context) =>
+    _receiveTokens(context).textSecondary;
 
 class ReceiveContextHeader extends StatelessWidget {
   final String title;
@@ -37,39 +45,27 @@ class ReceiveContextHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 64,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 64),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: onPressed,
-                icon: Icon(icon, size: 20),
-                color: _receiveText,
-                style: IconButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        child: Row(children: [
+          IconButton(
+              onPressed: onPressed,
+              icon: KeroseneIcon(icon, size: 20),
+              color: _receiveText(context),
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              style: IconButton.styleFrom(
                   shape: const CircleBorder(),
-                  foregroundColor: _receiveText,
-                ),
-              ),
-            ),
-            if (title.trim().isNotEmpty)
-              Text(
-                title,
-                style: AppTypography.captionLarge.copyWith(
-                  color: _receiveMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            const Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(width: 40, height: 40),
-            ),
-          ],
-        ),
+                  foregroundColor: _receiveText(context))),
+          Expanded(
+              child: Text(title,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.captionLarge.copyWith(
+                      color: _receiveMuted(context),
+                      fontWeight: FontWeight.w600))),
+          const SizedBox(width: 48),
+        ]),
       ),
     );
   }
@@ -86,17 +82,18 @@ class ReceiveShellHeader extends StatelessWidget {
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
-        color: _receiveBackground,
-        border: Border(bottom: BorderSide(color: _receiveBorder)),
+        color: _receiveBackground(context),
+        border: Border(bottom: BorderSide(color: _receiveBorder(context))),
       ),
       child: Row(
         children: [
-          Icon(KeroseneIcons.menu, color: _receiveText, size: 22),
+          KeroseneIcon(KeroseneIcons.menu,
+              color: _receiveText(context), size: 22),
           const Spacer(),
           Text(
             brandLabel,
             style: HomeTypography.heroTitle(
-              color: _receiveText,
+              color: _receiveText(context),
               fontSize: 24,
             ).copyWith(height: 1),
           ),
@@ -106,14 +103,14 @@ class ReceiveShellHeader extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _receiveSurfaceHigh,
-              border: Border.all(color: _receiveBorder),
+              color: _receiveSurfaceHigh(context),
+              border: Border.all(color: _receiveBorder(context)),
             ),
             child: Center(
               child: Text(
                 avatarLabel,
                 style: AppTypography.inter(
-                  color: _receiveText,
+                  color: _receiveText(context),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -142,11 +139,11 @@ class VaultCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _receiveBorder),
+        border: Border.all(color: _receiveBorder(context)),
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.hexFF1A1A1A, _receiveSurface],
+          colors: [AppColors.hexFF1A1A1A, _receiveSurface(context)],
         ),
         boxShadow: [
           BoxShadow(
@@ -177,11 +174,11 @@ class ReceiveQrFrame extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _receiveBorder),
+            border: Border.all(color: _receiveBorder(context)),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [AppColors.hexFF1A1A1A, _receiveSurface],
+              colors: [AppColors.hexFF1A1A1A, _receiveSurface(context)],
             ),
           ),
           child: Stack(
@@ -216,17 +213,21 @@ class CornerAccent extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             top: isTop
-                ? BorderSide(color: _receiveText.withValues(alpha: 0.20))
+                ? BorderSide(
+                    color: _receiveText(context).withValues(alpha: 0.20))
                 : BorderSide.none,
             bottom: isTop
                 ? BorderSide.none
-                : BorderSide(color: _receiveText.withValues(alpha: 0.20)),
+                : BorderSide(
+                    color: _receiveText(context).withValues(alpha: 0.20)),
             left: isLeft
-                ? BorderSide(color: _receiveText.withValues(alpha: 0.20))
+                ? BorderSide(
+                    color: _receiveText(context).withValues(alpha: 0.20))
                 : BorderSide.none,
             right: isLeft
                 ? BorderSide.none
-                : BorderSide(color: _receiveText.withValues(alpha: 0.20)),
+                : BorderSide(
+                    color: _receiveText(context).withValues(alpha: 0.20)),
           ),
         ),
       ),
@@ -237,7 +238,7 @@ class CornerAccent extends StatelessWidget {
 class ReceiveActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool primary;
 
   const ReceiveActionButton({
@@ -249,20 +250,22 @@ class ReceiveActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = primary ? _receiveTokens().ctaForeground : _receiveText;
+    final foreground =
+        primary ? _receiveTokens(context).ctaForeground : _receiveText(context);
     return SizedBox(
       height: 56,
       child: TextButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, size: 18),
+        icon: KeroseneIcon(icon, size: 18),
         label: Text(label),
         style: TextButton.styleFrom(
           foregroundColor: foreground,
-          backgroundColor: primary ? _receiveText : _receiveSurface,
+          backgroundColor:
+              primary ? _receiveText(context) : _receiveSurface(context),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: primary ? _receiveText : _receiveBorder,
+              color: primary ? _receiveText(context) : _receiveBorder(context),
             ),
           ),
           textStyle: AppTypography.inter(
@@ -295,7 +298,7 @@ class ReceiveDetailLine extends StatelessWidget {
     final valueStyle =
         (monospace ? AppTypography.ibmPlexMono() : AppTypography.inter())
             .copyWith(
-      color: _receiveText,
+      color: _receiveText(context),
       fontSize: 13,
       fontWeight: FontWeight.w500,
       height: 1.3,
@@ -306,12 +309,12 @@ class ReceiveDetailLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          Icon(icon, color: _receiveMuted, size: 17),
+          KeroseneIcon(icon, color: _receiveMuted(context), size: 17),
           const SizedBox(width: 10),
           Text(
             label,
             style: AppTypography.inter(
-              color: _receiveMuted,
+              color: _receiveMuted(context),
               fontSize: 12,
               fontWeight: FontWeight.w500,
               height: 1.2,
@@ -323,8 +326,6 @@ class ReceiveDetailLine extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: valueStyle,
             ),
           ),
@@ -345,8 +346,8 @@ class StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: _receiveSurfaceLow,
-        border: Border.all(color: _receiveBorder),
+        color: _receiveSurfaceLow(context),
+        border: Border.all(color: _receiveBorder(context)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -370,7 +371,7 @@ class StatusChip extends StatelessWidget {
           Text(
             label,
             style: AppTypography.inter(
-              color: _receiveBody,
+              color: _receiveBody(context),
               fontSize: 12,
               fontWeight: FontWeight.w400,
               height: 1.2,
@@ -385,11 +386,13 @@ class StatusChip extends StatelessWidget {
 class DetailRow extends StatelessWidget {
   final String label;
   final String value;
+  final String secondaryValue;
   final bool monospace;
 
   const DetailRow({
     required this.label,
     required this.value,
+    this.secondaryValue = '',
     this.monospace = false,
   });
 
@@ -402,7 +405,7 @@ class DetailRow extends StatelessWidget {
           Text(
             label,
             style: AppTypography.inter(
-              color: _receiveMuted,
+              color: _receiveMuted(context),
               fontSize: 11,
               fontWeight: FontWeight.w400,
               height: 1.3,
@@ -410,21 +413,36 @@ class DetailRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: (monospace
-                      ? AppTypography.ibmPlexMono()
-                      : AppTypography.inter())
-                  .copyWith(
-                color: _receiveText,
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                height: 1.3,
-                letterSpacing: 0,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  style: (monospace
+                          ? AppTypography.ibmPlexMono()
+                          : AppTypography.inter())
+                      .copyWith(
+                    color: _receiveText(context),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    height: 1.3,
+                    letterSpacing: 0,
+                  ),
+                ),
+                if (secondaryValue.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    secondaryValue,
+                    textAlign: TextAlign.right,
+                    style: AppTypography.number.copyWith(
+                      color: _receiveMuted(context),
+                      fontSize: 11,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -439,7 +457,7 @@ class ReceiveDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Divider(
-      color: _receiveBorder.withValues(alpha: 0.50),
+      color: _receiveBorder(context).withValues(alpha: 0.50),
       height: 1,
       thickness: 1,
     );
@@ -457,7 +475,7 @@ class SectionLabel extends StatelessWidget {
       label,
       textAlign: TextAlign.center,
       style: AppTypography.inter(
-        color: _receiveMuted,
+        color: _receiveMuted(context),
         fontSize: 12,
         fontWeight: FontWeight.w600,
         height: 1.2,
@@ -478,19 +496,21 @@ class InlineNotice extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _receiveWarning.withValues(alpha: 0.08),
-        border: Border.all(color: _receiveWarning.withValues(alpha: 0.28)),
+        color: _receiveWarning(context).withValues(alpha: 0.08),
+        border:
+            Border.all(color: _receiveWarning(context).withValues(alpha: 0.28)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(KeroseneIcons.warning, color: _receiveWarning, size: 18),
+          KeroseneIcon(KeroseneIcons.warning,
+              color: _receiveWarning(context), size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
               style: AppTypography.inter(
-                color: _receiveBody,
+                color: _receiveBody(context),
                 fontSize: 13,
                 height: 1.35,
               ),
@@ -503,13 +523,10 @@ class InlineNotice extends StatelessWidget {
 }
 
 String shortenReceiveAddress(String value, {int head = 6, int tail = 4}) {
-  final trimmed = value.trim();
-  if (trimmed.length <= head + tail + 3) return trimmed;
-  if (tail <= 0) return '${trimmed.substring(0, head)}...';
-  return '${trimmed.substring(0, head)}...${trimmed.substring(trimmed.length - tail)}';
+  return value.trim();
 }
 
-String formatReceiveDateTime(DateTime value) {
+String formatReceiveDateTime(DateTime value, {BuildContext? context}) {
   const months = [
     'Jan',
     'Fev',
@@ -524,7 +541,9 @@ String formatReceiveDateTime(DateTime value) {
     'Nov',
     'Dez',
   ];
-  final local = value.toLocal();
+  final local = context == null
+      ? value.toLocal()
+      : AppDateTime.inDisplayZone(context, value);
   final day = local.day.toString().padLeft(2, '0');
   final month = months[local.month - 1];
   final hour = local.hour.toString().padLeft(2, '0');
@@ -586,8 +605,8 @@ class ReceiveNetworkStatusRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: _receiveSurface,
-        border: Border.all(color: _receiveBorder),
+        color: _receiveSurface(context),
+        border: Border.all(color: _receiveBorder(context)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -596,11 +615,11 @@ class ReceiveNetworkStatusRow extends StatelessWidget {
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: _receiveWarning,
+              color: _receiveWarning(context),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _receiveWarning.withValues(alpha: 0.60),
+                  color: _receiveWarning(context).withValues(alpha: 0.60),
                   blurRadius: 8,
                 ),
               ],
@@ -611,7 +630,7 @@ class ReceiveNetworkStatusRow extends StatelessWidget {
             child: Text(
               onChainWallet ? 'Status da Rede' : 'Status Kerosene',
               style: AppTypography.inter(
-                color: _receiveText,
+                color: _receiveText(context),
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
                 height: 1.4,
@@ -625,7 +644,7 @@ class ReceiveNetworkStatusRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
               style: AppTypography.inter(
-                color: _receiveMuted,
+                color: _receiveMuted(context),
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
                 height: 1.4,
@@ -662,7 +681,7 @@ class ReceiveSuccessGraphic extends StatelessWidget {
                   height: 104,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _receiveSuccess.withValues(
+                    color: _receiveSuccess(context).withValues(
                       alpha: 0.12 * (1 - pulse),
                     ),
                   ),
@@ -673,18 +692,18 @@ class ReceiveSuccessGraphic extends StatelessWidget {
                 height: 96,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _receiveSurfaceLowest,
-                  border: Border.all(color: _receiveBorder),
+                  color: _receiveSurfaceLowest(context),
+                  border: Border.all(color: _receiveBorder(context)),
                   boxShadow: [
                     BoxShadow(
-                      color: _receiveSuccess.withValues(alpha: 0.10),
+                      color: _receiveSuccess(context).withValues(alpha: 0.10),
                       blurRadius: 40,
                     ),
                   ],
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.success,
-                  color: _receiveSuccess,
+                  color: _receiveSuccess(context),
                   size: 48,
                 ),
               ),
@@ -709,22 +728,22 @@ class ReceiveLoadingOverlay extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: BoxDecoration(
-              color: _receiveSurface,
-              border: Border.all(color: _receiveBorder),
+              color: _receiveSurface(context),
+              border: Border.all(color: _receiveBorder(context)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CupertinoActivityIndicator(
-                  color: _receiveText,
+                  color: _receiveText(context),
                   radius: 11,
                 ),
                 const SizedBox(height: 14),
                 Text(
                   preparingLabel,
                   style: AppTypography.inter(
-                    color: _receiveText,
+                    color: _receiveText(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     height: 1.4,
@@ -760,8 +779,8 @@ class ReceiveAddressBlock extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _receiveSurfaceLow,
-              border: Border.all(color: _receiveBorder),
+              color: _receiveSurfaceLow(context),
+              border: Border.all(color: _receiveBorder(context)),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -770,7 +789,7 @@ class ReceiveAddressBlock extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.ibmPlexMono(
-                color: _receiveText,
+                color: _receiveText(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
                 height: 1.4,

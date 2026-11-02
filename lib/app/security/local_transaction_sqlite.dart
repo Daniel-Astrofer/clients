@@ -140,17 +140,29 @@ class LocalTransactionSqlite {
     }
   }
 
-  static Future<void> clear(String sessionScope) async {
+  /// Integrity-sealed callers require acknowledgement before removing seals
+  /// or reporting success. Low-level compatibility cleanup remains best effort.
+  static Future<void> clear(String sessionScope,
+      {bool requireAcknowledgement = false}) async {
     final scope = sessionScope.trim();
-    if (scope.isEmpty) return;
+    if (scope.isEmpty) {
+      if (requireAcknowledgement) {
+        throw StateError('Local history account unavailable');
+      }
+      return;
+    }
     final db = await _open();
-    if (db == null) return;
+    if (db == null) {
+      if (requireAcknowledgement) {
+        throw StateError('Local history database unavailable');
+      }
+      return;
+    }
     try {
       await db.delete(_table, where: 'scope = ?', whereArgs: [scope]);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('LocalTransactionSqlite clear failed: $e');
-      }
+      if (kDebugMode) debugPrint('LocalTransactionSqlite clear failed: $e');
+      if (requireAcknowledgement) rethrow;
     }
   }
 }

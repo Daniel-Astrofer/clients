@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'dart:math' as math;
@@ -292,7 +293,7 @@ class HomeBalanceSectionState extends ConsumerState<HomeBalanceSection> {
 
     final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
     final heroHeight =
-        (responsive.isTinyPhone ? homeSize(200) : homeSize(216)) +
+        (responsive.isTinyPhone ? homeSize(136) : homeSize(144)) +
             (textScale - 1).clamp(0, 2) * 100;
     // Select only offset — ignore isPlaying churn mid-theater.
     final bodyOffset = ref.watch(
@@ -564,16 +565,24 @@ class _HomeWalletContextSelector extends StatelessWidget {
       label: hasWallet
           ? '$viewLabel. Carteira ${selected?.name ?? ''}'
           : viewLabel,
-      child: Align(
-        alignment: Alignment.center,
-        child: hasWallet
-            ? WalletExpandChip(
-                wallets: wallets,
-                selectedWallet: selected,
-                onWalletSelected: onWalletSelected,
-                appearance: WalletExpandChipAppearance.glass,
-              )
-            : const SizedBox.shrink(),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(viewLabel,
+                key: const ValueKey('home-account-title'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySmall.copyWith(
+                  fontSize: homeFontSize(13),
+                  fontWeight: FontWeight.w400,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                )),
+          ),
+          if (hasWallet) ...[
+            SizedBox(width: homeSize(8)),
+
+          ],
+        ],
       ),
     );
   }
@@ -667,7 +676,8 @@ class HomeBalanceHero extends ConsumerWidget {
             '$title. $walletName. Saldo: ${data.balanceHidden ? "Oculto" : "${data.balanceBtc} BTC, ou ${data.convertedBalanceLabel}"}. ${data.dailyChangeLabel}',
         excludeSemantics: true,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Wallet identity is rendered by the sibling context selector.
             // Keep this surface dedicated to balance and market information.
@@ -699,8 +709,8 @@ class HomeBalanceHero extends ConsumerWidget {
                         enableFlash: !suppressDigitRoll,
                         isHidden: data.balanceHidden,
                         characterSpacing: 0,
-                        decimalScaleFactor: 0.9,
-                        separatorScaleFactor: 0.9,
+                        decimalScaleFactor: 1,
+                        separatorScaleFactor: 1,
                         animateInitialValue: animateInitialValue,
                         suppressRoll: suppressDigitRoll,
                         largeDeltaThreshold: kHomeBalanceLargeDeltaBtc,
@@ -708,26 +718,13 @@ class HomeBalanceHero extends ConsumerWidget {
                           color: Theme.of(context).colorScheme.onSurface,
                         ).copyWith(
                           fontSize: responsive.compactFontSize(
-                            tiny: homeFontSize(40),
-                            compact: homeFontSize(48),
-                            regular: homeFontSize(52),
+                            tiny: homeFontSize(36),
+                            compact: homeFontSize(40),
+                            regular: homeFontSize(40),
                           ),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: homeSize(8),
-                        bottom: homeSize(8),
-                      ),
-                      child: Text(
-                        'BTC',
-                        style: AppTypography.bodyLarge.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: homeFontSize(16),
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.4,
+                          fontFamily: AppTypography.fontFamily,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
                       ),
                     ),
@@ -735,7 +732,8 @@ class HomeBalanceHero extends ConsumerWidget {
                 ),
               ),
             ),
-            SizedBox(height: homeSize(10)),
+            SizedBox(height: homeSize(8)),
+
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
@@ -766,7 +764,7 @@ class HomeBalanceHero extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (data.dailyChangeDirection != 0) ...[
-                    Icon(
+                    KeroseneIcon(
                       data.dailyChangeDirection > 0
                           ? KeroseneIcons.up
                           : KeroseneIcons.down,

@@ -15,28 +15,46 @@ class AppConfig {
       _hasNodeISDefine && _hasNodeCHDefine && _hasNodeSGDefine;
 
   /// Endereços .onion dos nós remotos
-  static const String nodeIS = String.fromEnvironment(
+  static const String _rawNodeIS = String.fromEnvironment(
     'KERO_NODE_IS_URL',
     defaultValue: _devPlaceholderOnionUrl,
   );
-  static const String nodeCH = String.fromEnvironment(
+  static const String _rawNodeCH = String.fromEnvironment(
     'KERO_NODE_CH_URL',
     defaultValue: _devPlaceholderOnionUrl,
   );
-  static const String nodeSG = String.fromEnvironment(
+  static const String _rawNodeSG = String.fromEnvironment(
     'KERO_NODE_SG_URL',
     defaultValue: _devPlaceholderOnionUrl,
   );
 
+  /// Normaliza URLs de nós/APIs para garantir que possuam esquema válido (ex.: http:// ou https://).
+  static String normalizeUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return 'http://$trimmed';
+  }
+
+  static String get nodeIS => normalizeUrl(_rawNodeIS);
+  static String get nodeCH => normalizeUrl(_rawNodeCH);
+  static String get nodeSG => normalizeUrl(_rawNodeSG);
+
   /// Mapeamento de nós com nomes amigáveis
-  static const Map<String, String> nodes = {
-    'Node IS': nodeIS,
-    'Node CH': nodeCH,
-    'Node SG': nodeSG,
-  };
+  static Map<String, String> get nodes => {
+        'Node IS': nodeIS,
+        'Node CH': nodeCH,
+        'Node SG': nodeSG,
+      };
 
   /// Nó ativo atualmente (URL .onion remota)
-  static String activeNodeUrl = nodeIS;
+  static String _activeNodeUrl = normalizeUrl(_rawNodeIS);
+  static String get activeNodeUrl => _activeNodeUrl;
+  static set activeNodeUrl(String value) {
+    _activeNodeUrl = normalizeUrl(value);
+  }
 
   /// Nome do nó ativo. Ambientes web/local podem injetar uma URL fora do mapa.
   static String get activeNodeName {
@@ -50,7 +68,11 @@ class AppConfig {
   static String get onionBaseUrl => activeNodeUrl;
 
   /// URL ativa da API — Aponta para o relay local (configurado no main.dart)
-  static String apiUrl = nodeIS;
+  static String _apiUrl = normalizeUrl(_rawNodeIS);
+  static String get apiUrl => _apiUrl;
+  static set apiUrl(String value) {
+    _apiUrl = normalizeUrl(value);
+  }
 
   static void validateReleaseNodeConfiguration({bool? releaseBuild}) {
     final shouldValidate = releaseBuild ?? isReleaseBuild;
@@ -88,6 +110,8 @@ class AppConfig {
       '/auth/recovery/emergency/start';
   static const String authEmergencyRecoveryFinish =
       '/auth/recovery/emergency/finish';
+  static const String authEmergencyRecoveryDeviceKeyChallenge =
+      '/auth/recovery/emergency/device-key/challenge';
   static const String authPasskeyChallenge = '/auth/passkey/challenge';
   static const String authPasskeyRegister = '/auth/passkey/register';
   static const String authPasskeyVerify = '/auth/passkey/verify';
@@ -195,6 +219,7 @@ class AppConfig {
   static const String kfeWallets = '/kfe/wallets';
   static const String kfeDashboard = '/kfe/dashboard';
   static const String kfeTransactions = '/kfe/transactions';
+  static const String kfeSubmissionLookup = '$kfeTransactions/submissions';
   static String kfeTransaction(String transactionId) =>
       '$kfeTransactions/$transactionId';
   static String kfeTransactionCancel(String transactionId) =>
@@ -317,6 +342,9 @@ class AppConfig {
   static const String adminOperationsVaultMesh =
       '/api/admin/operations/vault-mesh';
   static const String adminOperationsRelease = '/api/admin/operations/release';
+  static const String adminCellOperations = '/api/admin/operations/cell';
+  static const String adminCellUpdates = '$adminCellOperations/updates';
+  static const String adminCellPlans = '$adminCellUpdates/plans';
   static const String adminOperationsLogs = '/api/admin/operations/logs';
   static const String adminOperationsMobile = '/api/admin/operations/mobile';
   static const String adminOperationsMetrics = '/api/admin/operations/metrics';

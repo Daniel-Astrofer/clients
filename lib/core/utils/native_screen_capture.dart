@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -161,7 +162,7 @@ class _DadosButtonState extends ConsumerState<_DadosButton> {
                   ),
                 )
               else
-                const Icon(
+                const KeroseneIcon(
                   KeroseneIcons.photoLibrary,
                   color: Colors.white,
                   size: 20,

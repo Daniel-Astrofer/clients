@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
@@ -234,7 +235,7 @@ class _ReceiveFlowBrandBar extends StatelessWidget {
             ),
           )
         else ...[
-          Icon(
+          KeroseneIcon(
             KeroseneIcons.eye,
             color: receiveFlowTextColor.withValues(alpha: 0.82),
             size: 17,
@@ -243,7 +244,7 @@ class _ReceiveFlowBrandBar extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.notifications,
                 color: receiveFlowTextColor.withValues(alpha: 0.82),
                 size: 18,
@@ -355,7 +356,7 @@ class ReceiveFlowIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onTap,
-      icon: Icon(icon, color: receiveFlowTextColor, size: 17),
+      icon: KeroseneIcon(icon, color: receiveFlowTextColor, size: 17),
       style: IconButton.styleFrom(
         backgroundColor: receiveFlowPanelAltColor.withValues(alpha: 0.78),
         minimumSize: const Size(38, 38),
@@ -443,7 +444,7 @@ class ReceiveFlowTag extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 13, color: receiveFlowMutedTextColor),
+            KeroseneIcon(icon, size: 13, color: receiveFlowMutedTextColor),
             SizedBox(width: 6),
           ],
           Text(
@@ -521,7 +522,7 @@ class ReceiveFlowActionTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: iconBorderColor),
                   ),
-                  child: Icon(icon, color: titleColor, size: 17),
+                  child: KeroseneIcon(icon, color: titleColor, size: 17),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -569,7 +570,7 @@ class ReceiveFlowActionTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Icon(trailingIcon, size: 16, color: subtitleColor),
+                KeroseneIcon(trailingIcon, size: 16, color: subtitleColor),
               ],
             ),
           ),
@@ -633,7 +634,7 @@ class ReceiveFlowPrimaryButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 15, color: foregroundColor),
+                      KeroseneIcon(icon, size: 15, color: foregroundColor),
                       const SizedBox(width: 8),
                     ],
                     Flexible(
@@ -693,7 +694,7 @@ class ReceiveFlowSecondaryButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16),
+              KeroseneIcon(icon, size: 16),
               const SizedBox(width: 8),
             ],
             Flexible(
@@ -862,7 +863,7 @@ class ReceiveFlowStatePanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: receiveFlowBorderStrongColor),
             ),
-            child: Icon(icon, color: receiveFlowTextColor, size: 17),
+            child: KeroseneIcon(icon, color: receiveFlowTextColor, size: 17),
           ),
           SizedBox(height: 14),
           Text(

@@ -580,6 +580,12 @@ abstract class AppLocalizations {
   /// **'Error'**
   String get error;
 
+  /// No description provided for @genericActionFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t continue right now'**
+  String get genericActionFailureTitle;
+
   /// No description provided for @success.
   ///
   /// In en, this message translates to:
@@ -775,19 +781,19 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeHeaderTitleCustody.
   ///
   /// In en, this message translates to:
-  /// **'Institutional custody.\n'**
+  /// **'Your Bitcoin account.\n'**
   String get welcomeHeaderTitleCustody;
 
   /// No description provided for @welcomeHeaderTitleSimplicity.
   ///
   /// In en, this message translates to:
-  /// **'Absolute simplicity.'**
+  /// **'Send and receive.'**
   String get welcomeHeaderTitleSimplicity;
 
   /// No description provided for @welcomeHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Top-tier security for your digital assets. Designed for those who demand the best.'**
+  /// **'Track your balance, send bitcoin and receive payments in a custodial account.'**
   String get welcomeHeaderSubtitle;
 
   /// No description provided for @welcomeCreateAccountButton.
@@ -993,6 +999,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'COPY'**
   String get copy;
+
+  /// No description provided for @copyDataFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not copy this information. Try again.'**
+  String get copyDataFailed;
 
   /// No description provided for @share.
   ///
@@ -7811,6 +7823,78 @@ abstract class AppLocalizations {
   /// **'We could not generate new codes'**
   String get securityBackupRegenerateFailedTitle;
 
+  /// No description provided for @securitySensitiveHiddenMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery information is hidden.'**
+  String get securitySensitiveHiddenMessage;
+
+  /// No description provided for @securityRevealCodesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Show codes'**
+  String get securityRevealCodesAction;
+
+  /// No description provided for @securityCopyFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not copy the codes. Try again.'**
+  String get securityCopyFailedMessage;
+
+  /// No description provided for @securityAuthorizationUnavailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This device could not confirm your identity. Review your security settings.'**
+  String get securityAuthorizationUnavailableMessage;
+
+  /// No description provided for @securityRegenerateCodesConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating new codes invalidates the previous ones. Save the new set outside this device.'**
+  String get securityRegenerateCodesConfirmation;
+
+  /// No description provided for @securityDisableTotpConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabling the authenticator also invalidates the recovery codes. Continue?'**
+  String get securityDisableTotpConfirmation;
+
+  /// No description provided for @securityTotpRequiredSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This security profile requires an authenticator. Change the profile before disabling it.'**
+  String get securityTotpRequiredSubtitle;
+
+  /// No description provided for @securityUpdateUnconfirmedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not confirm the change. Check the current status before trying again.'**
+  String get securityUpdateUnconfirmedMessage;
+
+  /// No description provided for @securitySessionChangedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session changed. Close and reopen this screen to view your account.'**
+  String get securitySessionChangedMessage;
+
+  /// No description provided for @securityAuthenticatorActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get securityAuthenticatorActive;
+
+  /// No description provided for @securityAuthenticatorInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get securityAuthenticatorInactive;
+
+  /// No description provided for @securityTotpRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Required authenticator'**
+  String get securityTotpRequiredTitle;
+
   /// No description provided for @securityBackupCodesTitle.
   ///
   /// In en, this message translates to:
@@ -7970,13 +8054,13 @@ abstract class AppLocalizations {
   /// No description provided for @securityTotpEnabledSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Authenticator active. The unprotected account notice is hidden.'**
+  /// **'Manage this protection and store your recovery codes somewhere safe.'**
   String get securityTotpEnabledSubtitle;
 
   /// No description provided for @securityTotpDisabledSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'No authenticator. The account is marked as not protected.'**
+  /// **'Set up the authenticator to use temporary codes for actions that require them.'**
   String get securityTotpDisabledSubtitle;
 
   /// No description provided for @securityDisableTotpAction.
@@ -8216,13 +8300,13 @@ abstract class AppLocalizations {
   /// No description provided for @securityPinEnableTitle.
   ///
   /// In en, this message translates to:
-  /// **'Enable entry PIN'**
+  /// **'Set up PIN'**
   String get securityPinEnableTitle;
 
   /// No description provided for @securityPinChangeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Change this device PIN'**
+  /// **'Change PIN'**
   String get securityPinChangeTitle;
 
   /// No description provided for @securityPinDisableTitle.
@@ -8234,7 +8318,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityPinEnableBody.
   ///
   /// In en, this message translates to:
-  /// **'The PIN will be required whenever the app opens with this session on this device.'**
+  /// **'Set up this device PIN for access steps that require it.'**
   String get securityPinEnableBody;
 
   /// No description provided for @securityPinChangeBody.
@@ -8246,13 +8330,13 @@ abstract class AppLocalizations {
   /// No description provided for @securityPinDisableBody.
   ///
   /// In en, this message translates to:
-  /// **'Use the current PIN or an authenticator code to remove this device entry barrier.'**
+  /// **'This action disables the PIN preference on this device. Account access requirements still apply.'**
   String get securityPinDisableBody;
 
   /// No description provided for @securityCurrentPinLabel.
   ///
   /// In en, this message translates to:
-  /// **'Current PIN or authenticator code'**
+  /// **'Current PIN'**
   String get securityCurrentPinLabel;
 
   /// No description provided for @securityTotpCodeLabel.
@@ -8260,6 +8344,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Authenticator code'**
   String get securityTotpCodeLabel;
+
+  /// No description provided for @securityPinTotpCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'6-digit code'**
+  String get securityPinTotpCodeLabel;
 
   /// No description provided for @securityNewPinLabel.
   ///
@@ -10838,7 +10928,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveMethodKeroseneTitle.
   ///
   /// In en, this message translates to:
-  /// **'Receive in Kerosene'**
+  /// **'Between Kerosene accounts'**
   String get receiveMethodKeroseneTitle;
 
   /// No description provided for @receiveMethodKeroseneSubtitle.
@@ -10850,7 +10940,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveMethodOnchainTitle.
   ///
   /// In en, this message translates to:
-  /// **'Receive on-chain'**
+  /// **'Bitcoin — network'**
   String get receiveMethodOnchainTitle;
 
   /// No description provided for @receiveMethodOnchainSubtitle.
@@ -10862,7 +10952,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveMethodGatewayTitle.
   ///
   /// In en, this message translates to:
-  /// **'Payment gateway'**
+  /// **'Buy Bitcoin'**
   String get receiveMethodGatewayTitle;
 
   /// No description provided for @receiveMethodGatewaySubtitle.
@@ -10910,7 +11000,7 @@ abstract class AppLocalizations {
   /// No description provided for @receiveGatewayProvidersTitle.
   ///
   /// In en, this message translates to:
-  /// **'Providers'**
+  /// **'Buy Bitcoin'**
   String get receiveGatewayProvidersTitle;
 
   /// No description provided for @receiveGatewayRecommendedBrazil.
@@ -11612,13 +11702,13 @@ abstract class AppLocalizations {
   /// No description provided for @receivePaymentLinkCancelTitle.
   ///
   /// In en, this message translates to:
-  /// **'Cancel link'**
+  /// **'Cancel request'**
   String get receivePaymentLinkCancelTitle;
 
   /// No description provided for @receivePaymentLinkCancelMessage.
   ///
   /// In en, this message translates to:
-  /// **'You can add a reason to show in your history.'**
+  /// **'The request will be marked as cancelled in Kerosene. Check the details below before confirming.'**
   String get receivePaymentLinkCancelMessage;
 
   /// No description provided for @receivePaymentLinkCancelReason.
@@ -14121,7 +14211,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Local control of financial alerts, security events, and devices authorized for push notifications.'**
+  /// **'Choose which alerts to receive and manage authorized devices.'**
   String get settingsNotifSubtitle;
 
   /// No description provided for @settingsNotifAlertsSection.
@@ -14157,7 +14247,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifFinancialSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Transactions, receives, and payment requests.'**
+  /// **'Payments sent, payments received and payment requests.'**
   String get settingsNotifFinancialSubtitle;
 
   /// No description provided for @settingsNotifSecurityEventsTitle.
@@ -14169,7 +14259,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifSecurityEventsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Login, recovery, and sensitive access attempts.'**
+  /// **'Sign-ins, account recovery and security changes.'**
   String get settingsNotifSecurityEventsSubtitle;
 
   /// No description provided for @settingsNotifMarketTitle.
@@ -14181,49 +14271,49 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifMarketOn.
   ///
   /// In en, this message translates to:
-  /// **'Real 24h move alerts enabled.'**
+  /// **'Bitcoin market alerts enabled.'**
   String get settingsNotifMarketOn;
 
   /// No description provided for @settingsNotifMarketOff.
   ///
   /// In en, this message translates to:
-  /// **'Off by default. No mock and no fallback.'**
+  /// **'Bitcoin market alerts disabled.'**
   String get settingsNotifMarketOff;
 
   /// No description provided for @settingsNotifDevicesSection.
   ///
   /// In en, this message translates to:
-  /// **'Devices'**
+  /// **'Notification devices'**
   String get settingsNotifDevicesSection;
 
   /// No description provided for @settingsNotifDevicesLoading.
   ///
   /// In en, this message translates to:
-  /// **'Loading authorized devices.'**
+  /// **'Checking notification registrations.'**
   String get settingsNotifDevicesLoading;
 
   /// No description provided for @settingsNotifDevicesUnavailableTitle.
   ///
   /// In en, this message translates to:
-  /// **'Devices unavailable'**
+  /// **'List unavailable'**
   String get settingsNotifDevicesUnavailableTitle;
 
   /// No description provided for @settingsNotifDevicesUnavailableSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'We could not query registered tokens right now.'**
+  /// **'We could not check notification registrations right now. Try again.'**
   String get settingsNotifDevicesUnavailableSubtitle;
 
   /// No description provided for @settingsNotifNoDevicesTitle.
   ///
   /// In en, this message translates to:
-  /// **'No registered devices'**
+  /// **'No active registrations'**
   String get settingsNotifNoDevicesTitle;
 
   /// No description provided for @settingsNotifNoDevicesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'When you allow push notifications, the backend will show the device here.'**
+  /// **'Devices registered to receive Kerosene notifications appear here.'**
   String get settingsNotifNoDevicesSubtitle;
 
   /// No description provided for @settingsNotifDeviceFallback.
@@ -14235,7 +14325,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifRevoke.
   ///
   /// In en, this message translates to:
-  /// **'Revoke'**
+  /// **'Disable'**
   String get settingsNotifRevoke;
 
   /// No description provided for @settingsNotifPermissionTitle.
@@ -14253,19 +14343,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifRevokeFailedTitle.
   ///
   /// In en, this message translates to:
-  /// **'We could not revoke'**
+  /// **'Change unconfirmed'**
   String get settingsNotifRevokeFailedTitle;
 
   /// No description provided for @settingsNotifRevokedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Device revoked'**
+  /// **'Notifications disabled'**
   String get settingsNotifRevokedTitle;
 
   /// No description provided for @settingsNotifRevokedMessage.
   ///
   /// In en, this message translates to:
-  /// **'This token will not receive new notifications.'**
+  /// **'Kerosene confirmed that this notification registration was disabled.'**
   String get settingsNotifRevokedMessage;
 
   /// No description provided for @settingsNotifBackgroundDialogTitle.
@@ -14343,19 +14433,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityBiometricsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Biometrics'**
+  /// **'Access key'**
   String get settingsSecurityBiometricsTitle;
 
   /// No description provided for @settingsSecurityBiometricsOn.
   ///
   /// In en, this message translates to:
-  /// **'Use fingerprint to open the app'**
+  /// **'A key is linked to this account. View your authorized devices.'**
   String get settingsSecurityBiometricsOn;
 
   /// No description provided for @settingsSecurityBiometricsOff.
   ///
   /// In en, this message translates to:
-  /// **'Register a passkey on this device'**
+  /// **'Link this device to set up your access key.'**
   String get settingsSecurityBiometricsOff;
 
   /// No description provided for @settingsSecurityTotpTitle.
@@ -14499,7 +14589,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityWipeLedgerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Removes history stored on this device. Logout does not erase the statement — only this action. On next login, the app pulls remote data.'**
+  /// **'Removes this account’s statement copy from this device. Server history remains available for synchronization.'**
   String get settingsSecurityWipeLedgerSubtitle;
 
   /// No description provided for @settingsSecurityWipeConfirmTitle.
@@ -14511,7 +14601,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityWipeConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'This deletes up to 500 entries saved on this device. It does not cancel network transactions. Continue?'**
+  /// **'Erases this account’s statement copy stored on this device. Transactions and server history remain available.'**
   String get settingsSecurityWipeConfirmBody;
 
   /// No description provided for @settingsSecurityWipeConfirmAction.
@@ -14541,7 +14631,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityWipeOkMessage.
   ///
   /// In en, this message translates to:
-  /// **'History on this device was removed. Pull to sync again.'**
+  /// **'The local copy was removed. Open your statement to view and synchronize again.'**
   String get settingsSecurityWipeOkMessage;
 
   /// No description provided for @settingsSecurityWipeFailTitle.
@@ -14559,7 +14649,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsWalletsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Rename or archive wallets in this session. Actions use the same API as the Bitcoin accounts screen.'**
+  /// **'Manage wallet names and monitoring. Check the result of each change.'**
   String get settingsWalletsSubtitle;
 
   /// No description provided for @settingsWalletsSection.
@@ -14601,25 +14691,25 @@ abstract class AppLocalizations {
   /// No description provided for @settingsWalletsLoadErrorSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Tap to open full management.'**
+  /// **'Tap to try refreshing again.'**
   String get settingsWalletsLoadErrorSubtitle;
 
   /// No description provided for @settingsWalletsWatchOnly.
   ///
   /// In en, this message translates to:
-  /// **'Watch-only / cold'**
+  /// **'Monitoring wallet'**
   String get settingsWalletsWatchOnly;
 
   /// No description provided for @settingsWalletsCustodialOnchain.
   ///
   /// In en, this message translates to:
-  /// **'Custodial on-chain'**
+  /// **'Bitcoin — network · Kerosene custody'**
   String get settingsWalletsCustodialOnchain;
 
   /// No description provided for @settingsWalletsInternal.
   ///
   /// In en, this message translates to:
-  /// **'Secured account (internal)'**
+  /// **'Kerosene account'**
   String get settingsWalletsInternal;
 
   /// No description provided for @settingsWalletsProcessing.
@@ -14643,7 +14733,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsWalletsArchive.
   ///
   /// In en, this message translates to:
-  /// **'Archive / lock wallet'**
+  /// **'Archive wallet'**
   String get settingsWalletsArchive;
 
   /// No description provided for @settingsWalletsRenameOk.
@@ -14655,13 +14745,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsWalletsRenameFailTitle.
   ///
   /// In en, this message translates to:
-  /// **'Name not updated'**
+  /// **'Change unconfirmed'**
   String get settingsWalletsRenameFailTitle;
 
   /// No description provided for @settingsWalletsRenameFailMessage.
   ///
   /// In en, this message translates to:
-  /// **'Review the name and try again.'**
+  /// **'Refresh your wallets to check the name before trying again.'**
   String get settingsWalletsRenameFailMessage;
 
   /// No description provided for @settingsWalletsArchiveOkWatch.
@@ -14679,13 +14769,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsWalletsArchiveFailTitle.
   ///
   /// In en, this message translates to:
-  /// **'Could not archive'**
+  /// **'Archiving unconfirmed'**
   String get settingsWalletsArchiveFailTitle;
 
   /// No description provided for @settingsWalletsArchiveFailMessage.
   ///
   /// In en, this message translates to:
-  /// **'Try again in a moment.'**
+  /// **'Refresh your wallets to check the state before trying again.'**
   String get settingsWalletsArchiveFailMessage;
 
   /// No description provided for @settingsNotifBackgroundDialogDismiss.
@@ -14789,6 +14879,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Securing your account...'**
   String get flowSignupCreatingSecurityProgress;
+
+  /// No description provided for @flowSignupUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Result not yet confirmed'**
+  String get flowSignupUnknownTitle;
+
+  /// No description provided for @flowSignupUnknownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm that signup completed. Your account may have been created. Sign in with the same username to verify the result.'**
+  String get flowSignupUnknownSubtitle;
+
+  /// No description provided for @flowSignupConfirmByLoginAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify by signing in'**
+  String get flowSignupConfirmByLoginAction;
+
+  /// No description provided for @flowSignupTotpRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your authenticator'**
+  String get flowSignupTotpRequiredTitle;
+
+  /// No description provided for @flowSignupTotpRequiredSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'An authenticator code is required for this account’s security profile.'**
+  String get flowSignupTotpRequiredSubtitle;
+
+  /// No description provided for @flowSignupTotpFinishedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save your recovery codes'**
+  String get flowSignupTotpFinishedTitle;
+
+  /// No description provided for @flowSignupTotpFinishedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The authenticator step is complete. Review your codes before linking the device.'**
+  String get flowSignupTotpFinishedSubtitle;
 
   /// No description provided for @flowSignupTotpTitle.
   ///
@@ -15030,6 +15162,66 @@ abstract class AppLocalizations {
   /// **'Secure network is still connecting. Your PIN is saved — try again in a moment.'**
   String get appEntryPinTorWarming;
 
+  /// No description provided for @pinEntryChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking PIN…'**
+  String get pinEntryChecking;
+
+  /// No description provided for @pinEntrySaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving PIN…'**
+  String get pinEntrySaving;
+
+  /// No description provided for @errSelectedWalletInsufficientBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient balance in the selected wallet.'**
+  String get errSelectedWalletInsufficientBalance;
+
+  /// No description provided for @errDeviceKeyConfigurationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the device key on this device to continue.'**
+  String get errDeviceKeyConfigurationRequired;
+
+  /// No description provided for @historySyncUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating activity'**
+  String get historySyncUpdating;
+
+  /// No description provided for @historySyncUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not update your activity'**
+  String get historySyncUnavailable;
+
+  /// No description provided for @historySyncSavedData.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing the last available activity'**
+  String get historySyncSavedData;
+
+  /// No description provided for @historySyncKeptData.
+  ///
+  /// In en, this message translates to:
+  /// **'The last available activity remains visible.'**
+  String get historySyncKeptData;
+
+  /// No description provided for @historySyncRefreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh activity'**
+  String get historySyncRefreshAction;
+
+  /// No description provided for @historySyncLastQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated: {time}.'**
+  String historySyncLastQuery(String time);
+
   /// No description provided for @notifBannerNow.
   ///
   /// In en, this message translates to:
@@ -15123,7 +15315,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyRecoveryTitleStart.
   ///
   /// In en, this message translates to:
-  /// **'Rotate account access'**
+  /// **'Recover account access'**
   String get emergencyRecoveryTitleStart;
 
   /// No description provided for @emergencyRecoveryTitleVerify.
@@ -15135,25 +15327,25 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyRecoveryTitleComplete.
   ///
   /// In en, this message translates to:
-  /// **'Recovery complete'**
+  /// **'Recovery completed'**
   String get emergencyRecoveryTitleComplete;
 
   /// No description provided for @emergencyRecoveryBodyStart.
   ///
   /// In en, this message translates to:
-  /// **'Use offline recovery codes to create a new password, new TOTP and new passkey on this device.'**
+  /// **'Use your saved recovery codes to set a new password, configure another authenticator and register a new access key on this device.'**
   String get emergencyRecoveryBodyStart;
 
   /// No description provided for @emergencyRecoveryBodyVerify.
   ///
   /// In en, this message translates to:
-  /// **'Scan the QR in your authenticator, enter the 6-digit code and confirm the new local passkey.'**
+  /// **'Add this account to your authenticator using the QR, enter the 6-digit code and confirm the new access key on this device.'**
   String get emergencyRecoveryBodyVerify;
 
   /// No description provided for @emergencyRecoveryBodyComplete.
   ///
   /// In en, this message translates to:
-  /// **'Store the new codes offline before signing in again. They should not live in notes, email or cloud storage.'**
+  /// **'Save these codes in a safe place before signing in. They replace your previous codes and are only shown at this step.'**
   String get emergencyRecoveryBodyComplete;
 
   /// No description provided for @emergencyRecoveryNewPassword.
@@ -15207,7 +15399,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyRecoveryConfirmPasskey.
   ///
   /// In en, this message translates to:
-  /// **'Confirm new passkey'**
+  /// **'Confirm new key'**
   String get emergencyRecoveryConfirmPasskey;
 
   /// No description provided for @emergencyRecoveryGoBackReview.
@@ -15219,7 +15411,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyRecoveryCredentialsRotated.
   ///
   /// In en, this message translates to:
-  /// **'Credentials rotated'**
+  /// **'Access updated'**
   String get emergencyRecoveryCredentialsRotated;
 
   /// No description provided for @emergencyRecoveryCopyNewCodes.
@@ -15237,7 +15429,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyRecoveryTotpInstruction.
   ///
   /// In en, this message translates to:
-  /// **'Enter the 6-digit TOTP from the new authenticator.'**
+  /// **'Enter the 6-digit code from the new authenticator.'**
   String get emergencyRecoveryTotpInstruction;
 
   /// No description provided for @emergencyRecoveryPasswordMin.
@@ -15351,7 +15543,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifCenterReadAll.
   ///
   /// In en, this message translates to:
-  /// **'Read all'**
+  /// **'Mark as read'**
   String get notifCenterReadAll;
 
   /// No description provided for @notifCenterClear.
@@ -15405,7 +15597,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifSidebarSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Recent session alerts.'**
+  /// **'Account activity and notices.'**
   String get notifSidebarSubtitle;
 
   /// No description provided for @notifSidebarEmptyHint.
@@ -15441,7 +15633,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyRecoveryAccountRotatedBody.
   ///
   /// In en, this message translates to:
-  /// **'Account {username} now uses the new password, new TOTP and this device passkey.'**
+  /// **'Account {username} now uses the new password, the new authenticator and the access key registered on this device.'**
   String emergencyRecoveryAccountRotatedBody(String username);
 
   /// No description provided for @notifSidebarUnreadSingular.
@@ -15483,7 +15675,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDevicesRegisterPasskey.
   ///
   /// In en, this message translates to:
-  /// **'Register passkey on this device'**
+  /// **'Link this device'**
   String get settingsDevicesRegisterPasskey;
 
   /// No description provided for @settingsDevicesLoadError.
@@ -15549,7 +15741,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRecoveryHubSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Real recovery paths available for this account security mode.'**
+  /// **'Check your account protection and choose how to recover access.'**
   String get settingsRecoveryHubSubtitle;
 
   /// No description provided for @settingsRecoveryStatus.
@@ -15717,7 +15909,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendReviewYouPay.
   ///
   /// In en, this message translates to:
-  /// **'You pay'**
+  /// **'Total debited'**
   String get sendReviewYouPay;
 
   /// No description provided for @sendReviewSender.
@@ -15795,19 +15987,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupGenerateBip39.
   ///
   /// In en, this message translates to:
-  /// **'Generate BIP39 seed'**
+  /// **'Create a recovery phrase on this device'**
   String get walletSetupGenerateBip39;
 
   /// No description provided for @walletSetupImportSeed.
   ///
   /// In en, this message translates to:
-  /// **'Import seed'**
+  /// **'Import wallet'**
   String get walletSetupImportSeed;
 
   /// No description provided for @walletSetupImportSeedHint.
   ///
   /// In en, this message translates to:
-  /// **'12 or 24 words'**
+  /// **'Use your existing recovery phrase'**
   String get walletSetupImportSeedHint;
 
   /// No description provided for @walletSetupWatchOnly.
@@ -15819,19 +16011,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupXpubSoon.
   ///
   /// In en, this message translates to:
-  /// **'Coming soon · xpub'**
+  /// **'Public-key import is not available yet'**
   String get walletSetupXpubSoon;
 
   /// No description provided for @walletSetupMultisig.
   ///
   /// In en, this message translates to:
-  /// **'Multisig'**
+  /// **'Multiple signatures — Multisig'**
   String get walletSetupMultisig;
 
   /// No description provided for @walletSetupSoon.
   ///
   /// In en, this message translates to:
-  /// **'Coming soon'**
+  /// **'Not available in the app yet'**
   String get walletSetupSoon;
 
   /// No description provided for @walletSetupRegistering.
@@ -15855,7 +16047,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupNameExample.
   ///
   /// In en, this message translates to:
-  /// **'e.g. Main cold'**
+  /// **'E.g. My savings'**
   String get walletSetupNameExample;
 
   /// No description provided for @walletSetupContinue.
@@ -16269,13 +16461,13 @@ abstract class AppLocalizations {
   /// No description provided for @statementExportLongAddressesNote.
   ///
   /// In en, this message translates to:
-  /// **'Long addresses are shortened. CSV is better for reconciliation.'**
+  /// **'Complete identifiers. The PDF includes exact BTC and sat amounts; the CSV preserves numbers in sats.'**
   String get statementExportLongAddressesNote;
 
   /// No description provided for @statementExportShareLimit.
   ///
   /// In en, this message translates to:
-  /// **'Up to 200 lines · readable for sharing'**
+  /// **'All selected movements loaded on this device'**
   String get statementExportShareLimit;
 
   /// No description provided for @statementEmptyOnDevice.
@@ -16347,7 +16539,7 @@ abstract class AppLocalizations {
   /// No description provided for @statementExportPdfFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not share the PDF.'**
+  /// **'The PDF was generated, but the system did not confirm sharing.'**
   String get statementExportPdfFailed;
 
   /// No description provided for @movementHubReceiveInternal.
@@ -16383,7 +16575,7 @@ abstract class AppLocalizations {
   /// No description provided for @seedPassphrase25th.
   ///
   /// In en, this message translates to:
-  /// **'Passphrase / 25th word (not the 12)'**
+  /// **'Extra password (passphrase), if your backup uses one'**
   String get seedPassphrase25th;
 
   /// No description provided for @coldSendAuthIncompleteTitle.
@@ -16413,7 +16605,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRecoveryEmergencyBody.
   ///
   /// In en, this message translates to:
-  /// **'Rotates password, TOTP and passkey with offline codes. Ends the current session.'**
+  /// **'Use your recovery codes to replace your password, authenticator and access key. Then sign in again.'**
   String get settingsRecoveryEmergencyBody;
 
   /// No description provided for @securityTotpValidating.
@@ -16593,13 +16785,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeOnchainTab.
   ///
   /// In en, this message translates to:
-  /// **'On-chain'**
+  /// **'On-chain account'**
   String get homeOnchainTab;
 
   /// No description provided for @homeColdTab.
   ///
   /// In en, this message translates to:
-  /// **'Cold'**
+  /// **'Watch-only account'**
   String get homeColdTab;
 
   /// No description provided for @homeOnchainWalletCardTitle.
@@ -16623,13 +16815,13 @@ abstract class AppLocalizations {
   /// No description provided for @activityFilterOnchain.
   ///
   /// In en, this message translates to:
-  /// **'On-chain'**
+  /// **'Bitcoin — network'**
   String get activityFilterOnchain;
 
   /// No description provided for @activityFilterLightning.
   ///
   /// In en, this message translates to:
-  /// **'Lightning'**
+  /// **'Bitcoin — Lightning'**
   String get activityFilterLightning;
 
   /// No description provided for @activityFilterCold.
@@ -16797,7 +16989,7 @@ abstract class AppLocalizations {
   /// No description provided for @txDetailCancelBody.
   ///
   /// In en, this message translates to:
-  /// **'The pending invoice or send will be closed. It stays on the statement as cancelled until you open details (then moves to Archived).'**
+  /// **'The server will check whether this operation can still be cancelled. This does not reverse Bitcoin already sent. The movement stays in your activity until you choose to archive it.'**
   String get txDetailCancelBody;
 
   /// No description provided for @txDetailCancelConfirm.
@@ -16815,7 +17007,7 @@ abstract class AppLocalizations {
   /// No description provided for @txDetailCancelError.
   ///
   /// In en, this message translates to:
-  /// **'Could not cancel'**
+  /// **'We could not confirm cancellation. Refresh your activity to check its current status.'**
   String get txDetailCancelError;
 
   /// No description provided for @activityArchiveNow.
@@ -16881,7 +17073,7 @@ abstract class AppLocalizations {
   /// No description provided for @txListInstant.
   ///
   /// In en, this message translates to:
-  /// **'Instant'**
+  /// **'Between Kerosene accounts'**
   String get txListInstant;
 
   /// No description provided for @txListId.
@@ -17482,7 +17674,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSetupNewVault.
   ///
   /// In en, this message translates to:
-  /// **'New vault'**
+  /// **'Create or import wallet'**
   String get walletSetupNewVault;
 
   /// No description provided for @financialHubAddWallet.
@@ -17622,6 +17814,2082 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End-to-end encrypted connection'**
   String get transactionAuthEncryptedTitle;
+
+  /// No description provided for @activityFilterInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Between Kerosene accounts'**
+  String get activityFilterInternal;
+
+  /// No description provided for @walletRegisteredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet registered'**
+  String get walletRegisteredTitle;
+
+  /// No description provided for @walletRegisteredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The wallet is listed in your accounts. Check its balance and availability before sending or receiving.'**
+  String get walletRegisteredBody;
+
+  /// No description provided for @settingsPreferenceSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the change. The previous preference was kept.'**
+  String get settingsPreferenceSaveFailed;
+
+  /// No description provided for @coldWalletReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device wallet registered'**
+  String get coldWalletReadyTitle;
+
+  /// No description provided for @coldWalletObserveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View-only wallet'**
+  String get coldWalletObserveTitle;
+
+  /// No description provided for @coldWalletSeedStoredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The keys stay on this device. Keep your recovery phrase to restore the wallet.'**
+  String get coldWalletSeedStoredBody;
+
+  /// No description provided for @coldWalletSeedMissingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The recovery phrase was not saved on this device. You can view the balance, but must restore the keys before sending.'**
+  String get coldWalletSeedMissingBody;
+
+  /// No description provided for @coldWalletObserveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Done — view only'**
+  String get coldWalletObserveAction;
+
+  /// No description provided for @gatewayLinksSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an available purchase link. Payment takes place with the external provider.'**
+  String get gatewayLinksSubtitle;
+
+  /// No description provided for @gatewayLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load providers. Try again or choose another receive method.'**
+  String get gatewayLoadFailed;
+
+  /// No description provided for @gatewayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchase provider is configured in this environment.'**
+  String get gatewayEmpty;
+
+  /// No description provided for @receiptViewOperation.
+  ///
+  /// In en, this message translates to:
+  /// **'Track operation'**
+  String get receiptViewOperation;
+
+  /// No description provided for @receiptExpectedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected total'**
+  String get receiptExpectedTotal;
+
+  /// No description provided for @receiptFailedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This operation failed. Check its details before sending again.'**
+  String get receiptFailedSubtitle;
+
+  /// No description provided for @receiptCancelledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This operation was cancelled. Check its details for the final balance.'**
+  String get receiptCancelledSubtitle;
+
+  /// No description provided for @receiptReconcilingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The final result is being checked. Funds may still be reserved; do not send again.'**
+  String get receiptReconcilingSubtitle;
+
+  /// No description provided for @recoverySubmissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments being tracked'**
+  String get recoverySubmissionTitle;
+
+  /// No description provided for @recoverySubmissionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'The result is still being checked. Verify it before sending again.'**
+  String get recoverySubmissionPending;
+
+  /// No description provided for @recoverySubmissionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not check this payment now. Its identity has been preserved.'**
+  String get recoverySubmissionUnavailable;
+
+  /// No description provided for @recoverySubmissionStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not read the payments being tracked. Try again.'**
+  String get recoverySubmissionStorage;
+
+  /// No description provided for @recoverySubmissionVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Check result'**
+  String get recoverySubmissionVerify;
+
+  /// No description provided for @recoverySubmissionSaveBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not save this payment identity. This attempt was not sent.'**
+  String get recoverySubmissionSaveBlocked;
+
+  /// No description provided for @recoverySubmissionAccountChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account changed. Reopen this payment in the correct account.'**
+  String get recoverySubmissionAccountChanged;
+
+  /// No description provided for @recoverySubmissionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no payments being tracked here. Check your movements in activity.'**
+  String get recoverySubmissionEmpty;
+
+  /// No description provided for @recoverySubmissionExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'An identical payment still needs your acknowledgment. Check its result before starting another.'**
+  String get recoverySubmissionExisting;
+
+  /// No description provided for @walletSetupNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network: {network}'**
+  String walletSetupNetwork(String network);
+
+  /// No description provided for @walletImportRetryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration could not be completed. The validated phrase remains only on this screen so you can try again.'**
+  String get walletImportRetryBody;
+
+  /// No description provided for @walletImportResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume import'**
+  String get walletImportResume;
+
+  /// No description provided for @walletImportedDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported wallet'**
+  String get walletImportedDefaultName;
+
+  /// No description provided for @seedWordByWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Word by word'**
+  String get seedWordByWord;
+
+  /// No description provided for @seedPastePhrase.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste phrase'**
+  String get seedPastePhrase;
+
+  /// No description provided for @seedPasteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase'**
+  String get seedPasteTitle;
+
+  /// No description provided for @seedReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Phrase validated'**
+  String get seedReadyTitle;
+
+  /// No description provided for @seedWordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} words'**
+  String seedWordCount(int count);
+
+  /// No description provided for @seedWordProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Word {index} of {total}'**
+  String seedWordProgress(int index, int total);
+
+  /// No description provided for @seedPasteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the words from your BIP39 or Electrum backup in their original order. Enter the extra password separately.'**
+  String get seedPasteBody;
+
+  /// No description provided for @seedEntryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the English backup words in their original order. You can enter an extra password afterwards.'**
+  String get seedEntryBody;
+
+  /// No description provided for @seedWordNotInList.
+  ///
+  /// In en, this message translates to:
+  /// **'A word is not in the English BIP39 list. Check your backup.'**
+  String get seedWordNotInList;
+
+  /// No description provided for @seedChooseValidWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a valid word from the list.'**
+  String get seedChooseValidWord;
+
+  /// No description provided for @seedInvalidWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid word'**
+  String get seedInvalidWord;
+
+  /// No description provided for @seedNoWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your recovery phrase words.'**
+  String get seedNoWords;
+
+  /// No description provided for @seedChooseSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the complete word or select a suggestion.'**
+  String get seedChooseSuggestion;
+
+  /// No description provided for @seedPhraseValidated.
+  ///
+  /// In en, this message translates to:
+  /// **'BIP39 phrase validated. Continue to import the wallet.'**
+  String get seedPhraseValidated;
+
+  /// No description provided for @seedLiteralImportNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The phrase failed BIP39 validation. You chose to import the literal content without correcting words.'**
+  String get seedLiteralImportNotice;
+
+  /// No description provided for @seedHideExtraPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide extra password'**
+  String get seedHideExtraPassword;
+
+  /// No description provided for @seedAddExtraPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Add extra password (passphrase)'**
+  String get seedAddExtraPassword;
+
+  /// No description provided for @seedHiddenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Phrase hidden'**
+  String get seedHiddenTitle;
+
+  /// No description provided for @seedHiddenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The words were hidden when the app left the foreground.'**
+  String get seedHiddenBody;
+
+  /// No description provided for @seedRevealWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Show words'**
+  String get seedRevealWords;
+
+  /// No description provided for @seedConcealWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide words'**
+  String get seedConcealWords;
+
+  /// No description provided for @seedElectrumDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Electrum phrase recognized. Continue to import the wallet.'**
+  String get seedElectrumDetected;
+
+  /// No description provided for @seedInvalidCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 12, 15, 18, 21 or 24 words for a BIP39 phrase.'**
+  String get seedInvalidCount;
+
+  /// No description provided for @seedChecksumMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The phrase failed BIP39 validation. Check the words and their order in your backup.'**
+  String get seedChecksumMismatch;
+
+  /// No description provided for @seedSuggestionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check suggestion'**
+  String get seedSuggestionTitle;
+
+  /// No description provided for @seedSuggestionWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'A valid phrase does not prove that it belongs to your wallet. Changing a word may create another wallet. Check your backup before using the suggestion.'**
+  String get seedSuggestionWarning;
+
+  /// No description provided for @seedReviewSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Check suggestion: {word}'**
+  String seedReviewSuggestion(String word);
+
+  /// No description provided for @seedUseSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {word}'**
+  String seedUseSuggestion(String word);
+
+  /// No description provided for @walletSelectedUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load the selected wallet. Refresh its data before continuing.'**
+  String get walletSelectedUnavailable;
+
+  /// No description provided for @receiveRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancelled'**
+  String get receiveRequestCancelled;
+
+  /// No description provided for @receiveRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Request not completed'**
+  String get receiveRequestFailed;
+
+  /// No description provided for @receiveRequestExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Request deadline ended'**
+  String get receiveRequestExpired;
+
+  /// No description provided for @receiveClosedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This request is not available for new payments. Check the server result; observed amounts may still be processing.'**
+  String get receiveClosedBody;
+
+  /// No description provided for @receiveObservedAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount observed by the server'**
+  String get receiveObservedAmount;
+
+  /// No description provided for @receivePartialBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This observed amount does not prove completion of the request or final wallet credit.'**
+  String get receivePartialBody;
+
+  /// No description provided for @receiveCheckStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Check result'**
+  String get receiveCheckStatus;
+
+  /// No description provided for @receiveStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not update tracking now. The last state has been preserved.'**
+  String get receiveStatusUnavailable;
+
+  /// No description provided for @receiveCreditValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmations reached; validating credit'**
+  String get receiveCreditValidating;
+
+  /// No description provided for @receiveExpiredTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'The request has expired. The detected payment is still being tracked.'**
+  String get receiveExpiredTracking;
+
+  /// No description provided for @walletPublicImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import public key'**
+  String get walletPublicImportTitle;
+
+  /// No description provided for @walletPublicImportHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive and monitor using the account public key'**
+  String get walletPublicImportHint;
+
+  /// No description provided for @walletPublicImportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a native SegWit (BIP84) account public key to receive and track activity. Check the data exported by the original wallet.'**
+  String get walletPublicImportBody;
+
+  /// No description provided for @walletPublicName.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet name'**
+  String get walletPublicName;
+
+  /// No description provided for @walletPublicKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Account public key'**
+  String get walletPublicKey;
+
+  /// No description provided for @walletPublicKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use xpub/zpub on Mainnet or tpub/vpub on Testnet. Use public material only.'**
+  String get walletPublicKeyHint;
+
+  /// No description provided for @walletPublicFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Origin identifier (fingerprint)'**
+  String get walletPublicFingerprint;
+
+  /// No description provided for @walletPublicOriginHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the 8-character master identifier provided by the original wallet.'**
+  String get walletPublicOriginHint;
+
+  /// No description provided for @walletPublicPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Account origin (path)'**
+  String get walletPublicPath;
+
+  /// No description provided for @walletPublicPathHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the network and account number. The path must match the exported key.'**
+  String get walletPublicPathHint;
+
+  /// No description provided for @walletPublicRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete this field.'**
+  String get walletPublicRequired;
+
+  /// No description provided for @walletPublicInvalidKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid public key or format incompatible with native SegWit. Check the export.'**
+  String get walletPublicInvalidKey;
+
+  /// No description provided for @walletPublicPrivateKey.
+  ///
+  /// In en, this message translates to:
+  /// **'A private key was entered. Use only the account public key.'**
+  String get walletPublicPrivateKey;
+
+  /// No description provided for @walletPublicWrongNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'The key or path network differs from this app’s network.'**
+  String get walletPublicWrongNetwork;
+
+  /// No description provided for @walletPublicInvalidFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'The origin identifier must have 8 hexadecimal characters (0–9, a–f).'**
+  String get walletPublicInvalidFingerprint;
+
+  /// No description provided for @walletPublicInvalidPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the BIP84 account path in the format m/84\'/network\'/account\'.'**
+  String get walletPublicInvalidPath;
+
+  /// No description provided for @walletPublicAccountMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The key depth or account number does not match the path. Check the account key and its origin.'**
+  String get walletPublicAccountMismatch;
+
+  /// No description provided for @walletPublicRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Import for monitoring'**
+  String get walletPublicRegister;
+
+  /// No description provided for @walletPublicResultUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The registration result could not be confirmed. It may have completed. Check your wallets before starting another import.'**
+  String get walletPublicResultUnknown;
+
+  /// No description provided for @walletPublicCheckWallets.
+  ///
+  /// In en, this message translates to:
+  /// **'View my wallets'**
+  String get walletPublicCheckWallets;
+
+  /// No description provided for @walletPublicOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This wallet was imported using public data only. You can receive and monitor balances and activity. To send, use the wallet holding the keys.'**
+  String get walletPublicOnlyBody;
+
+  /// No description provided for @settingsWalletsSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallets could not be refreshed. The last known data has been kept.'**
+  String get settingsWalletsSyncFailed;
+
+  /// No description provided for @walletStateActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get walletStateActive;
+
+  /// No description provided for @walletStateArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get walletStateArchived;
+
+  /// No description provided for @walletStateCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Being created'**
+  String get walletStateCreating;
+
+  /// No description provided for @walletStateRotating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating address'**
+  String get walletStateRotating;
+
+  /// No description provided for @walletStateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation incomplete'**
+  String get walletStateFailed;
+
+  /// No description provided for @walletStateQuorum.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for operational availability'**
+  String get walletStateQuorum;
+
+  /// No description provided for @walletStateFrozen.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions blocked'**
+  String get walletStateFrozen;
+
+  /// No description provided for @walletStateUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'State unavailable'**
+  String get walletStateUnknown;
+
+  /// No description provided for @walletArchiveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get walletArchiveAction;
+
+  /// No description provided for @walletArchiveReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the wallet and the effect of this action before confirming.'**
+  String get walletArchiveReview;
+
+  /// No description provided for @walletArchiveMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This wallet will leave active operations. Archiving does not transfer funds. Check the selected wallet before confirming.'**
+  String get walletArchiveMessage;
+
+  /// No description provided for @walletArchiveWatchMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This wallet will leave active monitoring. Funds remain in the original wallet.'**
+  String get walletArchiveWatchMessage;
+
+  /// No description provided for @walletArchiveHasFunds.
+  ///
+  /// In en, this message translates to:
+  /// **'This wallet has funds or pending activity. Move the funds and finish pending operations before archiving.'**
+  String get walletArchiveHasFunds;
+
+  /// No description provided for @walletSessionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The session changed. Open wallet management again.'**
+  String get walletSessionChanged;
+
+  /// No description provided for @walletManageIdentifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet identifier'**
+  String get walletManageIdentifier;
+
+  /// No description provided for @walletManageCardIdentifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Card identifier'**
+  String get walletManageCardIdentifier;
+
+  /// No description provided for @walletManageExternalIdentifier.
+  ///
+  /// In en, this message translates to:
+  /// **'External wallet identifier'**
+  String get walletManageExternalIdentifier;
+
+  /// No description provided for @runtimeBgTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Status on this device'**
+  String get runtimeBgTitle;
+
+  /// No description provided for @runtimeBgDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Background alerts are disabled.'**
+  String get runtimeBgDisabled;
+
+  /// No description provided for @runtimeBgSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to start alerts.'**
+  String get runtimeBgSignedOut;
+
+  /// No description provided for @runtimeBgUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Background monitoring is available on Android and iOS.'**
+  String get runtimeBgUnsupported;
+
+  /// No description provided for @runtimeBgWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the app to finish activation.'**
+  String get runtimeBgWaiting;
+
+  /// No description provided for @runtimeBgStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting the alert service…'**
+  String get runtimeBgStarting;
+
+  /// No description provided for @runtimeBgRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert service started on this device.'**
+  String get runtimeBgRunning;
+
+  /// No description provided for @runtimeBgPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications in system settings to receive alerts.'**
+  String get runtimeBgPermission;
+
+  /// No description provided for @runtimeBgStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the alert service. Try again.'**
+  String get runtimeBgStartFailed;
+
+  /// No description provided for @runtimeBgStopFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The device did not confirm stopping alerts. Try again.'**
+  String get runtimeBgStopFailed;
+
+  /// No description provided for @runtimeBgSessionStopFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not stop alerts for the previous session. Try again before switching accounts.'**
+  String get runtimeBgSessionStopFailed;
+
+  /// No description provided for @runtimeBgPreferenceOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Preference enabled. Check the service status below.'**
+  String get runtimeBgPreferenceOn;
+
+  /// No description provided for @errReserveCoverageInsufficient.
+  ///
+  /// In en, this message translates to:
+  /// **'The server rejected this attempt because the required reserve coverage was not met. Kerosene needs to reconcile its reserves before allowing the payment.'**
+  String get errReserveCoverageInsufficient;
+
+  /// No description provided for @errReserveVerificationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The server rejected this attempt because it could not verify the required reserves. Wait for the service to recover.'**
+  String get errReserveVerificationUnavailable;
+
+  /// No description provided for @errSettlementGateRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The server rejected this attempt during its financial safety checks. Check the payment details and tracking.'**
+  String get errSettlementGateRejected;
+
+  /// No description provided for @emergencyRecoverySessionClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This session has ended'**
+  String get emergencyRecoverySessionClosedTitle;
+
+  /// No description provided for @emergencyRecoverySessionClosedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new recovery session. The previous QR cannot be used to complete this process.'**
+  String get emergencyRecoverySessionClosedBody;
+
+  /// No description provided for @emergencyRecoveryRestartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart recovery'**
+  String get emergencyRecoveryRestartAction;
+
+  /// No description provided for @emergencyRecoveryUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Result not yet confirmed'**
+  String get emergencyRecoveryUnknownTitle;
+
+  /// No description provided for @emergencyRecoveryUnknownBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The confirmation was sent, but a valid result could not be obtained. Access may have been updated. Check whether you can sign in before starting another recovery; the new codes were not received.'**
+  String get emergencyRecoveryUnknownBody;
+
+  /// No description provided for @emergencyRecoveryCodesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'I saved the new recovery codes in a safe place.'**
+  String get emergencyRecoveryCodesSaved;
+
+  /// No description provided for @emergencyRecoveryReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'Show recovery information'**
+  String get emergencyRecoveryReveal;
+
+  /// No description provided for @emergencyRecoveryCopyAuthenticator.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy authenticator setup'**
+  String get emergencyRecoveryCopyAuthenticator;
+
+  /// No description provided for @emergencyRecoveryAccountChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The account session changed. Start recovery again.'**
+  String get emergencyRecoveryAccountChanged;
+
+  /// No description provided for @emergencyRecoveryInvalidResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'The server did not return a valid recovery session. Start again.'**
+  String get emergencyRecoveryInvalidResponse;
+
+  /// No description provided for @emergencyRecoveryRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The server rejected recovery. Check your details and start a new session.'**
+  String get emergencyRecoveryRejected;
+
+  /// No description provided for @emergencyRecoveryRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait before starting another recovery.'**
+  String get emergencyRecoveryRateLimited;
+
+  /// No description provided for @emergencyRecoveryInvalidRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the recovery details you entered.'**
+  String get emergencyRecoveryInvalidRequest;
+
+  /// No description provided for @emergencyRecoveryConfirmingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming recovery'**
+  String get emergencyRecoveryConfirmingTitle;
+
+  /// No description provided for @emergencyRecoveryConfirmingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete authorization on this device and wait for the server response.'**
+  String get emergencyRecoveryConfirmingBody;
+
+  /// No description provided for @emergencyRecoveryAuthenticatorCopyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not copy the authenticator setup. Try again.'**
+  String get emergencyRecoveryAuthenticatorCopyFailed;
+
+  /// No description provided for @emergencyRecoveryDeviceActivationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check this device key'**
+  String get emergencyRecoveryDeviceActivationTitle;
+
+  /// No description provided for @emergencyRecoveryDeviceActivationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery completed, but the key could not be activated on this device. Save the new codes and sign in with the new password and authenticator to review your devices.'**
+  String get emergencyRecoveryDeviceActivationFailed;
+
+  /// No description provided for @emergencyRecoveryDeviceKeyUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This recovery method is not yet available on the server. No confirmation was sent.'**
+  String get emergencyRecoveryDeviceKeyUnsupported;
+
+  /// No description provided for @emergencyRecoveryDeviceKeyPreparationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation could not be prepared. Check the authenticator and session before trying again.'**
+  String get emergencyRecoveryDeviceKeyPreparationFailed;
+
+  /// No description provided for @emergencyRecoverySessionExitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous session could not be ended. Your codes remain on this screen. Try again before signing in.'**
+  String get emergencyRecoverySessionExitFailed;
+
+  /// No description provided for @gatewaySelectedWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected wallet (reference)'**
+  String get gatewaySelectedWallet;
+
+  /// No description provided for @gatewayWalletReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet identifier'**
+  String get gatewayWalletReference;
+
+  /// No description provided for @gatewayProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get gatewayProvider;
+
+  /// No description provided for @gatewayDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination domain'**
+  String get gatewayDomain;
+
+  /// No description provided for @gatewayFullLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Full link'**
+  String get gatewayFullLink;
+
+  /// No description provided for @gatewayCheckoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the checkout'**
+  String get gatewayCheckoutTitle;
+
+  /// No description provided for @gatewayCheckoutTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the local currency amount, Bitcoin quantity, fees and payment methods in the provider’s checkout before paying.'**
+  String get gatewayCheckoutTerms;
+
+  /// No description provided for @gatewayDestinationUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'This link does not confirm the destination wallet, Bitcoin reservation or delivery. Check the destination with the provider. Returning to Kerosene does not confirm payment.'**
+  String get gatewayDestinationUnconfirmed;
+
+  /// No description provided for @gatewayExternalPending.
+  ///
+  /// In en, this message translates to:
+  /// **'The {provider} link was opened. Opening it does not confirm payment or Bitcoin receipt. Check your activity for confirmed receipts.'**
+  String gatewayExternalPending(String provider);
+
+  /// No description provided for @gatewayUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Links checked at {time}'**
+  String gatewayUpdatedAt(String time);
+
+  /// No description provided for @gatewayLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating purchase links…'**
+  String get gatewayLoading;
+
+  /// No description provided for @gatewayStale.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not update the links. The last lookup is shown; refresh before opening a checkout.'**
+  String get gatewayStale;
+
+  /// No description provided for @gatewayRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh links'**
+  String get gatewayRefresh;
+
+  /// No description provided for @gatewayInvalidLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid link or missing HTTPS connection. Unavailable to open.'**
+  String get gatewayInvalidLink;
+
+  /// No description provided for @gatewayOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open provider'**
+  String get gatewayOpen;
+
+  /// No description provided for @gatewayCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get gatewayCopy;
+
+  /// No description provided for @gatewayOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open the provider. Try again or copy the link to open it in your browser.'**
+  String get gatewayOpenFailed;
+
+  /// No description provided for @gatewayCheckoutLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout link copied.'**
+  String get gatewayCheckoutLinkCopied;
+
+  /// No description provided for @statementExportDocumentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement'**
+  String get statementExportDocumentTitle;
+
+  /// No description provided for @statementPdfGeneratedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated at {time} (UTC)'**
+  String statementPdfGeneratedAt(String time);
+
+  /// No description provided for @statementPdfSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected movements'**
+  String statementPdfSummary(int count);
+
+  /// No description provided for @statementPdfPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total}'**
+  String statementPdfPage(int page, int total);
+
+  /// No description provided for @statementPdfLoadedHistoryNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This statement contains movements loaded and selected in the app. History may be partial. Statuses reflect the available lookup and do not confirm pending movements. Each movement shows exact BTC and sat amounts. Fiat values appear only when recorded for the operation.'**
+  String get statementPdfLoadedHistoryNote;
+
+  /// No description provided for @statementPdfAmountSats.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact amount (sats)'**
+  String get statementPdfAmountSats;
+
+  /// No description provided for @statementPdfCounterparty.
+  ///
+  /// In en, this message translates to:
+  /// **'Counterparty'**
+  String get statementPdfCounterparty;
+
+  /// No description provided for @statementPdfFailureCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Failure code'**
+  String get statementPdfFailureCode;
+
+  /// No description provided for @statementExportDismissedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing closed'**
+  String get statementExportDismissedTitle;
+
+  /// No description provided for @statementExportDismissedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The {format} file was generated. No sharing was confirmed.'**
+  String statementExportDismissedMessage(String format);
+
+  /// No description provided for @statementIncludeLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Include all loaded movements'**
+  String get statementIncludeLoaded;
+
+  /// No description provided for @statementLoadedActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'History loaded on this device'**
+  String get statementLoadedActivity;
+
+  /// No description provided for @movementOperationTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation total'**
+  String get movementOperationTotal;
+
+  /// No description provided for @activityArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive this movement?'**
+  String get activityArchiveTitle;
+
+  /// No description provided for @activityArchiveEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'The movement will be moved to Archived on this device. This organizes the view and does not change your balance, payment or server history.'**
+  String get activityArchiveEffect;
+
+  /// No description provided for @activityArchiveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get activityArchiveConfirm;
+
+  /// No description provided for @activityArchiveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm archiving. The movement remains visible; try again.'**
+  String get activityArchiveFailed;
+
+  /// No description provided for @activityActionSessionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again to change this movement.'**
+  String get activityActionSessionRequired;
+
+  /// No description provided for @activityActionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The status changed while you reviewed the details. Review the movement before continuing.'**
+  String get activityActionChanged;
+
+  /// No description provided for @activityArchiveLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading local activity organization…'**
+  String get activityArchiveLoading;
+
+  /// No description provided for @activityArchiveUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not update archiving information. The view may be out of date.'**
+  String get activityArchiveUnavailable;
+
+  /// No description provided for @activityArchiveCheckedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Last local lookup: {time}'**
+  String activityArchiveCheckedAt(String time);
+
+  /// No description provided for @settingsConfirmationAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsConfirmationAccount;
+
+  /// No description provided for @settingsPrivacyLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the preference. Tap to try again.'**
+  String get settingsPrivacyLoadFailed;
+
+  /// No description provided for @settingsPrivacyCaptureEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Screenshot protection enabled for financial screens on Android.'**
+  String get settingsPrivacyCaptureEnabled;
+
+  /// No description provided for @settingsPrivacyCaptureDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Screenshot protection disabled in this app.'**
+  String get settingsPrivacyCaptureDisabled;
+
+  /// No description provided for @settingsSecurityWipeFailMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm the removal. Check your statement and try again.'**
+  String get settingsSecurityWipeFailMessage;
+
+  /// No description provided for @settingsSecurityViewStatement.
+  ///
+  /// In en, this message translates to:
+  /// **'View statement'**
+  String get settingsSecurityViewStatement;
+
+  /// No description provided for @securityCredentialWorkingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking this device'**
+  String get securityCredentialWorkingTitle;
+
+  /// No description provided for @securityCredentialWorkingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the access request shown on this device. Completion depends on the server response.'**
+  String get securityCredentialWorkingBody;
+
+  /// No description provided for @securityCredentialDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Access key linked'**
+  String get securityCredentialDoneTitle;
+
+  /// No description provided for @securityCredentialDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device was linked to your account. View your authorized devices to check the details.'**
+  String get securityCredentialDoneBody;
+
+  /// No description provided for @securityCredentialSessionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The session changed'**
+  String get securityCredentialSessionTitle;
+
+  /// No description provided for @securityCredentialSessionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This linking attempt cannot continue in this session. Check the current account’s devices before starting another attempt.'**
+  String get securityCredentialSessionBody;
+
+  /// No description provided for @securityCredentialCancelledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account transfer not confirmed'**
+  String get securityCredentialCancelledTitle;
+
+  /// No description provided for @securityCredentialCancelledBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You did not confirm transferring this device to this account. Linking confirmation was not completed.'**
+  String get securityCredentialCancelledBody;
+
+  /// No description provided for @securityCredentialUnconfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking not confirmed'**
+  String get securityCredentialUnconfirmedTitle;
+
+  /// No description provided for @securityCredentialUnconfirmedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm linking. Check your authorized devices before trying again.'**
+  String get securityCredentialUnconfirmedBody;
+
+  /// No description provided for @securityCredentialBusyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A linking attempt is in progress on this device. Wait for it to finish before starting another.'**
+  String get securityCredentialBusyBody;
+
+  /// No description provided for @securityCredentialViewDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'View devices'**
+  String get securityCredentialViewDevices;
+
+  /// No description provided for @securityProfileUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating security data. The last known data remains visible.'**
+  String get securityProfileUpdating;
+
+  /// No description provided for @securityProfileStale.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not update the security details. Refresh to continue.'**
+  String get securityProfileStale;
+
+  /// Time of the last successfully observed security profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Last lookup: {time}'**
+  String securityProfileCheckedAt(String time);
+
+  /// No description provided for @securityCredentialSystemSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up biometrics or screen lock on this device before trying again.'**
+  String get securityCredentialSystemSetup;
+
+  /// No description provided for @securityCredentialPinSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Set an app PIN in security settings before trying again.'**
+  String get securityCredentialPinSetup;
+
+  /// No description provided for @securityCredentialDoneAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get securityCredentialDoneAction;
+
+  /// Server-defined PIN length bounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {min} to {max} digits for the new PIN.'**
+  String securityPinLengthError(int min, int max);
+
+  /// No description provided for @securityPinAuthorizationMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the current PIN or a valid authenticator code, when that option is available.'**
+  String get securityPinAuthorizationMissing;
+
+  /// No description provided for @securityPinEnabledResult.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN configured'**
+  String get securityPinEnabledResult;
+
+  /// No description provided for @securityPinChangedResult.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN updated'**
+  String get securityPinChangedResult;
+
+  /// No description provided for @securityPinDisabledResult.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN preference disabled'**
+  String get securityPinDisabledResult;
+
+  /// No description provided for @securityPinSavedResultBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device’s PIN configuration was confirmed. Use the updated PIN for subsequent access requests.'**
+  String get securityPinSavedResultBody;
+
+  /// No description provided for @securityPinDisabledResultBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The PIN preference was disabled on this device. Account access requirements still apply.'**
+  String get securityPinDisabledResultBody;
+
+  /// Number of received recovery codes, kept in memory only.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} codes received. Open the list and keep them somewhere safe.'**
+  String securityResultCodesReady(int count);
+
+  /// No description provided for @securityResultCodesChangedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'New codes were generated. Previous codes are no longer valid; save the new list before finishing.'**
+  String get securityResultCodesChangedBody;
+
+  /// No description provided for @securityTotpActiveStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticator active'**
+  String get securityTotpActiveStatusTitle;
+
+  /// No description provided for @securityTotpInactiveStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticator disabled'**
+  String get securityTotpInactiveStatusTitle;
+
+  /// No description provided for @securityTotpSetupStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup in progress'**
+  String get securityTotpSetupStatusTitle;
+
+  /// No description provided for @securityTotpActiveStatusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the temporary codes from your authenticator when requested.'**
+  String get securityTotpActiveStatusBody;
+
+  /// No description provided for @securityTotpInactiveStatusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the account to your authenticator and verify a 6-digit code to finish.'**
+  String get securityTotpInactiveStatusBody;
+
+  /// No description provided for @securityAuthenticatorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticator'**
+  String get securityAuthenticatorTitle;
+
+  /// No description provided for @securityTotpPreparingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing the authenticator…'**
+  String get securityTotpPreparingMessage;
+
+  /// No description provided for @securityChangeProcessingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming the change…'**
+  String get securityChangeProcessingMessage;
+
+  /// No description provided for @recoveryNavigationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open recovery. Try again.'**
+  String get recoveryNavigationFailed;
+
+  /// No description provided for @recoveryModeStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get recoveryModeStandard;
+
+  /// No description provided for @recoveryModePasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Access key — Passkey'**
+  String get recoveryModePasskey;
+
+  /// No description provided for @recoveryModeShamir.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared recovery — Shamir'**
+  String get recoveryModeShamir;
+
+  /// No description provided for @recoveryModeMultisig.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiple signatures — Multisig 2FA'**
+  String get recoveryModeMultisig;
+
+  /// No description provided for @recoveryManageCodesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'View your codes and generate a new list when needed.'**
+  String get recoveryManageCodesBody;
+
+  /// No description provided for @recoveryPassphraseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Access passphrase'**
+  String get recoveryPassphraseTitle;
+
+  /// No description provided for @recoverySharesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This account uses SLIP39 recovery shares.'**
+  String get recoverySharesBody;
+
+  /// No description provided for @recoveryPassphraseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This account requires the access passphrase for sensitive actions.'**
+  String get recoveryPassphraseBody;
+
+  /// No description provided for @recoverySharesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery shares — SLIP39'**
+  String get recoverySharesTitle;
+
+  /// No description provided for @recoveryStatusLookupFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not check the account status. You can still open the recovery options.'**
+  String get recoveryStatusLookupFailure;
+
+  /// No description provided for @securityPinCheckStatusAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check PIN status'**
+  String get securityPinCheckStatusAction;
+
+  /// No description provided for @securityPinChangePinOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the current PIN and choose a new PIN for this device.'**
+  String get securityPinChangePinOnlyBody;
+
+  /// No description provided for @securityPinLockedResetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The PIN is locked. Use an authenticator code to set the new PIN.'**
+  String get securityPinLockedResetBody;
+
+  /// No description provided for @transactionExplorerOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open the explorer. Try again. The hash remains available in the technical details.'**
+  String get transactionExplorerOpenFailed;
+
+  /// No description provided for @transactionExplorerInvalidHash.
+  ///
+  /// In en, this message translates to:
+  /// **'Explorer unavailable: the supplied identifier is not a valid Bitcoin hash.'**
+  String get transactionExplorerInvalidHash;
+
+  /// No description provided for @transactionExplorerLocalNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'This operation uses a local network without a public explorer.'**
+  String get transactionExplorerLocalNetwork;
+
+  /// No description provided for @transactionExplorerUnknownNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Explorer unavailable: this operation’s data does not identify the Bitcoin network.'**
+  String get transactionExplorerUnknownNetwork;
+
+  /// No description provided for @receiveReceiptShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive receipt'**
+  String get receiveReceiptShareTitle;
+
+  /// No description provided for @receiveReceiptOperationId.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation identifier'**
+  String get receiveReceiptOperationId;
+
+  /// No description provided for @receiveReceiptRequestId.
+  ///
+  /// In en, this message translates to:
+  /// **'Request identifier'**
+  String get receiveReceiptRequestId;
+
+  /// No description provided for @receiveShareCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing completed.'**
+  String get receiveShareCompleted;
+
+  /// No description provided for @receiveShareUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm sharing. You can copy the details.'**
+  String get receiveShareUnconfirmed;
+
+  /// No description provided for @receiveShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share. Try again or copy the details.'**
+  String get receiveShareFailed;
+
+  /// No description provided for @receiveReceiptDateUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt date not provided'**
+  String get receiveReceiptDateUnavailable;
+
+  /// No description provided for @receiveBackgroundHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive details are hidden while the app is in the background.'**
+  String get receiveBackgroundHidden;
+
+  /// No description provided for @receiveNetworkUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Network not provided'**
+  String get receiveNetworkUnknown;
+
+  /// No description provided for @receiveNetworkTestFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Test network not identified'**
+  String get receiveNetworkTestFamily;
+
+  /// No description provided for @receiveCancelUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm cancellation yet. We are checking the request status.'**
+  String get receiveCancelUnconfirmed;
+
+  /// No description provided for @receiveCancelBackAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get receiveCancelBackAction;
+
+  /// No description provided for @receiveCancelNoLongerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This request cannot be cancelled now. Check its updated status on the screen.'**
+  String get receiveCancelNoLongerAvailable;
+
+  /// No description provided for @receiveReceiptRequestStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Request status'**
+  String get receiveReceiptRequestStatus;
+
+  /// No description provided for @settingsNotifDisableConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable on this device?'**
+  String get settingsNotifDisableConfirmTitle;
+
+  /// No description provided for @settingsNotifDisableConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Kerosene will stop sending notifications to this registration.'**
+  String get settingsNotifDisableConfirmBody;
+
+  /// No description provided for @settingsNotifDeviceRecordId.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration ID'**
+  String get settingsNotifDeviceRecordId;
+
+  /// No description provided for @settingsNotifDeviceReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Device reference'**
+  String get settingsNotifDeviceReference;
+
+  /// No description provided for @settingsNotifDeviceTokenReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification reference'**
+  String get settingsNotifDeviceTokenReference;
+
+  /// No description provided for @settingsNotifDeviceAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'App version'**
+  String get settingsNotifDeviceAppVersion;
+
+  /// No description provided for @settingsNotifDeviceLastSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'Last reported activity'**
+  String get settingsNotifDeviceLastSeen;
+
+  /// No description provided for @settingsNotifDevicesUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating the list. The last known registrations remain visible.'**
+  String get settingsNotifDevicesUpdating;
+
+  /// No description provided for @settingsNotifDevicesStale.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not update the list. Check the registrations before making a change.'**
+  String get settingsNotifDevicesStale;
+
+  /// No description provided for @settingsNotifRevokeUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm the change. Refresh the list before trying again.'**
+  String get settingsNotifRevokeUnconfirmed;
+
+  /// No description provided for @settingsNotifRefreshDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh list'**
+  String get settingsNotifRefreshDevices;
+
+  /// No description provided for @settingsNotifDeviceDecisionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the updated list and confirm this device again.'**
+  String get settingsNotifDeviceDecisionChanged;
+
+  /// No description provided for @settingsNotifDisabling.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabling…'**
+  String get settingsNotifDisabling;
+
+  /// No description provided for @notifDialogAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get notifDialogAmount;
+
+  /// No description provided for @notifDialogBtcAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (BTC)'**
+  String get notifDialogBtcAmount;
+
+  /// No description provided for @notifDialogWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get notifDialogWallet;
+
+  /// No description provided for @notifDialogFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get notifDialogFrom;
+
+  /// No description provided for @notifDialogTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get notifDialogTo;
+
+  /// No description provided for @notifDialogPayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Payer'**
+  String get notifDialogPayer;
+
+  /// No description provided for @notifDialogLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment link'**
+  String get notifDialogLink;
+
+  /// No description provided for @notifDialogDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Device'**
+  String get notifDialogDevice;
+
+  /// No description provided for @notifDialogLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get notifDialogLocation;
+
+  /// No description provided for @notifDialogIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP address'**
+  String get notifDialogIp;
+
+  /// No description provided for @notifDialogTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time as recorded'**
+  String get notifDialogTime;
+
+  /// No description provided for @notifDialogPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price (USD)'**
+  String get notifDialogPrice;
+
+  /// No description provided for @notifDialogChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change in 24h (%)'**
+  String get notifDialogChange;
+
+  /// No description provided for @notifDialogThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert threshold (%)'**
+  String get notifDialogThreshold;
+
+  /// No description provided for @notifDialogSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get notifDialogSource;
+
+  /// No description provided for @notifDialogMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet type'**
+  String get notifDialogMode;
+
+  /// No description provided for @notifDialogNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get notifDialogNetwork;
+
+  /// No description provided for @notifDialogMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Public data'**
+  String get notifDialogMaterial;
+
+  /// No description provided for @notifDialogReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get notifDialogReference;
+
+  /// No description provided for @notifDialogOpenSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'View security'**
+  String get notifDialogOpenSecurity;
+
+  /// No description provided for @notifDialogOpenLink.
+  ///
+  /// In en, this message translates to:
+  /// **'View payment link'**
+  String get notifDialogOpenLink;
+
+  /// No description provided for @notifDialogOpenMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'View market'**
+  String get notifDialogOpenMarket;
+
+  /// No description provided for @notifDialogOpenWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'View wallet'**
+  String get notifDialogOpenWallet;
+
+  /// No description provided for @notifDialogSecurityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'If you do not recognize this activity, review your access and protect your account.'**
+  String get notifDialogSecurityNote;
+
+  /// No description provided for @notifDialogMarketNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the market screen to check the latest quote.'**
+  String get notifDialogMarketNote;
+
+  /// No description provided for @notifDialogWalletNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the wallet to check its activity and available actions.'**
+  String get notifDialogWalletNote;
+
+  /// No description provided for @notifDialogWatchedWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored wallet'**
+  String get notifDialogWatchedWallet;
+
+  /// No description provided for @notifDialogOpenFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open'**
+  String get notifDialogOpenFailedTitle;
+
+  /// No description provided for @notifDialogOpenFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try opening this screen again from the notification center.'**
+  String get notifDialogOpenFailedMessage;
+
+  /// No description provided for @notifDateNotProvided.
+  ///
+  /// In en, this message translates to:
+  /// **'Date not provided'**
+  String get notifDateNotProvided;
+
+  /// No description provided for @notifSyncUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating notifications'**
+  String get notifSyncUpdating;
+
+  /// No description provided for @notifSyncUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Update unavailable'**
+  String get notifSyncUnavailable;
+
+  /// No description provided for @notifSyncSavedData.
+  ///
+  /// In en, this message translates to:
+  /// **'Data saved on this device.'**
+  String get notifSyncSavedData;
+
+  /// No description provided for @notifSyncKeptData.
+  ///
+  /// In en, this message translates to:
+  /// **'Known notifications remain available.'**
+  String get notifSyncKeptData;
+
+  /// No description provided for @notifSyncLastQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Last checked: {time}.'**
+  String notifSyncLastQuery(String time);
+
+  /// No description provided for @notifSyncReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading saved data'**
+  String get notifSyncReading;
+
+  /// No description provided for @notifSyncNoQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Check again to view the account notifications.'**
+  String get notifSyncNoQuery;
+
+  /// No description provided for @notifOperationDataIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the details to view this operation.'**
+  String get notifOperationDataIncomplete;
+
+  /// No description provided for @notifOperationAmountNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded amount: {amount} {currency}. Open the operation details.'**
+  String notifOperationAmountNotice(String amount, String currency);
+
+  /// No description provided for @notifSyncRefreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh notifications'**
+  String get notifSyncRefreshAction;
+
+  /// No description provided for @notifUntitledNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification'**
+  String get notifUntitledNotice;
+
+  /// No description provided for @notifSignInToView.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to view your notifications.'**
+  String get notifSignInToView;
+
+  /// No description provided for @appEntryForgotPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot my PIN'**
+  String get appEntryForgotPin;
+
+  /// No description provided for @appEntryPinCreateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose 4 digits to protect access to the app.'**
+  String get appEntryPinCreateSubtitle;
+
+  /// No description provided for @appEntryPinConfirmSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the PIN you just created again.'**
+  String get appEntryPinConfirmSubtitle;
+
+  /// No description provided for @appEntryPinUnlockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your PIN to unlock this device.'**
+  String get appEntryPinUnlockSubtitle;
+
+  /// No description provided for @firstAccessChoiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how to start'**
+  String get firstAccessChoiceTitle;
+
+  /// No description provided for @firstAccessChoiceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your first account or explore the app first. You can add other accounts later.'**
+  String get firstAccessChoiceBody;
+
+  /// No description provided for @firstAccessAccountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account name (optional)'**
+  String get firstAccessAccountLabel;
+
+  /// No description provided for @firstAccessOnchainBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Send and receive Bitcoin with an on-chain account.'**
+  String get firstAccessOnchainBody;
+
+  /// No description provided for @firstAccessWatchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Track a wallet using only its public information.'**
+  String get firstAccessWatchBody;
+
+  /// No description provided for @firstAccessReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is ready'**
+  String get firstAccessReadyTitle;
+
+  /// No description provided for @firstAccessReadyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything is set up. Open Home to manage your account.'**
+  String get firstAccessReadyBody;
+
+  /// No description provided for @firstAccessPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking your account…'**
+  String get firstAccessPreparing;
+
+  /// No description provided for @firstAccessCheckStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Check availability'**
+  String get firstAccessCheckStatus;
+
+  /// No description provided for @firstAccessExplore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the app first'**
+  String get firstAccessExplore;
+
+  /// No description provided for @firstAccessGoHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Home'**
+  String get firstAccessGoHome;
+
+  /// No description provided for @firstAccessNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'The account is not available yet. Check again or explore the app.'**
+  String get firstAccessNotReady;
+
+  /// No description provided for @firstAccessCreationUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation has not been confirmed yet. Check again to avoid creating a duplicate account.'**
+  String get firstAccessCreationUnknown;
+
+  /// No description provided for @firstAccessSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get firstAccessSignIn;
+
+  /// No description provided for @pinRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recover your access'**
+  String get pinRecoveryTitle;
+
+  /// No description provided for @pinRecoveryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your account password and passkey to set a new 4-digit PIN.'**
+  String get pinRecoveryBody;
+
+  /// No description provided for @pinRecoveryPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Account password'**
+  String get pinRecoveryPassword;
+
+  /// No description provided for @pinRecoveryPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your account password.'**
+  String get pinRecoveryPasswordRequired;
+
+  /// No description provided for @pinRecoveryNewPin.
+  ///
+  /// In en, this message translates to:
+  /// **'New 4-digit PIN'**
+  String get pinRecoveryNewPin;
+
+  /// No description provided for @pinRecoveryConfirmPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your new PIN'**
+  String get pinRecoveryConfirmPin;
+
+  /// No description provided for @pinRecoveryFourDigits.
+  ///
+  /// In en, this message translates to:
+  /// **'The PIN must contain exactly 4 digits.'**
+  String get pinRecoveryFourDigits;
+
+  /// No description provided for @pinRecoveryMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The PINs do not match.'**
+  String get pinRecoveryMismatch;
+
+  /// No description provided for @pinRecoveryContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm with passkey'**
+  String get pinRecoveryContinue;
+
+  /// No description provided for @pinRecoveryConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your identity on your device…'**
+  String get pinRecoveryConfirming;
+
+  /// No description provided for @pinRecoveryDone.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN reset'**
+  String get pinRecoveryDone;
+
+  /// No description provided for @pinRecoveryDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your new PIN to unlock the app.'**
+  String get pinRecoveryDoneBody;
+
+  /// No description provided for @pinRecoveryBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to sign in'**
+  String get pinRecoveryBack;
+
+  /// No description provided for @pinRecoveryInterrupted.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery was interrupted. Try your new PIN before repeating.'**
+  String get pinRecoveryInterrupted;
+
+  /// No description provided for @pinRecoveryUnknownHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If confirmation was interrupted, try signing in with your new PIN. If it does not work, restart recovery.'**
+  String get pinRecoveryUnknownHint;
+
+  /// No description provided for @pinEntryDigitsFilled.
+  ///
+  /// In en, this message translates to:
+  /// **'{filled} of {total} digits entered'**
+  String pinEntryDigitsFilled(int filled, int total);
 }
 
 class _AppLocalizationsDelegate

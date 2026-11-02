@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -173,9 +174,8 @@ class _WalletExpandChipState extends ConsumerState<WalletExpandChip>
     final others = _others;
     final canExpand = others.isNotEmpty;
     final isGlass = widget.appearance == WalletExpandChipAppearance.glass;
-    final palette = isGlass
-        ? _ChipPalette.glassOf(context)
-        : _ChipPalette.solid;
+    final palette =
+        isGlass ? _ChipPalette.glassOf(context) : _ChipPalette.solid;
 
     return Center(
       child: ConstrainedBox(
@@ -201,7 +201,7 @@ class _WalletExpandChipState extends ConsumerState<WalletExpandChip>
                       trailing: canExpand
                           ? Transform.rotate(
                               angle: _arrow.value * 2 * math.pi,
-                              child: Icon(
+                              child: KeroseneIcon(
                                 KeroseneIcons.chevronRight,
                                 size: 16,
                                 color: palette.muted,
@@ -246,12 +246,10 @@ class _WalletExpandChipState extends ConsumerState<WalletExpandChip>
               final isLight = Theme.of(context).brightness == Brightness.light;
               final onSurface = Theme.of(context).colorScheme.onSurface;
               final policy = ref.watch(graphicsPolicyProvider);
-              final useBlur =
-                  policy.allowBackdropBlur &&
+              final useBlur = policy.allowBackdropBlur &&
                   !KeroseneMotion.reduceMotion(context);
-              final fillOpacity = useBlur
-                  ? (isLight ? 0.55 : 0.14)
-                  : (isLight ? 0.60 : 0.19);
+              final fillOpacity =
+                  useBlur ? (isLight ? 0.55 : 0.14) : (isLight ? 0.60 : 0.19);
               final panel = DecoratedBox(
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: fillOpacity),
@@ -346,7 +344,7 @@ class _WalletChipRow extends StatelessWidget {
         ),
         Row(
           children: [
-            Icon(icon, size: 14, color: palette.foreground),
+            KeroseneIcon(icon, size: 14, color: palette.foreground),
             const Spacer(),
             SizedBox(
               width: 16,

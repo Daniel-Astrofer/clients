@@ -1,3 +1,5 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/core/constants/localized_copy.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import
@@ -25,12 +27,6 @@ import 'bitcoin_accounts_advanced_sections.dart';
 import 'bitcoin_screens/internal_account_creation_screen.dart';
 
 import 'bitcoin_accounts_wallet_support.dart';
-
-class _BitcoinAccountsDetailsCopy {
-  const _BitcoinAccountsDetailsCopy._();
-
-  static const renameWallet = 'Trocar nome';
-}
 
 class ReceiveMaterialDetails extends StatelessWidget {
   final BitcoinAccount account;
@@ -145,13 +141,13 @@ class AccountOptionActionButton extends StatelessWidget {
       style: colors.outlinedButtonStyle(
         minHeight: 42,
         foregroundColor: destructive
-            ? KeroseneBrandTokens.error
+            ? KeroseneBrandTokens.textPrimary
             : KeroseneBrandTokens.textPrimary,
       ),
       onPressed: busy ? null : onPressed,
       icon: busy
           ? const CupertinoActivityIndicator(radius: 7.5)
-          : Icon(icon, size: 15),
+          : KeroseneIcon(icon, size: 15),
       label: Text(label),
     );
   }
@@ -214,18 +210,20 @@ class WalletNameDialogState extends State<WalletNameDialog> {
 
   void submit() {
     final value = controller.text.trim();
-    if (value.isEmpty) return;
+    if (value.isEmpty || value == widget.initialName.trim()) return;
     Navigator.of(context).pop(value);
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text(_BitcoinAccountsDetailsCopy.renameWallet),
+      scrollable: true,
+      title: Text(context.tr.settingsWalletsRename),
       content: TextField(
         controller: controller,
         autofocus: true,
         maxLength: 96,
+        onChanged: (_) => setState(() {}),
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(labelText: context.tr.coldCreateWalletName),
         onSubmitted: (_) => submit(),
@@ -236,7 +234,10 @@ class WalletNameDialogState extends State<WalletNameDialog> {
           child: Text(context.tr.cancel),
         ),
         FilledButton(
-          onPressed: submit,
+          onPressed: controller.text.trim().isEmpty ||
+                  controller.text.trim() == widget.initialName.trim()
+              ? null
+              : submit,
           child: Text(context.tr.save),
         ),
       ],
@@ -248,29 +249,46 @@ Future<bool> confirmWalletArchive(
   BuildContext context,
   BitcoinAccount account,
 ) async {
+  final hasFunds = !account.isWatchOnly &&
+      (account.totalSats > 0 ||
+          (account.isCustodialOnchain && account.chainObservedSats > 0));
   final title = account.isWatchOnly
-      ? 'Arquivar acompanhamento'
-      : account.isCustodialOnchain
-          ? 'Bloquear carteira'
-          : 'Bloquear cartão';
-  final message = account.isWatchOnly
-      ? 'Esta carteira deixará de aparecer como acompanhamento ativo.'
-      : 'Esta carteira deixará de aparecer como ativa para movimentação.';
+      ? context.tr.settingsWalletsArchiveWatch
+      : context.tr.settingsWalletsArchive;
+  final message = hasFunds
+      ? context.tr.walletArchiveHasFunds
+      : account.isWatchOnly
+          ? context.tr.walletArchiveWatchMessage
+          : context.tr.walletArchiveMessage;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
         title: Text(title),
-        content: Text(message),
+        scrollable: true,
+        content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  account.label.trim().isEmpty
+                      ? context.tr.bitcoinAccountsUnnamedAccount
+                      : account.label,
+                  style: AppTypography.bodyMedium
+                      .copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Text(message)
+            ]),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text(context.tr.cancel),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr.confirm),
-          ),
+          if (!hasFunds)
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(context.tr.confirm),
+            ),
         ],
       );
     },
@@ -318,7 +336,7 @@ class AccountExpansionItem extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    KeroseneIcon(
                       accountOptionIcon(title),
                       color: colors.text,
                       size: 20,
@@ -340,7 +358,7 @@ class AccountExpansionItem extends StatelessWidget {
                     AnimatedRotation(
                       duration: KeroseneMotion.medium,
                       turns: expanded ? 0.5 : 0,
-                      child: Icon(
+                      child: KeroseneIcon(
                         KeroseneIcons.chevronDown,
                         color: colors.mutedText,
                         size: 20,
@@ -552,10 +570,10 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
   }
 
   Widget _buildDateHeader(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final now = AppDateTime.inDisplayZone(context, DateTime.now());
+    final today = DateTime.utc(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-    final txDate = DateTime(date.year, date.month, date.day);
+    final txDate = DateTime.utc(date.year, date.month, date.day);
     final colors = BitcoinAccountsColors.of(context);
 
     String label;
@@ -638,7 +656,7 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
               child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(KeroseneIcons.moveHorizontal,
+                    KeroseneIcon(KeroseneIcons.moveHorizontal,
                         size: 18, color: colors.mutedText),
                     const SizedBox(width: 8),
                     Text(_filterLabel(_filter)),
@@ -700,12 +718,16 @@ class _FocusedAccountHistoryState extends ConsumerState<FocusedAccountHistory> {
 
                   Widget? dateHeader;
                   if (index == 0) {
-                    dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+                    dateHeader = _buildDateHeader(
+                        AppDateTime.inDisplayZone(context, tx.timestamp));
                   } else {
                     final previousTx = rows[index - 1];
-                    if (!_isSameDay(tx.timestamp.toLocal(),
-                        previousTx.timestamp.toLocal())) {
-                      dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+                    if (!_isSameDay(
+                        AppDateTime.inDisplayZone(context, tx.timestamp),
+                        AppDateTime.inDisplayZone(
+                            context, previousTx.timestamp))) {
+                      dateHeader = _buildDateHeader(
+                          AppDateTime.inDisplayZone(context, tx.timestamp));
                     }
                   }
 
@@ -821,7 +843,7 @@ class FocusedHistoryRow extends StatelessWidget {
                   color: colors.text.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   transaction.isInternal
                       ? KeroseneIcons.wallet
                       : KeroseneIcons.history,
@@ -864,7 +886,8 @@ class FocusedHistoryRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                bitcoinAccountHistoryTimestampLabel(transaction.timestamp),
+                bitcoinAccountHistoryTimestampLabel(transaction.timestamp,
+                    context: context),
                 textAlign: TextAlign.right,
                 style: AppTypography.inter(
                   color: colors.mutedText,

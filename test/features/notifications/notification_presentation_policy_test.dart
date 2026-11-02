@@ -1,3 +1,5 @@
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
@@ -46,7 +48,9 @@ void main() {
   });
 
   test('critical event interrupts lower priority content and preserves it', () {
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [
+      sessionStorageScopeProvider.overrideWithValue('fixture-account')
+    ]);
     addTearDown(container.dispose);
     final notifier = container.read(notificationBannerProvider.notifier);
     final first = _item(id: 'first');

@@ -1,29 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 
-/// Standard icon wrapper for Kerosene UI.
-///
-/// Keeps size, color and semantics consistent across product surfaces.
-class KeroseneIcon extends StatelessWidget {
+/// Standard icon with shared client presentation density.
+/// Retains its original layout, hit target, color and semantic contract.
+class KeroseneIcon extends Icon {
   const KeroseneIcon(
-    this.icon, {
+    super.icon, {
     super.key,
-    this.size = 20,
-    this.color,
-    this.semanticLabel,
+    super.size,
+    super.fill,
+    super.weight,
+    super.grade,
+    super.opticalSize,
+    super.color,
+    super.shadows,
+    super.semanticLabel,
+    super.textDirection,
+    super.applyTextScaling,
+    super.blendMode,
+    super.fontWeight,
   });
-
-  final IconData icon;
-  final double size;
-  final Color? color;
-  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      icon,
-      size: size,
-      color: color ?? Theme.of(context).colorScheme.onSurface,
-      semanticLabel: semanticLabel,
-    );
+    final scaler = MediaQuery.textScalerOf(context);
+    final followsText =
+        applyTextScaling ?? IconTheme.of(context).applyTextScaling ?? false;
+    if (scaler is KeroseneTextScaler && followsText) {
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: scaler.inherited),
+        child: Builder(
+            builder: (inner) =>
+                KeroseneUiScale.icon(context, super.build(inner))),
+      );
+    }
+    return KeroseneUiScale.icon(context, super.build(context));
   }
 }

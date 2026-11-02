@@ -10,14 +10,11 @@ import 'package:kerosene/features/financial_accounts/presentation/providers/wall
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
-import 'package:kerosene/features/home/presentation/providers/incoming_transfer_theater.dart';
 import 'package:kerosene/features/home/presentation/providers/theater_scheduler.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show HomeLedgerBalanceView, homeLedgerBalanceViewProvider;
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
-import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
-/// Injects education / receive copy into the **home theater** (Communication Stage).
+/// Injects education copy into the **home theater** (Communication Stage).
 ///
 /// Not modals — pieces appear as [HomeCommunicationStage] content via
 /// [HomeSurfaceNotifier.presentLocalStage].
@@ -32,10 +29,6 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
   bool _totpCheckScheduled = false;
   String? _activeLocalId;
 
-  /// First non-empty history snapshot only seeds seen IDs (no theater spam).
-  bool _historySeeded = false;
-  final Set<String> _seenCreditIds = <String>{};
-
   TheaterSchedulerState _schedulerSession = const TheaterSchedulerState();
   DateTime? _stageIdleSince;
   Timer? _educationTimer;
@@ -46,11 +39,6 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Seed before any listen delta so already-loaded history never floods theater.
-      final existing = ref.read(transactionHistoryProvider).asData?.value;
-      if (existing != null && existing.isNotEmpty) {
-        _onHistorySnapshot(existing);
-      }
       _tryPresentNext(force: true);
       _scheduleTotpCheck();
       _armEducationTimer();
@@ -112,8 +100,7 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
 
     final surface = ref.read(homeSurfaceProvider);
     final stage = surface.stage;
-    final busy =
-        stage.isActive &&
+    final busy = stage.isActive &&
         (stage.id.startsWith('local-incoming') ||
             stage.id.startsWith('local-totp') ||
             stage.priority >= 120);
@@ -270,57 +257,6 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
     }
   }
 
-  void _onHistorySnapshot(List<Transaction> txs) {
-    if (txs.isEmpty) return;
-
-    if (!_historySeeded) {
-      for (final tx in txs) {
-        if (tx.isCredit) _seenCreditIds.add(tx.id);
-      }
-      _historySeeded = true;
-      debugPrint(
-        '[homeEducation] seeded ${_seenCreditIds.length} credit ids '
-        '(no theater for historical receives)',
-      );
-      return;
-    }
-
-    // Only brand-new credits after the seed. Caps to avoid floods.
-    var presented = 0;
-    for (final tx in txs) {
-      if (!tx.isCredit || tx.isCancelled) continue;
-      if (_seenCreditIds.contains(tx.id)) continue;
-      _seenCreditIds.add(tx.id);
-
-      final payload = payloadFromTransaction(tx, read: ref.read);
-      if (payload == null) continue;
-
-      presentIncomingTheater(
-        ref.read(homeEducationQueueProvider.notifier),
-        ref.read(homeBalanceReceivePulseProvider.notifier),
-        payload,
-      );
-      presented += 1;
-      debugPrint(
-        '[homeEducation] history receive → theater id=${payload.id} '
-        'amount=${payload.amountLabel}',
-      );
-      if (presented >= 3) break;
-    }
-
-    // Bound memory for long sessions.
-    if (_seenCreditIds.length > 400) {
-      final keep = txs
-          .where((t) => t.isCredit)
-          .map((t) => t.id)
-          .take(200)
-          .toSet();
-      _seenCreditIds
-        ..clear()
-        ..addAll(keep);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen(homeEducationQueueProvider, (prev, next) {
@@ -331,21 +267,8 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
       }
     });
 
-    // Extrato path: when poll/WS refresh brings a new credit, show theater even
-    // if /queue/notifications never delivered the financial notification.
-    ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider, (
-      prev,
-      next,
-    ) {
-      final txs = next.asData?.value;
-      if (txs == null) return;
-      _onHistorySnapshot(txs);
-    });
-
     ref.listen(authControllerProvider, (prev, next) {
       if (next is AuthAuthenticated && prev is! AuthAuthenticated) {
-        _historySeeded = false;
-        _seenCreditIds.clear();
         _totpCheckScheduled = false;
         _schedulerSession = const TheaterSchedulerState();
         _stageIdleSince = null;

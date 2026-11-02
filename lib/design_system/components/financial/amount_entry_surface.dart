@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // architecture-allow-large-file: financial input state and rendering are kept
 // together to preserve the public surface API and keyboard behavior.
 import 'dart:async';
@@ -129,8 +130,7 @@ class TransactionValueEntrySurface extends StatelessWidget {
     final editable = useSystemKeyboard && onAmountTextChanged != null;
     final keypadVisible = !editable && showKeypad && onKeyTap != null;
     final currencyTapEnabled = editable || showKeypad;
-    final heroTitle =
-        !inlineHeroTitle &&
+    final heroTitle = !inlineHeroTitle &&
         titleTopInsetFraction != null &&
         title != null &&
         title!.trim().isNotEmpty;
@@ -192,8 +192,7 @@ class TransactionValueEntrySurface extends StatelessWidget {
                   ),
                   if (heroTitle)
                     SizedBox(
-                      height:
-                          MediaQuery.sizeOf(context).height *
+                      height: MediaQuery.sizeOf(context).height *
                           titleTopInsetFraction!,
                       width: double.infinity,
                       child: Align(
@@ -266,9 +265,8 @@ class TransactionValueEntrySurface extends StatelessWidget {
                                 const SizedBox(height: 10),
                                 _ConversionLine(
                                   text: fiatReference,
-                                  onTap: currencyTapEnabled
-                                      ? onCurrencyTap
-                                      : null,
+                                  onTap:
+                                      currencyTapEnabled ? onCurrencyTap : null,
                                 ),
                                 if (quickActions.isNotEmpty &&
                                     (keypadVisible || editable)) ...[
@@ -415,8 +413,7 @@ class _InlineHeroLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).height < 640;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 40;
-    final availableHeight =
-        MediaQuery.sizeOf(context).height -
+    final availableHeight = MediaQuery.sizeOf(context).height -
         MediaQuery.viewInsetsOf(context).bottom -
         MediaQuery.paddingOf(context).top;
     final tight = availableHeight < 520;
@@ -499,9 +496,8 @@ class _InlineHeroLayout extends StatelessWidget {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final minBody = constraints.maxHeight.isFinite
-                  ? constraints.maxHeight
-                  : 0.0;
+              final minBody =
+                  constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
@@ -554,7 +550,7 @@ class _Header extends StatelessWidget {
           IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: onBack,
-            icon: const Icon(KeroseneIcons.back, size: 22),
+            icon: const KeroseneIcon(KeroseneIcons.back, size: 22),
             style: IconButton.styleFrom(
               foregroundColor: _C.text,
               minimumSize: const Size.square(48),
@@ -617,8 +613,7 @@ class _InlineTitleHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = titleStyle ?? AppTypography.h1.copyWith(color: _C.text);
-    final subStyle =
-        subtitleStyle ??
+    final subStyle = subtitleStyle ??
         AppTypography.inter(
           color: _C.muted,
           fontSize: 12,
@@ -751,7 +746,7 @@ class _BackArrowButtonState extends State<_BackArrowButton>
       child: IconButton(
         tooltip: MaterialLocalizations.of(context).backButtonTooltip,
         onPressed: _handleTap,
-        icon: const Icon(KeroseneIcons.back, size: 22),
+        icon: const KeroseneIcon(KeroseneIcons.back, size: 22),
         style: IconButton.styleFrom(
           foregroundColor: _C.text,
           minimumSize: const Size.square(48),
@@ -820,7 +815,8 @@ class _CurrencyChip extends StatelessWidget {
             ),
             if (onTap != null) ...[
               const SizedBox(width: 4),
-              Icon(KeroseneIcons.chevronDown, size: 16, color: _C.muted),
+              KeroseneIcon(KeroseneIcons.chevronDown,
+                  size: 16, color: _C.muted),
             ],
           ],
         ),
@@ -1026,15 +1022,12 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     final nextStr = chars.join();
     if (nextStr == activeStr) return;
 
-    final prevDigits = active
-        .where((g) => !_isAmountSep(g.char))
-        .toList(growable: false);
-    final prevSeps = active
-        .where((g) => _isAmountSep(g.char))
-        .toList(growable: false);
-    final nextDigitChars = chars
-        .where((c) => !_isAmountSep(c))
-        .toList(growable: false);
+    final prevDigits =
+        active.where((g) => !_isAmountSep(g.char)).toList(growable: false);
+    final prevSeps =
+        active.where((g) => _isAmountSep(g.char)).toList(growable: false);
+    final nextDigitChars =
+        chars.where((c) => !_isAmountSep(c)).toList(growable: false);
     final nextSepCount = chars.length - nextDigitChars.length;
 
     final sharedDigits = prevDigits.length < nextDigitChars.length
@@ -1090,9 +1083,8 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
         nextSepGlyphs.add(
           _AmountGlyph(
             id: prevSeps[i].id,
-            char: chars
-                .where((c) => _isAmountSep(c))
-                .toList(growable: false)[i],
+            char:
+                chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
             enter: false,
             expandWidth: false,
             exiting: false,
@@ -1102,9 +1094,8 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
         nextSepGlyphs.add(
           _AmountGlyph(
             id: _nextGlyphId++,
-            char: chars
-                .where((c) => _isAmountSep(c))
-                .toList(growable: false)[i],
+            char:
+                chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
             enter: true,
             expandWidth: true,
             exiting: false,
@@ -1265,9 +1256,8 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     final symbolStyle = style.copyWith(
       color: _C.muted,
       fontSize: baseSize * 0.72,
-      fontWeight: widget.currency == Currency.btc
-          ? FontWeight.w300
-          : style.fontWeight,
+      fontWeight:
+          widget.currency == Currency.btc ? FontWeight.w300 : style.fontWeight,
     );
 
     return AnimatedBuilder(
@@ -1875,10 +1865,9 @@ class _ConversionLineState extends State<_ConversionLine>
     );
 
     final label = Text(
-      widget.text,
+      widget.text.isEmpty ? context.tr.currency : widget.text,
       key: ValueKey<String>(widget.text),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      softWrap: true,
       textAlign: TextAlign.center,
       style: AppTypography.inter(
         color: _C.muted,
@@ -1888,7 +1877,11 @@ class _ConversionLineState extends State<_ConversionLine>
       ),
     );
 
+    if (widget.text.isEmpty && widget.onTap == null) {
+      return const SizedBox.shrink();
+    }
     return GestureDetector(
+      key: const ValueKey('amount-currency-switch'),
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap == null ? null : _onTap,
       child: Row(
@@ -1913,7 +1906,7 @@ class _ConversionLineState extends State<_ConversionLine>
                   curve: KeroseneMotion.standard,
                 ),
               ),
-              child: Icon(
+              child: KeroseneIcon(
                 KeroseneIcons.swap,
                 size: 14,
                 color: _C.muted.withValues(alpha: 0.85),
@@ -2178,7 +2171,7 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
               height: widget.compact ? 44 : 56,
               child: Center(
                 child: isBackspace
-                    ? Icon(
+                    ? KeroseneIcon(
                         KeroseneIcons.backspace,
                         color: _C.text,
                         size: widget.compact ? 20 : 22,
@@ -2317,8 +2310,8 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
             final height = widget.compact
                 ? 48.0
                 : (AppSpacing.xxxl > AppSpacing.minTouch
-                      ? 54.0
-                      : AppSpacing.minTouch.toDouble());
+                    ? 54.0
+                    : AppSpacing.minTouch.toDouble());
             return ScaleTransition(
               scale: _pressScale,
               child: AnimatedContainer(
@@ -2349,8 +2342,7 @@ class _CtaBarState extends State<_CtaBar> with TickerProviderStateMixin {
                                 animation: _spinController,
                                 builder: (context, child) {
                                   return Transform.rotate(
-                                    angle:
-                                        _spinController.value *
+                                    angle: _spinController.value *
                                         2 *
                                         3.141592653589793,
                                     child: Container(
@@ -2397,5 +2389,5 @@ class _C {
   static Color get text => KeroseneBrandTokens.textPrimary;
   static Color get muted => KeroseneBrandTokens.textMuted;
   static Color get chip => KeroseneBrandTokens.surfaceElevated;
-  static const warning = KeroseneBrandTokens.warning;
+  static Color get warning => KeroseneBrandTokens.textPrimary;
 }

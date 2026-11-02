@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/config/app_config.dart';
-import 'package:kerosene/design_system/components/generic/kerosene_logo_loading_view.dart';
+import 'package:kerosene/design_system/components/generic/tor_navigation_loading_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/startup_connection_loading_screen.dart';
 
 void main() {
@@ -18,6 +19,9 @@ void main() {
   Future<void> pumpStartupScreen(WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
+        locale: Locale('pt'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: StartupConnectionLoadingScreen(
           childAfterWarmup: Text('warmup-child-ready'),
         ),
@@ -31,14 +35,16 @@ void main() {
     await tester.pump(const Duration(seconds: 14));
 
     expect(find.text('warmup-child-ready'), findsNothing);
-    expect(find.byType(KeroseneLogoLoadingView), findsOneWidget);
+    expect(find.text('CARREGANDO'), findsNothing);
+    expect(find.text('Estabelecendo conexão segura...'), findsNothing);
+    expect(find.byType(TorNavigationLoadingScreen), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) =>
             widget.runtimeType.toString().contains('Lottie') ||
             widget.runtimeType.toString().contains('LottieBuilder'),
       ),
-      findsWidgets,
+      findsNothing,
     );
     expect(find.text('Carregando Tor'), findsNothing);
     expect(find.text('carregando tor'), findsNothing);

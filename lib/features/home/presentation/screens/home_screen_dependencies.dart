@@ -17,7 +17,6 @@ export 'package:kerosene/design_system/components/feedback/app_notice.dart';
 export 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
 export 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
 export 'package:kerosene/design_system/components/generic/kerosene_logo.dart';
-export 'package:kerosene/design_system/components/generic/kerosene_logo_loading_view.dart';
 export 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 export 'package:kerosene/core/providers/currency_provider.dart';
 export 'package:kerosene/core/providers/money_format_provider.dart';

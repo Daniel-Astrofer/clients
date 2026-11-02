@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -125,7 +126,7 @@ class _StateContainer extends StatelessWidget {
                     color: colorScheme.primary.withValues(alpha: 0.18),
                   ),
                 ),
-                child: Icon(icon, color: colorScheme.primary, size: 26),
+                child: KeroseneIcon(icon, color: colorScheme.primary, size: 26),
               ),
               SizedBox(height: AppSpacing.base),
               Text(

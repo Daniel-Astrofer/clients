@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -214,7 +215,7 @@ class _TierCardFace extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Icon(
+                      KeroseneIcon(
                         KeroseneIcons.contactless,
                         size: height * 0.18,
                         color: appearance.inkPrimary.withValues(alpha: 0.7),

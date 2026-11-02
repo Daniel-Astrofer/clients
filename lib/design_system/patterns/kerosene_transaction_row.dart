@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -61,7 +62,7 @@ class KeroseneTransactionRow extends StatelessWidget {
         child: Row(
           children: [
             // Type icon
-            Icon(
+            KeroseneIcon(
               type.isIncoming ? KeroseneIcons.down : KeroseneIcons.up,
               size: 18,
               color: type.isIncoming
@@ -87,7 +88,7 @@ class KeroseneTransactionRow extends StatelessWidget {
                   SizedBox(height: 2),
                   Row(children: [
                     if (isPending) ...[
-                      Icon(KeroseneIcons.schedule,
+                      KeroseneIcon(KeroseneIcons.schedule,
                           size: 12, color: KeroseneBrandTokens.warning),
                       SizedBox(width: 4),
                     ],

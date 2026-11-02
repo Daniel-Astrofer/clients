@@ -1,6 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'
+    show sqfliteFfiInit, databaseFactory, databaseFactoryFfi;
 import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/app/security/local_transaction_sqlite.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
@@ -40,6 +45,23 @@ Transaction _tx(String id) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
+  late Directory databaseDirectory;
+  setUpAll(() async {
+    databaseDirectory =
+        await Directory.systemTemp.createTemp('kerosene-history-test-');
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    await databaseFactory.setDatabasesPath(databaseDirectory.path);
+  });
+  tearDownAll(() async {
+    final path = p.join(databaseDirectory.path, 'kerosene_tx_history_v1.db');
+    final db = await databaseFactory.openDatabase(path);
+    await db.close();
+    await databaseFactory.deleteDatabase(path);
+    await databaseDirectory.delete(recursive: true);
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   test('save/load roundtrip with HMAC blob', () async {
     final kv = _MemoryKv();
@@ -64,14 +86,12 @@ void main() {
     addTearDown(() => LocalTransactionSqlite.clear(scope));
 
     final saved = await LocalTransactionSqlite.save(scope, [_tx('sqlite-1')]);
-    if (!saved) {
-      markTestSkipped('SQLite native backend unavailable in this runner');
-      return;
-    }
+    expect(saved, isTrue);
 
     final loaded = await LocalTransactionSqlite.load(scope);
     expect(loaded, hasLength(1));
     expect(loaded!.single.id, 'sqlite-1');
+    expect(await LocalTransactionSqlite.load('${scope}_other'), isNull);
   });
 
   test('tampered payload is discarded', () async {

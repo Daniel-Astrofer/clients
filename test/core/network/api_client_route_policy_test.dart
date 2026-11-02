@@ -67,6 +67,34 @@ void main() {
   });
 
   group('ApiClient retry policy', () {
+    for (final path in [
+      '/auth/security/app-pin/verify',
+      '/auth/security/app-pin/recover',
+      'https://example.test/auth/security/app-pin/recover?device=current',
+      'http://127.0.0.1:43123/auth/security/app-pin/verify?device=current',
+    ]) {
+      test('does not replay a PIN verification or recovery at $path', () {
+        expect(
+          ApiClient.shouldRetryRequest(
+            method: 'POST',
+            path: path,
+            data: const {'pin': '1234'},
+          ),
+          isFalse,
+        );
+      });
+    }
+
+    test('can retry a read-only PIN status query', () {
+      expect(
+        ApiClient.shouldRetryRequest(
+          method: 'GET',
+          path: '/auth/security/app-pin',
+        ),
+        isTrue,
+      );
+    });
+
     test('does not replay the single-use PoW signup request', () {
       final shouldRetry = ApiClient.shouldRetryRequest(
         method: 'POST',
@@ -127,14 +155,14 @@ void main() {
       expect(shouldRetry, isFalse);
     });
 
-    test('allows retry for ordinary transient POST requests', () {
+    test('does not replay wallet creation after an uncertain response', () {
       final shouldRetry = ApiClient.shouldRetryRequest(
         method: 'POST',
         path: '/kfe/wallets',
         data: const {'name': 'ACCOUNT 02'},
       );
 
-      expect(shouldRetry, isTrue);
+      expect(shouldRetry, isFalse);
     });
   });
 }

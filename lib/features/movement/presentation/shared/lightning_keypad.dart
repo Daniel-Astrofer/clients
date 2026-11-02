@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/home_surface_tokens.dart';
@@ -98,7 +99,7 @@ class _LightningKeypadButton extends StatelessWidget {
           ),
         ),
         child: isBackspace
-            ? const Icon(KeroseneIcons.backspace, size: 22)
+            ? const KeroseneIcon(KeroseneIcons.backspace, size: 22)
             : Text(label),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 
 class AnimatedGlyphIcon extends StatelessWidget {
@@ -16,7 +17,7 @@ class AnimatedGlyphIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
+    return KeroseneIcon(
       icon,
       size: size,
       color: color ?? IconTheme.of(context).color,

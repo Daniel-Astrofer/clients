@@ -12,6 +12,7 @@ import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/security/domain/entities/passkey_action_required.dart';
+import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
 import '../../controller/auth_controller.dart';
 import '../../../home/presentation/screens/home_screen.dart';
@@ -39,7 +40,7 @@ class PasskeyVerificationScreen extends ConsumerStatefulWidget {
 
 class _PasskeyVerificationScreenState
     extends ConsumerState<PasskeyVerificationScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   _PasskeyPhase _phase = _PasskeyPhase.connecting;
   final _totpController = TextEditingController();
   late final AnimationController _pulseController;
@@ -60,23 +61,58 @@ class _PasskeyVerificationScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseController = AnimationController(
       vsync: this,
       duration: KeroseneMotion.passkeyPulse,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startPasskeySequence();
+      if (mounted) _startPasskeySequence();
     });
   }
 
-  bool get _canUseTotpFallback {
-    return widget.fallbackPreAuthToken?.trim().isNotEmpty == true;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      _pulseController.stop();
+    } else if (mounted &&
+        _phase == _PasskeyPhase.prompt &&
+        ref.read(authControllerProvider) is AuthLoading &&
+        !AuthMotion.reduce(context)) {
+      // Resume only visual feedback; device authentication is never retried
+      // merely because the app returned to the foreground.
+      _pulseController.repeat(reverse: true);
+    }
   }
 
   Future<void> _startPasskeySequence({
     bool resetChallengeRenewals = true,
   }) async {
-    if (_isRunningSequence) return;
+    if (!mounted ||
+        _isRunningSequence ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    if (WidgetsBinding.instance.lifecycleState != null &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      setState(() {
+        _phase = _PasskeyPhase.issue;
+        _issue = PasskeyIssueInfo(
+          icon: KeroseneIcons.biometric,
+          title: _copy(
+              pt: 'Confirme sua entrada',
+              en: 'Confirm your sign-in',
+              es: 'Confirma tu acceso'),
+          message: _copy(
+            pt: 'Volte ao aplicativo e tente novamente para confirmar sua passkey.',
+            en: 'Return to the app and try again to confirm your passkey.',
+            es: 'Vuelve a la aplicación e intenta de nuevo para confirmar tu passkey.',
+          ),
+          allowTotpFallback: false,
+        );
+      });
+      return;
+    }
 
     _isRunningSequence = true;
     if (resetChallengeRenewals) {
@@ -93,8 +129,10 @@ class _PasskeyVerificationScreenState
     }
 
     setState(() => _phase = _PasskeyPhase.prompt);
+    if (!AuthMotion.reduce(context)) {
+      _pulseController.repeat(reverse: true);
+    }
 
-    _isRunningSequence = false;
     unawaited(
       ref
           .read(authControllerProvider.notifier)
@@ -109,26 +147,6 @@ class _PasskeyVerificationScreenState
       _pendingTotpUsername = challenge.username;
       _pendingTotpPassphrase = challenge.passphrase;
       _pendingTotpPreAuthToken = challenge.preAuthToken;
-      _totpHasError = false;
-      _totpErrorMessage = null;
-      _totpController.clear();
-    });
-  }
-
-  void _openTotpFallback() {
-    final token = widget.fallbackPreAuthToken?.trim();
-    if (token == null || token.isEmpty) {
-      _goToManualLogin();
-      return;
-    }
-
-    HapticFeedback.selectionClick();
-    setState(() {
-      _issue = null;
-      _phase = _PasskeyPhase.totp;
-      _pendingTotpUsername = widget.username.trim();
-      _pendingTotpPassphrase = widget.fallbackPassphrase ?? '';
-      _pendingTotpPreAuthToken = token;
       _totpHasError = false;
       _totpErrorMessage = null;
       _totpController.clear();
@@ -230,6 +248,25 @@ class _PasskeyVerificationScreenState
     );
     final code = error.errorCode ?? '';
 
+    if (error.statusCode == 503 ||
+        code == 'ERR_KFE_RAIL_PROVIDER_UNAVAILABLE' ||
+        code == 'ERR_VAULT_NOT_READY') {
+      return PasskeyIssueInfo(
+        icon: KeroseneIcons.linkUnavailable,
+        title: _copy(
+          pt: 'Entrada indisponível',
+          en: 'Sign-in unavailable',
+          es: 'Acceso no disponible',
+        ),
+        message: _copy(
+          pt: 'Não foi possível concluir sua entrada porque um serviço da Kerosene está indisponível. Tente novamente em instantes.',
+          en: 'We could not complete your sign-in because a Kerosene service is unavailable. Try again shortly.',
+          es: 'No pudimos completar tu acceso porque un servicio de Kerosene no está disponible. Intenta de nuevo en unos instantes.',
+        ),
+        allowTotpFallback: false,
+      );
+    }
+
     if (code == 'USER_NOT_FOUND' ||
         code == 'ERR_AUTH_USER_NOT_FOUND' ||
         error.statusCode == 404) {
@@ -305,30 +342,14 @@ class _PasskeyVerificationScreenState
     return code == 'CHALLENGE_EXPIRED' || code == 'AUTH_012';
   }
 
-  /// True when we arrived from password login and passkey cannot complete.
-  bool _canFallbackToPasswordSession(AuthError error) {
-    // Only when primary password login already ran (JWT may be stored).
-    if (widget.fallbackPassphrase == null) {
-      return false;
-    }
-    final code = (error.errorCode ?? '').toUpperCase();
-    final message = error.message.toUpperCase();
-    return code == 'AUTH_014' ||
-        code == 'AUTH_017' ||
-        code == 'ERR_AUTH_PASSKEY_NOT_REGISTERED' ||
-        code == 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS' ||
-        code == 'ERR_AUTH_PASSKEY_CORRUPTED_KEY_MATERIAL' ||
-        code == 'ERR_AUTH_PASSKEY_LINK_REQUIRED' ||
-        message.contains('NENHUMA PASSKEY') ||
-        message.contains('NOT REGISTERED') ||
-        message.contains('NO DEVICE KEY');
-  }
-
   String _authTitle() {
     if (_phase == _PasskeyPhase.success) {
       return context.tr.passkeyVerifyAccessApproved;
     }
-    return context.tr.passkeyVerifyAuthentication;
+    return _copy(
+        pt: 'Confirmando passkey',
+        en: 'Confirming passkey',
+        es: 'Confirmando passkey');
   }
 
   String _authSubtitle() {
@@ -338,7 +359,11 @@ class _PasskeyVerificationScreenState
       case _PasskeyPhase.sending:
         return context.tr.passkeyVerificationBodySending;
       case _PasskeyPhase.prompt:
-        return context.tr.passkeyVerifyTouchSensor;
+        return _copy(
+          pt: 'Confirme com a biometria ou o bloqueio de tela do seu dispositivo.',
+          en: 'Confirm using biometrics or your device screen lock.',
+          es: 'Confirma con la biometría o el bloqueo de pantalla de tu dispositivo.',
+        );
       case _PasskeyPhase.success:
         return context.tr.passkeyVerificationBodySuccess;
       case _PasskeyPhase.totp:
@@ -358,6 +383,7 @@ class _PasskeyVerificationScreenState
       }
 
       if (next is AuthAuthenticated) {
+        _pulseController.stop();
         _cancelSequenceWait();
         _isRunningSequence = false;
         _isSubmittingTotp = false;
@@ -374,6 +400,7 @@ class _PasskeyVerificationScreenState
         HomeScreen.skipNextAuth = true;
         GoRouter.of(context).go('/home_loading');
       } else if (next is AuthRequiresLoginTotp) {
+        _pulseController.stop();
         _cancelSequenceWait();
         _isRunningSequence = false;
         _isSubmittingTotp = false;
@@ -382,6 +409,7 @@ class _PasskeyVerificationScreenState
           _openInlineTotpChallenge(next);
         }
       } else if (next is AuthError) {
+        _pulseController.stop();
         _cancelSequenceWait();
         _isRunningSequence = false;
         _isSubmittingTotp = false;
@@ -395,10 +423,13 @@ class _PasskeyVerificationScreenState
             });
           }
           await Future<void>.delayed(KeroseneMotion.medium);
-          if (mounted) {
+          if (mounted &&
+              (WidgetsBinding.instance.lifecycleState == null ||
+                  WidgetsBinding.instance.lifecycleState ==
+                      AppLifecycleState.resumed)) {
             unawaited(_startPasskeySequence(resetChallengeRenewals: false));
+            return;
           }
-          return;
         }
         if (_phase == _PasskeyPhase.totp) {
           if (mounted) {
@@ -412,14 +443,6 @@ class _PasskeyVerificationScreenState
               _issuePulseKey += 1;
             });
           }
-          return;
-        }
-        // Password login may already have stored a JWT. If passkey is unavailable
-        // (unlinked device / no server credential), complete with password session.
-        if (_canFallbackToPasswordSession(next)) {
-          await ref
-              .read(authControllerProvider.notifier)
-              .establishSessionAfterPasswordLogin();
           return;
         }
         if (mounted) {
@@ -446,61 +469,74 @@ class _PasskeyVerificationScreenState
                 ? Brightness.dark
                 : Brightness.light,
       ),
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final responsive = context.responsive;
-              final horizontalPadding =
-                  responsive.isTinyPhone ? AppSpacing.base : AppSpacing.lg;
-              final isShort = constraints.maxHeight < 560;
-              final topInset = isShort ? 54.0 : 72.0;
-              final bottomInset = isShort ? AppSpacing.md : AppSpacing.xl;
+      child: PopScope(
+          canPop: !isLoading,
+          child: Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final responsive = context.responsive;
+                  final horizontalPadding =
+                      responsive.isTinyPhone ? AppSpacing.base : AppSpacing.lg;
+                  final isShort = constraints.maxHeight < 560;
+                  final topInset = isShort ? 54.0 : 72.0;
+                  final bottomInset = isShort ? AppSpacing.md : AppSpacing.xl;
 
-              return Stack(
-                children: [
-                  Positioned(
-                    top: 4,
-                    left: horizontalPadding - 8,
-                    child: TopBackButton(
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        topInset,
-                        horizontalPadding,
-                        bottomInset,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: math.max(
-                            0,
-                            constraints.maxHeight - topInset - bottomInset,
-                          ),
-                        ),
-                        child: Center(
-                          child: _buildPhaseContent(
-                            isLoading: isLoading,
-                            isShort: isShort,
-                            responsive: responsive,
-                          ),
+                  return Stack(
+                    children: [
+                      Positioned(
+                        top: 4,
+                        left: horizontalPadding - 8,
+                        child: TopBackButton(
+                          onPressed:
+                              isLoading ? null : () => Navigator.pop(context),
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
+                      Positioned.fill(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            topInset,
+                            horizontalPadding,
+                            bottomInset,
+                          ),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: math.max(
+                                0,
+                                constraints.maxHeight - topInset - bottomInset,
+                              ),
+                            ),
+                            child: Center(
+                              child: AuthMotionShake(
+                                triggerKey: _issuePulseKey,
+                                enabled: _phase == _PasskeyPhase.issue,
+                                child: AuthDirectionalSwitcher(
+                                  isForward: true,
+                                  child: KeyedSubtree(
+                                    key: ValueKey(_phase),
+                                    child: _buildPhaseContent(
+                                      isLoading: isLoading,
+                                      isShort: isShort,
+                                      responsive: responsive,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          )),
     );
   }
 
@@ -515,10 +551,12 @@ class _PasskeyVerificationScreenState
           issue: _issue,
           isShort: isShort,
           canRetry: _issue?.allowRetry == true,
-          canUseTotp: _issue?.allowTotpFallback == true && _canUseTotpFallback,
+          canUseTotp: false,
           onRetry: isLoading ? null : _startPasskeySequence,
-          onUseTotp: isLoading ? null : _openTotpFallback,
+          onUseTotp: null,
           onBackToPassword: isLoading ? null : _goToManualLogin,
+          onRecoverAccount:
+              isLoading ? null : () => context.push('/recovery/emergency'),
           copy: _copy,
         );
       case _PasskeyPhase.totp:
@@ -551,6 +589,7 @@ class _PasskeyVerificationScreenState
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cancelSequenceWait();
     _pulseController.dispose();
     _totpController.dispose();

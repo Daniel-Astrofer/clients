@@ -1,9 +1,10 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
-import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -91,25 +92,10 @@ class _TransactionSuccessDialogState
   @override
   Widget build(BuildContext context) {
     final money = ref.watch(moneyFormatConfigProvider);
-    final selectedCurrency = money.currency;
-    final btcUsd = ref.watch(latestBtcPriceProvider);
-    final btcEur = ref.watch(btcEurPriceProvider);
-    final btcBrl = ref.watch(btcBrlPriceProvider);
     final primaryAmount = widget.amountBtc == null
         ? null
-        : money.formatAmountFromBtc(
-            btcAmount: widget.amountBtc!,
-            btcUsd: btcUsd,
-            btcEur: btcEur,
-            btcBrl: btcBrl,
-          );
-    final secondaryAmount =
-        widget.amountBtc == null || selectedCurrency == Currency.btc
-            ? null
-            : money.format(
-                amount: widget.amountBtc!,
-                currency: Currency.btc,
-              );
+        : MovementMoney(locale: money.locale).asset(widget.amountBtc!);
+    const String? secondaryAmount = null;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -164,7 +150,7 @@ class _TransactionSuccessDialogState
                           )
                         : ScaleTransition(
                             scale: _checkAnimation,
-                            child: Icon(_icon, color: _color, size: 24),
+                            child: KeroseneIcon(_icon, color: _color, size: 24),
                           ),
                   ),
                 ),

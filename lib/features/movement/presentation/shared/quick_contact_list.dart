@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -83,7 +84,7 @@ class QuickContactList extends StatelessWidget {
               ),
               child: Center(
                 child: isAdd
-                    ? Icon(icon, color: Colors.white, size: 24)
+                    ? KeroseneIcon(icon, color: Colors.white, size: 24)
                     : Text(
                         label,
                         style: AppTypography.bodySmall.copyWith(

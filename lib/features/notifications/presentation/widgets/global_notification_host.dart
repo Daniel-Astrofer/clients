@@ -1,3 +1,8 @@
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/design_system/components/feedback/app_notice.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -7,9 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
-import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
 import 'package:kerosene/design_system/components/feedback/app_screen_feedback_host.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
@@ -34,6 +37,10 @@ class _GlobalNotificationHostState
     extends ConsumerState<GlobalNotificationHost> {
   @override
   Widget build(BuildContext context) {
+    final scope = ref.watch(sessionStorageScopeProvider);
+    ref.listen(sessionStorageScopeProvider, (previous, next) {
+      if (previous != next) AppScreenFeedbackBus.clear();
+    });
     final sidebarOpen = ref.watch(notificationSidebarProvider);
 
     return Stack(
@@ -48,7 +55,8 @@ class _GlobalNotificationHostState
                   ref.read(notificationSidebarProvider.notifier).close(),
               child: AnimatedOpacity(
                 opacity: sidebarOpen ? 1 : 0,
-                duration: KeroseneMotion.medium,
+                duration:
+                    KeroseneMotion.duration(context, KeroseneMotion.medium),
                 curve: KeroseneMotion.standard,
                 child: ColoredBox(color: Colors.black.withValues(alpha: 0.48)),
               ),
@@ -57,7 +65,7 @@ class _GlobalNotificationHostState
         ),
         if (sidebarOpen)
           AnimatedPositioned(
-            duration: KeroseneMotion.long,
+            duration: KeroseneMotion.duration(context, KeroseneMotion.long),
             curve: KeroseneMotion.standard,
             top: 0,
             right: 0,
@@ -68,14 +76,14 @@ class _GlobalNotificationHostState
                   ref.read(notificationSidebarProvider.notifier).close(),
             ),
           ),
-        const _TopNotificationBanner(),
+        _TopNotificationBanner(key: ValueKey(scope)),
       ],
     );
   }
 }
 
 class _TopNotificationBanner extends ConsumerWidget {
-  const _TopNotificationBanner();
+  const _TopNotificationBanner({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,7 +98,7 @@ class _TopNotificationBanner extends ConsumerWidget {
         child: IgnorePointer(
           ignoring: notification == null,
           child: AnimatedSwitcher(
-            duration: KeroseneMotion.medium,
+            duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
             switchInCurve: KeroseneMotion.standard,
             switchOutCurve: KeroseneMotion.exit,
             transitionBuilder: (child, animation) {
@@ -107,7 +115,7 @@ class _TopNotificationBanner extends ConsumerWidget {
                 ? const SizedBox(key: ValueKey<String>('empty-banner'))
                 : _DismissibleNotificationBanner(
                     key: ValueKey<String>(
-                      '${notification.id}-${notification.timestamp.microsecondsSinceEpoch}',
+                      '${notification.id}-${notification.timestamp?.microsecondsSinceEpoch ?? 'undated'}',
                     ),
                     notification: notification,
                   ),
@@ -167,10 +175,16 @@ class _DismissibleNotificationBannerState
         velocity.dy < -540;
 
     if (shouldDismiss) {
-      ref.read(notificationBannerProvider.notifier).dismiss();
+      ref
+          .read(notificationBannerProvider.notifier)
+          .dismiss(expected: widget.notification);
       return;
     }
 
+    if (KeroseneMotion.reduceMotion(context)) {
+      setState(() => _dragOffset = Offset.zero);
+      return;
+    }
     _offsetAnimation = Tween<Offset>(
       begin: _dragOffset,
       end: Offset.zero,
@@ -228,7 +242,7 @@ class _NotificationBannerCard extends ConsumerWidget {
       notification,
       _localizedNow(context),
     );
-    final accent = _accentFor(visuals.tone);
+    final accent = Theme.of(context).colorScheme.onSurface;
     final size = MediaQuery.sizeOf(context);
     final compact = size.width < 360 || size.height < 620;
     final shortViewport = size.height < 420;
@@ -253,8 +267,8 @@ class _NotificationBannerCard extends ConsumerWidget {
       decoration: TextDecoration.none,
     );
     final contentPadding = compact
-        ? const EdgeInsets.fromLTRB(16, 14, 44, 14)
-        : const EdgeInsets.fromLTRB(18, 16, 48, 16);
+        ? const EdgeInsets.fromLTRB(16, 14, 64, 14)
+        : const EdgeInsets.fromLTRB(18, 16, 68, 16);
 
     return ConstrainedBox(
       key: originKey,
@@ -271,7 +285,7 @@ class _NotificationBannerCard extends ConsumerWidget {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: KeroseneBrandTheme.of(context).border,
               ),
             ),
             child: Stack(
@@ -294,7 +308,7 @@ class _NotificationBannerCard extends ConsumerWidget {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(top: 1),
-                            child: Icon(
+                            child: KeroseneIcon(
                               visuals.icon,
                               color: accent,
                               size: compact ? 18 : 20,
@@ -313,8 +327,6 @@ class _NotificationBannerCard extends ConsumerWidget {
                                       ? _fallbackTitle(context)
                                       : NotificationTranslator.resolveTitle(
                                           context, notification),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                   style: titleStyle,
                                 ),
                                 if (NotificationTranslator.resolveBody(
@@ -324,8 +336,6 @@ class _NotificationBannerCard extends ConsumerWidget {
                                   Text(
                                     NotificationTranslator.resolveBody(
                                         context, notification),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                     style: bodyStyle,
                                   ),
                                 ],
@@ -376,8 +386,8 @@ class _NotificationBannerCard extends ConsumerWidget {
                     child: IconButton(
                       onPressed: () => ref
                           .read(notificationBannerProvider.notifier)
-                          .dismiss(),
-                      icon: const Icon(KeroseneIcons.close),
+                          .dismiss(expected: notification),
+                      icon: const KeroseneIcon(KeroseneIcons.close),
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -389,8 +399,8 @@ class _NotificationBannerCard extends ConsumerWidget {
                       iconSize: 18,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints.tightFor(
-                        width: 32,
-                        height: 32,
+                        width: 48,
+                        height: 48,
                       ),
                       style: IconButton.styleFrom(
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -408,7 +418,12 @@ class _NotificationBannerCard extends ConsumerWidget {
   }
 
   Future<void> _handleBannerTap(BuildContext context, WidgetRef ref) {
-    ref.read(notificationBannerProvider.notifier).dismiss();
+    if (!identical(ref.read(notificationBannerProvider), notification)) {
+      return Future.value();
+    }
+    ref
+        .read(notificationBannerProvider.notifier)
+        .dismiss(expected: notification);
     unawaited(
       ref
           .read(sessionNotificationFeedProvider.notifier)
@@ -423,16 +438,6 @@ class _NotificationBannerCard extends ConsumerWidget {
       context,
       originKey: originKey,
     );
-  }
-
-  static Color _accentFor(AppNotificationTone tone) {
-    return switch (tone) {
-      AppNotificationTone.error => AppColors.hexFFF8312F,
-      AppNotificationTone.warning => AppColors.hexFFF8312F,
-      AppNotificationTone.success => AppColors.hexFFE5E7EB,
-      AppNotificationTone.info => AppColors.hexFFD4D4D8,
-      AppNotificationTone.neutral => AppColors.hexFFD4D4D8,
-    };
   }
 
   static String _localizedNow(BuildContext context) =>
@@ -488,7 +493,7 @@ class _BannerActionPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 5),
-          Icon(
+          KeroseneIcon(
             KeroseneIcons.chevronRight,
             size: 13,
             color:

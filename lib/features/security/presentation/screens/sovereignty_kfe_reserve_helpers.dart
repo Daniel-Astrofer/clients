@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -69,7 +70,7 @@ Widget buildKfeReserveUnavailableCard({
             color: Theme.of(context).colorScheme.error.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
+          child: KeroseneIcon(
             KeroseneIcons.wallet,
             color: Theme.of(context).colorScheme.error,
             size: 18,

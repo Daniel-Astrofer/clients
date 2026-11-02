@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 import 'package:kerosene/features/security/presentation/widgets/pin_entry_scaffold.dart';
@@ -47,6 +48,20 @@ class TransactionPinSetupScreenState
   String _confirmation = '';
   String? _error;
 
+  late final String? _ownerScope;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerScope = ref.read(sessionStorageScopeProvider);
+  }
+
+  bool get _ownsSession =>
+      mounted &&
+      _ownerScope != null &&
+      (ModalRoute.of(context)?.isActive ?? true) &&
+      ref.read(sessionStorageScopeProvider) == _ownerScope;
+
   int get _pinLength => widget.status.minPinLength.clamp(4, 8);
 
   String get _currentInput => _confirming ? _confirmation : _pin;
@@ -60,7 +75,7 @@ class TransactionPinSetupScreenState
   }
 
   void _appendDigit(String digit) {
-    if (_busy || _currentInput.length >= _pinLength) return;
+    if (_busy || !_ownsSession || _currentInput.length >= _pinLength) return;
     HapticFeedback.selectionClick();
     setState(() {
       _currentInput = _currentInput + digit;
@@ -81,6 +96,7 @@ class TransactionPinSetupScreenState
   }
 
   Future<void> _submit() async {
+    if (_busy || !_ownsSession) return;
     final input = _currentInput;
     if (input.length != _pinLength) return;
 
@@ -113,18 +129,20 @@ class TransactionPinSetupScreenState
           pin: _pin,
         );
 
+    if (!_ownsSession) return;
+
     result.fold(
       (failure) {
         if (!mounted) return;
         setState(() {
           _busy = false;
-          _error = ErrorTranslator.translate(context.tr, failure.message);
+          _error = ErrorTranslator.translate(context.tr, failure.toString());
         });
       },
       (_) {
         ref.invalidate(appPinStatusProvider);
         if (mounted) {
-          Navigator.of(context).pop(
+          _finish(
             TransactionDeviceAuthOutcome(
                 TransactionDeviceAuthStatus.authenticated,
                 appPin: _pin),
@@ -136,13 +154,30 @@ class TransactionPinSetupScreenState
     if (mounted) setState(() => _busy = false);
   }
 
-  void _cancel() {
-    Navigator.of(context).pop(TransactionDeviceAuthOutcome.rejectedOutcome);
+  void _finish(TransactionDeviceAuthOutcome outcome) {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    if (route?.isCurrent ?? true) {
+      navigator.pop(outcome);
+    } else if (route != null) {
+      navigator.removeRoute(route, outcome);
+    }
   }
+
+  void _cancel() => _finish(TransactionDeviceAuthOutcome.rejectedOutcome);
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionStorageScopeProvider, (_, next) {
+      if (next != _ownerScope) {
+        _pin = '';
+        _confirmation = '';
+        _cancel();
+      }
+    });
     return PinEntryScaffold(
+      key: ValueKey(_confirming),
       instruction: _confirming
           ? transactionAuthLocaleSwitch(context,
               ptBr: 'Confirme o PIN para finalizar o cadastro.',
@@ -156,6 +191,8 @@ class TransactionPinSetupScreenState
       maxLength: _pinLength,
       error: _error,
       busy: _busy,
+      busyLabel: context.tr.pinEntrySaving,
+      enabled: _ownsSession && !_busy,
       onDigit: _appendDigit,
       onDelete: _deleteDigit,
       onConfirm: _busy ? null : _submit,
@@ -193,10 +230,29 @@ class TransactionPinAuthorizationScreenState
   String _pin = '';
   String? _error;
 
-  int get _pinLength => widget.status.minPinLength.clamp(4, 8);
+  late final String? _ownerScope;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerScope = ref.read(sessionStorageScopeProvider);
+  }
+
+  bool get _ownsSession =>
+      mounted &&
+      _ownerScope != null &&
+      (ModalRoute.of(context)?.isActive ?? true) &&
+      ref.read(sessionStorageScopeProvider) == _ownerScope;
+
+  int get _minPinLength => widget.status.minPinLength.clamp(4, 8);
+  int get _maxPinLength => widget.status.maxPinLength.clamp(_minPinLength, 8);
+  bool get _fixedLength => _minPinLength == _maxPinLength;
 
   void _appendDigit(String digit) {
-    if (_busy || widget.status.locked || _pin.length >= _pinLength) {
+    if (_busy ||
+        !_ownsSession ||
+        widget.status.locked ||
+        _pin.length >= _maxPinLength) {
       return;
     }
     HapticFeedback.selectionClick();
@@ -204,7 +260,9 @@ class TransactionPinAuthorizationScreenState
       _pin += digit;
       _error = null;
     });
-    if (_pin.length == _pinLength) {
+    // The API reports policy bounds, not the length of the stored PIN.
+    // Submit automatically only when those bounds identify an exact length.
+    if (_fixedLength && _pin.length == _maxPinLength) {
       unawaited(_submit());
     }
   }
@@ -221,12 +279,13 @@ class TransactionPinAuthorizationScreenState
   }
 
   Future<void> _submit() async {
-    if (_busy || widget.status.locked) {
+    if (_busy || widget.status.locked || !_ownsSession) {
       return;
     }
-    if (_pin.length != _pinLength) {
+    if (_pin.length < _minPinLength || _pin.length > _maxPinLength) {
       setState(() {
-        _error = context.tr.appEntryPinLengthError(_pinLength, _pinLength);
+        _error =
+            context.tr.appEntryPinLengthError(_minPinLength, _maxPinLength);
       });
       return;
     }
@@ -239,6 +298,8 @@ class TransactionPinAuthorizationScreenState
     final result =
         await ref.read(securityRepositoryProvider).verifyAppPin(pin: _pin);
 
+    if (!_ownsSession) return;
+
     result.fold(
       (failure) {
         if (!mounted) {
@@ -248,13 +309,13 @@ class TransactionPinAuthorizationScreenState
         setState(() {
           _busy = false;
           _pin = '';
-          _error = ErrorTranslator.translate(context.tr, failure.message);
+          _error = ErrorTranslator.translate(context.tr, failure.toString());
         });
         ref.invalidate(appPinStatusProvider);
       },
       (_) {
         ref.invalidate(appPinStatusProvider);
-        Navigator.of(context).pop(TransactionDeviceAuthOutcome(
+        _finish(TransactionDeviceAuthOutcome(
             TransactionDeviceAuthStatus.authenticated,
             appPin: _pin));
       },
@@ -265,19 +326,35 @@ class TransactionPinAuthorizationScreenState
     }
   }
 
-  void _cancel() {
-    Navigator.of(context).pop(TransactionDeviceAuthOutcome.rejectedOutcome);
+  void _finish(TransactionDeviceAuthOutcome outcome) {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    if (route?.isCurrent ?? true) {
+      navigator.pop(outcome);
+    } else if (route != null) {
+      navigator.removeRoute(route, outcome);
+    }
   }
+
+  void _cancel() => _finish(TransactionDeviceAuthOutcome.rejectedOutcome);
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionStorageScopeProvider, (_, next) {
+      if (next != _ownerScope) {
+        _pin = '';
+        _cancel();
+      }
+    });
     return PinEntryScaffold(
       instruction: transactionPinInstruction(context),
       valueLength: _pin.length,
-      maxLength: _pinLength,
+      maxLength: _maxPinLength,
       error: _error,
       busy: _busy,
-      enabled: !widget.status.locked && !_busy,
+      busyLabel: context.tr.pinEntryChecking,
+      enabled: _ownsSession && !widget.status.locked && !_busy,
       onDigit: _appendDigit,
       onDelete: _deleteDigit,
       onConfirm: _busy || widget.status.locked ? null : _submit,

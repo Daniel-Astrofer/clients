@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/config/app_config.dart';
-import 'package:kerosene/design_system/components/generic/kerosene_logo_loading_view.dart';
+import 'package:kerosene/design_system/components/generic/tor_navigation_loading_screen.dart';
 
 class StartupConnectionLoadingScreen extends StatefulWidget {
   final Widget? childAfterWarmup;
@@ -66,9 +66,6 @@ class _StartupConnectionLoadingScreenState
       return widget.childAfterWarmup!;
     }
 
-    return const KeroseneLogoLoadingView(
-      status: 'INICIANDO',
-      detail: 'Preparando conexão segura',
-    );
+    return const TorNavigationLoadingScreen(usePrimaryKey: false);
   }
 }

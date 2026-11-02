@@ -1,3 +1,4 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/home/domain/entities/home_surface.dart';
 import 'package:kerosene/features/home/presentation/providers/home_greeting_playback_provider.dart';
@@ -49,9 +49,8 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     }
     notifier.setPlaying(
       hideActions: p.hideActionsWhilePlaying,
-      pushDownBalancePx: p.pushDownBalanceWhilePlaying
-          ? p.pushDownBalancePx
-          : 0,
+      pushDownBalancePx:
+          p.pushDownBalanceWhilePlaying ? p.pushDownBalancePx : 0,
       compressLayout: p.compressLayoutWhilePlaying,
     );
   }
@@ -133,8 +132,7 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     _syncSession(greeting);
 
     final active = greeting.activeMessages;
-    final playing =
-        !_finishedOnce &&
+    final playing = !_finishedOnce &&
         active.isNotEmpty &&
         (greeting.mode == HomeGreetingMode.ephemeral ||
             greeting.mode == HomeGreetingMode.ticker ||
@@ -142,9 +140,8 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
             greeting.isEphemeralOnce);
 
     final showMarket = playing && active.isNotEmpty;
-    final message = showMarket
-        ? active[_index.clamp(0, active.length - 1)]
-        : null;
+    final message =
+        showMarket ? active[_index.clamp(0, active.length - 1)] : null;
     final text = showMarket
         ? message!.resolveText(widget.userName)
         : _localizedTimeOfDay(context, widget.userName, greeting.fallback);
@@ -163,29 +160,24 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
       letterSpacing: 0,
     );
 
-    return AnimatedSwitcher(
-      duration: KeroseneMotion.homeGreeting,
-      switchInCurve: KeroseneMotion.standard,
-      switchOutCurve: KeroseneMotion.exit,
-      child: Text(
-        text,
+    final label = Text(text,
         key: ValueKey(text),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: textStyle,
-      ),
-    );
+        style: textStyle);
+    if (KeroseneMotion.reduceMotion(context)) return label;
+    return AnimatedSwitcher(
+        duration: KeroseneMotion.homeGreeting,
+        switchInCurve: KeroseneMotion.standard,
+        switchOutCurve: KeroseneMotion.exit,
+        child: label);
   }
 
   Color _resolveColor(HomeGreetingMessage? message) {
     final token = message?.style.colorToken ?? 'white';
-    return switch (token) {
-      'positive' => homePositiveColor,
-      'danger' => AppColors.hexFFFF5A67,
-      'amber' => homeAmberColor,
-      'muted' => Theme.of(context).colorScheme.onSurfaceVariant,
-      _ => Theme.of(context).colorScheme.onSurface,
-    };
+    return token == 'muted'
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : Theme.of(context).colorScheme.onSurface;
   }
 
   static String _localizedTimeOfDay(
@@ -194,7 +186,7 @@ class _HomeGreetingSlotState extends ConsumerState<HomeGreetingSlot>
     HomeGreetingFallback fallback,
   ) {
     final includeName = fallback.includeName;
-    final hour = DateTime.now().hour;
+    final hour = AppDateTime.inDisplayZone(context, DateTime.now()).hour;
     if (!includeName) {
       if (hour < 12) {
         return context.tr

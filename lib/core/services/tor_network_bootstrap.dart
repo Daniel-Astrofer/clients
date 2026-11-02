@@ -34,7 +34,7 @@ class TorBootstrapTarget {
 }
 
 TorBootstrapTarget resolveTorBootstrapTarget(String rawUrl) {
-  final apiUrl = rawUrl.trim();
+  final apiUrl = AppConfig.normalizeUrl(rawUrl);
   final uri = Uri.parse(apiUrl);
   final host = uri.host.toLowerCase();
   final targetPort = _resolveTargetPort(uri);

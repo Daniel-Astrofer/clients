@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
@@ -56,7 +57,8 @@ class ExpenseCategoriesList extends ConsumerWidget {
                 color: category.color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(category.icon, color: category.color, size: 24),
+              child:
+                  KeroseneIcon(category.icon, color: category.color, size: 24),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -156,7 +157,7 @@ Widget wrapRealGolden(Widget child) {
       networkStatusProvider.overrideWith(() => NetworkStatusNotifier()),
       bitcoinAccountsServiceProvider
           .overrideWithValue(MockBitcoinAccountsService()),
-      bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+      bitcoinAccountsByScopeProvider.overrideWith2(BitcoinAccountsNotifier.new),
       sovereigntyStatusProvider.overrideWith((ref) async => mockSecurityStatus),
       kfeReserveOverviewProvider
           .overrideWith((ref) async => mockKfeReserveOverview),
@@ -214,6 +215,8 @@ Widget wrapRealGolden(Widget child) {
       depositsProvider.overrideWith((ref) async => const <Deposit>[]),
       // Freeze home HTTP surfaces (Tor would empty the UI).
       homeSurfaceProvider.overrideWith(() => _FrozenHomeSurface()),
+      homeGreetingClockProvider
+          .overrideWithValue(() => DateTime(2020, 1, 2, 15)),
       homeFeedProvider.overrideWith((ref) async => const <HomeFeedItem>[]),
       // Already "played" so claim() does not write during initState/build.
       homeBalanceCeremonyPlayedProvider
@@ -229,6 +232,10 @@ Widget wrapRealGolden(Widget child) {
       latestBtcPriceProvider.overrideWithValue(rate),
     ],
     child: MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: true),
+        child: KeroseneUiScale(child: child!),
+      ),
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       locale: const Locale('pt'),

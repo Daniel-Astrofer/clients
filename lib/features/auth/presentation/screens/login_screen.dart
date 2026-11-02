@@ -1,9 +1,9 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kerosene/core/security/device_credential_capabilities.dart';
-import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
@@ -129,6 +129,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _continueToDeviceKey() async {
+    if (_isSubmittingCredentials ||
+        ref.read(authControllerProvider) is AuthLoading) {
+      return;
+    }
     final username = _validatedUsername();
     if (username == null) {
       return;
@@ -145,7 +149,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _isSubmittingCredentials = true);
     try {
-      // Persist JWT via repository when password-only login succeeds.
+      // The repository retains the primary session; the app still requires
+      // successful device/passkey confirmation before opening its private UI.
       final result = await ref.read(authRepositoryProvider).login(
             username: username,
             passphrase: _passwordController.text,
@@ -161,7 +166,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             title: context.tr.authFlowInterruptedTitle,
             message: ErrorTranslator.translate(
               context.tr,
-              failure.message,
+              failure.toString(),
             ),
             target: _LoginErrorTarget.password,
           );
@@ -196,33 +201,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  /// After password (+ optional TOTP) issued a session:
-  /// - if Device Key is preferred and enrolled → biometric step-up
-  /// - N+2: legacy WebAuthn-shaped alone does not trigger step-up on tier A
-  /// - otherwise complete login with password only
+  /// Password and server-required TOTP never replace device confirmation.
   Future<void> _continueAfterPrimaryAuth(String username) async {
-    final capabilities =
-        await DeviceCredentialCapabilitiesResolver.instance.resolve();
-    final hasLocalDeviceKey =
-        await DeviceKeyService.instance.hasRegisteredDeviceKey(username);
-    if (!mounted) {
-      return;
-    }
-
-    final preferDeviceStepUp =
-        capabilities.deviceKeyLoginPreferred && hasLocalDeviceKey;
-
-    if (preferDeviceStepUp) {
-      _openDeviceKeyVerification(
-        username,
-        fallbackPassphrase: _passwordController.text,
-      );
-      return;
-    }
-
-    await ref
-        .read(authControllerProvider.notifier)
-        .establishSessionAfterPasswordLogin();
+    if (!mounted) return;
+    _openDeviceKeyVerification(username);
   }
 
   void _openDeviceKeyVerification(
@@ -266,6 +248,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submitInlineTotp([String? value]) async {
+    if (_isSubmittingCredentials ||
+        ref.read(authControllerProvider) is AuthLoading) {
+      return;
+    }
     final code = (value ?? _totpController.text).replaceAll(RegExp(r'\D'), '');
     final username = _pendingTotpUsername;
     final password = _pendingTotpPassword;
@@ -299,12 +285,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         (failure) async {
           _showInlineError(
             title: context.tr.authFlowInterruptedTitle,
-            message: ErrorTranslator.translate(context.tr, failure.message),
+            message: ErrorTranslator.translate(context.tr, failure.toString()),
             target: _LoginErrorTarget.totp,
           );
         },
         (_) async {
-          // Clear pending TOTP UI state before optional passkey step-up.
+          // TOTP completes primary auth; the passkey remains required.
           setState(() {
             _pendingTotpUsername = null;
             _pendingTotpPassword = null;
@@ -374,219 +360,220 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         systemNavigationBarIconBrightness:
             colors.isLight ? Brightness.dark : Brightness.light,
       ),
-      child: Scaffold(
-        backgroundColor: colors.background,
-        resizeToAvoidBottomInset: true,
-        body: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                colors.text.withValues(alpha: colors.isLight ? 0.035 : 0.06),
-                colors.background,
-                colors.background,
-              ],
-              stops: const [0, 0.34, 1],
-            ),
-          ),
-          child: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            behavior: HitTestBehavior.opaque,
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final responsive = context.responsive;
-                  final horizontalPadding = responsive.isTinyPhone
-                      ? 20.0
-                      : responsive.horizontalPadding;
-                  final maxWidth = responsive.formMaxWidth;
-                  final topSpacing = responsive.isTinyPhone ? 10.0 : 16.0;
-                  final bottomPadding =
-                      28 + MediaQuery.viewInsetsOf(context).bottom;
+      child: PopScope(
+          canPop: !isLoading,
+          child: Scaffold(
+            backgroundColor: colors.background,
+            resizeToAvoidBottomInset: true,
+            body: ColoredBox(
+              color: colors.background,
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                behavior: HitTestBehavior.opaque,
+                child: SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final responsive = context.responsive;
+                      final horizontalPadding =
+                          responsive.isTinyPhone ? 20.0 : 24.0;
+                      final maxWidth = responsive.formMaxWidth;
+                      final topSpacing = responsive.isTinyPhone ? 10.0 : 16.0;
+                      // Scaffold already reduces the viewport for the keyboard.
+                      const bottomPadding = 28.0;
 
-                  return AutofillGroup(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        topSpacing,
-                        horizontalPadding,
-                        bottomPadding,
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: maxWidth,
-                            minHeight: constraints.maxHeight -
-                                topSpacing -
-                                bottomPadding,
+                      return AutofillGroup(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
                           ),
-                          child: AuthMotionStagger(
-                            children: [
-                              LoginTopBar(
-                                onBack: () => Navigator.of(context).maybePop(),
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            topSpacing,
+                            horizontalPadding,
+                            bottomPadding,
+                          ),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: maxWidth,
+                                minHeight: math.max(
+                                    0,
+                                    constraints.maxHeight -
+                                        topSpacing -
+                                        bottomPadding),
                               ),
-                              if (_inlineErrorMessage != null) ...[
-                                const SizedBox(height: 18),
-                                AuthMotionShake(
-                                  triggerKey: _errorPulseKey,
-                                  child: LoginInlineFeedback(
-                                    title: _inlineErrorTitle ??
-                                        context.tr.authFlowInterruptedTitle,
-                                    message: _inlineErrorMessage!,
-                                    icon: KeroseneIcons.error,
-                                  ),
-                                ),
-                              ],
-                              SizedBox(
-                                  height: responsive.isTinyPhone ? 24 : 34),
-                              LoginTitleBlock(
-                                title: context.tr.loginTitle,
-                                subtitle: context.tr.loginSubtitle,
-                              ),
-                              if (_hasPendingTotp) ...[
-                                const SizedBox(height: 26),
-                                AuthMotionShake(
-                                  triggerKey: _errorPulseKey,
-                                  enabled: _inlineErrorTarget ==
-                                      _LoginErrorTarget.totp,
-                                  child: LoginTotpPanel(
-                                    controller: _totpController,
-                                    focusNode: _totpFocusNode,
-                                    isLoading: isLoading,
-                                    hasError: _inlineErrorTarget ==
-                                        _LoginErrorTarget.totp,
-                                    errorPulseKey: _errorPulseKey,
-                                    onCompleted: _submitInlineTotp,
-                                    onSubmit: () => _submitInlineTotp(),
-                                    title: context.tr.loginConfirmCodeTitle,
-                                    subtitle:
-                                        context.tr.loginConfirmCodeSubtitle,
-                                    buttonLabel:
-                                        context.tr.loginConfirmAccessButton,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 34),
-                              AuthMotionShake(
-                                triggerKey: _errorPulseKey,
-                                enabled: _inlineErrorTarget ==
-                                    _LoginErrorTarget.username,
-                                child: LoginTextField(
-                                  controller: _usernameController,
-                                  label: context.tr.loginUsernameLabel,
-                                  enabled: !isLoading,
-                                  autofocus: !widget.focusPassword,
-                                  keyboardType: TextInputType.text,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [AutofillHints.username],
-                                  prefixIcon: Icon(
-                                    KeroseneIcons.user,
-                                    size: 18,
-                                    color: colors.muted,
-                                  ),
-                                  suffixIcon:
-                                      _usernameController.text.isNotEmpty
-                                          ? Icon(
-                                              KeroseneIcons.success,
-                                              size: 18,
-                                              color: colors.text
-                                                  .withValues(alpha: 0.86),
-                                            )
-                                          : null,
-                                  onChanged: (value) {
-                                    _normalizeUsername(value);
-                                    setState(() {});
-                                  },
-                                  onSubmitted: (_) {
-                                    _passwordFocusNode.requestFocus();
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              AuthMotionShake(
-                                triggerKey: _errorPulseKey,
-                                enabled: _inlineErrorTarget ==
-                                    _LoginErrorTarget.password,
-                                child: LoginTextField(
-                                  controller: _passwordController,
-                                  focusNode: _passwordFocusNode,
-                                  label: context.tr.authAccountPasswordLabel,
-                                  hintText: '••••••••••••••••',
-                                  enabled: !isLoading,
-                                  obscureText: _obscurePassword,
-                                  textInputAction: TextInputAction.done,
-                                  autofillHints: const [AutofillHints.password],
-                                  prefixIcon: Icon(
-                                    KeroseneIcons.lock,
-                                    size: 18,
-                                    color: colors.muted,
-                                  ),
-                                  suffixIcon: IconButton(
-                                    onPressed: isLoading
+                              child: AuthMotionStagger(
+                                children: [
+                                  LoginTopBar(
+                                    onBack: isLoading
                                         ? null
-                                        : () {
-                                            setState(() {
-                                              _obscurePassword =
-                                                  !_obscurePassword;
-                                            });
-                                          },
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? KeroseneIcons.eye
-                                          : KeroseneIcons.eyeOff,
-                                      size: 18,
-                                      color: colors.muted,
+                                        : () =>
+                                            Navigator.of(context).maybePop(),
+                                  ),
+                                  if (_inlineErrorMessage != null) ...[
+                                    const SizedBox(height: 18),
+                                    AuthMotionShake(
+                                      triggerKey: _errorPulseKey,
+                                      child: LoginInlineFeedback(
+                                        title: _inlineErrorTitle ??
+                                            context.tr.authFlowInterruptedTitle,
+                                        message: _inlineErrorMessage!,
+                                        icon: KeroseneIcons.error,
+                                      ),
+                                    ),
+                                  ],
+                                  SizedBox(
+                                      height: responsive.isTinyPhone ? 24 : 34),
+                                  LoginTitleBlock(
+                                    title: context.tr.loginTitle,
+                                    subtitle: context.tr.loginSubtitle,
+                                  ),
+                                  if (_hasPendingTotp) ...[
+                                    const SizedBox(height: 26),
+                                    AuthMotionShake(
+                                      triggerKey: _errorPulseKey,
+                                      enabled: _inlineErrorTarget ==
+                                          _LoginErrorTarget.totp,
+                                      child: LoginTotpPanel(
+                                        controller: _totpController,
+                                        focusNode: _totpFocusNode,
+                                        isLoading: isLoading,
+                                        hasError: _inlineErrorTarget ==
+                                            _LoginErrorTarget.totp,
+                                        errorPulseKey: _errorPulseKey,
+                                        onCompleted: _submitInlineTotp,
+                                        onSubmit: () => _submitInlineTotp(),
+                                        title: context.tr.loginConfirmCodeTitle,
+                                        subtitle:
+                                            context.tr.loginConfirmCodeSubtitle,
+                                        buttonLabel:
+                                            context.tr.loginConfirmAccessButton,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 34),
+                                  AuthMotionShake(
+                                    triggerKey: _errorPulseKey,
+                                    enabled: _inlineErrorTarget ==
+                                        _LoginErrorTarget.username,
+                                    child: LoginTextField(
+                                      controller: _usernameController,
+                                      label: context.tr.loginUsernameLabel,
+                                      enabled: !isLoading,
+                                      autofocus: !widget.focusPassword,
+                                      keyboardType: TextInputType.text,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [
+                                        AutofillHints.username
+                                      ],
+                                      prefixIcon: KeroseneIcon(
+                                        KeroseneIcons.user,
+                                        size: 18,
+                                        color: colors.muted,
+                                      ),
+                                      suffixIcon:
+                                          _usernameController.text.isNotEmpty
+                                              ? KeroseneIcon(
+                                                  KeroseneIcons.success,
+                                                  size: 18,
+                                                  color: colors.text
+                                                      .withValues(alpha: 0.86),
+                                                )
+                                              : null,
+                                      onChanged: (value) {
+                                        _normalizeUsername(value);
+                                        setState(() {});
+                                      },
+                                      onSubmitted: (_) {
+                                        _passwordFocusNode.requestFocus();
+                                      },
                                     ),
                                   ),
-                                  onChanged: (_) => _clearInlineError(),
-                                  onSubmitted: (_) {
-                                    if (!isLoading) {
-                                      _continueToDeviceKey();
-                                    }
-                                  },
-                                ),
+                                  const SizedBox(height: 24),
+                                  AuthMotionShake(
+                                    triggerKey: _errorPulseKey,
+                                    enabled: _inlineErrorTarget ==
+                                        _LoginErrorTarget.password,
+                                    child: LoginTextField(
+                                      controller: _passwordController,
+                                      focusNode: _passwordFocusNode,
+                                      label:
+                                          context.tr.authAccountPasswordLabel,
+                                      hintText: '••••••••••••••••',
+                                      enabled: !isLoading,
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.password
+                                      ],
+                                      prefixIcon: KeroseneIcon(
+                                        KeroseneIcons.lock,
+                                        size: 18,
+                                        color: colors.muted,
+                                      ),
+                                      suffixIcon: IconButton(
+                                        onPressed: isLoading
+                                            ? null
+                                            : () {
+                                                setState(() {
+                                                  _obscurePassword =
+                                                      !_obscurePassword;
+                                                });
+                                              },
+                                        icon: KeroseneIcon(
+                                          _obscurePassword
+                                              ? KeroseneIcons.eye
+                                              : KeroseneIcons.eyeOff,
+                                          size: 18,
+                                          color: colors.muted,
+                                        ),
+                                      ),
+                                      onChanged: (_) => _clearInlineError(),
+                                      onSubmitted: (_) {
+                                        if (!isLoading) {
+                                          _continueToDeviceKey();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  LoginPrimaryButton(
+                                    text: context.tr.loginContinueButton,
+                                    isLoading: isLoading,
+                                    onPressed:
+                                        isLoading ? null : _continueToDeviceKey,
+                                    borderRadius: 999,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  TextButton(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () =>
+                                            context.push('/recovery/emergency'),
+                                    child: Text(
+                                      context.tr.loginLostAccessButton,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 26),
+                                  LoginSignupLink(
+                                    onTap: isLoading
+                                        ? null
+                                        : () => context.push('/signup'),
+                                    lead: context.tr.loginNewHere,
+                                    action: context.tr.loginCreateAccount,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 24),
-                              LoginPrimaryButton(
-                                text: context.tr.loginContinueButton,
-                                isLoading: isLoading,
-                                onPressed:
-                                    isLoading ? null : _continueToDeviceKey,
-                                borderRadius: 999,
-                              ),
-                              const SizedBox(height: 14),
-                              TextButton(
-                                onPressed: isLoading
-                                    ? null
-                                    : () => context.push('/recovery/emergency'),
-                                child: Text(
-                                  context.tr.loginLostAccessButton,
-                                ),
-                              ),
-                              const SizedBox(height: 26),
-                              LoginSignupLink(
-                                onTap: isLoading
-                                    ? null
-                                    : () => context.push('/signup'),
-                                lead: context.tr.loginNewHere,
-                                action: context.tr.loginCreateAccount,
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
+          )),
     );
   }
 }

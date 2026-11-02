@@ -68,8 +68,54 @@ class ErrorTranslator {
     final normalizedCode = codeToTest.trim().toUpperCase();
     final safeExtractedMessage = _safeUserMessage(extractedMessage);
 
+    // Older KFE deployments returned this refusal as SYS_001. Match the exact
+    // gate envelope so a diagnostic token in an unrelated failure is not enough.
+    final legacyGate = RegExp(
+      r'^KFE settlement gate rejected the transaction\. Failed flags: \[([A-Z0-9_, ]+)\]$',
+    ).firstMatch((extractedMessage ?? codeOrMessage).trim());
+    if (legacyGate != null &&
+        (normalizedCode == 'SYS_001' || extractedMessage == null)) {
+      final flags = legacyGate.group(1)!.split(',').map((flag) => flag.trim());
+      return flags.length == 1 && flags.single == 'V_RESERVA_MAT'
+          ? l10n.errReserveVerificationUnavailable
+          : l10n.errSettlementGateRejected;
+    }
+
     // Check for exact known Error Codes explicitly
     switch (normalizedCode) {
+      case 'ERR_RECOVERY_SESSION_EXIT':
+        return l10n.emergencyRecoverySessionExitFailed;
+      case 'ERR_RECOVERY_DEVICE_KEY_UNSUPPORTED':
+        return l10n.emergencyRecoveryDeviceKeyUnsupported;
+      case 'ERR_RECOVERY_DEVICE_KEY_PREPARATION':
+        return l10n.emergencyRecoveryDeviceKeyPreparationFailed;
+      case 'ERR_AUTH_DEVICE_KEY_AUTH_FAILED':
+        return l10n.errPasskeyRejected;
+      case 'ERR_RECOVERY_START_INVALID_RESPONSE':
+      case 'ERR_RECOVERY_POW_CHALLENGE_INVALID_RESPONSE':
+        return l10n.emergencyRecoveryInvalidResponse;
+      case 'RECOVERY_REJECTED':
+        return l10n.emergencyRecoveryRejected;
+      case 'RECOVERY_SESSION_EXPIRED':
+        return l10n.emergencyRecoverySessionClosedBody;
+      case 'RECOVERY_RATE_LIMITED':
+        return l10n.emergencyRecoveryRateLimited;
+      case 'RECOVERY_BAD_REQUEST':
+        return l10n.emergencyRecoveryInvalidRequest;
+      case 'ERR_RECOVERY_RESULT_UNKNOWN':
+        return l10n.emergencyRecoveryUnknownBody;
+      case 'ERR_BACKGROUND_SESSION_STOP':
+        return l10n.runtimeBgSessionStopFailed;
+      case 'ERR_PAYMENT_RECOVERY_PENDING':
+        return l10n.recoverySubmissionPending;
+      case 'ERR_PAYMENT_RECOVERY_EXISTING':
+        return l10n.recoverySubmissionExisting;
+      case 'ERR_PAYMENT_RECOVERY_STORAGE':
+        return l10n.recoverySubmissionSaveBlocked;
+      case 'ERR_PAYMENT_RECOVERY_ACCOUNT_CHANGED':
+        return l10n.recoverySubmissionAccountChanged;
+      case 'ERR_PAYMENT_RECOVERY_RESPONSE':
+        return l10n.recoverySubmissionUnavailable;
       // Auth Errors
       case 'AUTH_001':
       case 'ERR_AUTH_USER_ALREADY_EXISTS':
@@ -106,15 +152,13 @@ class ErrorTranslator {
         return l10n.errPasskeyDeviceNotLinked;
       case 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS':
       case 'ERR_AUTH_DEVICE_KEY_NO_LOCAL_CREDENTIALS':
-        return safeExtractedMessage ??
-            'Configure biometria ou um bloqueio de tela neste dispositivo para usar a chave do dispositivo.';
+        return safeExtractedMessage ?? l10n.passkeyNoBiometrics;
       case 'ERR_AUTH_DEVICE_KEY_APP_PIN_REQUIRED':
       case 'ERR_AUTH_DEVICE_KEY_ENROLL_BLOCKED':
       case 'ERR_AUTH_DEVICE_KEY_STORAGE_UNAVAILABLE':
       case 'ERR_AUTH_WEBAUTHN_SHAPED_ENROLL_DEPRECATED':
       case 'ERR_AUTH_DEVICE_KEY_RECONFIGURE_REQUIRED':
-        return safeExtractedMessage ??
-            'Configure a Chave do dispositivo neste aparelho. O caminho legado foi descontinuado.';
+        return safeExtractedMessage ?? l10n.errDeviceKeyConfigurationRequired;
       case 'AUTH_011':
       case 'ERR_AUTH_TOTP_TIMEOUT':
         return l10n.errAuthTotpTimeout;
@@ -148,9 +192,7 @@ class ErrorTranslator {
       case 'AUTH_019':
       case 'ERR_AUTH_APP_PIN_INVALID':
         // Entry PIN only — never use login "invalid credentials" copy here.
-        return extractedMessage?.trim().isNotEmpty == true
-            ? extractedMessage!.trim()
-            : 'PIN incorreto. Tente novamente.';
+        return l10n.pinIncorrect;
       case 'AUTH_020':
       case 'ERR_AUTH_APP_PIN_LOCKED':
         return l10n.appEntryLockedHelper;
@@ -269,7 +311,7 @@ class ErrorTranslator {
       case 'V_SALDO_DISP':
       case 'INSUFFICIENT_AVAILABLE':
       case 'INSUFFICIENT_BALANCE':
-        return 'Saldo insuficiente na carteira escolhida.';
+        return l10n.errSelectedWalletInsufficientBalance;
       case 'V_LIQUIDEZ':
       case 'INSUFFICIENT_FREE_OUTBOUND_CAPACITY':
       case 'INSUFFICIENT_OUTBOUND_CAPACITY':
@@ -283,7 +325,12 @@ class ErrorTranslator {
       case 'KFE_SETTLEMENT_GATE':
       case 'SETTLEMENT_GATE_REJECTED':
       case 'BINARY_SETTLEMENT_REJECTED':
-        return safeExtractedMessage ?? l10n.errUnexpected;
+        return l10n.errSettlementGateRejected;
+      case 'ERR_KFE_RESERVE_COVERAGE_INSUFFICIENT':
+        return l10n.errReserveCoverageInsufficient;
+      case 'ERR_KFE_RESERVE_VERIFICATION_UNAVAILABLE':
+      case 'V_RESERVA_MAT':
+        return l10n.errReserveVerificationUnavailable;
     }
 
     // Fallback translations based on message content

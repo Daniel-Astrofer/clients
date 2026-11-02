@@ -96,11 +96,7 @@ class RegisterColdWalletUseCase {
       kind = ColdWalletSeedKind.electrum;
     } else {
       if (!parsedBip39.isValid) {
-        throw ArgumentError.value(
-          mnemonic,
-          'mnemonic',
-          parsedBip39.message ?? 'Invalid BIP39 mnemonic.',
-        );
+        throw ArgumentError('Invalid BIP39 recovery phrase.');
       }
       words = parsedBip39.phrase;
       path = derivationPath ?? appColdWalletDerivationPath;
@@ -181,6 +177,7 @@ class RegisterColdWalletUseCase {
       walletId: walletId,
       material: material,
       seedStored: false,
+      publicOnly: true,
     );
   }
 
@@ -196,12 +193,14 @@ class RegisterColdWalletResult {
   final String walletId;
   final ColdWalletPublicMaterial material;
   final bool seedStored;
+  final bool publicOnly;
 
   const RegisterColdWalletResult({
     required this.account,
     required this.walletId,
     required this.material,
     required this.seedStored,
+    this.publicOnly = false,
   });
 }
 
@@ -211,10 +210,12 @@ class ColdWalletFlowOutcome {
 
   /// When true, open unified [SendMoneyScreen] with the new wallet.
   final bool openSend;
+  final bool openReceive;
 
   const ColdWalletFlowOutcome({
     required this.registration,
     this.openSend = false,
+    this.openReceive = false,
   });
 
   String get walletId => registration.walletId;

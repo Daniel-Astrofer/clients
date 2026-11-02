@@ -1,11 +1,15 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 // architecture-allow-large-file: movement rail selection and navigation keep
 // their existing provider and platform-channel contracts together.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
+import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
@@ -33,6 +37,9 @@ import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import '../activity/statement_screen.dart';
 
+import 'receive_gateway_providers_screen.dart';
+
+export 'receive_gateway_providers_screen.dart';
 export '../activity/statement_screen.dart';
 
 Future<void> openTransactionStatement(
@@ -147,14 +154,12 @@ Color get _receiveSurfaceHigh => ThemeTokenBridge.isLight
     : KeroseneBrandTheme.dark.surface;
 Color get _receiveTextColor => KeroseneBrandTokens.textPrimary;
 Color get _receiveMutedTextColor => KeroseneBrandTokens.textMuted;
-Color get _receiveSubtleTextColor => KeroseneBrandTokens.textMuted;
-
-// Gateway providers screen palette aliases.
 
 class MovementHubScreen extends ConsumerStatefulWidget {
   final Wallet? initialWallet;
   final Wallet? wallet;
   final double? amountBtc;
+  final MovementMoney? money;
   final VoidCallback? onBack;
 
   /// True only when hosted inside the wallet→hub expand sheet.
@@ -165,6 +170,7 @@ class MovementHubScreen extends ConsumerStatefulWidget {
     this.initialWallet,
     this.wallet,
     this.amountBtc,
+    this.money,
     this.onBack,
     this.embeddedInSheet = false,
   });
@@ -254,6 +260,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
         await Navigator.of(context).push<void>(
           _flowRoute(
             (_) => ReceiveNfcFlowScreen(
+              money: widget.money,
               wallet: wallet,
               onChainWallet: onChainWallet,
               amountBtc: amountBtc,
@@ -271,9 +278,12 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
     }
 
     if (!mounted) return;
+    final requestOwner = ref.read(sessionStorageScopeProvider)?.trim();
     await Navigator.of(context).push<void>(
       _flowRoute(
         (_) => ReceiveRequestFlowScreen(
+          ownerScope: requestOwner,
+          money: widget.money,
           wallet: wallet,
           method: method,
           onChainWallet: onChainWallet,
@@ -324,7 +334,7 @@ class _MovementHubScreenState extends ConsumerState<MovementHubScreen> {
     return Material(
       color: _receiveBackground,
       child: AnimatedSwitcher(
-        duration: KeroseneMotion.medium,
+        duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
         switchInCurve: KeroseneMotion.standard,
         switchOutCurve: KeroseneMotion.exit,
         child: methodSelection,
@@ -517,7 +527,8 @@ class _ReceiveActionTile extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: _receiveSurfaceHigh,
                       ),
-                      child: Icon(icon, color: _receiveTextColor, size: 22),
+                      child: KeroseneIcon(icon,
+                          color: _receiveTextColor, size: 22),
                     ),
                   ],
                 ),
@@ -552,7 +563,7 @@ class _ReceiveActionTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.chevronRight,
                 color: _receiveMutedTextColor.withValues(alpha: 0.76),
                 size: 20,
@@ -562,506 +573,5 @@ class _ReceiveActionTile extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class ReceiveGatewayProvidersScreen extends ConsumerWidget {
-  final Wallet wallet;
-
-  const ReceiveGatewayProvidersScreen({
-    super.key,
-    required this.wallet,
-  });
-
-  List<_GatewayProviderSection> _providerSections(BuildContext context) {
-    final tr = context.tr;
-    return [
-      _GatewayProviderSection(
-        title: tr.receiveGatewayRecommendedBrazil,
-        providers: [
-          _GatewayProvider(
-            name: 'MoonPay',
-            methods: tr.receiveGatewayMoonPayMethods,
-            fees: tr.receiveGatewayMoonPayFees,
-            icon: KeroseneIcons.creditCard,
-            aliases: const ['moonpay'],
-          ),
-          _GatewayProvider(
-            name: 'Banxa',
-            methods: tr.receiveGatewayBanxaMethods,
-            fees: tr.receiveGatewayBanxaFees,
-            icon: KeroseneIcons.fiat,
-            aliases: const ['banxa'],
-          ),
-          _GatewayProvider(
-            name: 'Mercuryo',
-            methods: tr.receiveGatewayMercuryoMethods,
-            fees: tr.receiveGatewayMercuryoFees,
-            icon: KeroseneIcons.device,
-            aliases: const ['mercuryo'],
-          ),
-          _GatewayProvider(
-            name: 'Ramp Network',
-            methods: tr.receiveGatewayRampMethods,
-            fees: tr.receiveGatewayRampFees,
-            icon: KeroseneIcons.trendUp,
-            aliases: const ['ramp', 'ramp_network', 'rampnetwork'],
-          ),
-        ],
-      ),
-      _GatewayProviderSection(
-        title: tr.receiveGatewayInstitutional,
-        providers: [
-          _GatewayProvider(
-            name: 'Stripe Crypto Onramp',
-            methods: tr.receiveGatewayStripeMethods,
-            fees: tr.receiveGatewayStripeFees,
-            icon: KeroseneIcons.business,
-            badge: tr.receiveGatewayInstitutionalBadge,
-            aliases: const [
-              'stripe',
-              'stripe_crypto_onramp',
-              'stripe_onramp',
-            ],
-          ),
-          _GatewayProvider(
-            name: 'Coinbase Onramp',
-            methods: tr.receiveGatewayCoinbaseMethods,
-            fees: tr.receiveGatewayCoinbaseFees,
-            icon: KeroseneIcons.database,
-            badge: tr.receiveGatewayInstitutionalBadge,
-            aliases: const ['coinbase', 'coinbase_onramp'],
-          ),
-        ],
-      ),
-      _GatewayProviderSection(
-        title: tr.receiveGatewayAggregators,
-        providers: [
-          _GatewayProvider(
-            name: 'Onramper',
-            methods: tr.receiveGatewayOnramperMethods,
-            fees: tr.receiveGatewayOnramperFees,
-            icon: KeroseneIcons.stack,
-            aliases: const ['onramper'],
-          ),
-        ],
-      ),
-      _GatewayProviderSection(
-        title: tr.receiveGatewayOther,
-        providers: [
-          _GatewayProvider(
-            name: 'Transak',
-            methods: tr.receiveGatewayTransakMethods,
-            fees: tr.receiveGatewayTransakFees,
-            icon: KeroseneIcons.internalTransfer,
-            aliases: const ['transak'],
-          ),
-          _GatewayProvider(
-            name: 'Wert',
-            methods: tr.receiveGatewayWertMethods,
-            fees: tr.receiveGatewayWertFees,
-            icon: KeroseneIcons.lightning,
-            aliases: const ['wert'],
-          ),
-          _GatewayProvider(
-            name: 'GateFi / Unlimit',
-            methods: tr.receiveGatewayGateFiMethods,
-            fees: tr.receiveGatewayGateFiFees,
-            icon: KeroseneIcons.globe,
-            aliases: const ['gatefi', 'unlimit', 'gatefi_unlimit'],
-          ),
-        ],
-      ),
-    ];
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final urlsAsync = ref.watch(_receiveGatewayProviderUrlsProvider);
-    final providers = _providerSections(context);
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: ReceiveFlowScreenShell(
-        onBack: () => Navigator.of(context).maybePop(),
-        title: context.tr.receiveGatewayProvidersTitle,
-        subtitle: 'Third-party links only. Kerosene does not process fiat '
-            'or custody onramp funds. Testnet beta — use with care.',
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            ReceiveFlowLayout.pageHorizontal,
-            0,
-            ReceiveFlowLayout.pageHorizontal,
-            ReceiveFlowLayout.pageBottom,
-          ),
-          child: urlsAsync.when(
-            loading: () => _GatewayProviderList(
-              sections: providers,
-              urls: const {},
-              onSelect: (_) {},
-              isLoading: true,
-            ),
-            error: (_, __) => _GatewayEmptyState(
-              message:
-                  'Could not load buy options. Try again later, or receive on-chain / Lightning instead.',
-              providers: providers,
-              onSelectUnavailable: (provider) =>
-                  _showProviderUnavailable(context, provider),
-            ),
-            data: (urls) {
-              final hasAny = urls.values.any((v) => v.trim().isNotEmpty);
-              if (!hasAny) {
-                return _GatewayEmptyState(
-                  message:
-                      'No buy providers are configured for this environment. '
-                      'Receive BTC on-chain or via payment request instead.',
-                  providers: providers,
-                  onSelectUnavailable: (provider) =>
-                      _showProviderUnavailable(context, provider),
-                );
-              }
-              return _GatewayProviderList(
-                sections: providers,
-                urls: urls,
-                onSelect: (provider) =>
-                    _selectProvider(context, provider, urls),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _selectProvider(
-    BuildContext context,
-    _GatewayProvider provider,
-    Map<String, String> urls,
-  ) {
-    final url = provider.resolveUrl(urls);
-    if (url == null || url.isEmpty) {
-      _showProviderUnavailable(context, provider);
-      return;
-    }
-
-    Clipboard.setData(ClipboardData(text: url));
-    SnackbarHelper.showSuccess(
-      context.tr.receiveGatewayLinkCopied(provider.name, wallet.name),
-    );
-  }
-
-  void _showProviderUnavailable(
-    BuildContext context,
-    _GatewayProvider provider,
-  ) {
-    SnackbarHelper.showInfo(
-      context.tr.receiveGatewayProviderUnavailable(provider.name),
-    );
-  }
-}
-
-final _receiveGatewayProviderUrlsProvider =
-    FutureProvider<Map<String, String>>((ref) async {
-  final result = await ref.read(transactionRepositoryProvider).getOnrampUrls();
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (urls) => urls,
-  );
-});
-
-class _GatewayEmptyState extends StatelessWidget {
-  final String message;
-  final List<_GatewayProviderSection> providers;
-  final ValueChanged<_GatewayProvider> onSelectUnavailable;
-
-  const _GatewayEmptyState({
-    required this.message,
-    required this.providers,
-    required this.onSelectUnavailable,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: KeroseneBrandTokens.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).dividerColor),
-            ),
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: _receiveMutedTextColor,
-                    height: 1.4,
-                  ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: _GatewayProviderList(
-            sections: providers,
-            urls: const {},
-            onSelect: onSelectUnavailable,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GatewayProviderList extends StatelessWidget {
-  final List<_GatewayProviderSection> sections;
-  final Map<String, String> urls;
-  final ValueChanged<_GatewayProvider> onSelect;
-  final bool isLoading;
-
-  const _GatewayProviderList({
-    required this.sections,
-    required this.urls,
-    required this.onSelect,
-    this.isLoading = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
-      itemCount: sections.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 30),
-      itemBuilder: (context, sectionIndex) {
-        final section = sections[sectionIndex];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              section.title.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: _receiveMutedTextColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                    letterSpacing: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 18),
-            for (var index = 0; index < section.providers.length; index++) ...[
-              if (index > 0) const SizedBox(height: 24),
-              _GatewayProviderTile(
-                provider: section.providers[index],
-                available: isLoading
-                    ? true
-                    : section.providers[index].resolveUrl(urls) != null,
-                onTap: isLoading
-                    ? () {}
-                    : () => onSelect(section.providers[index]),
-                isLoading: isLoading,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _GatewayProviderTile extends StatelessWidget {
-  final _GatewayProvider provider;
-  final bool available;
-  final VoidCallback onTap;
-  final bool isLoading;
-
-  const _GatewayProviderTile({
-    required this.provider,
-    required this.available,
-    required this.onTap,
-    this.isLoading = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Row(
-          children: [
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (isLoading)
-                    SizedBox(
-                      width: 46,
-                      height: 46,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: _receiveTextColor,
-                      ),
-                    ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? KeroseneBrandTheme.dark.surface
-                          : KeroseneBrandTheme.light.surface,
-                    ),
-                    child: Icon(
-                      provider.icon,
-                      color: _receiveMutedTextColor,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          provider.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: _receiveTextColor,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.25,
-                                    letterSpacing: 0,
-                                  ),
-                        ),
-                      ),
-                      if (provider.badge != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: _receiveMutedTextColor.withValues(
-                                alpha: 0.56,
-                              ),
-                            ),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Text(
-                            provider.badge!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: _receiveMutedTextColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1,
-                                  letterSpacing: 0.8,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    provider.methods,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _receiveMutedTextColor,
-                          fontSize: 12,
-                          height: 1.25,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    available
-                        ? provider.fees
-                        : '${provider.fees} • ${context.tr.receiveGatewayComingSoon}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _receiveSubtleTextColor,
-                          fontSize: 12,
-                          height: 1.25,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Icon(
-              KeroseneIcons.chevronRight,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 18,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GatewayProviderSection {
-  final String title;
-  final List<_GatewayProvider> providers;
-
-  const _GatewayProviderSection({
-    required this.title,
-    required this.providers,
-  });
-}
-
-class _GatewayProvider {
-  final String name;
-  final String methods;
-  final String fees;
-  final IconData icon;
-  final String? badge;
-  final List<String> aliases;
-
-  const _GatewayProvider({
-    required this.name,
-    required this.methods,
-    required this.fees,
-    required this.icon,
-    required this.aliases,
-    this.badge,
-  });
-
-  String? resolveUrl(Map<String, String> urls) {
-    for (final entry in urls.entries) {
-      final normalizedKey = _normalize(entry.key);
-      for (final alias in aliases) {
-        if (normalizedKey == _normalize(alias)) {
-          final value = entry.value.trim();
-          return value.isEmpty ? null : value;
-        }
-      }
-    }
-    return null;
-  }
-
-  String _normalize(String value) {
-    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
   }
 }

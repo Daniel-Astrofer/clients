@@ -41,11 +41,11 @@ class NotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/launcher_icon');
 
-    const DarwinInitializationSettings initializationSettingsDarwin =
+    final DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
+      requestSoundPermission: requestPermission,
+      requestBadgePermission: requestPermission,
+      requestAlertPermission: requestPermission,
     );
 
     // Desktop platforms require explicit settings or initialize() throws.
@@ -62,7 +62,7 @@ class NotificationService {
       guid: 'a3f1c8e2-7b54-4d91-9e6c-2f8d0b4a5c17',
     );
 
-    const InitializationSettings initializationSettings =
+    final InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
@@ -174,6 +174,20 @@ class NotificationService {
         ?.requestPermissions(alert: true, badge: true, sound: true);
 
     return androidGranted ?? iosGranted ?? macosGranted ?? true;
+  }
+
+  Future<bool> permissionsEnabled() async {
+    final android =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    final ios =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) return (await ios.checkPermissions())?.isEnabled ?? false;
+    return false;
   }
 
   /// Preferred entry: full structured presentation from backend fields.

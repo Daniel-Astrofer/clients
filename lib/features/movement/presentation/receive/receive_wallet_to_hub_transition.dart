@@ -1,3 +1,4 @@
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -15,6 +16,7 @@ Future<void> pushReceiveHub({
   required BuildContext context,
   required Wallet wallet,
   required double amountBtc,
+  MovementMoney? money,
 }) {
   return Navigator.of(context).push<void>(
     keroseneHorizontalRoute<void>(
@@ -23,6 +25,7 @@ Future<void> pushReceiveHub({
         body: MovementHubScreen(
           wallet: wallet,
           amountBtc: amountBtc,
+          money: money,
           onBack: () => Navigator.of(context).maybePop(),
         ),
       ),
@@ -97,13 +100,13 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
       parent: _transitionController,
       curve: const Interval(0, 0.34, curve: KeroseneMotion.linearIn),
     );
-    _hubSlide = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
-        .animate(
-          CurvedAnimation(
-            parent: _transitionController,
-            curve: const Interval(0.08, 1, curve: _receiveWalletToHubCurve),
-          ),
-        );
+    _hubSlide =
+        Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _transitionController,
+        curve: const Interval(0.08, 1, curve: _receiveWalletToHubCurve),
+      ),
+    );
     _hubFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _transitionController,
@@ -156,9 +159,8 @@ class _ReceiveWalletToHubSheetState extends State<_ReceiveWalletToHubSheet>
           final expand = _selectedWallet == null ? 0.0 : _expand.value;
           final sheetHeight =
               contentHeight + (expandedHeight - contentHeight) * expand;
-          final sheetOpacity = _selectedWallet == null
-              ? 1.0
-              : (1 - _sheetFade.value);
+          final sheetOpacity =
+              _selectedWallet == null ? 1.0 : (1 - _sheetFade.value);
 
           return Align(
             alignment: Alignment.bottomCenter,

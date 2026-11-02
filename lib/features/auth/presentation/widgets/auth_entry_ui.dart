@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -261,7 +262,9 @@ class AuthEntryButton extends StatelessWidget {
         backgroundColor: background,
         foregroundColor: foreground,
         borderColor: borderColor,
-        icon: icon == null ? null : Icon(icon, size: 16, color: foreground),
+        icon: icon == null
+            ? null
+            : KeroseneIcon(icon, size: 16, color: foreground),
         textStyle: AppTypography.buttonText.copyWith(
           color: foreground,
           fontWeight: FontWeight.w600,
@@ -297,7 +300,7 @@ class AuthEntryIconButton extends StatelessWidget {
               HapticFeedback.selectionClick();
               onPressed();
             },
-            child: Icon(icon, size: 18, color: authEntryText),
+            child: KeroseneIcon(icon, size: 18, color: authEntryText),
           ),
         ),
       ),
@@ -330,7 +333,7 @@ class AuthEntryNote extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, color: authEntryMuted, size: 18),
+            child: KeroseneIcon(icon, color: authEntryMuted, size: 18),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

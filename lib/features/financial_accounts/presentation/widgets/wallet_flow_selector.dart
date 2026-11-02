@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -94,7 +95,7 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
         ),
         child: IconButton(
           onPressed: widget.onBack ?? () => Navigator.maybePop(context),
-          icon: const Icon(KeroseneIcons.back, size: 22),
+          icon: const KeroseneIcon(KeroseneIcons.back, size: 22),
           tooltip: context.tr.authBackAction,
           style: IconButton.styleFrom(
             foregroundColor: _text,
@@ -131,7 +132,7 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(KeroseneIcons.warning, color: _muted, size: 34),
+          const KeroseneIcon(KeroseneIcons.warning, color: _muted, size: 34),
           const SizedBox(height: 16),
           Text(
             context.tr.walletSelectorLoadErrorTitle,
@@ -155,7 +156,7 @@ class _WalletFlowSelectorState extends ConsumerState<WalletFlowSelector> {
           const SizedBox(height: 24),
           TextButton.icon(
             onPressed: () => ref.read(walletProvider.notifier).refresh(),
-            icon: const Icon(KeroseneIcons.refresh, size: 18),
+            icon: const KeroseneIcon(KeroseneIcons.refresh, size: 18),
             label: Text(context.tr.walletSelectorRetry),
           ),
         ],

@@ -22,9 +22,25 @@ Future<Transaction> cancelActivity(
       throw StateError('payment request id missing');
     }
     final link = await repo.cancelPaymentRequest(requestId);
-    return link.toTransaction();
+    if (link.id.trim() != requestId || !link.isCancelled) {
+      throw StateError('Cancellation not confirmed');
+    }
+    final updated = link.toTransaction();
+    if (!updated.isCancelled) throw StateError('Cancellation not confirmed');
+    return updated.id == current.id
+        ? updated
+        : Transaction.fromJson({
+            ...updated.toJson(),
+            'id': current.id,
+          });
   }
-  return repo.cancelTransaction(current.id);
+  final transactionId = current.id.trim();
+  if (transactionId.isEmpty) throw StateError('Transaction identifier missing');
+  final updated = await repo.cancelTransaction(transactionId);
+  if (updated.id.trim() != current.id.trim() || !updated.isCancelled) {
+    throw StateError('Cancellation not confirmed');
+  }
+  return updated;
 }
 
 /// Archive both the history row id and the payment-link strip key when needed.
@@ -32,19 +48,15 @@ Future<void> archiveActivity(
   ActivityArchiveNotifier archive,
   Transaction tx,
 ) async {
+  if (!tx.isArchiveEligible) throw StateError('Activity cannot be archived');
   final id = tx.id.trim();
-  if (id.isNotEmpty) {
-    await archive.markArchived(id);
-  }
+  if (id.isEmpty) throw StateError('Activity identifier missing');
+  final keys = {id};
   final prId = (tx.paymentRequestPublicId ?? tx.paymentRequestId ?? '').trim();
   if (prId.isNotEmpty) {
-    await archive.markArchived(paymentLinkArchiveId(prId));
-    return;
+    keys.add(paymentLinkArchiveId(prId));
+  } else if (id.startsWith('pl_') && id.substring(3).trim().isNotEmpty) {
+    keys.add(paymentLinkArchiveId(id.substring(3)));
   }
-  if (id.startsWith('pl_')) {
-    final bare = id.substring(3).trim();
-    if (bare.isNotEmpty) {
-      await archive.markArchived(paymentLinkArchiveId(bare));
-    }
-  }
+  await archive.markArchivedMany(keys);
 }

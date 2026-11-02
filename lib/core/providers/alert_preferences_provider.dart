@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'shared_preferences_provider.dart';
 
 class AlertPreferencesState {
   final bool backgroundAlertsEnabled;
@@ -46,13 +47,8 @@ class AlertPreferencesNotifier extends Notifier<AlertPreferencesState> {
 
   @override
   AlertPreferencesState build() {
-    _load();
-    return const AlertPreferencesState();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = state.copyWith(
+    final prefs = ref.read(sharedPreferencesProvider);
+    return AlertPreferencesState(
       backgroundAlertsEnabled: prefs.getBool(backgroundAlertsKey) ?? true,
       inAppBannersEnabled: prefs.getBool(inAppBannersKey) ?? true,
       transactionAlertsEnabled: prefs.getBool(transactionAlertsKey) ?? true,
@@ -62,33 +58,41 @@ class AlertPreferencesNotifier extends Notifier<AlertPreferencesState> {
   }
 
   Future<void> setBackgroundAlertsEnabled(bool enabled) async {
+    await _save(backgroundAlertsKey, enabled);
     state = state.copyWith(backgroundAlertsEnabled: enabled);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(backgroundAlertsKey, enabled);
   }
 
   Future<void> setInAppBannersEnabled(bool enabled) async {
+    await _save(inAppBannersKey, enabled);
     state = state.copyWith(inAppBannersEnabled: enabled);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(inAppBannersKey, enabled);
   }
 
   Future<void> setTransactionAlertsEnabled(bool enabled) async {
+    await _save(transactionAlertsKey, enabled);
     state = state.copyWith(transactionAlertsEnabled: enabled);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(transactionAlertsKey, enabled);
   }
 
   Future<void> setSecurityAlertsEnabled(bool enabled) async {
+    await _save(securityAlertsKey, enabled);
     state = state.copyWith(securityAlertsEnabled: enabled);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(securityAlertsKey, enabled);
   }
 
   Future<void> setMarketAlertsEnabled(bool enabled) async {
+    await _save(marketAlertsKey, enabled);
     state = state.copyWith(marketAlertsEnabled: enabled);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(marketAlertsKey, enabled);
+  }
+
+  Future<void> _save(String key, bool enabled) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    try {
+      if (!await prefs.setBool(key, enabled)) {
+        throw StateError('Alert preference was not saved.');
+      }
+    } catch (_) {
+      // Legacy SharedPreferences changes its cache before the platform commit.
+      await prefs.reload();
+      rethrow;
+    }
   }
 }
 
