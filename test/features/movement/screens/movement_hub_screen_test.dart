@@ -12,8 +12,8 @@ void main() {
       (tester) async {
     await _pumpMovementHubScreen(tester, initialWallet: _internalWallet());
 
-    expect(find.text('Gateway de pagamento'), findsOneWidget);
-    expect(find.text('P2P'), findsOneWidget);
+    expect(find.text('Comprar Bitcoin'), findsOneWidget);
+    expect(find.text('Entre contas Kerosene'), findsOneWidget);
     expect(find.text('Fatura Lightning'), findsOneWidget);
     expect(find.text('QR Code'), findsOneWidget);
     expect(find.text('Link de pagamento'), findsOneWidget);
@@ -24,14 +24,14 @@ void main() {
       (tester) async {
     await _pumpMovementHubScreen(tester, initialWallet: _internalWallet());
 
-    expect(find.text('Gateway de pagamento'), findsOneWidget);
-    expect(find.text('P2P'), findsOneWidget);
+    expect(find.text('Comprar Bitcoin'), findsOneWidget);
+    expect(find.text('Entre contas Kerosene'), findsOneWidget);
     expect(find.text('Fatura Lightning'), findsOneWidget);
 
     await _pumpMovementHubScreen(tester, initialWallet: _onchainWallet());
     await tester.pumpAndSettle();
 
-    expect(find.text('Gateway de pagamento'), findsNothing);
+    expect(find.text('Comprar Bitcoin'), findsNothing);
     expect(find.text('Fatura Lightning'), findsNothing);
     expect(find.text('QR Code'), findsOneWidget);
     expect(find.text('Link de pagamento'), findsOneWidget);
@@ -40,8 +40,8 @@ void main() {
     await _pumpMovementHubScreen(tester, initialWallet: _coldWallet());
     await tester.pumpAndSettle();
 
-    expect(find.text('Gateway de pagamento'), findsNothing);
-    expect(find.text('P2P'), findsNothing);
+    expect(find.text('Comprar Bitcoin'), findsNothing);
+    expect(find.text('Entre contas Kerosene'), findsNothing);
     expect(find.text('Fatura Lightning'), findsNothing);
     expect(find.text('QR Code'), findsOneWidget);
     expect(find.text('Link de pagamento'), findsOneWidget);

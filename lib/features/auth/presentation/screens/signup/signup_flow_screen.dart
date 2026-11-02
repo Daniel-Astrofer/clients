@@ -1,4 +1,6 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -8,11 +10,13 @@ import 'package:go_router/go_router.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/components/generic/app_notice.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
+import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
+import 'package:kerosene/features/auth/presentation/first_access/first_access_progress.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'signup_flow_components.dart';
 import 'signup_flow_copy.dart';
@@ -68,6 +72,12 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String _sessionId = '';
+  bool _totpOptional = false;
+  String? _sessionPassword;
+  bool _totpPhaseFinished = false;
+  bool _deviceUnlinkDialogOpen = false;
+  bool _resumedVerifiedEnrollment = false;
+  bool _isContinuing = false;
   String _totpSecret = '';
   String _qrCodeUri = '';
   List<String> _backupCodes = const [];
@@ -84,6 +94,31 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
       authControllerProvider,
       _handleAuthState,
     );
+    final current = ref.read(authControllerProvider);
+    final resumable = current is AuthError ? current.resumeState : current;
+    if (current is AuthOnboardingOutcomeUnknown) {
+      _step = 5;
+    } else if (resumable is AuthRequiresTotpSetup) {
+      // Resume only the in-memory session. Credentials are never persisted by
+      // this screen, and a terminated app restarts from actual authentication.
+      _usernameController.text = resumable.username;
+      _passwordController.text = resumable.passphrase;
+      _confirmPasswordController.text = resumable.passphrase;
+      _acceptedPasswordRisk = true;
+      _sessionId = resumable.sessionId;
+      _sessionPassword = resumable.passphrase;
+      _totpOptional = resumable.totpOptional;
+      _totpSecret = resumable.totpSecret;
+      _qrCodeUri = resumable.qrCodeUri;
+      _backupCodes = resumable.backupCodes;
+      _step = 4;
+    } else if (resumable is AuthTotpVerified) {
+      _usernameController.text = resumable.username;
+      _sessionId = resumable.sessionId;
+      _totpPhaseFinished = true;
+      _resumedVerifiedEnrollment = true;
+      _step = 5;
+    }
   }
 
   @override
@@ -123,6 +158,9 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
 
     if (next is AuthRequiresTotpSetup) {
       _sessionId = next.sessionId;
+      _totpOptional = next.totpOptional;
+      _sessionPassword = next.passphrase;
+      _totpPhaseFinished = false;
       _totpSecret = next.totpSecret;
       _qrCodeUri = next.qrCodeUri;
       _backupCodes = next.backupCodes;
@@ -138,17 +176,39 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
 
     if (next is AuthTotpVerified) {
       _sessionId = next.sessionId;
+      _totpPhaseFinished = true;
       _goToStep(5);
       return;
     }
 
     if (next is AuthAuthenticated) {
-      _goToStep(6);
+      _sessionPassword = null;
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      _totpController.clear();
+      _totpSecret = '';
+      _qrCodeUri = '';
+      _backupCodes = const [];
+      unawaited(_confirmSignupSuccess(next));
+      return;
+    }
+
+    if (next is AuthOnboardingOutcomeUnknown) {
+      _totpTransitionTimer?.cancel();
+      _goToStep(5);
       return;
     }
 
     if (next is AuthError) {
       _totpTransitionTimer?.cancel();
+      if (next.resumeState is AuthRequiresTotpSetup) {
+        _goToStep(4);
+        _showInlineFeedback(
+            title: context.tr.authFlowInterruptedTitle,
+            message: ErrorTranslator.translate(context.tr, next.toString()),
+            target: _SignupErrorTarget.totp);
+        return;
+      }
       final isDeviceBound = next.errorCode == 'AUTH_024' ||
           next.errorCode == 'ERR_AUTH_DEVICE_ALREADY_BOUND' ||
           (next.data is Map &&
@@ -158,9 +218,21 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
         unawaited(_promptDeviceUnlinkAndRetry(next));
         return;
       }
+      if (next.resumeState is AuthTotpVerified) {
+        _goToStep(5);
+        _showInlineFeedback(
+          title: context.tr.authFlowInterruptedTitle,
+          message: ErrorTranslator.translate(context.tr, next.toString()),
+          target: _SignupErrorTarget.general,
+        );
+        return;
+      }
       final wasTotpOrPasskeyStep = _step == 4 || _step == 5;
       if (_step == 3 || wasTotpOrPasskeyStep) {
         _sessionId = '';
+        _sessionPassword = null;
+        _totpOptional = false;
+        _totpPhaseFinished = false;
         _totpSecret = '';
         _qrCodeUri = '';
         _backupCodes = const [];
@@ -175,7 +247,9 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
   }
 
   Future<void> _promptDeviceUnlinkAndRetry(AuthError error) async {
-    if (!mounted) return;
+    if (!mounted || _deviceUnlinkDialogOpen) return;
+    final sessionId = _sessionId;
+    _deviceUnlinkDialogOpen = true;
     final l10n = context.tr;
     final data = error.data is Map
         ? Map<String, dynamic>.from(error.data as Map)
@@ -189,41 +263,50 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
         ? l10n.authDeviceUnlinkDefaultGuidance
         : guidanceRaw;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: _signupPanel,
-          title: Text(
-            l10n.authDeviceUnlinkTitle,
-            style: TextStyle(color: _signupText),
-          ),
-          content: Text(
-            l10n.authDeviceUnlinkBody(previous, guidance),
-            style: TextStyle(color: _signupMuted),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.authDeviceUnlinkCancel),
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: _signupPanel,
+            title: Text(
+              l10n.authDeviceUnlinkTitle,
+              style: TextStyle(color: _signupText),
             ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(
-                l10n.authDeviceUnlinkConfirmSignup,
-                style: const TextStyle(color: Colors.redAccent),
+            content: Text(
+              l10n.authDeviceUnlinkBody(previous, guidance),
+              style: TextStyle(color: _signupMuted),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.authDeviceUnlinkCancel),
               ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted) return;
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(
+                  l10n.authDeviceUnlinkConfirmSignup,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _deviceUnlinkDialogOpen = false;
+    }
+    if (!mounted ||
+        _sessionId != sessionId ||
+        !identical(ref.read(authControllerProvider), error)) {
+      return;
+    }
     if (confirmed == true) {
       ref.read(authControllerProvider.notifier).registerPasskeyOnboarding(
-            _sessionId,
+            sessionId,
             confirmUnlinkDevice: true,
           );
       return;
@@ -236,9 +319,46 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
     );
   }
 
-  void _startAppAfterSuccess() {
+  Future<void> _startAppAfterSuccess() async {
+    final state = ref.read(authControllerProvider);
+    if (_isContinuing || state is! AuthAuthenticated) return;
+    setState(() => _isContinuing = true);
+    try {
+      await FirstAccessProgress.markPending(
+        ref.read(sharedPreferencesProvider),
+        state.user.id,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(signupProgressSaveError(context))),
+        );
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _isContinuing = false);
+    }
+    if (!mounted || ref.read(authControllerProvider) != state) return;
     AppScreenFeedbackBus.clear();
-    context.go('/home');
+    context.go('/home_loading');
+  }
+
+  Future<void> _confirmSignupSuccess(AuthAuthenticated owner) async {
+    try {
+      await FirstAccessProgress.markPending(
+        ref.read(sharedPreferencesProvider),
+        owner.user.id,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(signupProgressSaveError(context))),
+        );
+      }
+    }
+    if (!mounted || ref.read(authControllerProvider) != owner) return;
+    HapticFeedback.lightImpact();
+    _goToStep(6);
   }
 
   String? _usernameError(BuildContext context, String value) {
@@ -308,7 +428,28 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
     });
   }
 
+  void _openSignupLogin() {
+    final state = ref.read(authControllerProvider);
+    final username =
+        state is AuthOnboardingOutcomeUnknown ? state.username : _username;
+    ref.read(authControllerProvider.notifier).clearError();
+    context.go('/login', extra: username);
+  }
+
   void _handleBack() {
+    if (ref.read(authControllerProvider) is AuthLoading) return;
+    if (_resumedVerifiedEnrollment && _step == 5) {
+      _openSignupLogin();
+      return;
+    }
+    if (ref.read(authControllerProvider) is AuthOnboardingOutcomeUnknown) {
+      _openSignupLogin();
+      return;
+    }
+    if (_step == 4) {
+      _goToStep(2);
+      return;
+    }
     if (_step == 0 || _step >= 6) {
       Navigator.of(context).maybePop();
       return;
@@ -348,6 +489,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
   }
 
   void _submitSignup() {
+    if (ref.read(authControllerProvider) is AuthLoading || _step != 2) return;
     final usernameError = _usernameError(context, _username);
     if (usernameError != null) {
       _goToStep(0);
@@ -387,6 +529,31 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
       return;
     }
 
+    final state = ref.read(authControllerProvider);
+    final setup = state is AuthRequiresTotpSetup
+        ? state
+        : state is AuthError && state.resumeState is AuthRequiresTotpSetup
+            ? state.resumeState as AuthRequiresTotpSetup
+            : null;
+    if (setup != null &&
+        setup.username == _username &&
+        setup.passphrase == _password) {
+      _goToStep(4);
+      return;
+    }
+    final verified = state is AuthTotpVerified
+        ? state
+        : state is AuthError && state.resumeState is AuthTotpVerified
+            ? state.resumeState as AuthTotpVerified
+            : null;
+    if (verified != null &&
+        _sessionId == verified.sessionId &&
+        verified.username == _username &&
+        _sessionPassword == _password) {
+      _goToStep(5);
+      return;
+    }
+    _totpTransitionTimer?.cancel();
     _goToStep(3);
     ref.read(authControllerProvider.notifier).signup(
           username: _username,
@@ -399,6 +566,11 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
   }
 
   void _verifyTotp() {
+    if (ref.read(authControllerProvider) is AuthLoading) return;
+    if (_totpPhaseFinished) {
+      _goToStep(5);
+      return;
+    }
     if (_totpCode.length != 6) {
       _showInlineFeedback(
         title: context.tr.authInvalidConfirmationTitle,
@@ -417,6 +589,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
   }
 
   void _registerPasskey() {
+    if (ref.read(authControllerProvider) is AuthLoading) return;
     if (_sessionId.isEmpty) {
       _showInlineFeedback(
         title: context.tr.authSecurityPreparingTitle,
@@ -448,95 +621,92 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
                 ? Brightness.dark
                 : Brightness.light,
       ),
-      child: Scaffold(
-        backgroundColor: _signupInk,
-        resizeToAvoidBottomInset: true,
-        body: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                _signupText.withValues(
-                    alpha: ThemeTokenBridge.isLight ? 0.035 : 0.06),
-                _signupInk,
-                _signupInk,
-              ],
-              stops: const [0, 0.34, 1],
-            ),
-          ),
-          child: _step == 6
-              ? _buildSuccessStep()
-              : SafeArea(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final responsive = context.responsive;
-                      final horizontalPadding = responsive.isTinyPhone
-                          ? 20.0
-                          : responsive.horizontalPadding;
-                      final maxWidth = responsive.formMaxWidth;
-                      final topSpacing = responsive.isTinyPhone ? 10.0 : 16.0;
-                      final bottomPadding =
-                          28 + MediaQuery.viewInsetsOf(context).bottom;
+      child: PopScope(
+          canPop: !isLoading && (_step == 0 || _step >= 6),
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop && !isLoading) _handleBack();
+          },
+          child: Scaffold(
+            backgroundColor: _signupInk,
+            resizeToAvoidBottomInset: true,
+            body: ColoredBox(
+              color: _signupInk,
+              child: _step == 6
+                  ? _buildSuccessStep()
+                  : SafeArea(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final responsive = context.responsive;
+                          final horizontalPadding =
+                              responsive.isTinyPhone ? 20.0 : 24.0;
+                          final maxWidth = responsive.formMaxWidth;
+                          final topSpacing =
+                              responsive.isTinyPhone ? 10.0 : 16.0;
+                          // The Scaffold already excludes the keyboard inset.
+                          const bottomPadding = 28.0;
 
-                      return SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          topSpacing,
-                          horizontalPadding,
-                          bottomPadding,
-                        ),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: maxWidth,
-                              minHeight: constraints.maxHeight -
-                                  topSpacing -
-                                  bottomPadding,
+                          return SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SignupTopBar(
-                                  step: _step,
-                                  totalSteps: 6,
-                                  onBack: _handleBack,
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              topSpacing,
+                              horizontalPadding,
+                              bottomPadding,
+                            ),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: maxWidth,
+                                  minHeight: math.max(
+                                      0,
+                                      constraints.maxHeight -
+                                          topSpacing -
+                                          bottomPadding),
                                 ),
-                                if (_inlineFeedbackMessage != null) ...[
-                                  const SizedBox(height: 18),
-                                  AuthMotionShake(
-                                    triggerKey: _inlineFeedbackPulseKey,
-                                    child: SignupInlineFeedback(
-                                      title: _inlineFeedbackTitle ??
-                                          context.tr.authFlowInterruptedTitle,
-                                      message: _inlineFeedbackMessage!,
-                                      icon: _inlineFeedbackIcon,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    SignupTopBar(
+                                      step: _step,
+                                      totalSteps: 6,
+                                      onBack: isLoading ? null : _handleBack,
                                     ),
-                                  ),
-                                ],
-                                SizedBox(
-                                  height: responsive.isTinyPhone ? 24 : 34,
+                                    if (_inlineFeedbackMessage != null) ...[
+                                      const SizedBox(height: 18),
+                                      AuthMotionShake(
+                                        triggerKey: _inlineFeedbackPulseKey,
+                                        child: SignupInlineFeedback(
+                                          title: _inlineFeedbackTitle ??
+                                              context
+                                                  .tr.authFlowInterruptedTitle,
+                                          message: _inlineFeedbackMessage!,
+                                          icon: _inlineFeedbackIcon,
+                                        ),
+                                      ),
+                                    ],
+                                    SizedBox(
+                                      height: responsive.isTinyPhone ? 24 : 34,
+                                    ),
+                                    AuthDirectionalSwitcher(
+                                      isForward: _isForward,
+                                      child: KeyedSubtree(
+                                        key: ValueKey(_step),
+                                        child: _buildStepBody(isLoading),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                AuthDirectionalSwitcher(
-                                  isForward: _isForward,
-                                  child: KeyedSubtree(
-                                    key: ValueKey(_step),
-                                    child: _buildStepBody(isLoading),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ),
-      ),
+                          );
+                        },
+                      ),
+                    ),
+            ),
+          )),
     );
   }
 
@@ -574,7 +744,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
             suffixIcon: _usernameController.text.isNotEmpty
                 ? AnimatedSwitcher(
                     duration: AuthMotion.entrance,
-                    child: Icon(
+                    child: KeroseneIcon(
                       _usernameLooksValid
                           ? KeroseneIcons.success
                           : KeroseneIcons.warning,
@@ -635,7 +805,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
               onPressed: () => setState(() {
                 _obscurePassword = !_obscurePassword;
               }),
-              icon: Icon(
+              icon: KeroseneIcon(
                 _obscurePassword ? KeroseneIcons.eye : KeroseneIcons.eyeOff,
                 size: 18,
                 color: _signupMuted,
@@ -699,7 +869,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
               onPressed: () => setState(() {
                 _obscureConfirmPassword = !_obscureConfirmPassword;
               }),
-              icon: Icon(
+              icon: KeroseneIcon(
                 _obscureConfirmPassword
                     ? KeroseneIcons.eye
                     : KeroseneIcons.eyeOff,
@@ -745,7 +915,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.shield,
                 size: 82,
                 color: Theme.of(context)
@@ -755,7 +925,7 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 14),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.lock,
                   size: 28,
                   color: Theme.of(context)
@@ -793,37 +963,47 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
 
   Widget _buildTotpStep(bool isLoading) {
     return SignupStepColumn(
-      title: signupTotpTitle(context),
-      subtitle: signupTotpSubtitle(context),
+      title: _totpPhaseFinished
+          ? context.tr.flowSignupTotpFinishedTitle
+          : _totpOptional
+              ? signupTotpTitle(context)
+              : context.tr.flowSignupTotpRequiredTitle,
+      subtitle: _totpPhaseFinished
+          ? context.tr.flowSignupTotpFinishedSubtitle
+          : _totpOptional
+              ? signupTotpSubtitle(context)
+              : context.tr.flowSignupTotpRequiredSubtitle,
       children: [
-        NumberedInstruction(
-          number: 1,
-          text: context.tr.authSignupTotpScanInstruction,
-        ),
-        const SizedBox(height: 18),
-        Center(
-          child: TotpQrBox(data: _qrCodeUri, size: 160),
-        ),
-        const SizedBox(height: 26),
-        NumberedInstruction(
-          number: 2,
-          text: signupTotpCodeInstruction(context),
-        ),
-        const SizedBox(height: 14),
-        AuthMotionShake(
-          triggerKey: _inlineFeedbackPulseKey,
-          enabled: _inlineFeedbackTarget == _SignupErrorTarget.totp,
-          child: TotpDigitBoxes(
-            controller: _totpController,
-            enabled: !isLoading,
-            onChanged: (_) {
-              _clearInlineFeedback();
-              setState(() {});
-            },
-            onSubmitted: (_) => isLoading ? null : _verifyTotp(),
+        if (!_totpPhaseFinished) ...[
+          NumberedInstruction(
+            number: 1,
+            text: context.tr.authSignupTotpScanInstruction,
           ),
-        ),
-        const SizedBox(height: 34),
+          const SizedBox(height: 18),
+          Center(
+            child: TotpQrBox(data: _qrCodeUri, size: 160),
+          ),
+          const SizedBox(height: 26),
+          NumberedInstruction(
+            number: 2,
+            text: signupTotpCodeInstruction(context),
+          ),
+          const SizedBox(height: 14),
+          AuthMotionShake(
+            triggerKey: _inlineFeedbackPulseKey,
+            enabled: _inlineFeedbackTarget == _SignupErrorTarget.totp,
+            child: TotpDigitBoxes(
+              controller: _totpController,
+              enabled: !isLoading && !_totpPhaseFinished,
+              onChanged: (_) {
+                _clearInlineFeedback();
+                setState(() {});
+              },
+              onSubmitted: (_) => isLoading ? null : _verifyTotp(),
+            ),
+          ),
+          const SizedBox(height: 34),
+        ],
         Text(
           signupRecoveryCodesTitle(context),
           style: SignupTypography.sectionTitle(),
@@ -841,18 +1021,21 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
         const SizedBox(height: 28),
         Row(
           children: [
-            Expanded(
-              child: SignupPrimaryButton(
-                text: signupSkipAction(context),
-                outlined: true,
-                onPressed: isLoading ? null : _skipTotp,
-                borderRadius: 999,
+            if (_totpOptional && !_totpPhaseFinished)
+              Expanded(
+                child: SignupPrimaryButton(
+                  text: signupSkipAction(context),
+                  outlined: true,
+                  onPressed: isLoading ? null : _skipTotp,
+                  borderRadius: 999,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
+            if (_totpOptional && !_totpPhaseFinished) const SizedBox(width: 12),
             Expanded(
               child: SignupPrimaryButton(
-                text: signupConfirmAction(context),
+                text: _totpPhaseFinished
+                    ? context.tr.continueButton
+                    : signupConfirmAction(context),
                 isLoading: isLoading,
                 onPressed: isLoading ? null : _verifyTotp,
                 borderRadius: 999,
@@ -865,45 +1048,64 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
   }
 
   Widget _buildPasskeyStep(bool isLoading) {
+    final unknown =
+        ref.read(authControllerProvider) is AuthOnboardingOutcomeUnknown;
     return SignupStepColumn(
-      title: signupPasskeyTitle(context),
-      subtitle: signupPasskeySubtitle(context),
+      title: unknown
+          ? context.tr.flowSignupUnknownTitle
+          : isLoading
+              ? signupConfirmingPasskeyTitle(context)
+              : signupPasskeyTitle(context),
+      subtitle: unknown
+          ? context.tr.flowSignupUnknownSubtitle
+          : isLoading
+              ? signupConfirmingPasskeySubtitle(context)
+              : signupPasskeySubtitle(context),
       children: [
         const SizedBox(height: 10),
         Center(
           child: Container(
-            width: 104,
-            height: 104,
+            width: 132,
+            height: 132,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: _signupBorderSoft),
               color: _signupPanel,
             ),
-            child: Icon(
-              KeroseneIcons.userCheck,
-              size: 48,
-              color: _signupText,
+            child: AnimatedSwitcher(
+              duration: AuthMotion.reduce(context)
+                  ? Duration.zero
+                  : KeroseneMotion.medium,
+              child: KeroseneIcon(
+                unknown ? KeroseneIcons.info : KeroseneIcons.biometric,
+                key: ValueKey(unknown),
+                size: 58,
+                color: _signupText,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 28),
-        SignupBullet(
-          text: context.tr.authSignupPasskeyBiometricBullet,
-          icon: KeroseneIcons.biometric,
-        ),
-        SignupBullet(
-          text: context.tr.authSignupPasskeyPasswordBullet,
-          icon: KeroseneIcons.security,
-        ),
-        SignupBullet(
-          text: context.tr.authSignupPasskeyDeviceBullet,
-          icon: KeroseneIcons.security,
-        ),
+        if (!unknown)
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              signupPasskeyRequiredBody(context),
+              textAlign: TextAlign.center,
+              style: SignupTypography.bodySmall(),
+            ),
+          ),
         const SizedBox(height: 46),
         SignupPrimaryButton(
-          text: signupAuthorizeDeviceAction(context),
+          text: unknown
+              ? context.tr.flowSignupConfirmByLoginAction
+              : signupAuthorizeDeviceAction(context),
           isLoading: isLoading,
-          onPressed: isLoading ? null : _registerPasskey,
+          onPressed: isLoading
+              ? null
+              : unknown
+                  ? _openSignupLogin
+                  : _registerPasskey,
           borderRadius: 999,
         ),
       ],
@@ -914,8 +1116,9 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
     return SignupSuccessScene(
       appTitle: context.tr.appTitle,
       title: context.tr.authSignupSuccessTitle,
-      subtitle: signupSuccessBody(context),
-      actionLabel: signupStartAction(context),
+      subtitle: signupSetupNextBody(context),
+      actionLabel: context.tr.continueButton,
+      isLoading: _isContinuing,
       onContinue: _startAppAfterSuccess,
     );
   }

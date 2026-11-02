@@ -1,3 +1,5 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 // architecture-allow-large-file: NFC flow state and platform-channel timing
 // remain together to preserve the native request lifecycle.
 import 'dart:async';
@@ -5,15 +7,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
 import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
-import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/features/movement/kernel/intent/nfc_payment_request_codec.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_nfc_availability_provider.dart';
@@ -37,6 +37,7 @@ class ReceiveNfcFlowScreen extends StatefulWidget {
   final Wallet wallet;
   final bool onChainWallet;
   final double amountBtc;
+  final MovementMoney? money;
   final String paymentRequestUri;
   final String paymentRail;
   final Future<bool> Function()? supportsNfc;
@@ -47,6 +48,7 @@ class ReceiveNfcFlowScreen extends StatefulWidget {
     required this.wallet,
     required this.onChainWallet,
     required this.amountBtc,
+    this.money,
     this.paymentRequestUri = 'kerosene://payment/pay/preview-request',
     this.paymentRail = 'ONCHAIN',
     this.supportsNfc,
@@ -263,15 +265,8 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
     _timers.clear();
   }
 
-  String get _amountLabel {
-    final amount = MoneyDisplay.formatCompact(
-      amount: widget.amountBtc,
-      currency: Currency.btc,
-      withSymbol: false,
-      maxDecimalPlaces: 8,
-    );
-    return '$amount BTC';
-  }
+  String get _amountLabel =>
+      (widget.money ?? const MovementMoney()).primary(widget.amountBtc);
 
   String get _statusLabel {
     return 'Aguardando pagamento';
@@ -279,10 +274,10 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
 
   String get _networkLabel {
     return switch (_detectedMethod) {
-      ReceiveNfcMethod.direct => 'Direct',
-      ReceiveNfcMethod.lightning => 'Lightning',
-      ReceiveNfcMethod.onchain => 'On-chain',
-      ReceiveNfcMethod.automatic => 'Direct',
+      ReceiveNfcMethod.direct => context.tr.activityFilterInternal,
+      ReceiveNfcMethod.lightning => context.tr.activityFilterLightning,
+      ReceiveNfcMethod.onchain => context.tr.activityFilterOnchain,
+      ReceiveNfcMethod.automatic => context.tr.activityFilterInternal,
     };
   }
 
@@ -305,7 +300,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
             child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(KeroseneIcons.warning,
+                  KeroseneIcon(KeroseneIcons.warning,
                       size: 40, color: Theme.of(context).colorScheme.error),
                   const SizedBox(height: 20),
                   Semantics(
@@ -523,7 +518,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                 color: _surfaceHigh,
                 border: Border.all(color: _border),
               ),
-              child: Icon(icon, color: _text, size: 34),
+              child: KeroseneIcon(icon, color: _text, size: 34),
             ),
             const SizedBox(height: 12),
             Text(
@@ -599,7 +594,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                     Text(
                       successTitle,
                       textAlign: TextAlign.center,
-                      style: AppTypography.h1.copyWith(
+                      style: AppTypography.display.copyWith(
                         color: _text,
                         fontSize: 48,
                         fontWeight: FontWeight.w400,
@@ -618,6 +613,14 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (widget.money?.secondary(widget.amountBtc).isNotEmpty ??
+                        false)
+                      Text(
+                        widget.money!.secondary(widget.amountBtc),
+                        textAlign: TextAlign.center,
+                        style: AppTypography.number.copyWith(
+                            color: _mutedText, fontSize: 14, letterSpacing: 0),
+                      ),
                     _buildPaymentStatusChip(),
                     const SizedBox(height: 28),
                     _buildDetailsCard(context),
@@ -684,7 +687,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
             alignment: Alignment.centerLeft,
             child: IconButton(
               onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(KeroseneIcons.back),
+              icon: const KeroseneIcon(KeroseneIcons.back),
               color: _text,
               style: IconButton.styleFrom(
                 foregroundColor: _text,
@@ -775,7 +778,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                   ),
                   border: Border.all(color: _border),
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.nfc,
                   color: detected ? _success : _text,
                   size: size * 0.34,
@@ -860,7 +863,7 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
                     ),
                   ],
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.success,
                   color: _success,
                   size: 48,
@@ -874,8 +877,6 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
   }
 
   Widget _buildDetailsCard(BuildContext context) {
-    final time = DateFormat('HH:mm').format(_completedAt);
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -904,17 +905,20 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
           Divider(color: _border.withValues(alpha: 0.6), height: 1),
           const SizedBox(height: 16),
           if (_detectedMethod == ReceiveNfcMethod.lightning) ...[
-            _buildDetailRow('Taxa Lightning', '0.000001 BTC'),
+            _buildDetailRow(
+                context.tr.sendReviewNetworkFee, context.tr.sendFeeUnavailable),
             const SizedBox(height: 16),
             Divider(color: _border.withValues(alpha: 0.6), height: 1),
             const SizedBox(height: 16),
           ] else if (_detectedMethod == ReceiveNfcMethod.onchain) ...[
-            _buildDetailRow(context.tr.sendReviewNetworkFee, 'A confirmar'),
+            _buildDetailRow(
+                context.tr.sendReviewNetworkFee, context.tr.sendFeeUnavailable),
             const SizedBox(height: 16),
             Divider(color: _border.withValues(alpha: 0.6), height: 1),
             const SizedBox(height: 16),
           ],
-          _buildDetailRow('Data', 'Hoje, $time'),
+          _buildDetailRow(
+              context.tr.date, AppDateTime.formatFull(context, _completedAt)),
           const SizedBox(height: 16),
         ],
       ),
@@ -938,8 +942,6 @@ class _ReceiveNfcFlowScreenState extends State<ReceiveNfcFlowScreen>
         Flexible(
           child: Text(
             value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.right,
             style: AppTypography.inter(
               color: _text,
@@ -1078,7 +1080,5 @@ class _NfcMethodInfoCard extends StatelessWidget {
 }
 
 String _shortenAddress(String value) {
-  final trimmed = value.trim();
-  if (trimmed.length <= 13) return trimmed;
-  return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 4)}';
+  return value.trim();
 }

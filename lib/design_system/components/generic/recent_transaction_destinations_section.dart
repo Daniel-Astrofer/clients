@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/recent_transaction_destinations_provider.dart';
@@ -65,7 +66,7 @@ class RecentTransactionDestinationsSection extends StatelessWidget {
             if (onClearAll != null)
               TextButton.icon(
                 onPressed: onClearAll,
-                icon: const Icon(KeroseneIcons.trash, size: 14),
+                icon: const KeroseneIcon(KeroseneIcons.trash, size: 14),
                 label: Text(clearAllLabel),
                 style: TextButton.styleFrom(
                   foregroundColor: _recentDestinationMutedTextColor(context),
@@ -152,7 +153,7 @@ class _RecentDestinationRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(radius),
                 child: Row(
                   children: [
-                    Icon(
+                    KeroseneIcon(
                       _iconFor(destination.kind),
                       size: 17,
                       color: _recentDestinationMutedTextColor(context),
@@ -198,7 +199,7 @@ class _RecentDestinationRow extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             if (onRemove == null)
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.next,
                 size: 16,
                 color: _recentDestinationFaintTextColor(context),
@@ -207,7 +208,7 @@ class _RecentDestinationRow extends StatelessWidget {
               IconButton(
                 onPressed: onRemove,
                 tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
-                icon: const Icon(KeroseneIcons.trash, size: 16),
+                icon: const KeroseneIcon(KeroseneIcons.trash, size: 16),
                 color: _recentDestinationFaintTextColor(context),
                 style: IconButton.styleFrom(
                   minimumSize: const Size.square(34),

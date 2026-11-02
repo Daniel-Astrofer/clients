@@ -1,3 +1,5 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 // architecture-allow-large-file: receive rail state and request lifecycle are
 // kept together to preserve backend and navigation contracts.
 import 'dart:async';
@@ -10,21 +12,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/core/providers/money_format_provider.dart';
-import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/components/financial/send_flow_theme.dart';
-import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/core/utils/bitcoin_network.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
-import 'package:kerosene/core/utils/money_display.dart';
 import 'package:kerosene/core/utils/qr_payment_parser.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/domain/entities/external_transfer.dart';
 import 'package:kerosene/features/movement/domain/entities/onchain_address_allocation.dart';
-import 'package:kerosene/app/storage/activity_archive_store.dart';
 import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
@@ -35,21 +32,24 @@ import 'package:kerosene/features/movement/presentation/receive/receive_method.d
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_layout.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_network_picker.dart';
 import 'receive_request_flow_components.dart';
+import 'receive_bitcoin_network.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 
-enum ReceiveRequestStage { qr, confirmations, identified }
+enum ReceiveRequestStage { qr, confirmations, identified, closed }
 
-SendFlowTheme _flowTokens() => SendFlowTheme.forVariant(
-      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
-    );
+final receiveRequestShareProvider =
+    Provider<Future<ShareResult> Function(ShareParams)>(
+        (ref) => SharePlus.instance.share);
 
-Color get _receiveBackground => _flowTokens().background;
-Color get _receiveText => _flowTokens().textPrimary;
-Color get _receiveMuted => _flowTokens().textMuted;
+SendFlowTheme _flowTokens(BuildContext context) =>
+    SendFlowTheme.forVariant(Theme.of(context).brightness);
 
 class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final Wallet wallet;
   final bool onChainWallet;
   final double amountBtc;
+  final MovementMoney? money;
   final ReceiveAmountMethod method;
   final PaymentLink? initialPaymentLink;
   final ReceiveRequestStage? initialStage;
@@ -60,6 +60,7 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
   final int? initialConfirmations;
   final int? requiredConfirmations;
   final DateTime? identifiedAt;
+  final String? ownerScope;
 
   /// When no [initialPaymentLink] is provided, the screen creates one using this TTL.
   final int paymentLinkExpiresInMinutes;
@@ -72,6 +73,7 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
     required this.wallet,
     required this.onChainWallet,
     required this.amountBtc,
+    this.money,
     required this.method,
     this.initialPaymentLink,
     this.initialStage,
@@ -82,6 +84,7 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
     this.initialConfirmations,
     this.requiredConfirmations,
     this.identifiedAt,
+    this.ownerScope,
     this.paymentLinkExpiresInMinutes = 60,
     this.deferNetworkUntilChosen = false,
   });
@@ -92,15 +95,24 @@ class ReceiveRequestFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _ReceiveRequestFlowScreenState
-    extends ConsumerState<ReceiveRequestFlowScreen> with FinancialSurfaceMixin {
+    extends ConsumerState<ReceiveRequestFlowScreen>
+    with FinancialSurfaceMixin, WidgetsBindingObserver {
+  Color get _receiveBackground => _flowTokens(context).background;
+  Color get _receiveText => _flowTokens(context).textPrimary;
+  Color get _receiveMuted => _flowTokens(context).textMuted;
+
   Timer? _statusTimer;
   Timer? _expiryTicker;
   late ReceiveRequestStage _stage;
-  late DateTime _identifiedAt;
+  DateTime? _identifiedAt;
+  String get _receiptDateLabel => _identifiedAt == null
+      ? context.tr.receiveReceiptDateUnavailable
+      : formatReceiveDateTime(_identifiedAt!, context: context);
 
   PaymentLink? _link;
   OnchainAddressAllocation? _allocation;
   ExternalTransfer? _observedTransfer;
+  Transaction? _historyReceipt;
   String? _address;
   String? _paymentUri;
   String? _txid;
@@ -108,52 +120,92 @@ class _ReceiveRequestFlowScreenState
   bool _isLoadingRequest = false;
   bool _cancelling = false;
   bool _awaitingNetworkChoice = false;
+  bool _statusRefreshBusy = false;
+  bool _foreground = true;
+  bool _statusUnavailable = false;
+  bool _presentationBusy = false;
+  bool _scopeLost = false;
+  bool _cancelDialogOpen = false;
+  bool _cancelNeedsRefresh = false;
+  late final String? _ownerScope;
+
+  bool get _owns =>
+      mounted &&
+      !_scopeLost &&
+      ref.read(sessionStorageScopeProvider)?.trim() == _ownerScope;
+  bool get _canAct => _owns && _foreground;
+  int _linkRevision = 0;
   ReceiveNetworkChoice? _selectedNetwork;
 
   @override
   void initState() {
     super.initState();
+    _ownerScope = widget.ownerScope?.trim() ??
+        ref.read(sessionStorageScopeProvider)?.trim();
+    _scopeLost = ref.read(sessionStorageScopeProvider)?.trim() != _ownerScope;
+    WidgetsBinding.instance.addObserver(this);
+    _foreground = WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     _stage = widget.initialStage ?? ReceiveRequestStage.qr;
-    _identifiedAt = widget.identifiedAt ?? DateTime.now();
+    _identifiedAt = widget.identifiedAt;
     _link = widget.initialPaymentLink;
     _address = widget.initialAddress ?? _link?.depositAddress;
     _paymentUri = widget.initialPaymentUri ?? _paymentUriFor(_link);
     _txid = widget.initialTxid ?? _link?.txid;
     _awaitingNetworkChoice =
         widget.deferNetworkUntilChosen && widget.initialPaymentLink == null;
+    if (_link != null && widget.initialStage == null) {
+      _applyPaymentLinkStage(_link!);
+    }
 
     if (widget.enableStatusPolling && !_awaitingNetworkChoice) {
       scheduleMicrotask(_prepareRequest);
     }
-    // Cancelled links leave the global strip after the user opens them.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final link = _link;
-      if (link != null && (link.isCancelled || link.isExpired)) {
-        unawaited(
-          ref
-              .read(activityArchiveProvider.notifier)
-              .markArchived(paymentLinkArchiveId(link.id)),
-        );
-      }
-    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusTimer?.cancel();
     _expiryTicker?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+    setState(() => _foreground = state == AppLifecycleState.resumed);
+    if (!_foreground) {
+      _statusTimer?.cancel();
+      _expiryTicker?.cancel();
+    } else if (widget.enableStatusPolling &&
+        _owns &&
+        !_awaitingNetworkChoice &&
+        _stage != ReceiveRequestStage.identified) {
+      if (_link != null) {
+        _startPaymentLinkPolling();
+        _startExpiryTicker();
+      } else if (_allocation != null) {
+        _startTransferPolling();
+      }
+    }
+  }
+
   void _startExpiryTicker() {
     _expiryTicker?.cancel();
+    if (!_canAct ||
+        _link?.expiresAt == null ||
+        _stage == ReceiveRequestStage.identified ||
+        _stage == ReceiveRequestStage.closed) {
+      return;
+    }
     _expiryTicker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {});
-      final remaining = _remainingExpiry;
-      if (remaining != null && remaining <= Duration.zero && _linkCanCancel) {
-        // Keep UI reactive; expiry is owned by backend status.
+      if (!_canAct) return;
+      setState(() {
+        if (_link != null) _applyPaymentLinkStage(_link!);
+      });
+      if (_remainingExpiry != null && _remainingExpiry! <= Duration.zero) {
+        _expiryTicker?.cancel();
       }
     });
   }
@@ -175,13 +227,13 @@ class _ReceiveRequestFlowScreenState
                 ),
           );
     if (remaining == null || total == null || total.inSeconds <= 0) {
-      return _flowTokens().feedbackSuccess;
+      return _flowTokens(context).feedbackSuccess;
     }
     final ratio = remaining.inMilliseconds / total.inMilliseconds;
     // Green while above half; yellow around half; red below half.
-    if (ratio > 0.52) return _flowTokens().feedbackSuccess;
-    if (ratio >= 0.48) return _flowTokens().feedbackWarning;
-    return _flowTokens().feedbackError;
+    if (ratio > 0.52) return _flowTokens(context).feedbackSuccess;
+    if (ratio >= 0.48) return _flowTokens(context).feedbackWarning;
+    return _flowTokens(context).feedbackError;
   }
 
   String _formatRemaining(Duration? remaining) {
@@ -228,6 +280,7 @@ class _ReceiveRequestFlowScreenState
   }
 
   void _onNetworkChosen(ReceiveNetworkChoice choice) {
+    if (!_canAct || !_awaitingNetworkChoice) return;
     setState(() {
       _selectedNetwork = choice;
       _awaitingNetworkChoice = false;
@@ -236,6 +289,7 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _prepareRequest() async {
+    if (!_canAct || _isLoadingRequest) return;
     final link = _link;
     if (link != null) {
       _applyPaymentLinkStage(link);
@@ -288,6 +342,7 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _createPaymentLinkOnScreen() async {
+    if (!_canAct || _isLoadingRequest) return;
     setState(() {
       _isLoadingRequest = true;
       _errorMessage = null;
@@ -313,7 +368,7 @@ class _ReceiveRequestFlowScreenState
           'source': 'receive_flow',
         },
       );
-      if (!mounted) return;
+      if (!mounted || !_owns) return;
       setState(() {
         _link = paymentLink;
         _address = paymentLink.depositAddress.trim().isEmpty
@@ -331,7 +386,7 @@ class _ReceiveRequestFlowScreenState
         _startPaymentLinkPolling();
       }
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || !_owns) return;
       final translated = ErrorTranslator.translate(
         context.tr,
         error.toString(),
@@ -340,11 +395,12 @@ class _ReceiveRequestFlowScreenState
         _isLoadingRequest = false;
         _errorMessage = translated;
       });
-      SnackbarHelper.showError(translated);
+      if (_canAct) SnackbarHelper.showError(translated);
     }
   }
 
   Future<void> _issueOnchainAddress() async {
+    if (!_canAct || _isLoadingRequest) return;
     setState(() {
       _isLoadingRequest = true;
       _errorMessage = null;
@@ -356,7 +412,7 @@ class _ReceiveRequestFlowScreenState
                 walletName: widget.wallet.id,
                 expectedAmountBtc: widget.amountBtc,
               );
-      if (!mounted) return;
+      if (!mounted || !_owns) return;
 
       final nextAddress = allocation.onchainAddress.trim();
       if (nextAddress.isEmpty || !allocation.hasTransferId) {
@@ -390,7 +446,7 @@ class _ReceiveRequestFlowScreenState
       ref.invalidate(transactionHistoryProvider);
       _startTransferPolling();
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || !_owns) return;
       final translated = ErrorTranslator.translate(
         context.tr,
         error.toString(),
@@ -399,11 +455,16 @@ class _ReceiveRequestFlowScreenState
         _isLoadingRequest = false;
         _errorMessage = translated;
       });
-      SnackbarHelper.showError(translated);
+      if (_canAct) SnackbarHelper.showError(translated);
     }
   }
 
   void _startTransferPolling() {
+    if (!_canAct ||
+        _stage == ReceiveRequestStage.closed ||
+        _stage == ReceiveRequestStage.identified) {
+      return;
+    }
     final transferId = _allocation?.transferId.trim() ?? '';
     if (transferId.isEmpty) return;
     _statusTimer?.cancel();
@@ -416,14 +477,21 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _refreshObservedTransfer() async {
+    if (_statusRefreshBusy || !_canAct) return;
     final transferId = _allocation?.transferId.trim() ?? '';
     if (transferId.isEmpty) return;
+    _statusRefreshBusy = true;
 
     try {
       final latest = await ref
           .read(transactionRepositoryProvider)
           .getExternalTransfer(transferId);
-      if (!mounted) return;
+      if (!mounted || !_owns) return;
+      if (_allocation?.transferId != transferId) return;
+      if (latest.id != transferId) {
+        setState(() => _statusUnavailable = true);
+        return;
+      }
 
       final previousStatus =
           (_observedTransfer?.status ?? _allocation?.transferStatus ?? '')
@@ -434,6 +502,7 @@ class _ReceiveRequestFlowScreenState
       final latestStatus = latest.status.trim().toUpperCase();
 
       setState(() {
+        _statusUnavailable = false;
         _observedTransfer = latest;
         _txid = latest.blockchainTxid.trim().isEmpty
             ? _txid
@@ -444,7 +513,7 @@ class _ReceiveRequestFlowScreenState
           txid: latest.blockchainTxid,
         );
         if (_stage == ReceiveRequestStage.identified) {
-          _identifiedAt = DateTime.now();
+          _identifiedAt = latest.settledAt ?? widget.identifiedAt;
         }
       });
 
@@ -454,12 +523,18 @@ class _ReceiveRequestFlowScreenState
         ref.invalidate(transactionHistoryProvider);
       }
 
-      if (_stage == ReceiveRequestStage.identified) {
+      if (_stage == ReceiveRequestStage.identified ||
+          _stage == ReceiveRequestStage.closed) {
         _statusTimer?.cancel();
-        HapticFeedback.mediumImpact();
+        _expiryTicker?.cancel();
+        if (_canAct && _stage == ReceiveRequestStage.identified) {
+          HapticFeedback.mediumImpact();
+        }
       }
     } catch (_) {
-      // Keep the QR usable if the status refresh fails transiently.
+      if (_owns) setState(() => _statusUnavailable = true);
+    } finally {
+      _statusRefreshBusy = false;
     }
   }
 
@@ -469,6 +544,10 @@ class _ReceiveRequestFlowScreenState
     required String txid,
   }) {
     final normalized = status.trim().toUpperCase();
+    if (const ['FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED']
+        .contains(normalized)) {
+      return ReceiveRequestStage.closed;
+    }
     final required = _requiredConfirmations;
     final complete = normalized == 'COMPLETED' ||
         normalized == 'SETTLED' ||
@@ -491,6 +570,11 @@ class _ReceiveRequestFlowScreenState
 
   void _startPaymentLinkPolling() {
     _statusTimer?.cancel();
+    if (!_canAct ||
+        (_stage == ReceiveRequestStage.identified && !_cancelNeedsRefresh) ||
+        _stage == ReceiveRequestStage.closed) {
+      return;
+    }
     unawaited(_refreshPaymentLink());
     _statusTimer = Timer.periodic(
       const Duration(seconds: 2),
@@ -499,28 +583,45 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _refreshPaymentLink() async {
+    if (_statusRefreshBusy || !_canAct) return;
     final linkId = _link?.id.trim() ?? '';
-    if (linkId.isEmpty) return;
+    if (linkId.isEmpty || _cancelling) return;
+    final revision = _linkRevision;
+    _statusRefreshBusy = true;
 
     try {
       final PaymentLink latest;
       latest =
           await ref.read(transactionRepositoryProvider).getPaymentLink(linkId);
 
-      if (!mounted) return;
+      if (!mounted || !_owns) return;
+      if (_link?.id != linkId || revision != _linkRevision) return;
+      if (latest.id != linkId) {
+        setState(() => _statusUnavailable = true);
+        return;
+      }
       final previousStatus = _link?.status.trim().toLowerCase() ?? '';
       final previousTxid = _link?.txid?.trim() ?? '';
       final latestStatus = latest.status.trim().toLowerCase();
       final latestTxid = latest.txid?.trim() ?? '';
 
       setState(() {
+        _statusUnavailable = false;
         _link = latest;
+        _cancelNeedsRefresh = false;
+        final confirmedReceipt =
+            _historyReceipt?.status == TransactionStatus.confirmed;
+        if (!confirmedReceipt) {
+          _historyReceipt = null;
+        }
         _address = latest.depositAddress.trim().isEmpty
             ? _address
             : latest.depositAddress.trim();
         _paymentUri = _paymentUriFor(latest);
         _txid = latest.txid?.trim().isEmpty == true ? _txid : latest.txid;
-        _applyPaymentLinkStage(latest);
+        if (!confirmedReceipt) {
+          _applyPaymentLinkStage(latest);
+        }
       });
 
       if (previousStatus != latestStatus || previousTxid != latestTxid) {
@@ -531,22 +632,23 @@ class _ReceiveRequestFlowScreenState
         }
       }
 
-      if (_stage == ReceiveRequestStage.identified) {
+      if (_stage == ReceiveRequestStage.identified ||
+          _stage == ReceiveRequestStage.closed) {
         _statusTimer?.cancel();
-        HapticFeedback.mediumImpact();
+        _expiryTicker?.cancel();
+        if (_canAct && _stage == ReceiveRequestStage.identified) {
+          HapticFeedback.mediumImpact();
+        }
       }
     } catch (_) {
-      // Payment polling is intentionally quiet; the QR/link stays available.
+      if (_owns) setState(() => _statusUnavailable = true);
+    } finally {
+      _statusRefreshBusy = false;
     }
   }
 
   void _applyPaymentLinkStage(PaymentLink link) {
-    final rail = link.paymentRail.trim().toUpperCase();
-    final isLightning = link.isLightningPaymentRequest || rail == 'LIGHTNING';
-    final onChain = !isLightning &&
-        (widget.onChainWallet ||
-            rail == 'ONCHAIN' ||
-            looksLikeBitcoinAddress(link.depositAddress.trim()));
+    final isLightning = link.isLightningPaymentRequest;
     final bolt11 = link.paymentRequest?.trim() ?? '';
     if (isLightning && bolt11.isNotEmpty) {
       _address = bolt11;
@@ -568,29 +670,25 @@ class _ReceiveRequestFlowScreenState
         _address = deposit;
       }
     }
-    // Lightning / internal: paid is done. On-chain: paid/detected opens conf rings;
-    // "Confirmado" when confs meet the target or settlement is SETTLED — do not
-    // require isPaid alone (normalize used to mask PAID while VALIDATING).
     final settlement = link.settlementStatus.trim().toUpperCase();
-    final settledSettlement =
-        settlement == 'SETTLED' || settlement == 'COMPLETED';
-    final complete = link.isCompleted ||
-        settledSettlement ||
-        (isLightning && link.isPaid) ||
-        (!onChain && !isLightning && link.isPaid) ||
-        (onChain &&
-            (link.confirmations >= _requiredConfirmations ||
-                (link.isPaid && settledSettlement)));
+    final complete = link.isSettled;
+    if (!complete &&
+        (link.isCancelled ||
+            link.isFailed ||
+            (link.isExpired && !link.hasObservedOnchainPayment))) {
+      _stage = ReceiveRequestStage.closed;
+      _expiryTicker?.cancel();
+      return;
+    }
     if (complete) {
       _stage = ReceiveRequestStage.identified;
-      _identifiedAt = link.completedAt ?? link.paidAt ?? DateTime.now();
+      _identifiedAt = link.completedAt ?? link.paidAt ?? widget.identifiedAt;
       return;
     }
     if (link.isPaid ||
         link.isVerifyingOnboarding ||
         link.confirmations > 0 ||
         link.hasObservedOnchainPayment ||
-        settledSettlement ||
         settlement == 'VALIDATING' ||
         settlement == 'EXECUTING') {
       _stage = ReceiveRequestStage.confirmations;
@@ -600,6 +698,7 @@ class _ReceiveRequestFlowScreenState
   }
 
   void _maybeAdvanceFromInboundHistory(List<Transaction> history) {
+    if (!mounted || !_owns) return;
     if (_stage == ReceiveRequestStage.identified) return;
     final linkId = _link?.id.trim() ?? '';
     final address = _addressValue.trim().toLowerCase();
@@ -608,45 +707,53 @@ class _ReceiveRequestFlowScreenState
         _link?.createdAt ?? DateTime.now().subtract(const Duration(hours: 2));
 
     for (final tx in history) {
-      if (!tx.isCredit) continue;
+      if (!tx.isCredit ||
+          tx.status == TransactionStatus.failed ||
+          tx.status == TransactionStatus.cancelled) {
+        continue;
+      }
+      if (tx.status == TransactionStatus.pending &&
+          tx.cancellable &&
+          tx.cancelTarget == 'PAYMENT_REQUEST') {
+        continue;
+      }
       final txCreated = tx.timestamp;
       if (txCreated.isBefore(createdAt.subtract(const Duration(minutes: 1)))) {
         continue;
       }
       final prId = tx.paymentRequestId?.trim() ?? '';
-      final matchesLink = linkId.isNotEmpty &&
-          (prId == linkId ||
-              tx.id.contains(linkId) ||
-              (tx.externalReference?.contains(linkId) ?? false));
+      final matchesLink =
+          linkId.isNotEmpty && (prId == linkId || tx.id == 'pl_$linkId');
+      if (linkId.isNotEmpty && prId.isNotEmpty && prId != linkId) continue;
       final toAddr = tx.toAddress.trim().toLowerCase();
       final matchesAddress = address.isNotEmpty &&
           looksLikeBitcoinAddress(address) &&
-          (toAddr == address || toAddr.contains(address));
+          toAddr == address;
       final matchesWallet = walletId.isNotEmpty &&
           (tx.walletId?.trim().toLowerCase() == walletId ||
               tx.destinationWalletId?.trim().toLowerCase() == walletId);
       if (!matchesLink &&
           !matchesAddress &&
-          !(matchesWallet && !_isOnChainReceive)) {
+          !(matchesWallet && linkId.isEmpty && !_isOnChainReceive)) {
         continue;
       }
 
-      final confs = tx.confirmations;
       setState(() {
+        _historyReceipt = tx;
         if (tx.blockchainTxid != null && tx.blockchainTxid!.trim().isNotEmpty) {
           _txid = tx.blockchainTxid!.trim();
         }
-        if (_isOnChainReceive &&
-            confs < _requiredConfirmations &&
-            tx.status != TransactionStatus.confirmed) {
+        if (tx.status != TransactionStatus.confirmed) {
           _stage = ReceiveRequestStage.confirmations;
         } else {
           _stage = ReceiveRequestStage.identified;
           _identifiedAt = txCreated;
+          _linkRevision++;
           _statusTimer?.cancel();
+          _expiryTicker?.cancel();
         }
       });
-      if (_stage == ReceiveRequestStage.identified) {
+      if (_canAct && _stage == ReceiveRequestStage.identified) {
         HapticFeedback.mediumImpact();
       }
       return;
@@ -844,7 +951,8 @@ class _ReceiveRequestFlowScreenState
       }
       return widget.initialConfirmations ?? 0;
     }
-    return _observedTransfer?.confirmations ??
+    return _historyReceipt?.confirmations ??
+        _observedTransfer?.confirmations ??
         _allocation?.confirmations ??
         _link?.confirmations ??
         widget.initialConfirmations ??
@@ -852,27 +960,20 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _networkLabel {
-    if (_isLightningReceive) return 'Lightning';
-    if (!_isOnChainReceive) return 'Kerosene · interno';
-    final fromAddress = bitcoinNetworkDisplayName(
-      inferBitcoinNetworkFromAddress(_addressValue),
-    );
-    return switch (fromAddress) {
-      'Testnet' => 'On-chain · Bitcoin Testnet',
-      'Regtest' => 'On-chain · Bitcoin Regtest',
-      'Mainnet' => 'On-chain · Bitcoin Mainnet',
-      _ => () {
-          final network = (_allocation?.network ?? '').trim().toLowerCase();
-          return switch (network) {
-            'testnet' ||
-            'testnet4' ||
-            'testnet3' =>
-              'On-chain · Bitcoin Testnet',
-            'regtest' => 'On-chain · Bitcoin Regtest',
-            _ => 'On-chain · Bitcoin Mainnet',
-          };
-        }(),
+    if (_isLightningReceive) return context.tr.activityFilterLightning;
+    if (!_isOnChainReceive) return context.tr.activityFilterInternal;
+    final network = switch (resolveReceiveBitcoinNetwork(
+        network: _allocation?.network, address: _addressValue)) {
+      ReceiveBitcoinNetwork.mainnet => 'Mainnet',
+      ReceiveBitcoinNetwork.testnet => 'Testnet',
+      ReceiveBitcoinNetwork.testnet3 => 'Testnet3',
+      ReceiveBitcoinNetwork.testnet4 => 'Testnet4',
+      ReceiveBitcoinNetwork.signet => 'Signet',
+      ReceiveBitcoinNetwork.regtest => 'Regtest',
+      ReceiveBitcoinNetwork.testFamily => context.tr.receiveNetworkTestFamily,
+      ReceiveBitcoinNetwork.unknown => context.tr.receiveNetworkUnknown,
     };
+    return '${context.tr.activityFilterOnchain} · $network';
   }
 
   String get _statusLabel {
@@ -883,33 +984,35 @@ class _ReceiveRequestFlowScreenState
     return 'Confirmado na Kerosene';
   }
 
-  String get _amountLabel {
+  double get _displayAmountBtc {
+    if (_stage == ReceiveRequestStage.identified && _historyReceipt != null) {
+      return _historyReceipt!.amountSatoshis / 100000000.0;
+    }
+    if (_stage == ReceiveRequestStage.identified &&
+        _link?.hasNetAmount == true) {
+      return _link!.netAmountBtc;
+    }
     final received = _link?.amountBtc ??
         _observedTransfer?.amountBtc ??
         _allocation?.expectedAmountBtc;
-    final btc =
-        (received != null && received > 0) ? received : widget.amountBtc;
-    final amount = MoneyDisplay.formatCompact(
-      amount: btc,
-      currency: Currency.btc,
-      withSymbol: false,
-      maxDecimalPlaces: 8,
-    );
-    return '$amount BTC';
+    return received != null && received > 0 ? received : widget.amountBtc;
   }
 
-  String get _requestedAmountLabel {
-    final received = _link?.amountBtc;
-    final btc =
-        (received != null && received > 0) ? received : widget.amountBtc;
-    final amount = MoneyDisplay.format(
-      amount: btc,
-      currency: Currency.btc,
-      withSymbol: false,
-      decimalPlaces: 6,
-    );
-    return '$amount BTC';
+  String get _amountLabel {
+    final money = widget.money ?? const MovementMoney();
+    final sats = _stage == ReceiveRequestStage.identified
+        ? _historyReceipt?.amountSatoshis ??
+            (_link?.hasNetAmount == true
+                ? _link?.netAmountSatoshis
+                : _link?.amountSatoshis)
+        : _link?.amountSatoshis;
+    return sats != null
+        ? money.primarySatoshis(sats)
+        : money.primary(_displayAmountBtc);
   }
+
+  String get _requestedAmountLabel =>
+      (widget.money ?? const MovementMoney()).primary(widget.amountBtc);
 
   String get _monitorStatusLabel {
     if (_stage == ReceiveRequestStage.identified) {
@@ -921,6 +1024,10 @@ class _ReceiveRequestFlowScreenState
     if (_stage == ReceiveRequestStage.confirmations) {
       if (_isLightningReceive) {
         return ReceiveMoneyCopy.lightningPendingStatus(context);
+      }
+      if (_isOnChainReceive &&
+          _currentConfirmations >= _requiredConfirmations) {
+        return context.tr.receiveCreditValidating;
       }
       if (_link?.isValidatingSettlement == true) {
         return 'Validando ${_currentConfirmations.clamp(0, _requiredConfirmations)}/$_requiredConfirmations confirmações';
@@ -944,101 +1051,197 @@ class _ReceiveRequestFlowScreenState
   }
 
   String get _fiatLabel {
-    final money = ref.watch(moneyFormatConfigProvider);
-    final fiat = money.currency == Currency.btc ? Currency.usd : money.currency;
-    final received = _link?.amountBtc ??
-        _observedTransfer?.amountBtc ??
-        _allocation?.expectedAmountBtc;
-    final btc =
-        (received != null && received > 0) ? received : widget.amountBtc;
-    return '≈ ${money.formatAmountFromBtc(btcAmount: btc, currency: fiat, btcUsd: ref.watch(latestBtcPriceProvider), btcEur: ref.watch(btcEurPriceProvider), btcBrl: ref.watch(btcBrlPriceProvider))}';
+    if (widget.money != null) {
+      return widget.money!.secondary(_displayAmountBtc);
+    }
+    return '';
   }
 
+  bool get _canShareRequest =>
+      _stage == ReceiveRequestStage.identified ||
+      (_stage != ReceiveRequestStage.closed &&
+          !(_link?.isExpired ?? false) &&
+          !(_link?.isCancelled ?? false) &&
+          !(_link?.isFailed ?? false));
+
   Future<void> _copyPaymentValue() async {
-    final successMessage = context.tr.receiveQrCopied;
-    await Clipboard.setData(ClipboardData(text: _paymentValue));
-    await HapticFeedback.selectionClick();
-    SnackbarHelper.showSuccess(successMessage);
+    if (!_canShareRequest || _stage == ReceiveRequestStage.identified) return;
+    await _copyPayload(_paymentValue, context.tr.receiveQrCopied);
   }
 
   Future<void> _sharePaymentValue() async {
-    final payload = _paymentValue.trim();
+    if (!_canAct || _presentationBusy || !_canShareRequest) return;
+    final payload = _stage == ReceiveRequestStage.identified
+        ? [
+            context.tr.receiveReceiptShareTitle,
+            _amountLabel,
+            '${context.tr.sendReviewStatus}: $_statusLabel',
+            '${ReceiveMoneyCopy.detailDate(context)}: $_receiptDateLabel',
+            if (_historyReceipt != null)
+              '${context.tr.receiveReceiptOperationId}: ${_historyReceipt!.id}',
+            if (_link != null)
+              '${context.tr.receiveReceiptRequestId}: ${_link!.id}',
+            if (_txid?.trim().isNotEmpty == true) 'TXID: $_txid',
+            if (_addressValue.isNotEmpty)
+              '${ReceiveMoneyCopy.detailAddress(context)}: $_addressValue',
+          ].join('\n')
+        : _paymentValue.trim();
     if (payload.isEmpty) return;
-    final subject = ReceiveMoneyCopy.hubTitle(context);
-    await HapticFeedback.selectionClick();
-    await SharePlus.instance.share(
-      ShareParams(text: payload, subject: subject),
-    );
+    final stage = _stage;
+    final subject = _stage == ReceiveRequestStage.identified
+        ? context.tr.receiveReceiptShareTitle
+        : ReceiveMoneyCopy.hubTitle(context);
+    final tr = context.tr;
+    final box = context.findRenderObject();
+    final origin = box is RenderBox && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+    setState(() => _presentationBusy = true);
+    try {
+      final result = await ref.read(receiveRequestShareProvider)(ShareParams(
+          text: payload, subject: subject, sharePositionOrigin: origin));
+      if (!_canAct || _stage != stage) return;
+      switch (result.status) {
+        case ShareResultStatus.success:
+          SnackbarHelper.showSuccess(tr.receiveShareCompleted);
+        case ShareResultStatus.dismissed:
+          break;
+        case ShareResultStatus.unavailable:
+          SnackbarHelper.showInfo(tr.receiveShareUnconfirmed);
+      }
+    } catch (_) {
+      if (_canAct && _stage == stage) {
+        SnackbarHelper.showError(tr.receiveShareFailed);
+      }
+    } finally {
+      if (mounted) setState(() => _presentationBusy = false);
+    }
   }
 
   bool get _linkCanCancel {
     final link = _link;
-    if (link == null || _cancelling) return false;
+    if (_historyReceipt != null ||
+        link == null ||
+        _cancelling ||
+        _cancelNeedsRefresh ||
+        _statusUnavailable) {
+      return false;
+    }
     return link.isPending &&
         !link.isCancelled &&
         !link.isExpired &&
-        !link.isPaid;
+        !link.isPaid &&
+        !link.hasObservedOnchainPayment &&
+        !link.isFailed;
   }
 
   Future<void> _confirmAndCancelPaymentLink() async {
     final link = _link;
-    if (link == null || !_linkCanCancel) return;
+    if (!_canAct || _cancelDialogOpen || link == null || !_linkCanCancel) {
+      return;
+    }
     final tr = context.tr;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: _flowTokens().surfaceHigh,
-        title: Text(
-          tr.receivePaymentLinkCancelTitle,
-          style: AppTypography.inter(
-            color: _flowTokens().textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          tr.receivePaymentLinkCancelMessage,
-          style: AppTypography.inter(
-            color: _flowTokens().textSecondary,
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(tr.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(ctx).colorScheme.error,
+    _cancelDialogOpen = true;
+    final bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Consumer(builder: (ctx, dialogRef, _) {
+          dialogRef.watch(sessionStorageScopeProvider);
+          final allowed = _canAct;
+          return AlertDialog(
+            backgroundColor: _flowTokens(ctx).surfaceHigh,
+            title: Text(
+              tr.receivePaymentLinkCancelTitle,
+              style: AppTypography.inter(
+                color: _flowTokens(ctx).textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            child: Text(tr.receivePaymentLinkConfirmCancel),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
+            content: allowed
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                        Text(tr.receivePaymentLinkCancelMessage,
+                            style: AppTypography.inter(
+                              color: _flowTokens(ctx).textSecondary,
+                              fontSize: 14,
+                            )),
+                        const SizedBox(height: 16),
+                        Text(_requestedAmountLabel),
+                        const SizedBox(height: 8),
+                        SelectableText(link.id),
+                      ])
+                : Text(tr.securitySessionChangedMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(tr.receiveCancelBackAction),
+              ),
+              TextButton(
+                onPressed: allowed ? () => Navigator.of(ctx).pop(true) : null,
+                style: TextButton.styleFrom(
+                  foregroundColor: _flowTokens(ctx).textPrimary,
+                ),
+                child: Text(tr.receivePaymentLinkConfirmCancel),
+              ),
+            ],
+          );
+        }),
+      );
+    } finally {
+      _cancelDialogOpen = false;
+    }
+    if (confirmed != true || !_canAct) {
+      return;
+    }
+    if (_link?.id != link.id || !_linkCanCancel) {
+      SnackbarHelper.showInfo(tr.receiveCancelNoLongerAvailable);
+      return;
+    }
 
-    setState(() => _cancelling = true);
+    setState(() {
+      _cancelling = true;
+      _linkRevision++;
+    });
     try {
       final updated = await ref
           .read(transactionRepositoryProvider)
           .cancelPaymentRequest(link.id);
+      if (!mounted || !_owns) return;
+      if (updated.id != link.id || !updated.isCancelled) {
+        setState(() {
+          _cancelling = false;
+          _cancelNeedsRefresh = true;
+        });
+        if (_canAct) SnackbarHelper.showInfo(tr.receiveCancelUnconfirmed);
+        _startPaymentLinkPolling();
+        return;
+      }
       _statusTimer?.cancel();
-      if (!mounted) return;
       setState(() {
         _link = updated;
+        if (_historyReceipt?.status != TransactionStatus.confirmed) {
+          _applyPaymentLinkStage(updated);
+        }
         _cancelling = false;
       });
       ref.invalidate(paymentLinksProvider);
       ref.invalidate(transactionHistoryProvider);
-      SnackbarHelper.showSuccess(tr.receivePaymentLinkCancelled);
+      if (_canAct) SnackbarHelper.showSuccess(tr.receivePaymentLinkCancelled);
     } catch (error) {
-      if (!mounted) return;
-      setState(() => _cancelling = false);
-      SnackbarHelper.showError(
-        ErrorTranslator.translate(context.tr, error.toString()),
-      );
+      if (!mounted || !_owns) return;
+      setState(() {
+        _cancelling = false;
+        _cancelNeedsRefresh = true;
+      });
+      if (_canAct) {
+        SnackbarHelper.showError(
+          ErrorTranslator.translate(context.tr, error.toString()),
+        );
+      }
+      _startPaymentLinkPolling();
     }
   }
 
@@ -1049,6 +1252,39 @@ class _ReceiveRequestFlowScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionStorageScopeProvider, (_, next) {
+      if (next?.trim() != _ownerScope) {
+        _scopeLost = true;
+        _statusTimer?.cancel();
+        _expiryTicker?.cancel();
+      }
+    });
+    ref.watch(sessionStorageScopeProvider);
+    if (!_owns || !_foreground) {
+      return Scaffold(
+          backgroundColor: _receiveBackground,
+          body: SafeArea(
+              child: Center(
+                  child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        KeroseneIcon(KeroseneIcons.lock,
+                            size: 28, color: _receiveText),
+                        const SizedBox(height: 16),
+                        Text(
+                            !_owns
+                                ? context.tr.securitySessionChangedMessage
+                                : context.tr.receiveBackgroundHidden,
+                            textAlign: TextAlign.center,
+                            style: AppTypography.bodyMedium
+                                .copyWith(color: _receiveText)),
+                        const SizedBox(height: 16),
+                        TextButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            child: Text(MaterialLocalizations.of(context)
+                                .closeButtonLabel)),
+                      ])))));
+    }
     // When an inbound lands for this payment request / address, leave the QR
     // even if the payment-link poll lags one cycle.
     ref.listen<AsyncValue<List<Transaction>>>(transactionHistoryProvider, (
@@ -1074,6 +1310,7 @@ class _ReceiveRequestFlowScreenState
       );
     } else {
       child = switch (_stage) {
+        ReceiveRequestStage.closed => _buildClosedScreen(context),
         ReceiveRequestStage.qr => _buildQrScreen(context),
         ReceiveRequestStage.confirmations => _buildConfirmationsScreen(context),
         ReceiveRequestStage.identified => _buildIdentifiedScreen(context),
@@ -1089,7 +1326,8 @@ class _ReceiveRequestFlowScreenState
             child: Stack(
               children: [
                 AnimatedSwitcher(
-                  duration: KeroseneMotion.medium,
+                  duration:
+                      KeroseneMotion.duration(context, KeroseneMotion.medium),
                   switchInCurve: KeroseneMotion.standard,
                   switchOutCurve: KeroseneMotion.exit,
                   child: KeyedSubtree(
@@ -1137,6 +1375,14 @@ class _ReceiveRequestFlowScreenState
                 Center(child: _buildQrAmount(context)),
                 const SizedBox(height: 14),
                 _buildReceiveDetails(context),
+                if (_statusUnavailable) ...[
+                  const SizedBox(height: 12),
+                  InlineNotice(message: context.tr.receiveStatusUnavailable),
+                ],
+                if (_cancelNeedsRefresh) ...[
+                  const SizedBox(height: 12),
+                  InlineNotice(message: context.tr.receiveCancelUnconfirmed),
+                ],
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 12),
                   InlineNotice(message: _errorMessage!),
@@ -1159,12 +1405,86 @@ class _ReceiveRequestFlowScreenState
               icon: KeroseneIcons.share,
               label: context.tr.share,
               primary: true,
-              onTap: _sharePaymentValue,
+              onTap: _presentationBusy || !_canAct ? null : _sharePaymentValue,
             ),
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildClosedScreen(BuildContext context) {
+    final link = _link;
+    final transferStatus =
+        (_observedTransfer?.status ?? _allocation?.transferStatus ?? '')
+            .toUpperCase();
+    final title = link?.isCancelled == true ||
+            const ['CANCELLED', 'CANCELED'].contains(transferStatus)
+        ? context.tr.receiveRequestCancelled
+        : link?.isFailed == true || transferStatus == 'FAILED'
+            ? context.tr.receiveRequestFailed
+            : context.tr.receiveRequestExpired;
+    final observedSats = link?.partialPaymentReceivedSats;
+    final money = widget.money ?? const MovementMoney();
+    return Column(children: [
+      ReceiveContextHeader(
+          title: title,
+          icon: KeroseneIcons.arrowBack,
+          onPressed: () => Navigator.of(context).maybePop()),
+      Expanded(
+          child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    KeroseneIcon(KeroseneIcons.warning,
+                        size: 48, color: _flowTokens(context).feedbackWarning),
+                    const SizedBox(height: 20),
+                    Text(title,
+                        style: AppTypography.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: _receiveText),
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    Text(context.tr.receiveClosedBody,
+                        style: AppTypography.bodyMedium
+                            .copyWith(color: _receiveMuted),
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 24),
+                    DetailRow(
+                        label: ReceiveMoneyCopy.detailRequested(context),
+                        value: _requestedAmountLabel,
+                        secondaryValue: money.secondary(widget.amountBtc)),
+                    if (observedSats != null && observedSats > 0) ...[
+                      DetailRow(
+                          label: context.tr.receiveObservedAmount,
+                          value: money.primary(observedSats / 100000000.0),
+                          secondaryValue:
+                              money.secondary(observedSats / 100000000.0)),
+                      const SizedBox(height: 12),
+                      Text(context.tr.receivePartialBody,
+                          style: AppTypography.bodySmall
+                              .copyWith(color: _receiveMuted)),
+                    ],
+                    if (_statusUnavailable) ...[
+                      const SizedBox(height: 12),
+                      InlineNotice(message: context.tr.receiveStatusUnavailable)
+                    ],
+                  ]))),
+      Padding(
+          padding: const EdgeInsets.all(24),
+          child: ReceiveActionButton(
+              icon: KeroseneIcons.refresh,
+              label: context.tr.receiveCheckStatus,
+              onTap: () {
+                if (_link != null) {
+                  _refreshPaymentLink();
+                } else {
+                  _refreshObservedTransfer();
+                }
+              })),
+    ]);
   }
 
   Widget _buildQrTopBar(BuildContext context) {
@@ -1178,7 +1498,7 @@ class _ReceiveRequestFlowScreenState
           children: [
             IconButton(
               onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(KeroseneIcons.back, size: 20),
+              icon: const KeroseneIcon(KeroseneIcons.back, size: 20),
               color: _receiveText,
               style: IconButton.styleFrom(shape: const CircleBorder()),
             ),
@@ -1197,6 +1517,10 @@ class _ReceiveRequestFlowScreenState
               const SizedBox(width: 6),
             ],
             IconButton(
+              key: const ValueKey('receive-cancel-request'),
+              tooltip: canCancel
+                  ? context.tr.receivePaymentLinkCancelTitle
+                  : MaterialLocalizations.of(context).closeButtonTooltip,
               onPressed: canCancel
                   ? (_cancelling ? null : _confirmAndCancelPaymentLink)
                   : () => Navigator.of(context).maybePop(),
@@ -1209,7 +1533,8 @@ class _ReceiveRequestFlowScreenState
                         color: _expiryColor,
                       ),
                     )
-                  : Icon(KeroseneIcons.close, size: 18, color: _expiryColor),
+                  : KeroseneIcon(KeroseneIcons.close,
+                      size: 18, color: _expiryColor),
               style: IconButton.styleFrom(shape: const CircleBorder()),
             ),
           ],
@@ -1223,7 +1548,7 @@ class _ReceiveRequestFlowScreenState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
-        color: _flowTokens().surface,
+        color: _flowTokens(context).surface,
         border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(14),
       ),
@@ -1242,9 +1567,25 @@ class _ReceiveRequestFlowScreenState
           DetailRow(
             label: ReceiveMoneyCopy.detailRequested(context),
             value: _requestedAmountLabel,
+            secondaryValue: widget.money?.secondary(widget.amountBtc) ?? '',
           ),
           const ReceiveDivider(),
           _buildAddressPill(context),
+          if ((_link?.partialPaymentReceivedSats ?? 0) > 0) ...[
+            const ReceiveDivider(),
+            DetailRow(
+                label: context.tr.receiveObservedAmount,
+                value: (widget.money ?? const MovementMoney())
+                    .primarySatoshis(_link!.partialPaymentReceivedSats!),
+                secondaryValue: widget.money?.secondary(
+                        _link!.partialPaymentReceivedSats! / 100000000.0) ??
+                    ''),
+            Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(context.tr.receivePartialBody,
+                    style: AppTypography.bodySmall
+                        .copyWith(color: _receiveMuted))),
+          ],
         ],
       ),
     );
@@ -1254,49 +1595,41 @@ class _ReceiveRequestFlowScreenState
     final label = _isLightningReceive
         ? ReceiveMoneyCopy.detailInvoice(context)
         : ReceiveMoneyCopy.detailAddress(context);
-    final display = _isLightningReceive
-        ? shortenReceiveAddress(_addressValue, head: 12, tail: 8)
-        : shortenReceiveAddress(_addressValue, head: 10, tail: 6);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            label,
-            style: AppTypography.captionLarge.copyWith(
-              color: _receiveMuted,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: InkWell(
-              key: const ValueKey('receive-address-pill-copy'),
-              onTap: _copyRawAddress,
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        display,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: AppTypography.ibmPlexMono(
-                          color: _receiveText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(KeroseneIcons.copy, size: 18, color: _receiveMuted),
-                  ],
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.captionLarge.copyWith(
+                    color: _receiveMuted,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
+              IconButton(
+                key: const ValueKey('receive-address-pill-copy'),
+                onPressed: _presentationBusy || !_canAct || !_canShareRequest
+                    ? null
+                    : _copyRawAddress,
+                tooltip: context.tr.copy,
+                icon: KeroseneIcon(KeroseneIcons.copy,
+                    size: 18, color: _receiveMuted),
+              ),
+            ],
+          ),
+          SelectableText(
+            _addressValue,
+            textDirection: TextDirection.ltr,
+            style: AppTypography.technicalMono(
+              color: _receiveText,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.5,
             ),
           ),
         ],
@@ -1305,15 +1638,28 @@ class _ReceiveRequestFlowScreenState
   }
 
   Future<void> _copyRawAddress() async {
+    if (!_canShareRequest || _stage == ReceiveRequestStage.identified) return;
     final payload = _isLightningReceive ? _paymentValue : _addressValue;
-    await Clipboard.setData(ClipboardData(text: payload));
-    await HapticFeedback.selectionClick();
-    if (!mounted) return;
-    SnackbarHelper.showSuccess(
-      _isLightningReceive
-          ? ReceiveMoneyCopy.invoiceCopied(context)
-          : ReceiveMoneyCopy.addressCopied(context),
-    );
+    await _copyPayload(
+        payload,
+        _isLightningReceive
+            ? ReceiveMoneyCopy.invoiceCopied(context)
+            : ReceiveMoneyCopy.addressCopied(context));
+  }
+
+  Future<void> _copyPayload(String payload, String successMessage) async {
+    if (!_canAct || _presentationBusy || payload.trim().isEmpty) return;
+    final failureMessage = context.tr.copyDataFailed;
+    setState(() => _presentationBusy = true);
+    try {
+      await Clipboard.setData(ClipboardData(text: payload));
+      if (!_canAct) return;
+      SnackbarHelper.showSuccess(successMessage);
+    } catch (_) {
+      if (_canAct) SnackbarHelper.showError(failureMessage);
+    } finally {
+      if (mounted) setState(() => _presentationBusy = false);
+    }
   }
 
   Widget _buildConfirmationsScreen(BuildContext context) {
@@ -1347,7 +1693,10 @@ class _ReceiveRequestFlowScreenState
                   ),
                 ),
                 const SizedBox(height: 22),
-                _buildQrBox(size: 180),
+                if (_canShareRequest)
+                  _buildQrBox(size: 180)
+                else
+                  InlineNotice(message: context.tr.receiveExpiredTracking),
                 const SizedBox(height: 16),
                 _buildQrAmount(context),
                 const SizedBox(height: 16),
@@ -1362,27 +1711,36 @@ class _ReceiveRequestFlowScreenState
                       .toInt(),
                   requiredConfirmations: _requiredConfirmations,
                 ),
+                if (_statusUnavailable) ...[
+                  const SizedBox(height: 12),
+                  InlineNotice(message: context.tr.receiveStatusUnavailable),
+                ],
                 const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ReceiveActionButton(
-                        icon: KeroseneIcons.copy,
-                        label: context.tr.copy,
-                        onTap: _copyPaymentValue,
+                if (_canShareRequest)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ReceiveActionButton(
+                          icon: KeroseneIcons.copy,
+                          label: context.tr.copy,
+                          onTap: _presentationBusy || !_canAct
+                              ? null
+                              : _copyPaymentValue,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ReceiveActionButton(
-                        icon: KeroseneIcons.share,
-                        label: context.tr.share,
-                        primary: true,
-                        onTap: _sharePaymentValue,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ReceiveActionButton(
+                          icon: KeroseneIcons.share,
+                          label: context.tr.share,
+                          primary: true,
+                          onTap: _presentationBusy || !_canAct
+                              ? null
+                              : _sharePaymentValue,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -1412,13 +1770,19 @@ class _ReceiveRequestFlowScreenState
               amountLabel: _amountLabel,
               supportingLabel: _fiatLabel,
               rows: [
+                if (_cancelNeedsRefresh || _link?.isCancelled == true)
+                  MovementConfirmationRow(
+                      label: context.tr.receiveReceiptRequestStatus,
+                      value: _cancelNeedsRefresh
+                          ? context.tr.receiveCancelUnconfirmed
+                          : context.tr.receiveRequestCancelled),
                 MovementConfirmationRow(
                   label: context.tr.sendReviewStatus,
                   value: _statusLabel,
                 ),
                 MovementConfirmationRow(
                   label: context.tr.sendReviewDestination,
-                  value: shortenReceiveAddress(_addressValue),
+                  value: _addressValue,
                   technical: true,
                 ),
                 MovementConfirmationRow(
@@ -1427,7 +1791,7 @@ class _ReceiveRequestFlowScreenState
                 ),
                 MovementConfirmationRow(
                   label: ReceiveMoneyCopy.detailDate(context),
-                  value: formatReceiveDateTime(_identifiedAt),
+                  value: _receiptDateLabel,
                 ),
               ],
             ),
@@ -1448,8 +1812,8 @@ class _ReceiveRequestFlowScreenState
                 child: FilledButton(
                   onPressed: _goHome,
                   style: FilledButton.styleFrom(
-                    backgroundColor: _flowTokens().ctaBackground,
-                    foregroundColor: _flowTokens().ctaForeground,
+                    backgroundColor: _flowTokens(context).ctaBackground,
+                    foregroundColor: _flowTokens(context).ctaForeground,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -1466,9 +1830,10 @@ class _ReceiveRequestFlowScreenState
               SizedBox(
                 height: 52,
                 child: OutlinedButton.icon(
-                  onPressed: _sharePaymentValue,
+                  onPressed:
+                      _presentationBusy || !_canAct ? null : _sharePaymentValue,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: _flowTokens().textPrimary,
+                    foregroundColor: _flowTokens(context).textPrimary,
                     side: BorderSide(color: Theme.of(context).dividerColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -1478,7 +1843,7 @@ class _ReceiveRequestFlowScreenState
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  icon: const Icon(KeroseneIcons.share, size: 17),
+                  icon: const KeroseneIcon(KeroseneIcons.share, size: 17),
                   label: Text(context.tr.share),
                 ),
               ),
@@ -1540,15 +1905,31 @@ class _ReceiveRequestFlowScreenState
   }
 
   Widget _buildQrAmount(BuildContext context) {
-    return Text(
-      _amountLabel,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-      style: AppTypography.amountInput(
-        isBtc: true,
-        color: _receiveText,
-      ).copyWith(fontSize: 26, height: 1.12, letterSpacing: 0),
+    final exact = widget.money?.secondary(_displayAmountBtc) ?? '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _amountLabel,
+          textAlign: TextAlign.center,
+          style: AppTypography.amountInput(
+            isBtc: true,
+            color: _receiveText,
+          ).copyWith(fontSize: 26, height: 1.12, letterSpacing: 0),
+        ),
+        if (exact.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            exact,
+            textAlign: TextAlign.center,
+            style: AppTypography.number.copyWith(
+              color: _receiveMuted,
+              fontSize: 14,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

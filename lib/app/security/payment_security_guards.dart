@@ -54,9 +54,7 @@ String normalizeFirstSendAddressKey(String address) {
 }
 
 String firstSendAddressPreview(String address) {
-  final trimmed = address.trim();
-  if (trimmed.length <= 14) return trimmed;
-  return '${trimmed.substring(0, 8)}…${trimmed.substring(trimmed.length - 6)}';
+  return address.trim();
 }
 
 /// Whether this on-chain address has already been confirmed once on-device.

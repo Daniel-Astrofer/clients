@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
@@ -341,7 +342,8 @@ class PaymentPayloadPreview extends StatelessWidget {
                   color: receiveFlowPanelRaisedColor,
                   border: Border.all(color: receiveFlowBorderStrongColor),
                 ),
-                child: Icon(draft.icon, color: receiveFlowTextColor, size: 18),
+                child: KeroseneIcon(draft.icon,
+                    color: receiveFlowTextColor, size: 18),
               ),
               SizedBox(width: 12),
               Expanded(

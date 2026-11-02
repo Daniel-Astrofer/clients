@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 
 import 'package:flutter/material.dart';
@@ -176,7 +177,7 @@ class _PhysicalCreditCardFace extends ConsumerWidget {
                 children: [
                   _CardChip(palette: palette),
                   const SizedBox(width: 14),
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.contactless,
                     color: palette.inkPrimary.withValues(alpha: 0.72),
                     size: 24,
@@ -337,7 +338,7 @@ class _EmptyCreditCardFace extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.18),
                   ),
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.plus,
                   color: palette.inkPrimary,
                   size: 20,
@@ -549,7 +550,7 @@ class _SecurityHashButton extends StatelessWidget {
               color: palette.inkPrimary.withValues(alpha: 0.18),
             ),
           ),
-          child: Icon(
+          child: KeroseneIcon(
             KeroseneIcons.copy,
             size: 13,
             color: palette.inkPrimary.withValues(alpha: 0.82),

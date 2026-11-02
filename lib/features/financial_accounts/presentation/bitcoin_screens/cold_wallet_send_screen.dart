@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -405,7 +406,7 @@ class _ColdWalletSendScreenState extends ConsumerState<ColdWalletSendScreen> {
                 children: [
                   for (final wallet in keroseneTargets)
                     ActionChip(
-                      avatar: Icon(
+                      avatar: KeroseneIcon(
                         KeroseneIcons.wallet,
                         size: 16,
                         color: Theme.of(context).colorScheme.onSurface,

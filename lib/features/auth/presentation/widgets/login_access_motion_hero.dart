@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -486,7 +487,7 @@ class _PasskeyPromptScene extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                KeroseneIcon(
                   KeroseneIcons.biometric,
                   size: 44,
                   color: color,
@@ -691,7 +692,7 @@ class _MultisigScene extends StatelessWidget {
             ),
             child: Transform.scale(
               scale: pulse,
-              child: Icon(
+              child: KeroseneIcon(
                 KeroseneIcons.shield,
                 size: 40,
                 color: color,
@@ -809,7 +810,7 @@ class _StatusScene extends StatelessWidget {
           color: color.withValues(alpha: 0.12),
           border: Border.all(color: color.withValues(alpha: 0.24)),
         ),
-        child: Icon(
+        child: KeroseneIcon(
           icon,
           size: 44,
           color: color,
@@ -842,7 +843,7 @@ class _IconBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(compact ? 14 : 16),
         border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
-      child: Icon(
+      child: KeroseneIcon(
         icon,
         size: compact ? 18 : 22,
         color: color,

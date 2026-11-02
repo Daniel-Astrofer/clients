@@ -2,6 +2,7 @@ library;
 
 // Foundation - Theme
 export 'foundation/theme/app_theme.dart';
+export 'foundation/theme/kerosene_ui_scale.dart';
 export 'foundation/theme/app_colors.dart';
 export 'foundation/theme/app_typography.dart';
 export 'foundation/theme/app_spacing.dart';

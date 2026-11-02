@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,8 @@ import 'package:kerosene/features/movement/presentation/receive/receive_request_
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kerosene/core/providers/money_format_provider.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_nfc_flow_screen.dart';
 
 void main() {
   late SharedPreferences preferences;
@@ -122,10 +125,10 @@ void main() {
       '1',
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('350.000,00'));
+    await tester.tap(find.byKey(const ValueKey('amount-currency-switch')));
     await tester.pump();
 
-    expect(find.text('≈ ₿ 1'), findsOneWidget);
+    expect(find.text('1,00000000 BTC'), findsOneWidget);
 
     final continueButton =
         find.byKey(const ValueKey('transaction-value-entry-cta-hit-target'));
@@ -200,6 +203,82 @@ void main() {
     expect(writtenUri, 'kerosene://payment/pay/receive-link-1');
     expect(find.text('Gravar solicitação'), findsOneWidget);
   });
+  testWidgets(
+      'NFC keeps captured precision and exact amount during request creation',
+      (tester) async {
+    final pendingRequest = Completer<void>();
+    final repository = _ReceiveAmountRepository(createGate: pendingRequest);
+    final container = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(preferences),
+      transactionRepositoryProvider.overrideWithValue(repository),
+      moneyFormatConfigProvider
+          .overrideWith((ref) => ref.watch(_precisionProvider)),
+      latestBtcPriceProvider.overrideWith((ref) => 65000),
+      btcEurPriceProvider.overrideWith((ref) => 60000),
+      btcBrlPriceProvider.overrideWith((ref) => 350000),
+      paymentLinksProvider.overrideWith((ref) async => const []),
+      transactionHistoryProvider.overrideWith((ref) async => const []),
+      externalTransfersProvider.overrideWith((ref) async => const []),
+      receiveNfcCompatibilityProvider.overrideWith((ref) async => true),
+    ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        locale: const Locale('pt'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MovementAmountScreen(
+          wallet: _wallet(),
+          method: ReceiveAmountMethod.nfc,
+          onChainWallet: false,
+          nfcWriter: (
+              {required String paymentRequestUri,
+              required VoidCallback onWritten,
+              required ValueChanged<String> onError}) async {},
+        ),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.enterText(
+        find.byKey(const ValueKey('movement-amount-input')), '0.12345678');
+    await tester.pump();
+    final button = find.byKey(const ValueKey('transaction-value-entry-cta'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+    container.read(_precisionProvider.notifier).setPrecision(8);
+    await tester.tap(button, warnIfMissed: false);
+    await tester.pump();
+    expect(repository.createPaymentLinkCalls, 1);
+    pendingRequest.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(repository.createPaymentLinkCalls, 1);
+    expect(repository.lastAmount, 0.12345678);
+    final screen =
+        tester.widget<ReceiveNfcFlowScreen>(find.byType(ReceiveNfcFlowScreen));
+    expect(screen.money!.btcDecimalPlaces, 2);
+    expect(screen.money!.primary(screen.amountBtc), '0,12345678 BTC');
+    expect(screen.money!.secondary(screen.amountBtc), isEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+}
+
+final _precisionProvider =
+    NotifierProvider<_PrecisionPreference, MoneyFormatConfig>(
+        _PrecisionPreference.new);
+
+class _PrecisionPreference extends Notifier<MoneyFormatConfig> {
+  @override
+  MoneyFormatConfig build() => const MoneyFormatConfig(
+      currency: Currency.btc, locale: Locale('pt'), btcDecimalPlaces: 2);
+  void setPrecision(int value) => state = MoneyFormatConfig(
+      currency: Currency.btc,
+      locale: const Locale('pt'),
+      btcDecimalPlaces: value);
 }
 
 Wallet _wallet() {
@@ -217,6 +296,8 @@ Wallet _wallet() {
 }
 
 class _ReceiveAmountRepository implements TransactionRepository {
+  final Completer<void>? createGate;
+  _ReceiveAmountRepository({this.createGate});
   int createPaymentLinkCalls = 0;
   double? lastAmount;
   Map<String, String>? lastMetadata;
@@ -237,6 +318,7 @@ class _ReceiveAmountRepository implements TransactionRepository {
     lastAmount = amount;
     lastMetadata = metadata;
     lastExpiresInMinutes = expiresInMinutes;
+    if (createGate != null) await createGate!.future;
     final rail = metadata?['rail'] ?? 'INTERNAL';
     final onChain = rail == 'ONCHAIN';
     return PaymentLink(

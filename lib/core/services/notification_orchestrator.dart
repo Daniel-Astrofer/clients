@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/config/app_config.dart';
@@ -54,7 +55,9 @@ class NotificationOrchestrator {
         debugPrint('Failed to sync notifications from backend: $e');
       }
 
-      return localList..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return localList
+        ..sort(
+            (a, b) => AppDateTime.compareNewestFirst(a.timestamp, b.timestamp));
     } catch (e) {
       debugPrint('Error loading local notifications inbox: $e');
       return [];
@@ -82,7 +85,7 @@ class NotificationOrchestrator {
               'severity': n.severity,
               'title': n.title,
               'body': n.body,
-              'timestamp': n.timestamp.toIso8601String(),
+              'timestamp': n.timestamp?.toUtc().toIso8601String(),
               'deeplink': n.deeplink,
               'entityType': n.entityType,
               'entityId': n.entityId,

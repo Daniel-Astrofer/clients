@@ -1,3 +1,6 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
+    show walletProvider;
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import '../bitcoin_accounts_dependencies.dart';
@@ -16,6 +19,7 @@ class InternalAccountCreationFlowState
   InternalAccountStep step = InternalAccountStep.custody;
   final TextEditingController walletNameController = TextEditingController();
   bool busy = false;
+  String? _createdLabel;
   int? selectedCustodyIndex;
   late final Set<BitcoinAccountCustody> initialUnavailableCustodies;
 
@@ -90,18 +94,15 @@ class InternalAccountCreationFlowState
 
     setState(() => busy = true);
     try {
-      await ref.read(bitcoinAccountsProvider.notifier).createWallet(
-            label: walletNameController.text.trim(),
-            custody: selectedCustody,
-          );
+      final created =
+          await ref.read(bitcoinAccountsControllerProvider).createWallet(
+                label: walletNameController.text.trim(),
+                custody: selectedCustody,
+              );
       HapticFeedback.mediumImpact();
       if (!mounted) return;
-      AppNotice.showSuccess(
-        context,
-        title: context.tr.bitcoinAccountsCreateCardTitle,
-        message: context.tr.internalCreatedSuccess,
-      );
-      Navigator.of(context).pop(true);
+      setState(() => _createdLabel = created.label);
+      unawaited(ref.read(walletProvider.notifier).refresh());
     } catch (_) {
       if (!mounted) return;
       AppNotice.showError(
@@ -115,7 +116,43 @@ class InternalAccountCreationFlowState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PopScope(
+        canPop: !busy,
+        child: _buildScreen(context),
+      );
+
+  Widget _buildScreen(BuildContext context) {
+    if (_createdLabel != null) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+            child: Center(
+                child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const KeroseneIcon(KeroseneIcons.check, size: 48),
+            const SizedBox(height: 20),
+            Text(context.tr.walletRegisteredTitle,
+                textAlign: TextAlign.center,
+                style: AppTypography.playfairDisplay(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w500,
+                    height: 1.14)),
+            const SizedBox(height: 12),
+            Text(_createdLabel!,
+                textAlign: TextAlign.center, style: AppTypography.bodyMedium),
+            const SizedBox(height: 12),
+            Text(context.tr.walletRegisteredBody,
+                textAlign: TextAlign.center, style: AppTypography.bodyMedium),
+            const SizedBox(height: 24),
+            FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(context.tr.done)),
+          ]),
+        ))),
+      );
+    }
     final colors = BitcoinAccountsColors.of(context);
 
     if (step == InternalAccountStep.custody) {
@@ -140,7 +177,7 @@ class InternalAccountCreationFlowState
                 child: IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: goBack,
-                  icon: Icon(
+                  icon: KeroseneIcon(
                     KeroseneIcons.back,
                     color: colors.text,
                     size: 24,
@@ -544,7 +581,7 @@ class CustodySelectionTopBar extends StatelessWidget {
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   visualDensity: VisualDensity.compact,
                   onPressed: onBack,
-                  icon: Icon(
+                  icon: KeroseneIcon(
                     KeroseneIcons.back,
                     color: colors.text,
                     size: 24,
@@ -632,7 +669,7 @@ class CustodySelectionTile extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            KeroseneIcon(
                               icon,
                               color: secondary,
                               size: iconSize,
@@ -695,29 +732,4 @@ class CustodyCreationOption {
     required this.title,
     required this.subtitle,
   });
-}
-
-String friendlyStatus(BuildContext context, String status) {
-  return switch (status.trim().toUpperCase()) {
-    'ACTIVE' => context.tr.bitcoinAccountsStatusActive,
-    'CREATING' => 'Criando',
-    'PENDING' => context.tr.bitcoinAccountsStatusPending,
-    'DISABLED' => context.tr.bitcoinAccountsStatusDisabled,
-    'BLOCKED' => 'Bloqueada',
-    'FROZEN' => 'Congelada',
-    'ARCHIVED' => 'Arquivada',
-    'ROTATING_ADDRESS' => 'Rotacionando endereço',
-    'KEYGEN_FAILED' => 'Falha na criação da chave',
-    'QUORUM_BLOCKED' => 'Bloqueada por quórum',
-    'SUSPENDED' => 'Suspensa',
-    'READY' => context.tr.bitcoinAccountsStatusReady,
-    final raw when raw.isNotEmpty => raw
-        .toLowerCase()
-        .split('_')
-        .map((part) => part.isEmpty
-            ? part
-            : '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' '),
-    _ => context.tr.bitcoinAccountsStatusReady,
-  };
 }

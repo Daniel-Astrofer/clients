@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -54,7 +55,7 @@ class SelfCustodyBlockedCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.review,
                 color: receiveFlowTextColor,
                 size: 16,

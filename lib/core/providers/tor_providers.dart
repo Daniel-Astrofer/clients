@@ -9,7 +9,7 @@ class TorApiUrlNotifier extends Notifier<String> {
   String build() => AppConfig.apiUrl;
 
   void updateUrl(String newUrl) {
-    state = newUrl;
+    state = AppConfig.normalizeUrl(newUrl);
   }
 }
 

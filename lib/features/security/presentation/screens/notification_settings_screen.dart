@@ -1,207 +1,44 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/components/generic/kerosene_screen_background.dart';
-import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
-import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
+import 'settings_notifications_pane.dart';
 
-class NotificationSettingsScreen extends ConsumerStatefulWidget {
+/// Standalone entry shares permissions and persistence feedback with settings.
+class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
 
   @override
-  ConsumerState<NotificationSettingsScreen> createState() =>
-      _NotificationSettingsScreenState();
-}
-
-class _NotificationSettingsScreenState
-    extends ConsumerState<NotificationSettingsScreen> {
-  @override
   Widget build(BuildContext context) {
-    final preferences = ref.watch(alertPreferencesProvider);
-    final notifier = ref.read(alertPreferencesProvider.notifier);
-
-    return KeroseneScreenBackground(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: _buildHeader(context),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(context.tr.notificationChannels),
-                  _buildSwitchItem(
-                    context,
-                    context.tr.pushNotifications,
-                    context.tr.pushNotificationsDesc,
-                    preferences.backgroundAlertsEnabled,
-                    notifier.setBackgroundAlertsEnabled,
-                    KeroseneIcons.notifications,
+    return Scaffold(
+      body: KeroseneScreenBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md, vertical: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    tooltip:
+                        MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const KeroseneIcon(KeroseneIcons.back),
                   ),
-                  _buildSwitchItem(
-                    context,
-                    context.tr.settingsUiInAppBannersTitle,
-                    context.tr.settingsUiInAppBannersOnSubtitle,
-                    preferences.inAppBannersEnabled,
-                    notifier.setInAppBannersEnabled,
-                    KeroseneIcons.info,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  _buildSectionHeader(context.tr.notificationAlerts),
-                  _buildSwitchItem(
-                    context,
-                    context.tr.transactionUpdates,
-                    context.tr.transactionUpdatesDesc,
-                    preferences.transactionAlertsEnabled,
-                    notifier.setTransactionAlertsEnabled,
-                    KeroseneIcons.history,
-                  ),
-                  _buildSwitchItem(
-                    context,
-                    context.tr.securityAlertsTitle,
-                    context.tr.securityAlertsDesc,
-                    preferences.securityAlertsEnabled,
-                    notifier.setSecurityAlertsEnabled,
-                    KeroseneIcons.security,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.md, left: 4),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelSmall!.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.4,
-            ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.1),
-              ),
-            ),
-            child: Icon(
-              KeroseneIcons.back,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 20,
-            ),
-          ),
-        ),
-        SizedBox(width: AppSpacing.md),
-        Text(
-          context.tr.notifications,
-          style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                letterSpacing: -0.1,
-              ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSwitchItem(
-    BuildContext context,
-    String title,
-    String subtitle,
-    bool value,
-    ValueChanged<bool> onChanged,
-    IconData icon,
-  ) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color:
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 20,
-            ),
-          ),
-          SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+              ),
+              const Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: SettingsNotificationsPane(),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: KeroseneBrandTokens.brand,
-            activeTrackColor: KeroseneBrandTokens.brand.withValues(alpha: 0.2),
-            inactiveThumbColor:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-            inactiveTrackColor:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-          ),
-        ],
+        ),
       ),
     );
   }

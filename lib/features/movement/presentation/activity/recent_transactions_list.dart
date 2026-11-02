@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,7 @@ class RecentTransactionsList extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.privateMode,
                 color: Theme.of(context)
                     .colorScheme
@@ -109,6 +110,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
     final btcAmountLabel = money.format(
       amount: t.signedAmountBTC.abs(),
       currency: Currency.btc,
+      decimalPlaces: 8,
     );
 
     return RepaintBoundary(
@@ -247,6 +249,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           money.format(
                             amount: t.feeBTC,
                             currency: Currency.btc,
+                            decimalPlaces: 8,
                           ),
                         ),
                       ],
@@ -257,6 +260,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                           money.format(
                             amount: t.serviceFeeBTC,
                             currency: Currency.btc,
+                            decimalPlaces: 8,
                           ),
                         ),
                       ],
@@ -268,6 +272,7 @@ class _TransactionItemWidgetState extends ConsumerState<TransactionItemWidget> {
                                   (t.showsNetworkFee ? t.feeSatoshis : 0)) /
                               100000000.0,
                           currency: Currency.btc,
+                          decimalPlaces: 8,
                         ),
                       ),
                       if (t.showsOnchainConfirmations ||

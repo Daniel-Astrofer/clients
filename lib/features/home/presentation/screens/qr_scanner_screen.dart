@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -67,7 +68,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(KeroseneIcons.warning,
+                  const KeroseneIcon(KeroseneIcons.warning,
                       color: AppColors.hexFFFFFFFF, size: 36),
                   const SizedBox(height: 16),
                   Text(
@@ -128,7 +129,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                               en: 'Flashlight', pt: 'Lanterna', es: 'Linterna')
                           .resolve(context),
                       onPressed: () => _controller.toggleTorch(),
-                      icon: const Icon(KeroseneIcons.lightning,
+                      icon: const KeroseneIcon(KeroseneIcons.lightning,
                           color: AppColors.hexFFFFFFFF)),
                   IconButton(
                       tooltip: const LocalizedCopy(
@@ -137,7 +138,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                               es: 'Cambiar cámara')
                           .resolve(context),
                       onPressed: () => _controller.switchCamera(),
-                      icon: const Icon(KeroseneIcons.refresh,
+                      icon: const KeroseneIcon(KeroseneIcons.refresh,
                           color: AppColors.hexFFFFFFFF)),
                 ])),
             const Spacer(),
@@ -150,7 +151,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                       onPressed: _paste,
-                      icon: const Icon(KeroseneIcons.paste),
+                      icon: const KeroseneIcon(KeroseneIcons.paste),
                       label: Text(const LocalizedCopy(
                               en: 'Paste payment details',
                               pt: 'Colar dados do pagamento',

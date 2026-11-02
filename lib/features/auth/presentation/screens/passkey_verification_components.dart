@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'dart:math' as math;
@@ -8,34 +9,26 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
-import 'package:kerosene/design_system/foundation/theme/theme_token_bridge.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/auth/presentation/widgets/auth_motion.dart';
 
-Color get _authBlack => ThemeTokenBridge.isLight
-    ? KeroseneBrandTheme.light.background
-    : KeroseneBrandTheme.dark.background;
-Color get _authWhite => ThemeTokenBridge.isLight
-    ? KeroseneBrandTheme.light.textPrimary
-    : KeroseneBrandTheme.dark.textPrimary;
-Color get _authMuted => ThemeTokenBridge.isLight
-    ? KeroseneBrandTheme.light.textSecondary
-    : KeroseneBrandTheme.dark.textMuted;
-Color get _authSurface => ThemeTokenBridge.isLight
-    ? KeroseneBrandTheme.light.surface
-    : KeroseneBrandTheme.dark.surface;
-Color get _authSurfaceRaised => ThemeTokenBridge.isLight
-    ? KeroseneBrandTheme.light.surfaceHigh
-    : KeroseneBrandTheme.dark.surfaceElevated;
-Color get _authBorder => ThemeTokenBridge.isLight
-    ? KeroseneBrandTheme.light.border
-    : KeroseneBrandTheme.dark.border;
-const Color _authErrorText = AppColors.hexFFF4C7C7;
-const Color _authSuccess = AppColors.hexFF4ADE80;
+Color _authBlack(BuildContext context) =>
+    KeroseneBrandTheme.of(context).background;
+Color _authWhite(BuildContext context) =>
+    KeroseneBrandTheme.of(context).textPrimary;
+Color _authMuted(BuildContext context) =>
+    KeroseneBrandTheme.of(context).textMuted;
+Color _authSurface(BuildContext context) =>
+    KeroseneBrandTheme.of(context).surface;
+Color _authSurfaceRaised(BuildContext context) =>
+    KeroseneBrandTheme.of(context).surfaceElevated;
+Color _authBorder(BuildContext context) =>
+    KeroseneBrandTheme.of(context).border;
+Color _authErrorText(BuildContext context) => _authWhite(context);
+Color _authSuccess(BuildContext context) => _authWhite(context);
 
 class PasskeyIssueInfo {
   final IconData icon;
@@ -54,7 +47,7 @@ class PasskeyIssueInfo {
 }
 
 class TopBackButton extends StatelessWidget {
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const TopBackButton({required this.onPressed});
 
@@ -67,8 +60,8 @@ class TopBackButton extends StatelessWidget {
         child: IconButton(
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: onPressed,
-          icon: const Icon(KeroseneIcons.back, size: 24),
-          color: _authWhite.withValues(alpha: 0.84),
+          icon: const KeroseneIcon(KeroseneIcons.back, size: 24),
+          color: _authWhite(context).withValues(alpha: 0.84),
           padding: EdgeInsets.zero,
         ),
       ),
@@ -95,21 +88,18 @@ class PasskeyAuthView extends StatelessWidget {
   Widget build(BuildContext context) {
     final responsive = context.responsive;
     final sensorSize = responsive.isTinyPhone
-        ? 196.0
+        ? 132.0
         : isShort
-            ? 156.0
-            : 256.0;
+            ? 112.0
+            : 152.0;
     final iconSize = sensorSize * 0.42;
-    final titleSize = responsive.isTinyPhone
-        ? 34.0
-        : isShort
-            ? 32.0
-            : 42.0;
+    final titleSize = responsive.isTinyPhone || isShort ? 28.0 : 30.0;
 
     return ConstrainedBox(
       constraints: responsive.formConstraints,
-      child: Column(
+      child: AuthMotionStagger(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SensorVisualizer(
             animation: animation,
@@ -118,25 +108,27 @@ class PasskeyAuthView extends StatelessWidget {
             isSuccess: isSuccess,
           ),
           SizedBox(height: isShort ? AppSpacing.lg : 46),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTypography.inter(
-              color: _authWhite,
-              fontSize: titleSize,
-              fontWeight: FontWeight.w500,
-              height: 1.08,
-              letterSpacing: 0,
-            ),
-          ),
+          Semantics(
+              liveRegion: true,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTypography.inter(
+                  color: _authWhite(context),
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w600,
+                  height: 1.18,
+                  letterSpacing: 0,
+                ),
+              )),
           const SizedBox(height: AppSpacing.md),
           Text(
             subtitle,
             textAlign: TextAlign.center,
             style: AppTypography.bodyMedium.copyWith(
-              color: _authMuted,
-              fontSize: responsive.isTinyPhone ? 14 : 16,
-              fontWeight: FontWeight.w300,
+              color: _authMuted(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
               height: 1.45,
               letterSpacing: 0,
             ),
@@ -162,79 +154,33 @@ class SensorVisualizer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sensor = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _authSurface(context),
+        border: Border.all(color: _authWhite(context).withValues(alpha: 0.08)),
+      ),
+      child: KeroseneIcon(
+        isSuccess ? KeroseneIcons.success : KeroseneIcons.biometric,
+        size: iconSize,
+        color: isSuccess ? _authSuccess(context) : _authWhite(context),
+      ),
+    );
+    if (AuthMotion.reduce(context) || isSuccess) return sensor;
     return SizedBox(
       width: size,
       height: size,
       child: AnimatedBuilder(
         animation: animation,
+        child: sensor,
         builder: (context, child) {
-          final waveA = math.sin(animation.value * math.pi * 2);
-          final waveB = math.sin((animation.value * math.pi * 2) + math.pi);
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              PulseRing(
-                size: size,
-                scale: 0.92 + waveB * 0.08,
-                opacity: 0.30 + waveB.abs() * 0.18,
-                inset: 0,
-              ),
-              PulseRing(
-                size: size,
-                scale: 0.88 + waveA * 0.10,
-                opacity: 0.42 + waveA.abs() * 0.22,
-                inset: size * 0.07,
-              ),
-              Container(
-                width: size * 0.64,
-                height: size * 0.64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _authSurface.withValues(alpha: 0.74),
-                  border: Border.all(
-                    color: _authWhite.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: Icon(
-                  isSuccess ? KeroseneIcons.security : KeroseneIcons.biometric,
-                  size: iconSize,
-                  color: isSuccess ? _authSuccess : _authWhite,
-                ),
-              ),
-            ],
+          return Transform.scale(
+            scale: 0.98 + math.sin(animation.value * math.pi) * 0.02,
+            child: child,
           );
         },
-      ),
-    );
-  }
-}
-
-class PulseRing extends StatelessWidget {
-  final double size;
-  final double scale;
-  final double opacity;
-  final double inset;
-
-  const PulseRing({
-    required this.size,
-    required this.scale,
-    required this.opacity,
-    required this.inset,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.scale(
-      scale: scale,
-      child: Container(
-        width: size - inset * 2,
-        height: size - inset * 2,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: _authWhite.withValues(alpha: opacity.clamp(0.0, 1.0)),
-          ),
-        ),
       ),
     );
   }
@@ -248,6 +194,7 @@ class PasskeyIssueView extends StatelessWidget {
   final VoidCallback? onRetry;
   final VoidCallback? onUseTotp;
   final VoidCallback? onBackToPassword;
+  final VoidCallback? onRecoverAccount;
   final String Function({
     required String pt,
     required String en,
@@ -262,17 +209,14 @@ class PasskeyIssueView extends StatelessWidget {
     required this.onRetry,
     required this.onUseTotp,
     required this.onBackToPassword,
+    this.onRecoverAccount,
     required this.copy,
   });
 
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
-    final titleSize = responsive.isTinyPhone
-        ? 32.0
-        : isShort
-            ? 30.0
-            : 38.0;
+    final titleSize = responsive.isTinyPhone || isShort ? 28.0 : 30.0;
     final message = issue?.message ??
         copy(
           pt: 'Biometria não reconhecida. Tente novamente ou use outro método.',
@@ -288,16 +232,17 @@ class PasskeyIssueView extends StatelessWidget {
           ErrorGlyph(size: isShort ? 92 : 120, icon: issue?.icon),
           SizedBox(height: isShort ? AppSpacing.lg : AppSpacing.xl),
           Text(
-            copy(
-              pt: 'Falha na Autenticação',
-              en: 'Authentication Failed',
-              es: 'Falló la Autenticación',
-            ),
+            issue?.title ??
+                copy(
+                  pt: 'Falha na Autenticação',
+                  en: 'Authentication Failed',
+                  es: 'Falló la Autenticación',
+                ),
             textAlign: TextAlign.center,
             style: AppTypography.inter(
-              color: _authWhite.withValues(alpha: 0.96),
+              color: _authWhite(context).withValues(alpha: 0.96),
               fontSize: titleSize,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               height: 1.12,
               letterSpacing: 0,
             ),
@@ -307,8 +252,8 @@ class PasskeyIssueView extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: AppTypography.bodyMedium.copyWith(
-              color: _authErrorText,
-              fontSize: responsive.isTinyPhone ? 14 : 15,
+              color: _authErrorText(context),
+              fontSize: 14,
               height: 1.45,
               letterSpacing: 0,
             ),
@@ -344,6 +289,17 @@ class PasskeyIssueView extends StatelessWidget {
               onPressed: onBackToPassword,
               secondary: true,
             ),
+          if (onRecoverAccount != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            TextButton(
+              onPressed: onRecoverAccount,
+              child: Text(copy(
+                pt: 'Recuperar conta',
+                en: 'Recover account',
+                es: 'Recuperar cuenta',
+              )),
+            ),
+          ],
         ],
       ),
     );
@@ -371,19 +327,20 @@ class ErrorGlyph extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _authSurface,
-              border: Border.all(color: _authErrorText.withValues(alpha: 0.22)),
+              color: _authSurface(context),
+              border: Border.all(
+                  color: _authErrorText(context).withValues(alpha: 0.22)),
               boxShadow: [
                 BoxShadow(
-                  color: _authErrorText.withValues(alpha: 0.18),
+                  color: _authErrorText(context).withValues(alpha: 0.18),
                   blurRadius: 18,
                   spreadRadius: 1,
                 ),
               ],
             ),
-            child: Icon(
+            child: KeroseneIcon(
               icon ?? KeroseneIcons.biometric,
-              color: _authErrorText,
+              color: _authErrorText(context),
               size: size * 0.46,
             ),
           ),
@@ -394,14 +351,14 @@ class ErrorGlyph extends StatelessWidget {
               width: size * 0.24,
               height: size * 0.24,
               decoration: BoxDecoration(
-                color: _authErrorText,
+                color: _authErrorText(context),
                 shape: BoxShape.circle,
-                border: Border.all(color: _authBlack, width: 2),
+                border: Border.all(color: _authBlack(context), width: 2),
               ),
-              child: Icon(
+              child: KeroseneIcon(
                 KeroseneIcons.warning,
                 size: size * 0.16,
-                color: _authBlack,
+                color: _authBlack(context),
               ),
             ),
           ),
@@ -464,7 +421,7 @@ class TotpFallbackView extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
             style: AppTypography.inter(
-              color: _authWhite,
+              color: _authWhite(context),
               fontSize: titleSize,
               fontWeight: FontWeight.w500,
               height: 1.1,
@@ -480,7 +437,7 @@ class TotpFallbackView extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
             style: AppTypography.bodyMedium.copyWith(
-              color: _authMuted,
+              color: _authMuted(context),
               fontSize: responsive.isTinyPhone ? 14 : 16,
               height: 1.45,
               letterSpacing: 0,
@@ -498,7 +455,7 @@ class TotpFallbackView extends StatelessWidget {
               errorMessage!,
               textAlign: TextAlign.center,
               style: AppTypography.bodySmall.copyWith(
-                color: _authErrorText,
+                color: _authErrorText(context),
                 height: 1.3,
                 letterSpacing: 0,
               ),
@@ -551,16 +508,16 @@ class PinDots extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: filled
-                ? _authWhite
+                ? _authWhite(context)
                 : hasError
-                    ? _authErrorText.withValues(alpha: 0.12)
-                    : _authSurface,
+                    ? _authErrorText(context).withValues(alpha: 0.12)
+                    : _authSurface(context),
             border: Border.all(
               color: filled
-                  ? _authWhite
+                  ? _authWhite(context)
                   : hasError
-                      ? _authErrorText
-                      : _authBorder,
+                      ? _authErrorText(context)
+                      : _authBorder(context),
             ),
           ),
         );
@@ -675,11 +632,11 @@ class KeypadButton extends StatelessWidget {
             onTap: onPressed,
             child: Center(
               child: icon != null
-                  ? Icon(icon, color: _authMuted, size: 22)
+                  ? KeroseneIcon(icon, color: _authMuted(context), size: 22)
                   : Text(
                       value ?? '',
                       style: AppTypography.inter(
-                        color: _authWhite,
+                        color: _authWhite(context),
                         fontSize: isShort ? 25 : 29,
                         fontWeight: FontWeight.w500,
                         height: 1,
@@ -710,8 +667,9 @@ class ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = onPressed == null || isLoading;
-    final background = secondary ? _authSurfaceRaised : _authWhite;
-    final foreground = secondary ? _authWhite : _authBlack;
+    final background =
+        secondary ? _authSurfaceRaised(context) : _authWhite(context);
+    final foreground = secondary ? _authWhite(context) : _authBlack(context);
 
     return AuthMotionPressScale(
       enabled: !disabled,
@@ -720,7 +678,9 @@ class ActionButton extends StatelessWidget {
         height: 54,
         child: Material(
           color: Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
           child: InkWell(
+            borderRadius: BorderRadius.circular(999),
             onTap: disabled
                 ? null
                 : () {
@@ -729,10 +689,13 @@ class ActionButton extends StatelessWidget {
                   },
             child: Ink(
               decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
                 color:
                     disabled ? background.withValues(alpha: 0.42) : background,
                 border: Border.all(
-                  color: secondary ? _authSurfaceRaised : Colors.transparent,
+                  color: secondary
+                      ? _authSurfaceRaised(context)
+                      : Colors.transparent,
                 ),
               ),
               child: Center(
@@ -749,8 +712,8 @@ class ActionButton extends StatelessWidget {
                           color: disabled
                               ? foreground.withValues(alpha: 0.7)
                               : foreground,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           height: 1,
                           letterSpacing: 0,
                         ),

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'package:kerosene/core/errors/exceptions.dart';
@@ -84,7 +85,7 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
           child: FilledButton.icon(
             style: colors.filledButtonStyle(),
             onPressed: busy ? null : createReceiveRequest,
-            icon: Icon(KeroseneIcons.qr, size: 18),
+            icon: KeroseneIcon(KeroseneIcons.qr, size: 18),
             label: Text(
               busy
                   ? context.tr.bitcoinReceiveGenerating
@@ -153,13 +154,13 @@ class ReceiveSheetState extends ConsumerState<ReceiveSheet> {
               OutlinedButton.icon(
                 style: colors.outlinedButtonStyle(),
                 onPressed: busy ? null : copyAddress,
-                icon: Icon(KeroseneIcons.copy, size: 18),
+                icon: KeroseneIcon(KeroseneIcons.copy, size: 18),
                 label: Text(context.tr.copyAddress),
               ),
               OutlinedButton.icon(
                 style: colors.outlinedButtonStyle(),
                 onPressed: busy ? null : () => refreshStatus(silent: false),
-                icon: Icon(KeroseneIcons.refresh, size: 18),
+                icon: KeroseneIcon(KeroseneIcons.refresh, size: 18),
                 label: Text(context.tr.bitcoinReceiveRefresh),
               ),
             ];

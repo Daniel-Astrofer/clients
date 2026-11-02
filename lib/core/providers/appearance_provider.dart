@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'shared_preferences_provider.dart';
 
 // ─── Theme Mode ───────────────────────────────────────
 enum AppThemeVariant { dark, light }
@@ -49,15 +49,10 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
 
   @override
   AppearanceState build() {
-    _load();
-    return const AppearanceState();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ref.read(sharedPreferencesProvider);
     final darkModeEnabled = prefs.getBool(_darkModeKey) ?? true;
 
-    state = AppearanceState(
+    return AppearanceState(
       themeVariant:
           darkModeEnabled ? AppThemeVariant.dark : AppThemeVariant.light,
     );
@@ -65,9 +60,16 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
 
   Future<void> setDarkModeEnabled(bool enabled) async {
     final variant = enabled ? AppThemeVariant.dark : AppThemeVariant.light;
+    final prefs = ref.read(sharedPreferencesProvider);
+    try {
+      if (!await prefs.setBool(_darkModeKey, enabled)) {
+        throw StateError('Appearance preference was not saved.');
+      }
+    } catch (_) {
+      await prefs.reload();
+      rethrow;
+    }
     state = state.copyWith(themeVariant: variant);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_darkModeKey, enabled);
   }
 
   Future<void> setThemeVariant(AppThemeVariant variant) async {

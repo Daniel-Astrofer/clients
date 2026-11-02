@@ -1,3 +1,5 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/navigation/app_page_transitions.dart';
@@ -171,12 +173,14 @@ class AppTheme {
             secondary: AppColors.secondary,
             surface: palette.surface,
             surfaceContainerHighest: palette.inputFill,
-            error: AppColors.error,
+            error: onSurface,
+            errorContainer: palette.inputFill,
+            onErrorContainer: onSurface,
             onPrimary: AppColors.white,
             onSecondary: AppColors.white,
             onSurface: onSurface,
             onSurfaceVariant: onSurfaceVariant,
-            onError: AppColors.white,
+            onError: palette.surface,
             secondaryContainer: AppColors.secondary.withValues(alpha: 0.12),
             onSecondaryContainer: onSurface,
           )
@@ -185,12 +189,14 @@ class AppTheme {
             secondary: AppColors.secondary,
             surface: palette.surface,
             surfaceContainerHighest: palette.inputFill,
-            error: AppColors.error,
+            error: onSurface,
+            errorContainer: palette.inputFill,
+            onErrorContainer: onSurface,
             onPrimary: AppColors.onyxCanvas,
             onSecondary: AppColors.white,
             onSurface: onSurface,
             onSurfaceVariant: onSurfaceVariant,
-            onError: AppColors.white,
+            onError: palette.surface,
             secondaryContainer: AppColors.secondary.withValues(alpha: 0.2),
             onSecondaryContainer: AppColors.snow,
           );
@@ -211,6 +217,13 @@ class AppTheme {
     );
 
     return ThemeData(
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) => const KeroseneIcon(KeroseneIcons.back),
+        closeButtonIconBuilder: (_) => const KeroseneIcon(KeroseneIcons.close),
+        drawerButtonIconBuilder: (_) => const KeroseneIcon(KeroseneIcons.menu),
+        endDrawerButtonIconBuilder: (_) =>
+            const KeroseneIcon(KeroseneIcons.menu),
+      ),
       brightness: brightness,
       scaffoldBackgroundColor: palette.background,
       canvasColor: palette.background,
@@ -274,11 +287,11 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.input,
-          borderSide: const BorderSide(color: AppColors.error, width: 1),
+          borderSide: BorderSide(color: onSurface, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadius.input,
-          borderSide: const BorderSide(color: AppColors.error, width: 1),
+          borderSide: BorderSide(color: onSurface, width: 1),
         ),
         hintStyle: AppTypography.bodyMedium.copyWith(color: hintColor),
         labelStyle: AppTypography.bodyMedium.copyWith(color: labelColor),
@@ -287,7 +300,7 @@ class AppTheme {
           fontWeight: AppTypography.w510,
         ),
         errorStyle: AppTypography.bodySmall.copyWith(
-          color: AppColors.error,
+          color: onSurface,
           fontWeight: AppTypography.w590,
         ),
         prefixIconColor: labelColor,

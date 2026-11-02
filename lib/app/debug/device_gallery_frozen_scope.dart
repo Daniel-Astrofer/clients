@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +19,8 @@ import 'package:kerosene/features/auth/data/datasources/auth_remote_datasource.d
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_settings_provider.dart';
-import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
+    hide transactionRepositoryProvider;
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/home/domain/entities/home_feed_item.dart';
 import 'package:kerosene/features/home/domain/entities/home_surface.dart';
@@ -51,8 +53,26 @@ Widget buildFrozenGalleryApp({
       networkStatusProvider.overrideWith(() => NetworkStatusNotifier()),
       bitcoinAccountsServiceProvider
           .overrideWithValue(MockBitcoinAccountsService()),
-      bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+      bitcoinAccountsByScopeProvider.overrideWith2(BitcoinAccountsNotifier.new),
+      transactionRepositoryProvider
+          .overrideWithValue(MockTransactionRepository()),
+      transactionHistoryProvider.overrideWith(
+        (ref) async => snapshot.transactions,
+      ),
+      pagedTransactionHistoryProvider.overrideWith(
+        (ref, request) async =>
+            snapshot.transactions.take(request.size).toList(),
+      ),
+      paymentLinksProvider.overrideWith((ref) async => mockPaymentLinks),
+      externalTransfersProvider
+          .overrideWith((ref) async => mockExternalTransfers),
+      depositsProvider.overrideWith((ref) async => const <Deposit>[]),
+      notificationRepositoryProvider
+          .overrideWithValue(MockNotificationRepository()),
       sovereigntyStatusProvider.overrideWith((ref) async => mockSecurityStatus),
+      appPinGateServerSyncProvider.overrideWith((ref) async {}),
+      appPinManagementStatusProvider
+          .overrideWith((ref) async => mockAppPinStatus),
       kfeReserveOverviewProvider
           .overrideWith((ref) async => mockKfeReserveOverview),
       auditStatsProvider.overrideWith((ref) async => mockSecurityAuditStats),
@@ -112,6 +132,7 @@ Widget buildFrozenGalleryApp({
       sessionNotificationFeedProvider.overrideWith(
         () => _EmptyNotifs(),
       ),
+      activeDeviceTokensProvider.overrideWith((ref) async => const []),
       priceWebSocketServiceProvider
           .overrideWithValue(MockPriceWebSocketService()),
       backendBtcRatesProvider.overrideWith((ref) async => snapshot.rates),
@@ -134,7 +155,7 @@ Widget buildFrozenGalleryApp({
           viewPadding: EdgeInsets.zero,
           viewInsets: EdgeInsets.zero,
         ),
-        child: home,
+        child: KeroseneUiScale(child: home),
       ),
     ),
   );

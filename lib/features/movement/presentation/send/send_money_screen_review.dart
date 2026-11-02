@@ -1,3 +1,16 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:kerosene/app/security/payment_submission_store.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/core/logging/app_log.dart';
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_presentation.dart';
+import 'package:kerosene/core/navigation/app_page_transitions.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/financial_surface_provider.dart';
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 // architecture-allow-large-file: review and authorization composition preserve
 // the deferred route and external confirmation callback contracts.
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -33,17 +46,30 @@ class SendPaymentReviewRowData {
   });
 }
 
+enum SendPaymentReceiptRowKind {
+  information,
+  networkFee,
+  platformFee,
+  total,
+  status,
+  networkReference
+}
+
 class SendPaymentReceiptRowData {
   final String label;
   final String value;
+  final String secondaryValue;
   final bool numeric;
   final bool technical;
+  final SendPaymentReceiptRowKind kind;
 
   const SendPaymentReceiptRowData({
     required this.label,
     required this.value,
+    this.secondaryValue = '',
     this.numeric = false,
     this.technical = false,
+    this.kind = SendPaymentReceiptRowKind.information,
   });
 }
 
@@ -51,17 +77,27 @@ class SendPaymentReceiptData {
   final String title;
   final String subtitle;
   final String amountLabel;
-  final DateTime occurredAt;
+  final String secondaryAmountLabel;
+  final DateTime? occurredAt;
+  final DateTime? updatedAt;
+  final bool confirmed;
+  final String? transactionId;
   final List<SendPaymentReceiptRowData> rows;
   final String shareText;
+  final MovementMoney? money;
 
   const SendPaymentReceiptData({
     required this.title,
     this.subtitle = '',
     required this.amountLabel,
+    this.secondaryAmountLabel = '',
     required this.occurredAt,
+    this.updatedAt,
+    this.confirmed = true,
+    this.transactionId,
     required this.rows,
     required this.shareText,
+    this.money,
   });
 }
 
@@ -90,6 +126,7 @@ class InternalTransferReviewScreen<T> extends StatefulWidget {
   /// When set with [onDismiss], success completes the inline phase instead
   /// of `context.pop(result)`.
   final ValueChanged<T>? onCompleted;
+  final ValueChanged<bool>? onSubmittingChanged;
 
   /// Locked payment-request: speed / fee chips (amount is not editable).
   final bool showFeeTierControls;
@@ -116,6 +153,7 @@ class InternalTransferReviewScreen<T> extends StatefulWidget {
     this.receiptBuilder,
     this.onDismiss,
     this.onCompleted,
+    this.onSubmittingChanged,
     this.showFeeTierControls = false,
     this.feeTier,
     this.onFeeTierChanged,
@@ -130,52 +168,35 @@ class InternalTransferReviewScreenState<T>
     extends State<InternalTransferReviewScreen<T>> {
   bool _isSubmitting = false;
   bool _firstSendAcknowledged = false;
-  int _submittingPhase = 0;
-  Timer? _submittingPhaseTimer;
+  bool _accepted = false;
 
   bool get _canAuthorize {
-    if (_isSubmitting) return false;
+    if (_isSubmitting || _accepted) return false;
     if (widget.requiresFirstSendAck && !_firstSendAcknowledged) return false;
     return true;
-  }
-
-  void _startSubmittingPhases() {
-    _submittingPhaseTimer?.cancel();
-    _submittingPhase = 0;
-    _submittingPhaseTimer = Timer.periodic(const Duration(milliseconds: 900), (
-      _,
-    ) {
-      if (!mounted || !_isSubmitting) return;
-      setState(() => _submittingPhase += 1);
-    });
-  }
-
-  void _stopSubmittingPhases() {
-    _submittingPhaseTimer?.cancel();
-    _submittingPhaseTimer = null;
-    _submittingPhase = 0;
-  }
-
-  @override
-  void dispose() {
-    _stopSubmittingPhases();
-    super.dispose();
   }
 
   Future<void> _confirm() async {
     if (!_canAuthorize || _isSubmitting) return;
     HapticFeedback.mediumImpact();
+    widget.onSubmittingChanged?.call(true);
     setState(() {
       _isSubmitting = true;
-      _submittingPhase = 0;
     });
-    _startSubmittingPhases();
 
     try {
       final result = await widget.onConfirm(context);
       if (!mounted) return;
       if (result != null && result != false) {
-        _stopSubmittingPhases();
+        _accepted = true;
+        final receipt = widget.receiptBuilder?.call(result);
+        if (receipt != null) {
+          await Navigator.of(context).push<T>(keroseneHorizontalRoute<T>(
+            builder: (_) =>
+                SendPaymentReceiptScreen<T>(data: receipt, result: result),
+          ));
+          if (!mounted) return;
+        }
         _finishWithResult(result);
         return;
       }
@@ -185,7 +206,7 @@ class InternalTransferReviewScreenState<T>
         context,
       ).showSnackBar(SnackBar(content: Text(context.tr.tryAgain)));
     } finally {
-      _stopSubmittingPhases();
+      widget.onSubmittingChanged?.call(false);
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
@@ -217,7 +238,7 @@ class InternalTransferReviewScreenState<T>
         ? SendMoneyCopy.authorizeAction(context)
         : widget.confirmLabel;
     final submittingLabel = widget.submittingLabel.trim().isEmpty
-        ? SendMoneyCopy.authorizingPhase(context, _submittingPhase)
+        ? SendMoneyCopy.authorizingAction(context)
         : widget.submittingLabel;
 
     return PopScope(
@@ -294,7 +315,7 @@ class InternalTransferReviewScreenState<T>
                                         _FirstSendAckBlock(
                                           preview:
                                               widget.firstSendAddressPreview ??
-                                              '',
+                                                  '',
                                           acknowledged: _firstSendAcknowledged,
                                           enabled: !_isSubmitting,
                                           onChanged: (value) {
@@ -368,7 +389,7 @@ class InternalTransferReviewScreenState<T>
   }
 }
 
-class SendPaymentReceiptScreen<T> extends StatefulWidget {
+class SendPaymentReceiptScreen<T> extends ConsumerStatefulWidget {
   final SendPaymentReceiptData data;
   final T result;
 
@@ -379,35 +400,209 @@ class SendPaymentReceiptScreen<T> extends StatefulWidget {
   });
 
   @override
-  State<SendPaymentReceiptScreen<T>> createState() =>
+  ConsumerState<SendPaymentReceiptScreen<T>> createState() =>
       _SendPaymentReceiptScreenState<T>();
 }
 
 class _SendPaymentReceiptScreenState<T>
-    extends State<SendPaymentReceiptScreen<T>> {
+    extends ConsumerState<SendPaymentReceiptScreen<T>>
+    with FinancialSurfaceMixin {
+  bool _opening = false;
+  String? _visibleShareText;
+  String? _visibleTitle;
+  Transaction? _latestOperation;
+  String? _receiptScope;
+  @override
+  void initState() {
+    super.initState();
+    final id = widget.data.transactionId;
+    if (id != null && PaymentSubmissionStore.validTransactionId(id)) {
+      _receiptScope = ref.read(sessionStorageScopeProvider);
+    }
+  }
+
   void _close() {
-    context.pop(widget.result);
+    final scope = _receiptScope;
+    final id = widget.data.transactionId;
+    if (scope != null &&
+        id != null &&
+        ref.read(sessionStorageScopeProvider) == scope) {
+      unawaited(ref
+          .read(paymentSubmissionStoreProvider)
+          .acknowledgeTransaction(scope, id)
+          .catchError((Object _) {
+        appLog(
+            'Payment receipt was viewed; its recovery acknowledgment could not be saved.');
+      }));
+    }
+    Navigator.of(context).pop(widget.result);
   }
 
   Future<void> _shareReceipt() async {
-    final copiedMessage = SendMoneyCopy.receiptCopied(context);
-    await Clipboard.setData(ClipboardData(text: widget.data.shareText));
-    if (!mounted) return;
-    HapticFeedback.selectionClick();
-    SnackbarHelper.showSuccess(copiedMessage);
+    try {
+      await SharePlus.instance.share(ShareParams(
+        text: _visibleShareText ?? widget.data.shareText,
+        subject: _visibleTitle ?? widget.data.title,
+      ));
+    } catch (_) {
+      if (mounted) SnackbarHelper.showError(context.tr.tryAgain);
+    }
+  }
+
+  Future<void> _openOperation() async {
+    final id = widget.data.transactionId;
+    if (id == null || _opening) return;
+    setState(() => _opening = true);
+    try {
+      final result =
+          await ref.read(ledgerRepositoryProvider).getTransactionById(id);
+      if (!mounted) return;
+      final operation = result.fold((_) => null, (value) => value);
+      if (operation != null) {
+        await TransactionDetailScreen.open(context, operation);
+      } else {
+        SnackbarHelper.showError(context.tr.tryAgain);
+      }
+    } catch (_) {
+      if (mounted) SnackbarHelper.showError(context.tr.tryAgain);
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final candidate = ref.watch(lastTransactionHistoryProvider.select(
+        (history) => history
+            .where((item) => item.id == widget.data.transactionId)
+            .firstOrNull));
+    final minimumUpdate =
+        _latestOperation?.effectiveUpdatedAt ?? widget.data.updatedAt;
+    if (candidate != null &&
+        (minimumUpdate == null ||
+            !candidate.effectiveUpdatedAt.isBefore(minimumUpdate))) {
+      _latestOperation = candidate;
+    }
+    final operation = _latestOperation;
+    final status = operation?.displayStatus;
+    final confirmed = operation == null
+        ? widget.data.confirmed
+        : status == TransactionStatus.confirmed;
+    final copy = TransactionPresentationCopy.of(context);
+    final statusLabel = operation == null
+        ? null
+        : switch (operation.displayStatus) {
+            TransactionStatus.confirmed => copy.confirmed,
+            TransactionStatus.confirming => copy.confirming,
+            TransactionStatus.failed => copy.failed,
+            TransactionStatus.cancelled => copy.cancelled,
+            TransactionStatus.reconciling => copy.needsReview,
+            TransactionStatus.pending => copy.pending,
+          };
+    final title = switch (status) {
+      TransactionStatus.failed => copy.failed,
+      TransactionStatus.cancelled => copy.cancelled,
+      TransactionStatus.reconciling => copy.needsReview,
+      _ => confirmed
+          ? SendMoneyCopy.receiptTitleConfirmed(context)
+          : widget.data.title,
+    };
+    final subtitle = switch (status) {
+      TransactionStatus.failed => context.tr.receiptFailedSubtitle,
+      TransactionStatus.cancelled => context.tr.receiptCancelledSubtitle,
+      TransactionStatus.reconciling => context.tr.receiptReconcilingSubtitle,
+      _ => confirmed
+          ? SendMoneyCopy.receiptSubtitleConfirmed(context)
+          : widget.data.subtitle,
+    };
+    final money = widget.data.money;
+    final liveMoney = operation != null && money != null;
+    final amountLabel = liveMoney
+        ? money.primarySatoshis(operation.amountSatoshis)
+        : widget.data.amountLabel;
+    final secondaryAmountLabel = liveMoney
+        ? money.secondary(operation.amountBTC)
+        : widget.data.secondaryAmountLabel;
+    final occurredAt = operation?.timestamp ?? widget.data.occurredAt;
+    final networkReference = [operation?.blockchainTxid, operation?.paymentHash]
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .firstOrNull;
     final rows = <SendPaymentReceiptRowData>[
-      SendPaymentReceiptRowData(
-        label: SendMoneyCopy.receiptDateLabel(context),
-        value: _formatReceiptDate(context, widget.data.occurredAt),
-        numeric: true,
-      ),
-      ...widget.data.rows,
+      if (occurredAt != null)
+        SendPaymentReceiptRowData(
+          label: SendMoneyCopy.receiptDateLabel(context),
+          value: _formatReceiptDate(context, occurredAt),
+          numeric: true,
+        ),
+      for (final row in widget.data.rows)
+        if (!(operation != null &&
+                (row.kind == SendPaymentReceiptRowKind.status ||
+                    row.label == context.tr.sendReviewStatus)) &&
+            !(liveMoney &&
+                {
+                  SendPaymentReceiptRowKind.networkFee,
+                  SendPaymentReceiptRowKind.platformFee,
+                  SendPaymentReceiptRowKind.total
+                }.contains(row.kind)) &&
+            !(networkReference != null &&
+                row.kind == SendPaymentReceiptRowKind.networkReference))
+          row,
+      if (liveMoney && operation.showsNetworkFee)
+        SendPaymentReceiptRowData(
+            label: context.tr.sendReviewNetworkFee,
+            value: money.primarySatoshis(operation.feeSatoshis),
+            secondaryValue: money.secondary(operation.feeBTC),
+            numeric: true,
+            kind: SendPaymentReceiptRowKind.networkFee),
+      if (liveMoney && operation.showsServiceFee)
+        SendPaymentReceiptRowData(
+            label: context.tr.sendReviewKeroseneFee,
+            value: money.primarySatoshis(operation.serviceFeeSatoshis),
+            secondaryValue: money.secondary(operation.serviceFeeBTC),
+            numeric: true,
+            kind: SendPaymentReceiptRowKind.platformFee),
+      if (liveMoney &&
+          status != TransactionStatus.failed &&
+          status != TransactionStatus.cancelled)
+        SendPaymentReceiptRowData(
+            label: confirmed
+                ? context.tr.sendReviewTotalDebited
+                : context.tr.receiptExpectedTotal,
+            value: money.primarySatoshis(operation.signedDisplaySatoshis),
+            secondaryValue:
+                money.secondary(operation.signedDisplaySatoshis / 100000000.0),
+            numeric: true,
+            kind: SendPaymentReceiptRowKind.total),
+      if (networkReference != null && networkReference.trim().isNotEmpty)
+        SendPaymentReceiptRowData(
+            label: context.tr.sendReviewTxId,
+            value: compactSendReceiptValue(networkReference, head: 10, tail: 8),
+            technical: true,
+            kind: SendPaymentReceiptRowKind.networkReference),
+      if (operation != null)
+        SendPaymentReceiptRowData(
+          label: context.tr.sendReviewStatus,
+          value: statusLabel!,
+          kind: SendPaymentReceiptRowKind.status,
+        ),
+      if (operation != null && operation.showsOnchainConfirmations)
+        SendPaymentReceiptRowData(
+          label: context.tr.confirming,
+          value:
+              '${operation.confirmations} / ${operation.onchainConfirmationTarget}',
+        ),
     ];
 
+    _visibleShareText = [
+      title,
+      amountLabel,
+      if (secondaryAmountLabel.isNotEmpty) secondaryAmountLabel,
+      for (final row in rows)
+        '${row.label}: ${row.value}${row.secondaryValue.isEmpty ? '' : ' (${row.secondaryValue})'}'
+    ].join('\n');
+    _visibleTitle = title;
     return Scaffold(
       backgroundColor: _cBackground,
       body: SafeArea(
@@ -423,9 +618,12 @@ class _SendPaymentReceiptScreenState<T>
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                     child: _ReceiptBody(
-                      title: widget.data.title,
-                      subtitle: widget.data.subtitle,
-                      amountLabel: widget.data.amountLabel,
+                      confirmed: confirmed,
+                      status: status,
+                      title: title,
+                      subtitle: subtitle,
+                      amountLabel: amountLabel,
+                      secondaryAmountLabel: secondaryAmountLabel,
                       rows: rows,
                     ),
                   ),
@@ -440,6 +638,12 @@ class _SendPaymentReceiptScreenState<T>
                         onPressed: _close,
                       ),
                       const SizedBox(height: 10),
+                      if (widget.data.transactionId != null) ...[
+                        TextButton(
+                            onPressed: _opening ? null : _openOperation,
+                            child: Text(context.tr.receiptViewOperation)),
+                        const SizedBox(height: 10),
+                      ],
                       _ReceiptShareButton(
                         label: SendMoneyCopy.receiptShareAction(context),
                         onPressed: _shareReceipt,
@@ -476,11 +680,10 @@ class _ReviewBody extends StatelessWidget {
     final icon = card.isLightning
         ? KeroseneIcons.bolt
         : card.isOnChain
-        ? KeroseneIcons.send
-        : KeroseneIcons.user;
+            ? KeroseneIcons.send
+            : KeroseneIcons.user;
 
-    final showAddress =
-        card.recipientAddress.trim().isNotEmpty &&
+    final showAddress = card.recipientAddress.trim().isNotEmpty &&
         card.recipientAddress.trim() != card.recipientName.trim();
 
     return Column(
@@ -492,7 +695,7 @@ class _ReviewBody extends StatelessWidget {
             IconButton(
               tooltip: SendMoneyCopy.closeTooltip(context),
               onPressed: onBack,
-              icon: const Icon(KeroseneIcons.back, size: 31),
+              icon: const KeroseneIcon(KeroseneIcons.back, size: 31),
               style: IconButton.styleFrom(
                 foregroundColor: _cText,
                 disabledForegroundColor: _cMuted.withValues(alpha: 0.38),
@@ -543,7 +746,7 @@ class _ReviewBody extends StatelessWidget {
                               color: Colors.white.withValues(alpha: 0.28),
                             ),
                           ),
-                          child: Icon(icon, color: _cText, size: 20),
+                          child: KeroseneIcon(icon, color: _cText, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -552,8 +755,6 @@ class _ReviewBody extends StatelessWidget {
                             children: [
                               Text(
                                 card.recipientName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                                 style: AppTypography.inter(
                                   color: _cText,
                                   fontSize: 16,
@@ -563,11 +764,9 @@ class _ReviewBody extends StatelessWidget {
                               ),
                               if (showAddress) ...[
                                 const SizedBox(height: 4),
-                                Text(
+                                SelectableText(
                                   card.recipientAddress,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.inter(
+                                  style: AppTypography.technicalMono(
                                     color: _cMuted,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -670,8 +869,7 @@ class _ReviewLine extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
             style: AppTypography.inter(
               color: _cText,
               fontSize: 12.6,
@@ -681,19 +879,20 @@ class _ReviewLine extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Text(
-          value,
-          maxLines: 1,
-          softWrap: false,
-          overflow: TextOverflow.fade,
-          textAlign: TextAlign.right,
-          style: AppTypography.inter(
-            color: _cText,
-            fontSize: 12.6,
-            fontWeight: FontWeight.w600,
-            height: 1.3,
-          ),
-        ),
+        Flexible(
+            flex: 2,
+            child: Text(
+              value,
+              maxLines: 2,
+              softWrap: true,
+              textAlign: TextAlign.right,
+              style: AppTypography.inter(
+                color: _cText,
+                fontSize: 12.6,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            )),
       ],
     );
   }
@@ -720,8 +919,7 @@ class _AmountBlock extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
             style: AppTypography.inter(
               color: _cText,
               fontSize: emphasize ? 13.5 : 12.6,
@@ -731,41 +929,45 @@ class _AmountBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              amount,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.fade,
-              textAlign: TextAlign.right,
-              style: AppTypography.amountLarge.copyWith(
-                color: _cText,
-                fontSize: emphasize ? 16.2 : 14.4,
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-                letterSpacing: -0.2,
-              ),
-            ),
-            if (fiat.trim().isNotEmpty) ...[
-              const SizedBox(height: 6.5),
-              Text(
-                fiat.startsWith('≈') ? fiat : '≈ $fiat',
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-                textAlign: TextAlign.right,
-                style: AppTypography.inter(
-                  color: _cText,
-                  fontSize: 10.8,
-                  fontWeight: FontWeight.w500,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ],
-        ),
+        Flexible(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      amount,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.fade,
+                      textAlign: TextAlign.right,
+                      style: AppTypography.amountLarge.copyWith(
+                        color: _cText,
+                        fontSize: emphasize ? 16.2 : 14.4,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        letterSpacing: -0.2,
+                      ),
+                    )),
+                if (fiat.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6.5),
+                  Text(
+                    fiat,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    textAlign: TextAlign.right,
+                    style: AppTypography.inter(
+                      color: _cText,
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w500,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ],
+            )),
       ],
     );
   }
@@ -905,15 +1107,21 @@ class _FirstSendAckBlock extends StatelessWidget {
 }
 
 class _ReceiptBody extends StatelessWidget {
+  final bool confirmed;
+  final TransactionStatus? status;
   final String title;
   final String subtitle;
   final String amountLabel;
+  final String secondaryAmountLabel;
   final List<SendPaymentReceiptRowData> rows;
 
   const _ReceiptBody({
+    required this.confirmed,
+    this.status,
     required this.title,
     required this.subtitle,
     required this.amountLabel,
+    this.secondaryAmountLabel = '',
     required this.rows,
   });
 
@@ -926,15 +1134,15 @@ class _ReceiptBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _ReceiptSuccessMark(),
+            _ReceiptSuccessMark(confirmed: confirmed, status: status),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: AppTypography.financial(
+              style: AppTypography.playfairDisplay(
                 color: Colors.black87,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
               ),
             ),
             if (subtitle.isNotEmpty) ...[
@@ -942,61 +1150,118 @@ class _ReceiptBody extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: AppTypography.financial(
+                style: AppTypography.bodyMedium.copyWith(
                   color: Colors.black54,
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  height: 1.4,
                 ),
               ),
             ],
             const SizedBox(height: 24),
-            Text(
-              amountLabel,
-              textAlign: TextAlign.center,
-              style: AppTypography.financial(
-                color: Colors.black,
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  amountLabel,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.amount.copyWith(
+                    color: Colors.black,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                )),
+            if (secondaryAmountLabel.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(secondaryAmountLabel,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.number.copyWith(
+                      color: Colors.black54,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0)),
+            ],
             const SizedBox(height: 32),
             const Divider(color: Colors.black12, height: 1, thickness: 1),
             const SizedBox(height: 24),
             for (final row in rows)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        row.label,
-                        style: AppTypography.financial(
-                          color: Colors.black54,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        row.value,
-                        textAlign: TextAlign.right,
-                        style:
-                            AppTypography.financial(
+                child: row.technical
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(row.label,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.black54,
+                                fontSize: 14,
+                              )),
+                          const SizedBox(height: 6),
+                          SelectableText(
+                            row.value,
+                            textDirection: TextDirection.ltr,
+                            style: AppTypography.technicalMono(
                               color: Colors.black87,
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ).copyWith(
-                              fontFeatures: row.numeric
-                                  ? const [FontFeature.tabularFigures()]
-                                  : null,
+                              height: 1.4,
                             ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              row.label,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.black54,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  row.value,
+                                  textAlign: TextAlign.right,
+                                  style: (row.numeric
+                                          ? AppTypography.number
+                                          : AppTypography.bodyMedium)
+                                      .copyWith(
+                                        color: Colors.black87,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0,
+                                      )
+                                      .copyWith(
+                                        fontFeatures: row.numeric
+                                            ? const [
+                                                FontFeature.tabularFigures()
+                                              ]
+                                            : null,
+                                      ),
+                                ),
+                                if (row.secondaryValue.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    row.secondaryValue,
+                                    textAlign: TextAlign.right,
+                                    style: AppTypography.number.copyWith(
+                                      color: Colors.black54,
+                                      fontSize: 13,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             const SizedBox(height: 32), // space for jagged edge
           ],
@@ -1010,8 +1275,7 @@ class _SkeuomorphicReceiptPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors
-          .hexFFF9F6F0 // Paper color
+      ..color = AppColors.hexFFF9F6F0 // Paper color
       ..style = PaintingStyle.fill;
 
     final shadowPaint = Paint()
@@ -1064,7 +1328,7 @@ class _SendFlowHeader extends StatelessWidget {
         child: IconButton(
           tooltip: SendMoneyCopy.closeTooltip(context),
           onPressed: onClose,
-          icon: const Icon(KeroseneIcons.close, size: 22),
+          icon: const KeroseneIcon(KeroseneIcons.close, size: 22),
           style: IconButton.styleFrom(
             foregroundColor: _cMuted,
             disabledForegroundColor: _cMuted.withValues(alpha: 0.38),
@@ -1139,13 +1403,12 @@ class _AuthorizeButton extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(
+                          KeroseneIcon(
                             isSubmitting
                                 ? KeroseneIcons.security
                                 : KeroseneIcons.lock,
-                            color: ready || isSubmitting
-                                ? _cBackground
-                                : _cMuted,
+                            color:
+                                ready || isSubmitting ? _cBackground : _cMuted,
                             size: 18,
                           ),
                         ],
@@ -1163,19 +1426,32 @@ class _AuthorizeButton extends StatelessWidget {
 }
 
 class _ReceiptSuccessMark extends StatelessWidget {
-  const _ReceiptSuccessMark();
+  final bool confirmed;
+  final TransactionStatus? status;
+  const _ReceiptSuccessMark({required this.confirmed, this.status});
 
   @override
   Widget build(BuildContext context) {
+    final needsAttention = status == TransactionStatus.failed ||
+        status == TransactionStatus.reconciling;
+    // This mark is drawn on receipt paper, independent of the app's theme.
+    const color = Colors.black87;
+    final icon = confirmed
+        ? KeroseneIcons.check
+        : needsAttention
+            ? KeroseneIcons.warning
+            : status == TransactionStatus.cancelled
+                ? KeroseneIcons.close
+                : KeroseneIcons.pending;
     return Center(
       child: Container(
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: _cSuccess.withValues(alpha: 0.16),
+          color: color.withValues(alpha: 0.16),
           shape: BoxShape.circle,
         ),
-        child: Icon(KeroseneIcons.check, color: _cSuccess, size: 34),
+        child: KeroseneIcon(icon, color: color, size: 34),
       ),
     );
   }
@@ -1235,7 +1511,7 @@ class _ReceiptShareButton extends StatelessWidget {
             letterSpacing: 0,
           ),
         ),
-        icon: const Icon(KeroseneIcons.share, size: 17),
+        icon: const KeroseneIcon(KeroseneIcons.share, size: 17),
         label: Text(label),
       ),
     );
@@ -1246,63 +1522,62 @@ String receiptAmountLabelFromStatus({
   required TxStatus status,
   required double fallbackAmountBtc,
 }) {
-  final amount = status.amountReceived > 0
-      ? status.amountReceived
-      : fallbackAmountBtc;
+  final amount =
+      status.amountReceived > 0 ? status.amountReceived : fallbackAmountBtc;
   return formatBtcValue(amount);
 }
 
 String compactSendReceiptValue(String value, {int head = 12, int tail = 8}) {
-  final trimmed = value.trim();
-  if (trimmed.length <= head + tail + 3) return trimmed;
-  return '${trimmed.substring(0, head)}...${trimmed.substring(trimmed.length - tail)}';
+  // Keep the compatibility signature; financial identifiers are never shortened.
+  return value.trim();
 }
 
 String _formatReceiptDate(BuildContext context, DateTime value) {
+  value = AppDateTime.inDisplayZone(context, value);
   final locale = Localizations.localeOf(context).languageCode;
   final months = switch (locale) {
     'en' => const [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ],
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DEC',
+      ],
     'es' => const [
-      'ENE',
-      'FEB',
-      'MAR',
-      'ABR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AGO',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DIC',
-    ],
+        'ENE',
+        'FEB',
+        'MAR',
+        'ABR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AGO',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DIC',
+      ],
     _ => const [
-      'JAN',
-      'FEV',
-      'MAR',
-      'ABR',
-      'MAI',
-      'JUN',
-      'JUL',
-      'AGO',
-      'SET',
-      'OUT',
-      'NOV',
-      'DEZ',
-    ],
+        'JAN',
+        'FEV',
+        'MAR',
+        'ABR',
+        'MAI',
+        'JUN',
+        'JUL',
+        'AGO',
+        'SET',
+        'OUT',
+        'NOV',
+        'DEZ',
+      ],
   };
   final day = value.day.toString().padLeft(2, '0');
   final month = months[value.month - 1];
@@ -1314,8 +1589,8 @@ String _formatReceiptDate(BuildContext context, DateTime value) {
 /// Review palette — redirects to [SendFlowTheme] so send and receive share
 /// one color language.  File-scope getters are kept for minimal diff.
 SendFlowTheme _reviewTokens() => SendFlowTheme.forVariant(
-  ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
-);
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+    );
 
 Color get _cBackground => _reviewTokens().background;
 Color get _cSurface => _reviewTokens().surface;
@@ -1324,4 +1599,3 @@ Color get _cBorder => _reviewTokens().border;
 Color get _cText => _reviewTokens().textPrimary;
 Color get _cSecondary => _reviewTokens().textSecondary;
 Color get _cMuted => _reviewTokens().textMuted;
-Color get _cSuccess => _reviewTokens().feedbackSuccess;

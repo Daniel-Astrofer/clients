@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'package:flutter/cupertino.dart';
@@ -43,11 +44,11 @@ class SignupTypography {
   const SignupTypography._();
 
   static TextStyle title() {
-    return AppTypography.newsreader(
+    return AppTypography.inter(
       color: _signupText,
-      fontSize: 32,
-      fontWeight: FontWeight.w500,
-      height: 1.08,
+      fontSize: 30,
+      fontWeight: FontWeight.w600,
+      height: 1.18,
       letterSpacing: 0,
     );
   }
@@ -55,7 +56,7 @@ class SignupTypography {
   static TextStyle subtitle() {
     return AppTypography.inter(
       color: _signupMuted,
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: FontWeight.w400,
       height: 1.45,
       letterSpacing: 0,
@@ -123,11 +124,11 @@ class SignupTypography {
   }
 
   static TextStyle successTitle() {
-    return AppTypography.newsreader(
+    return AppTypography.inter(
       color: _signupText,
-      fontSize: 31,
-      fontWeight: FontWeight.w500,
-      height: 1.08,
+      fontSize: 30,
+      fontWeight: FontWeight.w600,
+      height: 1.18,
       letterSpacing: 0,
     );
   }
@@ -147,7 +148,7 @@ class SignupTypography {
 class SignupTopBar extends StatelessWidget {
   final int step;
   final int totalSteps;
-  final VoidCallback onBack;
+  final VoidCallback? onBack;
 
   const SignupTopBar({
     required this.step,
@@ -159,49 +160,46 @@ class SignupTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 44,
-      child: Stack(
-        alignment: Alignment.center,
+      child: Row(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBack,
-              icon: const Icon(KeroseneIcons.back, size: 24),
-              color: _signupText.withValues(alpha: 0.86),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            ),
+          IconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: onBack,
+            icon: const KeroseneIcon(KeroseneIcons.back, size: 24),
+            color: _signupText.withValues(alpha: 0.86),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          const SizedBox(width: 20),
+          Expanded(
+              child: Row(
             children: [
               for (var index = 0; index < totalSteps; index++) ...[
                 if (index > 0) const SizedBox(width: 7),
-                SizedBox(
-                  width: 30,
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: AuthMotion.step,
-                      curve: KeroseneMotion.standard,
-                      width: index == step ? 30 : (index < step ? 18 : 8),
-                      height: 4,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        color: index <= step
-                            ? _signupText.withValues(
-                                alpha: index == step ? 1 : 0.58,
-                              )
-                            : Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.18),
-                      ),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: AuthMotion.reduce(context)
+                        ? Duration.zero
+                        : AuthMotion.step,
+                    curve: KeroseneMotion.standard,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: index <= step
+                          ? _signupText.withValues(
+                              alpha: index == step ? 1 : 0.58,
+                            )
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.18),
                     ),
                   ),
                 ),
               ],
             ],
-          ),
+          )),
+          const SizedBox(width: 4),
         ],
       ),
     );
@@ -258,7 +256,7 @@ class SignupInlineFeedback extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          KeroseneIcon(
             icon,
             size: 18,
             color:
@@ -368,7 +366,7 @@ class SignupRuleRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          KeroseneIcon(
             passed ? KeroseneIcons.success : KeroseneIcons.circle,
             size: 18,
             color: passed
@@ -420,7 +418,7 @@ class SignupRiskAcknowledgement extends StatelessWidget {
               border: Border.all(color: checked ? _signupText : _signupDim),
             ),
             child: checked
-                ? Icon(KeroseneIcons.check, size: 13, color: _signupInk)
+                ? KeroseneIcon(KeroseneIcons.check, size: 13, color: _signupInk)
                 : null,
           ),
           const SizedBox(width: 12),
@@ -533,7 +531,17 @@ class SignupSpinnerState extends State<SignupSpinner>
     _controller = AnimationController(
       vsync: this,
       duration: KeroseneMotion.calm,
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AuthMotion.reduce(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override
@@ -548,6 +556,7 @@ class SignupSpinnerState extends State<SignupSpinner>
       return CupertinoActivityIndicator(
         radius: widget.size / 2,
         color: _signupText,
+        animating: false,
       );
     }
 
@@ -613,7 +622,8 @@ class TotpQrBox extends StatelessWidget {
       ),
       child: data.isEmpty
           ? Center(
-              child: Icon(KeroseneIcons.qr, color: _signupInk, size: 42),
+              child:
+                  KeroseneIcon(KeroseneIcons.qr, color: _signupInk, size: 42),
             )
           : QrImageView(data: data, version: QrVersions.auto),
     );
@@ -799,7 +809,7 @@ class RecoveryCodesCopyButton extends StatelessWidget {
       enabled: true,
       child: OutlinedButton.icon(
         onPressed: onCopied,
-        icon: Icon(KeroseneIcons.copy, size: 20),
+        icon: KeroseneIcon(KeroseneIcons.copy, size: 20),
         label: Text(_signupCopyRecoveryCodesAction(context)),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
@@ -832,7 +842,7 @@ class SignupBullet extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
         children: [
-          Icon(icon, color: _signupDim, size: 19),
+          KeroseneIcon(icon, color: _signupDim, size: 19),
           const SizedBox(width: 14),
           Expanded(
             child: Text(

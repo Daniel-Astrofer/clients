@@ -8,7 +8,9 @@ import 'theme_token_bridge.dart';
 ///
 /// Dark hexes follow the Linear monochrome stack (5 levels of near-black).
 /// Chrome colors resolve via [ThemeTokenBridge] / [KeroseneBrandTheme];
-/// accents (gold, bitcoin, status) are shared.
+/// brand / rail accents are shared. Resolved status colors use monochrome ink;
+/// their meaning is carried by icons and text. Static status constants remain
+/// available for legacy consumers outside the mobile theme.
 class KeroseneBrandTokens {
   const KeroseneBrandTokens._();
 
@@ -94,17 +96,17 @@ class KeroseneBrandTheme extends ThemeExtension<KeroseneBrandTheme> {
   Color get brand => KeroseneBrandTokens.brand;
   Color get bitcoin => KeroseneBrandTokens.bitcoin;
   Color get bitcoinOrange => KeroseneBrandTokens.bitcoinOrange;
-  Color get success => KeroseneBrandTokens.success;
-  Color get warning => KeroseneBrandTokens.warning;
-  Color get error => KeroseneBrandTokens.error;
-  Color get info => KeroseneBrandTokens.info;
+  Color get success => textPrimary;
+  Color get warning => textPrimary;
+  Color get error => textPrimary;
+  Color get info => textPrimary;
   Color get lightning => KeroseneBrandTokens.lightning;
   Color get railInternal => KeroseneBrandTokens.railInternal;
   Color get railOnchain => KeroseneBrandTokens.railOnchain;
   Color get railLightning => KeroseneBrandTokens.railLightning;
-  Color get railSettlement => KeroseneBrandTokens.railSettlement;
-  Color get railPending => KeroseneBrandTokens.railPending;
-  Color get railFailed => KeroseneBrandTokens.railFailed;
+  Color get railSettlement => textPrimary;
+  Color get railPending => textPrimary;
+  Color get railFailed => textPrimary;
 
   /// Linear monochrome dark map — 5-level gray stack.
   static const KeroseneBrandTheme dark = KeroseneBrandTheme(

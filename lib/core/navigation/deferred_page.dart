@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -265,7 +266,7 @@ class _DeferredPageErrorView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.serverUnavailable,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 32,

@@ -2,12 +2,90 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations_pt.dart';
+import 'package:kerosene/core/l10n/app_localizations_en.dart';
+import 'package:kerosene/core/l10n/app_localizations_es.dart';
 import 'package:kerosene/core/utils/error_translator.dart';
 
 void main() {
   final l10n = AppLocalizationsPt();
 
   group('ErrorTranslator', () {
+    for (final locale in [
+      AppLocalizationsPt(),
+      AppLocalizationsEn(),
+      AppLocalizationsEs()
+    ]) {
+      test('localizes PIN and selected-wallet failures in ${locale.localeName}',
+          () {
+        for (final code in ['AUTH_019', 'ERR_AUTH_APP_PIN_INVALID']) {
+          expect(
+              ErrorTranslator.translate(
+                  locale,
+                  jsonEncode({
+                    'errorCode': code,
+                    'message': 'DioException: endpoint /api/private failed',
+                  })),
+              locale.pinIncorrect);
+        }
+        expect(ErrorTranslator.translate(locale, 'V_SALDO_DISP'),
+            locale.errSelectedWalletInsufficientBalance);
+        expect(
+            ErrorTranslator.translate(
+                locale, 'ERR_AUTH_DEVICE_KEY_RECONFIGURE_REQUIRED'),
+            locale.errDeviceKeyConfigurationRequired);
+        expect(
+            ErrorTranslator.translate(
+                locale, 'ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS'),
+            locale.passkeyNoBiometrics);
+      });
+    }
+
+    test('translates legacy reserve refusals without inferring insolvency', () {
+      const message =
+          'KFE settlement gate rejected the transaction. Failed flags: [V_RESERVA_MAT]';
+      expect(ErrorTranslator.translate(l10n, message),
+          l10n.errReserveVerificationUnavailable);
+      expect(
+          ErrorTranslator.translate(
+              l10n,
+              jsonEncode({
+                'message': message,
+                'errorCode': 'SYS_001',
+                'statusCode': 409,
+              })),
+          l10n.errReserveVerificationUnavailable);
+      expect(
+          ErrorTranslator.translate(l10n,
+              'KFE settlement gate rejected the transaction. Failed flags: [V_SALDO_DISP, V_RESERVA_MAT]'),
+          l10n.errSettlementGateRejected);
+      expect(
+          ErrorTranslator.translate(l10n, 'Unrelated V_RESERVA_MAT diagnostic'),
+          isNot(l10n.errReserveVerificationUnavailable));
+      expect(
+          ErrorTranslator.translate(
+              l10n,
+              jsonEncode({
+                'message': message,
+                'errorCode': 'ERR_KFE_RESERVE_COVERAGE_INSUFFICIENT',
+                'statusCode': 409,
+              })),
+          l10n.errReserveCoverageInsufficient);
+    });
+
+    test('distinguishes failed reserve coverage from unavailable verification',
+        () {
+      expect(
+          ErrorTranslator.translate(
+              l10n, 'ERR_KFE_RESERVE_COVERAGE_INSUFFICIENT'),
+          l10n.errReserveCoverageInsufficient);
+      expect(
+          ErrorTranslator.translate(
+              l10n, 'ERR_KFE_RESERVE_VERIFICATION_UNAVAILABLE'),
+          l10n.errReserveVerificationUnavailable);
+      expect(ErrorTranslator.translate(l10n, 'SETTLEMENT_GATE_REJECTED'),
+          l10n.errSettlementGateRejected);
+    });
+
     test('maps standard numeric backend error codes to localized messages', () {
       final expectations = <String, String>{
         'AUTH_001': l10n.errAuthUserAlreadyExists,
@@ -29,7 +107,7 @@ void main() {
         'AUTH_017': l10n.errPasskeyDeviceNotLinked,
         'AUTH_018': l10n.appEntryPinUnavailableMessage,
         // App PIN invalid — never conflate with login credentials copy.
-        'AUTH_019': 'PIN incorreto. Tente novamente.',
+        'AUTH_019': l10n.pinIncorrect,
         'AUTH_020': l10n.appEntryLockedHelper,
         'AUTH_021': l10n.appEntryPinUnavailableMessage,
         'AUTH_022': l10n.errPasskeyRejected,

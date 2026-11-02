@@ -134,47 +134,49 @@ class AppDisplayPreferencesNotifier
 
   Future<void> setLocale(Locale locale) async {
     final next = AppLocalizationManager.resolve(locale);
-    state = state.copyWith(locale: next);
-    await ref
+    final saved = await ref
         .read(sharedPreferencesProvider)
         .setString(_localeKey, next.languageCode);
+    if (!saved) throw StateError('Locale preference was not saved.');
+    state = state.copyWith(locale: next);
     await _mirrorSecure(_secureLocaleKey, next.languageCode);
   }
 
   Future<void> setCurrency(Currency currency) async {
-    state = state.copyWith(currency: currency);
-    await ref
+    final saved = await ref
         .read(sharedPreferencesProvider)
         .setString(_currencyKey, currency.code);
+    if (!saved) throw StateError('Currency preference was not saved.');
+    state = state.copyWith(currency: currency);
     await _mirrorSecure(_secureCurrencyKey, currency.code);
   }
 
-  Future<void> setTimeZoneFollowDevice(bool follow) async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.setBool(_timeZoneFollowKey, follow);
-    if (follow) {
-      final detected = AppTimezone.detectId();
-      state = state.copyWith(
-        timeZoneFollowDevice: true,
-        timeZoneId: detected,
-      );
-      await prefs.setString(_timeZoneKey, detected);
-      await _mirrorSecure(_secureTimeZoneKey, detected);
-    } else {
-      state = state.copyWith(timeZoneFollowDevice: false);
-    }
-  }
+  Future<void> setTimeZoneFollowDevice(bool follow) =>
+      _saveTimeZone(follow ? AppTimezone.detectId() : state.timeZoneId, follow);
 
   Future<void> setTimeZoneId(String timeZoneId) async {
-    final resolved = AppTimezone.resolve(timeZoneId);
-    state = state.copyWith(
-      timeZoneId: resolved,
-      timeZoneFollowDevice: false,
-    );
+    if (!AppTimezone.isSupported(timeZoneId)) {
+      throw ArgumentError.value(
+          timeZoneId, 'timeZoneId', 'Unsupported timezone');
+    }
+    return _saveTimeZone(timeZoneId.trim(), false);
+  }
+
+  Future<void> _saveTimeZone(String id, bool follow) async {
+    final previous = state;
     final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.setBool(_timeZoneFollowKey, false);
-    await prefs.setString(_timeZoneKey, resolved);
-    await _mirrorSecure(_secureTimeZoneKey, resolved);
+    try {
+      if (!await prefs.setString(_timeZoneKey, id) ||
+          !await prefs.setBool(_timeZoneFollowKey, follow)) {
+        throw StateError('Timezone preference was not saved.');
+      }
+    } catch (_) {
+      await prefs.setString(_timeZoneKey, previous.timeZoneId);
+      await prefs.setBool(_timeZoneFollowKey, previous.timeZoneFollowDevice);
+      rethrow;
+    }
+    state = state.copyWith(timeZoneId: id, timeZoneFollowDevice: follow);
+    await _mirrorSecure(_secureTimeZoneKey, id);
   }
 
   /// Refresh device timezone when the OS offset changes (travel / DST).

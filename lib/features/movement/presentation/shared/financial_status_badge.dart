@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -164,7 +165,8 @@ class FinancialStatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(meta.icon, size: compact ? 14 : 16, color: monoTextColor),
+          KeroseneIcon(meta.icon,
+              size: compact ? 14 : 16, color: monoTextColor),
           SizedBox(width: compact ? 6 : 8),
           Text(
             meta.label,

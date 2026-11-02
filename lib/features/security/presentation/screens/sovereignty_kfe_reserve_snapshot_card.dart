@@ -1,6 +1,6 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/security/domain/entities/security_status.dart';
@@ -36,8 +36,9 @@ Widget buildKfeReserveSnapshotCard({
   final quorumHealthy =
       !failStopMode && totalNodes > 0 && activeNodes >= requiredNodes;
   final statusOk = isSolvent && quorumHealthy;
-  final statusColor =
-      statusOk ? AppColors.success : Theme.of(context).colorScheme.error;
+  final statusColor = statusOk
+      ? Theme.of(context).colorScheme.onSurface
+      : Theme.of(context).colorScheme.error;
   final statusLabel = failStopMode
       ? copy(
           pt: 'SAÍDAS PAUSADAS',
@@ -88,7 +89,7 @@ Widget buildKfeReserveSnapshotCard({
                 color: statusColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
+              child: KeroseneIcon(
                 KeroseneIcons.wallet,
                 color: statusColor,
                 size: 20,
@@ -260,7 +261,7 @@ Widget buildKfeReserveSnapshotCard({
                       es: 'Capacidad operativa',
                     ),
                     accentColor: lightningBalance > 0
-                        ? AppColors.success
+                        ? Theme.of(context).colorScheme.onSurface
                         : Theme.of(context).colorScheme.error,
                   ),
                 ),

@@ -2,15 +2,17 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show Locale;
+import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_taxonomy.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-/// Builds a privacy-conscious CSV of the local/remote projection.
+/// Builds a CSV of the local/remote projection with complete public identifiers.
 ///
-/// Long on-chain addresses are shortened; internal UUIDs are omitted when a
-/// human label exists. Values are satoshis (integer) for exact recon.
+/// Addresses and transaction references remain complete for reconciliation.
+/// Values are satoshis (integer) for exact reconciliation.
 /// Network/direction/status use the same taxonomy as Home/Extrato filters.
 String buildStatementCsv(List<Transaction> transactions) {
   final buf = StringBuffer();
@@ -35,8 +37,8 @@ String buildStatementCsv(List<Transaction> transactions) {
     final wallet = _csvCell(
       tx.walletLabel ?? tx.sourceWalletLabel ?? tx.destinationWalletLabel ?? '',
     );
-    final from = _csvCell(_shortMaybeAddress(tx.fromAddress));
-    final to = _csvCell(_shortMaybeAddress(tx.toAddress));
+    final from = _csvCell(tx.fromAddress.trim());
+    final to = _csvCell(tx.toAddress.trim());
     final cp = _csvCell(tx.counterpartyLabel ?? '');
     final txid = _csvCell((tx.blockchainTxid ?? '').trim());
     buf.writeln(
@@ -66,25 +68,26 @@ String buildStatementCsv(List<Transaction> transactions) {
 }
 
 String _csvCell(String raw) {
-  final v = raw.replaceAll('"', '""');
-  if (v.contains(',') || v.contains('"') || v.contains('\n')) {
+  // Text supplied by users must not become a formula when opened in a spreadsheet.
+  // Numeric satoshi columns are emitted separately and preserve their exact sign.
+  final text = RegExp(r'^\s*[=+\-@]').hasMatch(raw) ? "'$raw" : raw;
+  final v = text.replaceAll('"', '""');
+  if (v.contains(',') ||
+      v.contains('"') ||
+      v.contains('\n') ||
+      v.contains('\r')) {
     return '"$v"';
   }
   return v;
-}
-
-String _shortMaybeAddress(String raw) {
-  final v = raw.trim();
-  if (v.length <= 22) return v;
-  // Keep enough to identify without full address dump.
-  return '${v.substring(0, 10)}…${v.substring(v.length - 8)}';
 }
 
 /// Copy CSV to clipboard and (on mobile) open the system share sheet.
 Future<StatementExportResult> exportStatementCsv(
   List<Transaction> transactions, {
   String filePrefix = 'kerosene_statement',
+  AppLocalizations? localizations,
 }) async {
+  final tr = localizations ?? lookupAppLocalizations(const Locale('en'));
   final csv = buildStatementCsv(transactions);
   await Clipboard.setData(ClipboardData(text: csv));
 
@@ -102,26 +105,24 @@ Future<StatementExportResult> exportStatementCsv(
     final stamp = DateTime.now().toUtc().toIso8601String().replaceAll(':', '-');
     final file = File('${dir.path}/${filePrefix}_$stamp.csv');
     await file.writeAsString(csv, flush: true);
-    await SharePlus.instance.share(
+    final result = await SharePlus.instance.share(
       ShareParams(
         files: [
           XFile(file.path, mimeType: 'text/csv', name: 'statement.csv'),
         ],
-        subject: 'Kerosene statement',
-        text: 'Local statement (${transactions.length} entries). '
-            'Long addresses were shortened.',
+        subject: tr.statementExportDocumentTitle,
+        text: tr.statementPdfSummary(transactions.length),
       ),
     );
     return StatementExportResult(
       copiedToClipboard: true,
-      shared: true,
+      shared: result.status == ShareResultStatus.success,
+      shareDismissed: result.status == ShareResultStatus.dismissed,
       path: file.path,
       rowCount: transactions.length,
     );
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('exportStatementCsv share failed: $e');
-    }
+  } catch (_) {
+    // Clipboard acknowledgement remains true even if file sharing fails.
     return StatementExportResult(
       copiedToClipboard: true,
       shared: false,
@@ -134,12 +135,14 @@ Future<StatementExportResult> exportStatementCsv(
 class StatementExportResult {
   final bool copiedToClipboard;
   final bool shared;
+  final bool shareDismissed;
   final String? path;
   final int rowCount;
 
   const StatementExportResult({
     required this.copiedToClipboard,
     required this.shared,
+    this.shareDismissed = false,
     required this.path,
     required this.rowCount,
   });

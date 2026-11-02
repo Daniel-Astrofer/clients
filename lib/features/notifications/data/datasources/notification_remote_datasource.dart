@@ -28,7 +28,12 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
       final response = await apiClient.get(AppConfig.notificationsList);
       final body = response.data;
 
-      if (body is! List) {
+      if (response.statusCode != 200 ||
+          body is! List ||
+          body.any((item) =>
+              item is! Map ||
+              (item['id'] is! String && item['id'] is! int) ||
+              item['id'].toString().trim().isEmpty)) {
         throw ServerException(
           message: 'Resposta inesperada ao carregar notificações.',
           errorCode: 'ERR_NOTIFICATIONS_INVALID_RESPONSE',
@@ -37,7 +42,6 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
       }
 
       return body
-          .whereType<Map>()
           .map((item) => SessionNotificationItem.fromJson(
                 Map<String, dynamic>.from(item),
               ))
@@ -96,7 +100,7 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
     try {
       final response = await apiClient.get(AppConfig.notificationDeviceTokens);
       final body = response.data;
-      if (body is! List) {
+      if (response.statusCode != 200 || body is! List) {
         throw ServerException(
           message:
               'Resposta inesperada ao carregar dispositivos de notificação.',
@@ -104,10 +108,19 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
           data: body,
         );
       }
-      return body
-          .whereType<Map>()
-          .map((item) => DeviceToken.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
+      final devices = <DeviceToken>[];
+      for (final item in body) {
+        if (item is! Map ||
+            item['active'] is! bool ||
+            (item['id'] is! String && item['id'] is! int) ||
+            item['id'].toString().trim().isEmpty) {
+          throw const ServerException(
+              message: 'Invalid notification registration response.',
+              errorCode: 'ERR_NOTIFICATION_DEVICES_INVALID_RESPONSE');
+        }
+        devices.add(DeviceToken.fromJson(Map<String, dynamic>.from(item)));
+      }
+      return devices;
     } catch (error) {
       if (error is AppException) rethrow;
       throw ServerException(
@@ -119,7 +132,21 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
   @override
   Future<void> revokeDeviceToken(String tokenId) async {
     try {
-      await apiClient.delete(AppConfig.notificationDeviceToken(tokenId));
+      if (tokenId.trim().isEmpty) {
+        throw const ServerException(
+            message: 'Notification registration ID required.',
+            errorCode: 'ERR_NOTIFICATION_DEVICE_ID_REQUIRED');
+      }
+      final response = await apiClient.delete(
+          AppConfig.notificationDeviceToken(Uri.encodeComponent(tokenId)));
+      // The current Core contract acknowledges a completed revocation with 204.
+      // A queued response cannot be presented as an already disabled device.
+      if (response.statusCode != 204) {
+        throw ServerException(
+            message: 'Notification registration change was not confirmed.',
+            statusCode: response.statusCode,
+            errorCode: 'ERR_NOTIFICATION_REVOKE_UNCONFIRMED');
+      }
     } catch (error) {
       if (error is AppException) {
         rethrow;

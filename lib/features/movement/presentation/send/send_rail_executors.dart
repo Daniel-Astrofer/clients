@@ -33,6 +33,7 @@ Future<dynamic> executePaymentLinkSend({
   required String toAddress,
   required String linkId,
   required TransactionAuthResult authResult,
+  String? idempotencyKey,
   required Future<void> Function({
     required Wallet wallet,
     required SendDestinationAnalysis destination,
@@ -43,6 +44,7 @@ Future<dynamic> executePaymentLinkSend({
 }) async {
   final result = await ref.read(paymentLinkNotifierProvider.notifier).pay(
         linkId: linkId,
+        idempotencyKey: idempotencyKey,
         payerWalletId: wallet.id,
         totpCode: authResult.totpCode,
         confirmationPassphrase: authResult.confirmationPassphrase,
@@ -65,6 +67,7 @@ Future<dynamic> executePaymentLinkSend({
   }
 
   final error = ref.read(paymentLinkNotifierProvider).error;
+  final cause = ref.read(paymentLinkNotifierProvider).cause;
   // Silent when user cancelled passkey/device-key (error cleared in notifier).
   if (error != null) {
     HapticFeedback.heavyImpact();
@@ -75,6 +78,7 @@ Future<dynamic> executePaymentLinkSend({
     );
   }
   ref.read(paymentLinkNotifierProvider.notifier).reset();
+  if (cause != null) throw cause;
   return null;
 }
 
@@ -194,6 +198,7 @@ Future<dynamic> executeExternalSend({
   required SendFeeQuote feeQuote,
   required String toAddress,
   required TransactionAuthResult authResult,
+  String? idempotencyKey,
   required Future<void> Function({
     required Wallet wallet,
     required SendDestinationAnalysis destination,
@@ -206,6 +211,7 @@ Future<dynamic> executeExternalSend({
   final feeRateInt = feeQuote.submitFeeRateSatPerVbyte;
   final result = await ref.read(withdrawProvider.notifier).withdraw(
         fromWalletName: wallet.id,
+        idempotencyKey: idempotencyKey,
         toAddress: destination.isOnChain ? toAddress : null,
         paymentRequest: destination.isLightning ? toAddress : null,
         amount: amount,
@@ -251,6 +257,7 @@ Future<dynamic> executeExternalSend({
   }
 
   final error = ref.read(withdrawProvider).error;
+  final cause = ref.read(withdrawProvider).cause;
   if (error != null) {
     HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
@@ -260,6 +267,7 @@ Future<dynamic> executeExternalSend({
     );
   }
   ref.read(withdrawProvider.notifier).reset();
+  if (cause != null) throw cause;
   return null;
 }
 
@@ -272,6 +280,7 @@ Future<dynamic> executeInternalSend({
   required SendFeeQuote feeQuote,
   required String toAddress,
   required TransactionAuthResult authResult,
+  String? idempotencyKey,
   required Future<void> Function({
     required Wallet wallet,
     required SendDestinationAnalysis destination,
@@ -282,7 +291,7 @@ Future<dynamic> executeInternalSend({
   required String Function(String toAddress) resolveRecentDestinationAddress,
   required bool Function() isMounted,
 }) async {
-  final idempotencyKey = const Uuid().v4();
+  final operationKey = idempotencyKey ?? const Uuid().v4();
   final result = await ref.read(sendTransactionProvider.notifier).send(
         fromWalletId: wallet.id,
         fromAddress:
@@ -294,7 +303,7 @@ Future<dynamic> executeInternalSend({
         passkeyAssertionJson: authResult.passkeyAssertionJson,
         confirmationPassphrase: authResult.confirmationPassphrase,
         totpCode: authResult.totpCode,
-        idempotencyKey: idempotencyKey,
+        idempotencyKey: operationKey,
         requestTimestamp: DateTime.now().millisecondsSinceEpoch,
         appPin: authResult.appPin,
       );
@@ -321,6 +330,7 @@ Future<dynamic> executeInternalSend({
   }
 
   final error = ref.read(sendTransactionProvider).error;
+  final cause = ref.read(sendTransactionProvider).cause;
   if (error != null) {
     HapticFeedback.heavyImpact();
     if (!isMounted() || !confirmationContext.mounted) return null;
@@ -330,5 +340,6 @@ Future<dynamic> executeInternalSend({
     );
   }
   ref.read(sendTransactionProvider.notifier).reset();
+  if (cause != null) throw cause;
   return null;
 }

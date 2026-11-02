@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -134,7 +135,7 @@ class AmountInputPad extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppSpacing.md),
               border: Border.all(color: ink.withValues(alpha: 0.08)),
             ),
-            child: Icon(icon, color: ink, size: 20),
+            child: KeroseneIcon(icon, color: ink, size: 20),
           ),
         ),
       ),

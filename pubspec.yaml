@@ -23,13 +23,14 @@ dependencies:
   equatable: ^2.0.5
   timeago: ^3.5.0
   intl: ^0.20.2
+  timezone: ^0.11.0
   device_info_plus: ^13.1.0
   crypto: ^3.0.3
 
   bip39: ^1.0.6
   fl_chart: ^1.2.0
   mobile_scanner: ^7.2.0
-  nfc_manager: ^4.1.1
+  nfc_manager: ^4.2.1
   nfc_manager_ndef: ^1.1.0
   permission_handler: ^12.0.1
   web_socket_channel: ^3.0.3
@@ -105,23 +106,11 @@ flutter:
 
   assets:
     - 'assets/welcome_phone_mockup.png'
-    - 'assets/feed/cards/'
-    - 'assets/google_fonts/'
     - 'assets/logo/'
-    - 'assets/hero/'
-    - 'assets/animations/lottie/'
-    - 'assets/animations/rive/'
-    - 'assets/backgrounds/'
 
   shaders:
     - 'assets/shaders/home_aurora.frag'
     - 'assets/shaders/gemini_glow.frag'
-    - 'assets/shaders/bitcoin_hodl.frag'
-    - 'assets/shaders/card_wood.frag'
-    - 'assets/shaders/card_metal.frag'
-    - 'assets/shaders/card_diamond.frag'
-    - 'assets/shaders/card_ruby.frag'
-    - 'assets/shaders/card_emerald.frag'
 
 flutter_launcher_icons:
   android: "launcher_icon"

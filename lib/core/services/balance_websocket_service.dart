@@ -702,7 +702,7 @@ class RealtimeNotificationEvent {
   final String severity;
   final String title;
   final String body;
-  final DateTime timestamp;
+  final DateTime? timestamp;
   final String? deeplink;
   final String? entityType;
   final String? entityId;
@@ -722,11 +722,10 @@ class RealtimeNotificationEvent {
   });
 
   factory RealtimeNotificationEvent.fromJson(Map<String, dynamic> json) {
-    final rawTimestamp = json['createdAt'] ?? json['timestamp'];
-    final parsedTimestamp = AppDateTime.parse(rawTimestamp) ?? DateTime.now();
+    final parsedTimestamp = AppDateTime.parse(json['timestamp']) ??
+        AppDateTime.parse(json['createdAt']);
     final normalizedTitle = _normalizeText(
       json['title']?.toString(),
-      fallback: 'Atualização',
     );
     final normalizedBody = _normalizeText(json['body']?.toString());
     final inferredKind = _normalizeKind(
@@ -742,7 +741,7 @@ class RealtimeNotificationEvent {
     );
     final metadata = _normalizeMetadata(json['metadata']);
     final id = _normalizeNullableText(json['id']?.toString()) ??
-        '${parsedTimestamp.millisecondsSinceEpoch}|$inferredKind|$normalizedTitle|$normalizedBody';
+        '${parsedTimestamp?.millisecondsSinceEpoch ?? 'undated'}|$inferredKind|$normalizedTitle|$normalizedBody';
 
     return RealtimeNotificationEvent(
       id: id,

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:kerosene/features/movement/kernel/intent/payment_intent.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -64,9 +63,11 @@ class SendMoneyFlowState {
 
 class SendMoneyFlowNotifier extends AsyncNotifier<SendMoneyFlowState> {
   @override
-  FutureOr<SendMoneyFlowState> build() async {
+  SendMoneyFlowState build() {
     return const SendMoneyFlowState();
   }
+
+  void startJourney() => state = const AsyncValue.data(SendMoneyFlowState());
 
   void setStep(int step) {
     state = AsyncValue.data(state.value!.copyWith(currentStep: step));

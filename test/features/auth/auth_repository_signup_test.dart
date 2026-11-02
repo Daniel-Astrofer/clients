@@ -4,6 +4,31 @@ import 'package:kerosene/features/auth/data/datasources/auth_remote_datasource.d
 import 'package:kerosene/features/auth/data/repositories/auth_repository_impl.dart';
 
 void main() {
+  for (final failToken in [false, true]) {
+    test(
+        'invalid session cleanup attempts both keys and propagates failure: token=$failToken',
+        () async {
+      final events = <String>[];
+      final local = _RecordingAuthLocalDataSource(events)
+        ..failTokenRemoval = failToken
+        ..failUserRemoval = !failToken;
+      final repository = AuthRepositoryImpl(
+        remoteDataSource: _RecordingAuthRemoteDataSource(events),
+        localDataSource: local,
+      );
+      await expectLater(repository.clearInvalidSession(), throwsStateError);
+      expect(events, ['removeToken', 'removeUser']);
+    });
+  }
+  test('invalid session cleanup confirms both removals', () async {
+    final events = <String>[];
+    final repository = AuthRepositoryImpl(
+      remoteDataSource: _RecordingAuthRemoteDataSource(events),
+      localDataSource: _RecordingAuthLocalDataSource(events),
+    );
+    await repository.clearInvalidSession();
+    expect(events, ['removeToken', 'removeUser']);
+  });
   test('signup clears stale local auth and TOTP material before remote signup',
       () async {
     final events = <String>[];
@@ -33,17 +58,21 @@ void main() {
 
 class _RecordingAuthLocalDataSource implements AuthLocalDataSource {
   final List<String> events;
+  bool failTokenRemoval = false;
+  bool failUserRemoval = false;
 
   _RecordingAuthLocalDataSource(this.events);
 
   @override
   Future<void> removeToken() async {
     events.add('removeToken');
+    if (failTokenRemoval) throw StateError('Storage fixture failure');
   }
 
   @override
   Future<void> removeUser() async {
     events.add('removeUser');
+    if (failUserRemoval) throw StateError('Storage fixture failure');
   }
 
   @override

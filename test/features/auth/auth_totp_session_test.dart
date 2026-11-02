@@ -40,6 +40,8 @@ void main() {
       localDataSource: localDataSource,
     );
 
+    await repository.deviceKeyLoginFinish({'username': 'alice'});
+
     final result = await repository.verifyLoginTotp(
       username: 'alice',
       passphrase: 'unused',
@@ -106,6 +108,11 @@ class _TotpAuthRemoteDataSource implements AuthRemoteDataSource {
   _TotpAuthRemoteDataSource(this.result);
 
   @override
+  Future<LoginResult> deviceKeyLoginFinish(
+          Map<String, dynamic> credential) async =>
+      const LoginResult(jwt: 'pre-auth-token', requiresTotp: true);
+
+  @override
   Future<LoginResult> verifyLoginTotp({
     required String username,
     required String totpCode,
@@ -121,6 +128,9 @@ class _TotpAuthRemoteDataSource implements AuthRemoteDataSource {
 class _RecordingAuthLocalDataSource implements AuthLocalDataSource {
   String? savedToken;
   UserModel? savedUser;
+
+  @override
+  Future<void> removeToken() async => savedToken = null;
 
   @override
   Future<void> saveToken(String token) async {

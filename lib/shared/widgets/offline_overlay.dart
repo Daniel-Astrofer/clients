@@ -168,7 +168,7 @@ class _OfflineOverlayState extends ConsumerState<OfflineOverlay>
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
-                      Icon(
+                      KeroseneIcon(
                         KeroseneIcons.wifiOff,
                         size: 18,
                         color: KeroseneBrandTokens.warning,
@@ -382,7 +382,7 @@ class _AnimatedConnectionIcon extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Icon(
+                    child: KeroseneIcon(
                       KeroseneIcons.wifiOff,
                       size: size * 0.34,
                       color: KeroseneBrandTokens.warning,

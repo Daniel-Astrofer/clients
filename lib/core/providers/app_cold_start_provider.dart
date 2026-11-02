@@ -6,74 +6,44 @@ import 'package:kerosene/core/services/tor_network_bootstrap.dart';
 import 'package:kerosene/core/services/tor_service.dart';
 import 'package:kerosene/core/providers/tor_providers.dart';
 
-/// Cold-start readiness for splash + Tor.
+/// Cold-start readiness for Tor.
 ///
-/// - [minSplashElapsed]: brand K beat finished.
 /// - [torSettled]: local Tor relay is bound (API can go out).
 ///
 /// Authenticated entry PIN is shown only after Tor is settled (see
 /// mobile_bootstrap) so the pad is never shown twice (pre-Tor + post-Tor).
 class AppColdStartState {
   final bool torSettled;
-  final bool minSplashElapsed;
 
   const AppColdStartState({
     required this.torSettled,
-    required this.minSplashElapsed,
   });
-
-  /// Shell may leave the pure brand splash (welcome / auth shell).
-  /// Authenticated PIN still waits for [torSettled] separately.
-  bool get canShowAppShell => minSplashElapsed;
 
   /// Full network path ready (relay bound; circuit may still warm in background).
   bool get isTorReady => torSettled;
 
-  /// Back-compat: both brand splash and Tor gate.
-  bool get isReady => torSettled && minSplashElapsed;
+  /// Back-compat alias for the Tor gate.
+  bool get isReady => torSettled;
 
   AppColdStartState copyWith({
     bool? torSettled,
-    bool? minSplashElapsed,
   }) {
     return AppColdStartState(
       torSettled: torSettled ?? this.torSettled,
-      minSplashElapsed: minSplashElapsed ?? this.minSplashElapsed,
     );
   }
 }
 
 class AppColdStartNotifier extends Notifier<AppColdStartState> {
-  Timer? _minSplashTimer;
   bool _torKickoffStarted = false;
-  bool _splashScheduled = false;
   Completer<void>? _torReadyCompleter;
 
   // Instance fields survive keepAlive rebuilds without reading [state] in build().
   bool _torSettled = false;
-  bool _minSplashElapsed = false;
-
-  /// Brand splash before PIN — fixed 3s as product flow requires.
-  static const Duration minKLogoVisible = Duration(seconds: 3);
 
   @override
   AppColdStartState build() {
     ref.keepAlive();
-    ref.onDispose(() {
-      _minSplashTimer?.cancel();
-    });
-
-    // Only schedule the splash timer once per process — rebuilds must not reset
-    // the K logo clock (that felt like "Kerosene has no time to load").
-    if (!_splashScheduled) {
-      _splashScheduled = true;
-      _minSplashTimer = Timer(minKLogoVisible, () {
-        if (!ref.mounted) return;
-        _minSplashElapsed = true;
-        state = state.copyWith(minSplashElapsed: true);
-      });
-    }
-
     if (!_torKickoffStarted) {
       _torKickoffStarted = true;
       unawaited(_runTorBootstrap());
@@ -81,7 +51,6 @@ class AppColdStartNotifier extends Notifier<AppColdStartState> {
 
     return AppColdStartState(
       torSettled: _torSettled,
-      minSplashElapsed: _minSplashElapsed,
     );
   }
 

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -217,8 +218,12 @@ class KeroseneResponsiveBoundary extends StatelessWidget {
       return child;
     }
 
+    final compactScaler = mediaQuery.textScaler;
+    final systemMedia = compactScaler is KeroseneTextScaler
+        ? mediaQuery.copyWith(textScaler: compactScaler.inherited)
+        : mediaQuery;
     final metrics = KeroseneResponsiveMetrics.fromMediaQuery(
-      mediaQuery,
+      systemMedia,
       requestedTextScale: requestedTextScale,
     );
 
@@ -226,7 +231,9 @@ class KeroseneResponsiveBoundary extends StatelessWidget {
       metrics: metrics,
       child: MediaQuery(
         data: mediaQuery.copyWith(
-          textScaler: TextScaler.linear(metrics.effectiveTextScale),
+          textScaler: compactScaler is KeroseneTextScaler
+              ? compactScaler
+              : TextScaler.linear(metrics.effectiveTextScale),
         ),
         child: child,
       ),

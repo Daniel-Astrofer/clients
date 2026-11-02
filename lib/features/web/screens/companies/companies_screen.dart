@@ -8,6 +8,7 @@ import '../../theme/admin_colors.dart';
 import '../../theme/admin_typography.dart';
 import '../../theme/admin_theme.dart';
 import '../../widgets/admin_widgets.dart';
+import '../../widgets/cell_operations_card.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 class CompaniesScreen extends ConsumerWidget {
@@ -118,6 +119,7 @@ class CompaniesScreen extends ConsumerWidget {
                 );
               },
             ),
+            const CellOperationsCard(),
           ],
         ),
       ),
@@ -131,6 +133,8 @@ class CompaniesScreen extends ConsumerWidget {
     ref.invalidate(adminLightningMonitorProvider);
     ref.invalidate(adminVaultMeshHealthProvider);
     ref.invalidate(adminReleaseSnapshotProvider);
+    ref.invalidate(adminCellOperationsProvider);
+    ref.invalidate(adminCellUpdatesProvider);
   }
 }
 

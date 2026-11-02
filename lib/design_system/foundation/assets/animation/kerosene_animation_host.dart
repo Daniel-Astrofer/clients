@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/assets/animation/kerosene_animation_asset.dart';
@@ -49,7 +50,7 @@ class _KeroseneAnimationFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
+    return KeroseneIcon(
       icon,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
       size: 32,

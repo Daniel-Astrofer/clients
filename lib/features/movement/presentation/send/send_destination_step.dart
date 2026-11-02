@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -252,20 +253,17 @@ class SendDestinationStep extends StatelessWidget {
     final q = query.trim().toLowerCase();
     if (q.length < 3) return all;
     final needle = q.startsWith('@') ? q.substring(1) : q;
-    return all
-        .where((dest) {
-          final label = (dest.label ?? '').toLowerCase();
-          final address = dest.address.toLowerCase();
-          final labelBare = label.startsWith('@') ? label.substring(1) : label;
-          final addressBare = address.startsWith('@')
-              ? address.substring(1)
-              : address;
-          return labelBare.contains(needle) ||
-              addressBare.contains(needle) ||
-              label.contains(q) ||
-              address.contains(q);
-        })
-        .toList(growable: false);
+    return all.where((dest) {
+      final label = (dest.label ?? '').toLowerCase();
+      final address = dest.address.toLowerCase();
+      final labelBare = label.startsWith('@') ? label.substring(1) : label;
+      final addressBare =
+          address.startsWith('@') ? address.substring(1) : address;
+      return labelBare.contains(needle) ||
+          addressBare.contains(needle) ||
+          label.contains(q) ||
+          address.contains(q);
+    }).toList(growable: false);
   }
 
   /// Live resolve only — no "detected internal/on-chain/…" helper labels.
@@ -404,7 +402,7 @@ class _DestinationHeader extends StatelessWidget {
             tooltip: canWizardBack
                 ? MaterialLocalizations.of(context).backButtonTooltip
                 : context.tr.close,
-            icon: Icon(
+            icon: KeroseneIcon(
               canWizardBack ? KeroseneIcons.back : KeroseneIcons.close,
               size: 24,
             ),
@@ -466,7 +464,7 @@ class _DestinationFeedback extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: invalid ? 18 : 16),
+          KeroseneIcon(icon, color: color, size: invalid ? 18 : 16),
           SizedBox(width: tokens.spaceSm),
           Expanded(
             child: Text(
@@ -499,7 +497,7 @@ class _EmptyContactsState extends StatelessWidget {
               color: SendFlowTheme.of(context).surfaceHigh,
             ),
             child: Center(
-              child: Icon(
+              child: KeroseneIcon(
                 KeroseneIcons.userAdd,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 32,
@@ -589,8 +587,8 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
     final borderColor = widget.analysis.isInvalid
         ? KeroseneBrandTokens.error
         : widget.isLoading || _hasFocus
-        ? activeElementColor
-        : Theme.of(context).dividerColor;
+            ? activeElementColor
+            : Theme.of(context).dividerColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -615,9 +613,8 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
                   letterSpacing: 0,
                 ),
                 decoration: InputDecoration(
-                  hintText: _hasFocus
-                      ? null
-                      : SendMoneyCopy.destinationHint(context),
+                  hintText:
+                      _hasFocus ? null : SendMoneyCopy.destinationHint(context),
                   hintStyle: AppTypography.inter(
                     color: activeElementColor.withValues(alpha: 0.55),
                     fontSize: 18,
@@ -664,7 +661,7 @@ class _DestinationInputSectionState extends State<_DestinationInputSection> {
                   'es' => 'QR, NFC o pegar',
                   _ => 'QR, NFC ou colar',
                 },
-                icon: const Icon(KeroseneIcons.scanner, size: 24),
+                icon: const KeroseneIcon(KeroseneIcons.scanner, size: 24),
                 color: activeElementColor,
                 padding: EdgeInsets.zero,
                 style: IconButton.styleFrom(
@@ -765,12 +762,12 @@ class _FrequentContact extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      height: 1.15,
-                      letterSpacing: 0,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                          letterSpacing: 0,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -779,11 +776,11 @@ class _FrequentContact extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 11,
-                      height: 1.2,
-                      letterSpacing: 0,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                          height: 1.2,
+                          letterSpacing: 0,
+                        ),
                   ),
                 ],
               ),

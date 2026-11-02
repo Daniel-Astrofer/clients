@@ -1,3 +1,6 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
+import 'package:uuid/uuid.dart' as uuid;
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 // ignore_for_file: unused_import, unused_element, use_key_in_widget_constructors
 // architecture-allow-large-file: send-flow orchestration preserves deferred
 // imports, DI, and payment authorization callbacks.
@@ -76,11 +79,13 @@ import 'package:kerosene/features/movement/presentation/send/send_money_flow_not
 class SendMoneyScreen extends ConsumerStatefulWidget {
   final String? initialAddress;
   final double? initialAmountBtc;
+  final String? initialWalletId;
 
   const SendMoneyScreen({
     super.key,
     this.initialAddress,
     this.initialAmountBtc,
+    this.initialWalletId,
   });
 
   @override
@@ -89,6 +94,9 @@ class SendMoneyScreen extends ConsumerStatefulWidget {
 
 class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     with FinancialSurfaceMixin, TickerProviderStateMixin {
+  bool _journeyReady = false;
+  bool _initialWalletSelected = false;
+  bool _initialWalletUnavailable = false;
   Color get internalBlack => Theme.of(context).scaffoldBackgroundColor;
   Color get internalSurface => Theme.of(context).colorScheme.surface;
   Color get internalSurfaceHigh => SendFlowTheme.of(context).surfaceHigh;
@@ -145,6 +153,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   /// Inline Detalhes confirmation phase (amount → explicit review → authorize).
   InternalTransferReviewArgs<dynamic>? _detailsPhase;
+  String? _detailsIdempotencyKey;
+  bool _detailsSubmitting = false;
   Completer<dynamic>? _detailsPhaseCompleter;
   _LockedPaymentReviewSession? _detailsSession;
   late final AnimationController _detailsSlideController;
@@ -202,15 +212,27 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     _detailsSlide = _slideFromRight(_detailsSlideController);
     _raspGuard = RaspGuard.instance;
     _raspGuard.start();
-    _selectedCurrency = Currency.btc;
+    _selectedCurrency = widget.initialAmountBtc != null
+        ? Currency.btc
+        : ref.read(moneyFormatConfigProvider).currency;
     if (widget.initialAmountBtc != null) {
-      _lockedAmountBtc = widget.initialAmountBtc!;
       _amount.value = widget.initialAmountBtc!
           .toStringAsFixed(8)
           .replaceAll(RegExp(r'0+$'), '')
           .replaceAll(RegExp(r'\.$'), '');
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      ref.read(sendMoneyFlowProvider.notifier).startJourney();
+      if (widget.initialAmountBtc != null) {
+        _lockedAmountBtc = widget.initialAmountBtc!;
+      }
+      if (widget.initialWalletId != null) {
+        await _loadRequestedWallet();
+        if (!mounted) return;
+      } else {
+        setState(() => _journeyReady = true);
+      }
       final walletState = ref.read(walletProvider);
       if (walletState is WalletInitial || walletState is WalletError) {
         unawaited(ref.read(walletProvider.notifier).refresh());
@@ -219,6 +241,30 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         unawaited(_parsePaymentRequest(widget.initialAddress!));
       }
       // Cold stays in the same wizard (PR6) — local seed signs at confirm.
+    });
+  }
+
+  Future<void> _loadRequestedWallet() async {
+    setState(() => _journeyReady = false);
+    try {
+      await ref.read(walletProvider.notifier).refresh();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _initialWalletUnavailable = true;
+          _journeyReady = true;
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    final state = ref.read(walletProvider);
+    final found = state is WalletLoaded &&
+        state.wallets.any(
+            (wallet) => wallet.id == widget.initialWalletId && wallet.isActive);
+    setState(() {
+      _initialWalletUnavailable = !found;
+      _journeyReady = true;
     });
   }
 
@@ -314,6 +360,27 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!_journeyReady) {
+      return Scaffold(
+          backgroundColor: internalBlack,
+          body: const Center(child: CircularProgressIndicator()));
+    }
+    if (_initialWalletUnavailable) {
+      return Scaffold(
+          backgroundColor: internalBlack,
+          appBar: AppBar(),
+          body: Center(
+              child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(context.tr.walletSelectedUnavailable,
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                        onPressed: _loadRequestedWallet,
+                        child: Text(context.tr.tryAgain))
+                  ]))));
+    }
     final currentStepWatch =
         ref.watch(sendMoneyFlowProvider).value?.currentStep ?? 0;
     ref.watch(balanceWebSocketServiceProvider);
@@ -472,6 +539,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                 receiptBuilder: detailsArgs.receiptBuilder,
                 onDismiss: _closeDetailsPhase,
                 onCompleted: _completeDetailsPhase,
+                onSubmittingChanged: (busy) {
+                  if (mounted) setState(() => _detailsSubmitting = busy);
+                },
                 showFeeTierControls: detailsArgs.showFeeTierControls,
                 feeTier: detailsArgs.feeTier,
                 onFeeTierChanged: detailsArgs.onFeeTierChanged,
@@ -510,6 +580,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   }
 
   void _handleBack() {
+    if (_detailsSubmitting) return;
     if (_detailsPhase != null) {
       unawaited(_closeDetailsPhase());
       return;
@@ -599,6 +670,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   }
 
   Future<void> _closeDetailsPhase([dynamic result]) async {
+    if (_detailsSubmitting && result == null) return;
     final completer = _detailsPhaseCompleter;
     if (!mounted) {
       if (completer != null && !completer.isCompleted) {
@@ -619,6 +691,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
 
     setState(() {
       _detailsPhase = null;
+      _detailsIdempotencyKey = null;
       _detailsPhaseCompleter = null;
       _detailsSession = null;
       _destinationResolutionBusy = false;
@@ -959,6 +1032,22 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   }
 
   Wallet? _resolveWallet(WalletState walletState) {
+    if (!_initialWalletSelected &&
+        widget.initialWalletId != null &&
+        walletState is WalletLoaded) {
+      final requested = walletState.wallets
+          .where((wallet) =>
+              wallet.id == widget.initialWalletId && wallet.isActive)
+          .firstOrNull;
+      if (requested != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _initialWalletSelected) return;
+          _initialWalletSelected = true;
+          _selectSendWallet(requested);
+        });
+        return requested;
+      }
+    }
     return resolveSendWallet(
       walletState: walletState,
       selectedWallet: _selectedWallet,
@@ -1502,7 +1591,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
                             ),
                             child: Row(
                               children: [
-                                Icon(
+                                KeroseneIcon(
                                   icon,
                                   color: Theme.of(
                                     context,
@@ -1986,9 +2075,17 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     required SendFeeQuote feeQuote,
     required String toAddress,
   }) async {
+    _detailsIdempotencyKey ??= const uuid.Uuid().v4();
     final btcUsd = ref.read(latestBtcPriceProvider);
     final btcEur = ref.read(btcEurPriceProvider);
     final btcBrl = ref.read(btcBrlPriceProvider);
+    final money = MovementMoney(
+        currency: _selectedCurrency,
+        btcDecimalPlaces: ref.read(moneyFormatConfigProvider).btcDecimalPlaces,
+        locale: Localizations.localeOf(context),
+        btcUsd: btcUsd,
+        btcEur: btcEur,
+        btcBrl: btcBrl);
     final isPaymentLink =
         destination.isPaymentLink || _pendingPaymentLinkId != null;
     final amountLocked = _hasLockedPaymentAmount;
@@ -2006,6 +2103,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       btcEur: btcEur,
       btcBrl: btcBrl,
       isPaymentLink: isPaymentLink,
+      money: money,
       onConfirm: (confirmationContext,
               {required firstSendAcknowledgedInReview}) =>
           _confirmPayment(
@@ -2016,6 +2114,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         feeQuote: feeQuote,
         toAddress: toAddress,
         firstSendAcknowledgedInReview: firstSendAcknowledgedInReview,
+        idempotencyKey: _detailsIdempotencyKey,
+        money: money,
       ),
     );
     if (!mounted || args == null) return;
@@ -2095,6 +2195,13 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     final btcUsd = ref.read(latestBtcPriceProvider);
     final btcEur = ref.read(btcEurPriceProvider);
     final btcBrl = ref.read(btcBrlPriceProvider);
+    final money = MovementMoney(
+        currency: _selectedCurrency,
+        btcDecimalPlaces: ref.read(moneyFormatConfigProvider).btcDecimalPlaces,
+        locale: Localizations.localeOf(context),
+        btcUsd: btcUsd,
+        btcEur: btcEur,
+        btcBrl: btcBrl);
     final isPaymentLink =
         session.destination.isPaymentLink || _pendingPaymentLinkId != null;
     final showFeeTiers = session.amountLocked && session.destination.isOnChain;
@@ -2111,6 +2218,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       btcEur: btcEur,
       btcBrl: btcBrl,
       isPaymentLink: isPaymentLink,
+      money: money,
       onConfirm: (confirmationContext,
               {required firstSendAcknowledgedInReview}) =>
           _confirmPayment(
@@ -2121,6 +2229,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
         feeQuote: feeQuote,
         toAddress: session.toAddress,
         firstSendAcknowledgedInReview: firstSendAcknowledgedInReview,
+        idempotencyKey: _detailsIdempotencyKey,
+        money: money,
       ),
     );
     if (!mounted || args == null) return;
@@ -2165,21 +2275,9 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     required String toAddress,
   }) async {
     if (!mounted) return;
-    HapticFeedback.mediumImpact();
-    final amountLabel = formatBtcValue(amount);
-    final destLabel = _currentRecipientLabel();
-    final shortDest = destLabel.length > 22
-        ? '${destLabel.substring(0, 10)}…${destLabel.substring(destLabel.length - 6)}'
-        : destLabel;
-    AppNotice.showSuccess(
-      context,
-      title: SendMoneyCopy.sendSuccessTitle(context),
-      message: SendMoneyCopy.sendSuccessBody(
-        context,
-        amountLabel: '$amountLabel BTC',
-        destinationLabel: shortDest,
-      ),
-    );
+    // The operation result is acknowledged by the receipt. Do not show a
+    // generic success toast for a response that may still be pending.
+    HapticFeedback.selectionClick();
   }
 
   Future<dynamic> _confirmPayment({
@@ -2190,6 +2288,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     required SendFeeQuote feeQuote,
     required String toAddress,
     bool firstSendAcknowledgedInReview = false,
+    String? idempotencyKey,
+    MovementMoney? money,
   }) async {
     return confirmSendPayment(
       context: context,
@@ -2201,6 +2301,8 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       feeQuote: feeQuote,
       toAddress: toAddress,
       pendingPaymentLinkId: _pendingPaymentLinkId,
+      idempotencyKey: idempotencyKey,
+      money: money,
       resolveSecurityProfile: _resolveSecurityProfile,
       showSentTransactionNotification: _showSentTransactionNotification,
       resolveRecentDestinationLabel: _resolveRecentInternalDestinationLabel,
@@ -2409,7 +2511,7 @@ class _OfflineSendBanner extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.wifiOff,
                     size: 18,
                     color: Theme.of(context).colorScheme.error,

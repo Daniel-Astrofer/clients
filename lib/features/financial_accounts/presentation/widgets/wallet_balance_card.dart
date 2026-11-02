@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -85,7 +86,7 @@ class WalletBalanceCard extends ConsumerWidget {
                     color: surface.background,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: KeroseneIcon(
                     wallet.isColdWallet
                         ? KeroseneIcons.lock
                         : KeroseneIcons.wallet,

@@ -20,12 +20,24 @@ import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_screen.dart';
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_screens/wallet_setup_hub_screen.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart';
+import 'package:kerosene/features/home/presentation/screens/onboarding_steps_screen.dart';
+import 'package:kerosene/features/auth/presentation/first_access/first_access_screen.dart';
+import 'package:kerosene/features/auth/presentation/screens/emergency_recovery_screen.dart';
+import 'package:kerosene/features/auth/presentation/screens/login_screen.dart';
+import 'package:kerosene/features/auth/presentation/screens/server_unavailable_screen.dart';
+import 'package:kerosene/features/auth/presentation/screens/signup/signup_flow_screen.dart';
+import 'package:kerosene/features/auth/presentation/screens/welcome_screen.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart';
+import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_screen_review.dart';
+import 'package:kerosene/features/movement/presentation/send/send_payment_review_args.dart';
 import 'package:kerosene/features/notifications/presentation/screens/notification_center_screen.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 import 'package:kerosene/features/security/presentation/screens/notification_settings_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/security_totp_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_backup_codes_screen.dart';
+import 'package:kerosene/features/security/presentation/screens/app_pin_recovery_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_devices_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_recovery_hub_screen.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart';
@@ -86,22 +98,80 @@ class DeviceScreenGalleryExport {
 
     final screens = <_GalleryScreen>[
       _GalleryScreen('01_home', const HomeScreen()),
+      _GalleryScreen('02_welcome', const WelcomeScreen()),
+      _GalleryScreen('03_login', const LoginScreen()),
+      _GalleryScreen('04_signup', const SignupFlowScreen()),
+      _GalleryScreen('05_emergency_recovery', const EmergencyRecoveryScreen()),
+      _GalleryScreen('06_first_access', const FirstAccessScreen()),
+      _GalleryScreen('07_app_pin_recovery', const AppPinRecoveryScreen()),
+      _GalleryScreen('08_onboarding_steps', const OnboardingStepsScreen()),
       _GalleryScreen(
-        '02_settings',
+        '09_server_unavailable',
+        const ServerUnavailableScreen(),
+      ),
+      _GalleryScreen(
+        '10_settings',
         const SettingsScreen(showPrimaryNavigation: true),
       ),
-      _GalleryScreen('03_activity', const TransactionStatementScreen()),
-      _GalleryScreen('04_receive', const MovementHubScreen()),
-      _GalleryScreen('05_accounts', const BitcoinAccountsScreen()),
-      _GalleryScreen('06_notifications', const NotificationCenterScreen()),
-      _GalleryScreen('07_wallet_setup', const WalletSetupHubScreen()),
-      _GalleryScreen('08_security_totp', const SecurityTotpScreen()),
-      _GalleryScreen('09_recovery_hub', const SettingsRecoveryHubScreen()),
-      _GalleryScreen('10_devices', const SettingsDevicesScreen()),
-      _GalleryScreen('11_backup_codes', const SettingsBackupCodesScreen()),
-      _GalleryScreen('12_sovereignty', const SovereigntyStatusScreen()),
       _GalleryScreen(
-        '13_notification_settings',
+        '11_settings_notifications',
+        const SettingsScreen(openNotificationsPane: true),
+      ),
+      _GalleryScreen(
+        '12_settings_security',
+        const SettingsScreen(openSecurityPane: true),
+      ),
+      _GalleryScreen('13_activity', const TransactionStatementScreen()),
+      _GalleryScreen('14_receive_amount', const ReceiveAmountEntryScreen()),
+      _GalleryScreen('15_receive_methods', const MovementHubScreen()),
+      _GalleryScreen(
+        '16_send_money',
+        const SendMoneyScreen(),
+      ),
+      _GalleryScreen(
+        '16_send_review',
+        InternalTransferReviewScreen<Object?>(
+          title: 'Revisar transferência',
+          amountBtcLabel: '0,001 BTC',
+          fiatAmountLabel: 'R\$ 320,00',
+          confirmLabel: 'Confirmar',
+          submittingLabel: 'Processando…',
+          destinationLabel: 'Destino',
+          networkLabel: 'Bitcoin',
+          fromWalletLabel: 'Carteira principal',
+          rows: const [
+            SendPaymentReviewRowData(label: 'Rede', value: 'Bitcoin'),
+            SendPaymentReviewRowData(
+              label: 'Taxa estimada',
+              value: '0,00001 BTC',
+              numeric: true,
+            ),
+          ],
+          card: const SendPaymentReviewCardData(
+            recipientName: 'Destinatário',
+            recipientAddress: 'bc1q…kero',
+            transferAmountLabel: '0,001 BTC',
+            transferFiatLabel: 'R\$ 320,00',
+            totalAmountLabel: '0,00101 BTC',
+            totalFiatLabel: 'R\$ 323,20',
+            networkLabel: 'Bitcoin',
+            miningFeeLabel: '0,00001 BTC',
+            miningFeeFiatLabel: 'R\$ 3,20',
+            isOnChain: true,
+          ),
+          onConfirm: (_) async => null,
+        ),
+      ),
+      _GalleryScreen('17_accounts', const BitcoinAccountsScreen()),
+      _GalleryScreen('18_notifications', const NotificationCenterScreen()),
+      _GalleryScreen('19_wallet_setup', const WalletSetupHubScreen()),
+      _GalleryScreen('20_security_totp', const SecurityTotpScreen()),
+      _GalleryScreen('21_recovery_hub', const SettingsRecoveryHubScreen()),
+      _GalleryScreen('22_devices', const SettingsDevicesScreen()),
+      _GalleryScreen('23_backup_codes', const SettingsBackupCodesScreen()),
+      _GalleryScreen('24_sovereignty', const SovereigntyStatusScreen()),
+      _GalleryScreen(
+        '25_notification_settings',
         const NotificationSettingsScreen(),
       ),
     ];
@@ -131,6 +201,13 @@ class DeviceScreenGalleryExport {
       onTimeout: () => <File>[],
     );
 
+    if (controller.failures.isNotEmpty) {
+      throw StateError(
+        'Captura incompleta: ${controller.failures.length}/'
+        '${controller.screens.length} telas falharam '
+        '(${controller.failures.join(', ')}).',
+      );
+    }
     if (pngs.isEmpty) {
       throw StateError('Nenhum PNG gerado — veja logs [device-gallery]');
     }
@@ -183,6 +260,7 @@ class _GalleryCaptureController {
   final Directory runDir;
   final void Function(String status)? onStatus;
   final Completer<List<File>> done = Completer<List<File>>();
+  final List<String> failures = [];
 
   _GalleryCaptureController({
     required this.screens,
@@ -234,12 +312,24 @@ class _GalleryCapturePageState extends State<_GalleryCapturePage> {
         await _pump(40);
 
         try {
-          final file = await _shot(item.name);
+          File? file;
+          Object? lastError;
+          for (var attempt = 0; attempt < 3; attempt++) {
+            try {
+              file = await _shot(item.name);
+              break;
+            } catch (error) {
+              lastError = error;
+              if (attempt < 2) await _pump(30);
+            }
+          }
+          if (file == null) throw lastError!;
           pngs.add(file);
           c.onStatus?.call(
             'Salvo ${file.uri.pathSegments.last} (${file.lengthSync()} bytes)',
           );
         } catch (e, st) {
+          c.failures.add(item.name);
           debugPrint('[device-gallery] ${item.name}: $e\n$st');
           c.onStatus?.call('Erro ${item.name}: $e');
         }
@@ -295,17 +385,37 @@ class _GalleryCapturePageState extends State<_GalleryCapturePage> {
     );
     final w = image.width;
     final h = image.height;
+    final pixels = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
     final bd = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
+    if (pixels == null) throw StateError('pixel readback null');
     if (bd == null) throw StateError('png encode null');
 
     final bytes = bd.buffer.asUint8List();
-    final solid = bytes.length < 25000;
-    if (solid) {
+    final raw = pixels.buffer.asUint8List(
+      pixels.offsetInBytes,
+      pixels.lengthInBytes,
+    );
+    var visibleSamples = 0;
+    var sampleCount = 0;
+    const sampleStride = 32;
+    for (var y = 0; y < h; y += sampleStride) {
+      for (var x = 0; x < w; x += sampleStride) {
+        final offset = (y * w + x) * 4;
+        sampleCount++;
+        if (raw[offset + 3] > 128 &&
+            raw[offset] + raw[offset + 1] + raw[offset + 2] > 72) {
+          visibleSamples++;
+        }
+      }
+    }
+    final blank = visibleSamples < math.max(4, sampleCount ~/ 2000);
+    if (blank) {
       debugPrint(
-        '[device-gallery] WARN $name looks mostly black '
-        '(${bytes.length} bytes, ${w}x$h)',
+        '[device-gallery] WARN $name rendered blank/black '
+        '(${w}x$h, $visibleSamples visible samples)',
       );
+      throw StateError('rendered blank/black frame ($visibleSamples samples)');
     }
 
     final file = File(p.join(c.runDir.path, '$name.png'));
@@ -313,7 +423,7 @@ class _GalleryCapturePageState extends State<_GalleryCapturePage> {
     debugPrint(
       '[device-gallery] ${file.path} ${bytes.length}b ${w}x$h '
       'logical=${ro.size.width.toStringAsFixed(0)}x'
-      '${ro.size.height.toStringAsFixed(0)} solidBlack=$solid',
+      '${ro.size.height.toStringAsFixed(0)} visibleSamples=$visibleSamples',
     );
     return file;
   }

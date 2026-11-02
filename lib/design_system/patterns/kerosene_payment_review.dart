@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
@@ -216,7 +217,7 @@ class _ReviewRow extends StatelessWidget {
           SizedBox(width: AppSpacing.sm),
           GestureDetector(
               onTap: onEdit,
-              child: Icon(KeroseneIcons.edit,
+              child: KeroseneIcon(KeroseneIcons.edit,
                   size: 14, color: palette.textDisabled)),
         ],
       ],

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -66,7 +67,7 @@ class _RoundHeaderButton extends StatelessWidget {
         child: SizedBox(
           width: 48,
           height: 48,
-          child: Icon(icon, color: colors.text, size: 22),
+          child: KeroseneIcon(icon, color: colors.text, size: 22),
         ),
       ),
     );

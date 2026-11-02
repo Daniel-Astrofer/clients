@@ -19,6 +19,9 @@ class BitcoinAccount {
   /// User-facing account name.
   final String label;
 
+  /// Server clock for wallet metadata, independent of balance observations.
+  final DateTime? updatedAt;
+
   /// Optional explanatory label for the wallet type.
   final String walletTypeDescription;
 
@@ -62,6 +65,7 @@ class BitcoinAccount {
     required this.custody,
     required this.status,
     required this.label,
+    this.updatedAt,
     this.walletTypeDescription = '',
     required this.riskTier,
     this.cardId,
@@ -129,6 +133,7 @@ class BitcoinAccount {
       custody: json['custody'] as String? ?? 'KEROSENE_CUSTODIAL',
       status: json['status'] as String? ?? 'ACTIVE',
       label: json['label'] as String? ?? '',
+      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
       walletTypeDescription: json['walletTypeDescription'] as String? ?? '',
       riskTier: json['riskTier'] as String? ?? 'BRONZE',
       cardId: json['cardId'] as String?,
@@ -152,6 +157,7 @@ class BitcoinAccount {
         'custody': custody,
         'status': status,
         'label': label,
+        'updatedAt': updatedAt?.toUtc().toIso8601String(),
         'walletTypeDescription': walletTypeDescription,
         'riskTier': riskTier,
         'cardId': cardId,

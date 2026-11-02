@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/services/balance_websocket_service.dart';
 import 'package:kerosene/core/services/notification_orchestrator.dart';
@@ -151,7 +152,9 @@ class _NotificationCard extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  timeago.format(notification.timestamp),
+                  notification.timestamp == null
+                      ? context.tr.notifDateNotProvided
+                      : timeago.format(notification.timestamp!),
                   style: const TextStyle(
                     fontSize: 12,
                     color: AdminColors.textSecondary,

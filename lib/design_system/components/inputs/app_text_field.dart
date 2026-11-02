@@ -1,7 +1,9 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
 /// Canonical text field — uses theme [InputDecoration] + input radius token.
 class AppTextField extends StatelessWidget {
@@ -58,6 +60,17 @@ class AppTextField extends StatelessWidget {
       onChanged: onChanged,
       onFieldSubmitted: onFieldSubmitted,
       validator: validator,
+      errorBuilder: (context, message) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          KeroseneIcon(KeroseneIcons.error,
+              size: 16, color: theme.colorScheme.error),
+          const SizedBox(width: 6),
+          Expanded(
+              child:
+                  Text(message, style: theme.inputDecorationTheme.errorStyle)),
+        ],
+      ),
       autofocus: autofocus,
       enabled: enabled,
       autofillHints: autofillHints,

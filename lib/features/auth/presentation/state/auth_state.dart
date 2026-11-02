@@ -51,6 +51,13 @@ class AuthTotpVerified extends AuthState {
   int get hashCode => sessionId.hashCode ^ username.hashCode;
 }
 
+/// Signup completion may have committed; authenticated confirmation is required.
+/// Contains no password, TOTP, challenge, or device credential.
+class AuthOnboardingOutcomeUnknown extends AuthState {
+  final String username;
+  const AuthOnboardingOutcomeUnknown(this.username);
+}
+
 /// Estado não autenticado
 class AuthUnauthenticated extends AuthState {
   const AuthUnauthenticated();
@@ -63,11 +70,15 @@ class AuthError extends AuthState {
   final String? errorCode;
   final Object? data;
 
+  /// Ephemeral recovery context; excluded from diagnostic serialization.
+  final AuthState? resumeState;
+
   const AuthError(
     this.message, {
     this.statusCode,
     this.errorCode,
     this.data,
+    this.resumeState,
   });
 
   @override
@@ -77,7 +88,8 @@ class AuthError extends AuthState {
         other.message == message &&
         other.statusCode == statusCode &&
         other.errorCode == errorCode &&
-        other.data == data;
+        other.data == data &&
+        identical(other.resumeState, resumeState);
   }
 
   @override
@@ -85,7 +97,8 @@ class AuthError extends AuthState {
       message.hashCode ^
       statusCode.hashCode ^
       errorCode.hashCode ^
-      data.hashCode;
+      data.hashCode ^
+      resumeState.hashCode;
 
   @override
   String toString() => jsonEncode({

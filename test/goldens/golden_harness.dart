@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
@@ -15,6 +16,7 @@ import 'package:kerosene/core/providers/biometric_provider.dart';
 import 'package:kerosene/core/providers/locale_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
+import 'package:kerosene/core/providers/background_alerts_runtime_provider.dart';
 import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/data/datasources/auth_remote_datasource.dart'
@@ -45,7 +47,7 @@ Future<void> pumpFullScreenGolden(
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(wrapGolden(child));
+  await tester.pumpWidget(wrapGolden(_clientPresentation(child)));
   for (var i = 0; i < 8; i++) {
     await tester.pump(const Duration(milliseconds: 120));
   }
@@ -55,15 +57,28 @@ Future<void> pumpGoldenAnimationFrame(WidgetTester tester) {
   return tester.pump(const Duration(milliseconds: 120));
 }
 
+Widget _clientPresentation(Widget child) {
+  if (child is MediaQuery) {
+    return MediaQuery(
+        data: child.data, child: KeroseneUiScale(child: child.child));
+  }
+  if (child is Theme) {
+    return Theme(data: child.data, child: _clientPresentation(child.child));
+  }
+  return KeroseneUiScale(child: child);
+}
+
 Widget wrapGolden(Widget child) {
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(goldenSharedPreferences),
+      backgroundAlertsRuntimeProvider
+          .overrideWith(_GoldenBackgroundRuntime.new),
       sessionStorageScopeProvider.overrideWithValue('golden-session'),
       networkStatusProvider.overrideWith(() => NetworkStatusNotifier()),
       bitcoinAccountsServiceProvider
           .overrideWithValue(MockBitcoinAccountsService()),
-      bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+      bitcoinAccountsByScopeProvider.overrideWith2(BitcoinAccountsNotifier.new),
       sovereigntyStatusProvider.overrideWith((ref) async => mockSecurityStatus),
       kfeReserveOverviewProvider
           .overrideWith((ref) async => mockKfeReserveOverview),
@@ -123,6 +138,7 @@ Widget wrapGolden(Widget child) {
       latestBtcPriceProvider.overrideWithValue(67234.5),
     ],
     child: MaterialApp(
+      builder: (context, child) => KeroseneUiScale(child: child!),
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       locale: const Locale('pt'),
@@ -131,6 +147,12 @@ Widget wrapGolden(Widget child) {
       home: child,
     ),
   );
+}
+
+class _GoldenBackgroundRuntime extends BackgroundAlertsRuntimeNotifier {
+  @override
+  BackgroundAlertsRuntimeState build() =>
+      const BackgroundAlertsRuntimeState(BackgroundAlertsPhase.running);
 }
 
 class _GoldenAppearanceNotifier extends AppearanceNotifier {

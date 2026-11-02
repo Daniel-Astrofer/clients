@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
@@ -26,15 +27,9 @@ class AppNotificationStyle {
   static Color get bodyColor => KeroseneBrandTokens.textSecondary;
   static Color get metaColor => KeroseneBrandTokens.textMuted;
 
-  static Color accentFor(AppNotificationTone tone) {
-    return switch (tone) {
-      AppNotificationTone.success => KeroseneBrandTokens.success,
-      AppNotificationTone.error => KeroseneBrandTokens.error,
-      AppNotificationTone.warning => KeroseneBrandTokens.warning,
-      AppNotificationTone.info => KeroseneBrandTokens.info,
-      AppNotificationTone.neutral => KeroseneBrandTokens.textSecondary,
-    };
-  }
+  // State meaning is carried by its icon and label, using the Home ink palette.
+  static Color accentFor(AppNotificationTone tone) =>
+      KeroseneBrandTokens.textPrimary;
 
   static IconData iconFor(AppNotificationTone tone) {
     return switch (tone) {
@@ -58,7 +53,7 @@ class AppNotificationSurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double borderRadius;
   final double? minHeight;
-  final int maxMessageLines;
+  final int? maxMessageLines;
   final bool showLeadingIcon;
 
   const AppNotificationSurface({
@@ -85,22 +80,16 @@ class AppNotificationSurface extends StatelessWidget {
     );
     final normalizedMessage = _normalize(message ?? '', fallback: '');
     final normalizedFooter = _normalize(footerLabel ?? '', fallback: '');
-    final accent = AppNotificationStyle.accentFor(tone);
+    final brand = KeroseneBrandTheme.of(context);
+    final accent = brand.textPrimary;
 
     return Container(
       constraints:
           minHeight == null ? null : BoxConstraints(minHeight: minHeight!),
       decoration: BoxDecoration(
-        color: AppNotificationStyle.surfaceColor,
+        color: brand.surface,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: AppNotificationStyle.borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.32),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: brand.border),
       ),
       child: Padding(
         padding: padding,
@@ -117,12 +106,12 @@ class AppNotificationSurface extends StatelessWidget {
                     height: 30,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: KeroseneBrandTokens.surfaceMuted,
+                      color: brand.surfaceMuted,
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: brand.border,
                       ),
                     ),
-                    child: Icon(
+                    child: KeroseneIcon(
                       leadingIcon ?? AppNotificationStyle.iconFor(tone),
                       color: accent,
                       size: 17,
@@ -133,10 +122,8 @@ class AppNotificationSurface extends StatelessWidget {
                 Expanded(
                   child: Text(
                     normalizedTitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: AppNotificationStyle.titleColor,
+                      color: brand.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       height: 1.12,
@@ -156,9 +143,12 @@ class AppNotificationSurface extends StatelessWidget {
               Text(
                 normalizedMessage,
                 maxLines: maxMessageLines,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
+                overflow: maxMessageLines == null
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppNotificationStyle.bodyColor,
+                  color: brand.textSecondary,
                   fontSize: 13,
                   height: 1.42,
                   letterSpacing: 0,
@@ -193,7 +183,7 @@ class AppNotificationSurface extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
                         style: AppTypography.caption.copyWith(
-                          color: AppNotificationStyle.metaColor,
+                          color: brand.textMuted,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           height: 1,
@@ -236,17 +226,19 @@ class _NotificationCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = KeroseneBrandTheme.of(context);
     return SizedBox(
-      width: 24,
-      height: 24,
+      width: 48,
+      height: 48,
       child: IconButton(
         onPressed: onPressed,
-        icon: const Icon(KeroseneIcons.close),
-        color: KeroseneBrandTokens.textInverse.withValues(alpha: 0.86),
+        icon: const KeroseneIcon(KeroseneIcons.close),
+        color: brand.textSecondary,
+        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
         iconSize: 15,
         padding: EdgeInsets.zero,
         style: IconButton.styleFrom(
-          backgroundColor: AppNotificationStyle.closeButtonColor,
+          backgroundColor: Colors.transparent,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: const RoundedRectangleBorder(),
         ),
@@ -262,12 +254,13 @@ class _NotificationActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = KeroseneBrandTheme.of(context);
     final child = action.icon == null
         ? Text(action.label, maxLines: 1, overflow: TextOverflow.ellipsis)
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(action.icon!, size: 14),
+              KeroseneIcon(action.icon!, size: 14),
               const SizedBox(width: 6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 140),
@@ -283,12 +276,11 @@ class _NotificationActionButton extends StatelessWidget {
     return TextButton(
       onPressed: action.onPressed,
       style: TextButton.styleFrom(
-        minimumSize: Size.zero,
+        minimumSize: const Size(48, 48),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        foregroundColor:
-            KeroseneBrandTokens.textInverse.withValues(alpha: 0.92),
-        backgroundColor: AppNotificationStyle.buttonColor,
+        foregroundColor: brand.textInverse.withValues(alpha: 0.92),
+        backgroundColor: brand.textPrimary,
         shape: const RoundedRectangleBorder(),
         textStyle: AppTypography.bodySmall.copyWith(
           fontSize: 12,

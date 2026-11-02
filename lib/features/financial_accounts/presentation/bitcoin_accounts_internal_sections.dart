@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,8 +20,8 @@ import 'package:kerosene/core/providers/network_status_provider.dart';
 import 'bitcoin_accounts_provider.dart';
 import 'bitcoin_widgets/bottom_sheets.dart';
 import 'bitcoin_screens/internal_account_creation_screen.dart';
+import 'bitcoin_accounts_wallet_support.dart';
 import 'bitcoin_accounts_internal_sections.dart';
-
 
 class InternalCardPager extends StatelessWidget {
   final List<BitcoinAccount> accounts;
@@ -232,7 +233,7 @@ class InternalBalanceSection extends StatelessWidget {
           runSpacing: 8,
           children: [
             Pill(text: context.tr.bitcoinAccountsKeroseneCardBadge),
-            Pill(text: friendlyStatus(context, account.status)),
+            Pill(text: walletStatusLabel(context, account)),
           ],
         ),
         const SizedBox(height: 14),
@@ -543,7 +544,8 @@ class TransactionSummaryRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  relativeTransactionDate(transaction.timestamp),
+                  relativeTransactionDate(transaction.timestamp,
+                      context: context),
                   style: AppTypography.inter(
                     color: colors.mutedText,
                     fontSize: 13,
@@ -617,7 +619,7 @@ class DarkActionMessage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: colors.mutedText, size: 18),
+          KeroseneIcon(icon, color: colors.mutedText, size: 18),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -646,7 +648,7 @@ class DarkActionMessage extends StatelessWidget {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: onAction,
-                    icon: const Icon(KeroseneIcons.refresh, size: 15),
+                    icon: const KeroseneIcon(KeroseneIcons.refresh, size: 15),
                     label: Text(actionLabel!),
                   ),
                 ],

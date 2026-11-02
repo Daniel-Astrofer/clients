@@ -88,7 +88,9 @@ class MonochromeColors extends ThemeExtension<MonochromeColors> {
       ThemeTokenBridge.isLight ? light : dark;
 
   static MonochromeColors of(BuildContext context) {
-    return Theme.of(context).extension<MonochromeColors>() ?? current;
+    final theme = Theme.of(context);
+    return theme.extension<MonochromeColors>() ??
+        (theme.brightness == Brightness.light ? light : dark);
   }
 
   @override
@@ -151,7 +153,11 @@ BoxDecoration monochromePanelDecoration({
         ? [
             BoxShadow(
               color: Colors.black.withValues(
-                alpha: ThemeTokenBridge.isLight ? 0.08 : 0.28,
+                alpha: (context != null
+                        ? Theme.of(context).brightness == Brightness.light
+                        : ThemeTokenBridge.isLight)
+                    ? 0.08
+                    : 0.28,
               ),
               blurRadius: 24,
               spreadRadius: -18,
@@ -224,7 +230,11 @@ ButtonStyle monochromeFilledButtonStyle({
   final foreground = destructive
       ? mono.text
       : emphasis
-          ? (ThemeTokenBridge.isLight ? Colors.white : Colors.black)
+          ? ((context != null
+                  ? Theme.of(context).brightness == Brightness.light
+                  : ThemeTokenBridge.isLight)
+              ? Colors.white
+              : Colors.black)
           : mono.text;
   final border = destructive || emphasis ? mono.borderStrong : mono.border;
 

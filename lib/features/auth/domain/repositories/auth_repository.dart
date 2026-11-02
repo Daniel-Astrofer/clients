@@ -1,3 +1,4 @@
+import '../entities/account_security_change_factors.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/user.dart';
@@ -154,11 +155,15 @@ abstract class AuthRepository {
     required String totpCode,
   });
 
-  Future<Either<Failure, void>> disableTotp();
+  Future<Either<Failure, void>> disableTotp({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  });
 
   Future<Either<Failure, BackupCodesStatusResult>> getBackupCodesStatus();
 
-  Future<Either<Failure, BackupCodesStatusResult>> regenerateBackupCodes();
+  Future<Either<Failure, BackupCodesStatusResult>> regenerateBackupCodes({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  });
 
   /// Confirma a TX do onboarding e inicia monitoramento on-chain
   Future<Either<Failure, OnboardingPaymentLinkDto>> confirmOnboardingPayment({

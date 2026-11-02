@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -157,7 +158,7 @@ class _NetworkOptionCard extends StatelessWidget {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.pending,
                     size: 14,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -179,7 +180,7 @@ class _NetworkOptionCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.success,
                     size: 14,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

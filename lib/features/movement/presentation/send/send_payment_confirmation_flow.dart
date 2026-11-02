@@ -15,6 +15,10 @@ import 'package:kerosene/features/movement/kernel/execution/send_rail_handlers.d
 import 'package:kerosene/features/movement/kernel/intent/payment_intent_resolver.dart';
 import 'package:kerosene/features/movement/kernel/presentation/movement_registry.dart';
 import 'package:kerosene/features/movement/presentation/send/send_payment_execution_overlay.dart';
+import 'package:kerosene/app/security/payment_submission_store.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 
 export 'package:kerosene/features/movement/presentation/send/send_rail_executors.dart';
 
@@ -28,6 +32,8 @@ Future<dynamic> confirmSendPayment({
   required SendFeeQuote feeQuote,
   required String toAddress,
   required String? pendingPaymentLinkId,
+  String? idempotencyKey,
+  MovementMoney? money,
   required Future<AccountSecurityProfile> Function(Wallet wallet)
       resolveSecurityProfile,
   required Future<void> Function({
@@ -127,6 +133,14 @@ Future<dynamic> confirmSendPayment({
   return SendPaymentExecutionOverlay.show(
     confirmationContext,
     onExecute: () async {
+      if (idempotencyKey != null &&
+          money != null &&
+          !isColdSource &&
+          ref.read(sessionStorageScopeProvider) != null) {
+        ref
+            .read(paymentSubmissionStoreProvider)
+            .rememberDisplay(idempotencyKey, money.toJournal());
+      }
       final result = await handler.execute(
         SendExecuteContext(
           context: context,
@@ -138,6 +152,7 @@ Future<dynamic> confirmSendPayment({
           feeQuote: feeQuote,
           toAddress: toAddress,
           pendingPaymentLinkId: pendingPaymentLinkId,
+          idempotencyKey: idempotencyKey,
           authResult: authResult,
           showSentTransactionNotification: showSentTransactionNotification,
           resolveRecentDestinationLabel: resolveRecentDestinationLabel,
@@ -145,7 +160,7 @@ Future<dynamic> confirmSendPayment({
           isMounted: isMounted,
         ),
       );
-      return result != null;
+      return result;
     },
   );
 }

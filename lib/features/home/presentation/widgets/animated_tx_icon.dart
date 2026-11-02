@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -161,22 +162,24 @@ class _AnimatedTxIconState extends State<AnimatedTxIcon>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_primary, _secondary]),
-      builder: (_, __) {
-        return RepaintBoundary(
-          child: CustomPaint(
-            size: Size(widget.size, widget.size),
-            painter: _painterFor(
-              widget.kind,
-              widget.color,
-              _primary.value,
-              _secondary.value,
-            ),
-          ),
-        );
-      },
-    );
+    return KeroseneUiScale.icon(
+        context,
+        AnimatedBuilder(
+          animation: Listenable.merge([_primary, _secondary]),
+          builder: (_, __) {
+            return RepaintBoundary(
+              child: CustomPaint(
+                size: Size(widget.size, widget.size),
+                painter: _painterFor(
+                  widget.kind,
+                  widget.color,
+                  _primary.value,
+                  _secondary.value,
+                ),
+              ),
+            );
+          },
+        ));
   }
 
   CustomPainter _painterFor(

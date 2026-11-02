@@ -1,3 +1,4 @@
+import 'package:kerosene/core/localization/app_timezone.dart';
 import 'dart:math' as math;
 
 import 'package:intl/intl.dart';
@@ -22,6 +23,7 @@ class StatementReportCalculator {
     DateTime? now,
     String locale = 'pt',
     String emptyWalletName = 'Sem carteiras',
+    String? timeZoneId,
   }) {
     final effectiveNow = now ?? DateTime.now();
     final walletInsights = _walletInsights(
@@ -35,6 +37,7 @@ class StatementReportCalculator {
       period: period,
       now: effectiveNow,
       locale: locale,
+      timeZoneId: timeZoneId,
     );
     final reportStart = ranges.first.start;
     final reportEnd = ranges.last.end;
@@ -335,23 +338,28 @@ class StatementReportCalculator {
     required StatementReportPeriod period,
     required DateTime now,
     required String locale,
+    String? timeZoneId,
   }) {
-    final localNow = now.toLocal();
+    final localNow = AppTimezone.convert(now, timeZoneId: timeZoneId);
     DateTime? earliest;
     for (final wallet in wallets) {
-      final created = wallet.createdAt.toLocal();
+      final created =
+          AppTimezone.convert(wallet.createdAt, timeZoneId: timeZoneId);
       if (earliest == null || created.isBefore(earliest)) earliest = created;
     }
     // Accounts have no createdAt; fall back to year start if needed.
-    final createdAt = earliest ?? DateTime(localNow.year, localNow.month);
+    final createdAt = earliest ??
+        AppTimezone.calendar(localNow.year, localNow.month, 1, timeZoneId);
 
     switch (period) {
       case StatementReportPeriod.weekly:
-        final currentWeek = _weekStart(localNow);
-        final firstWeek = _weekStart(createdAt);
-        final ytdWeek = _weekStart(DateTime(localNow.year));
+        final currentWeek = _weekStart(localNow, timeZoneId);
+        final firstWeek = _weekStart(createdAt, timeZoneId);
+        final ytdWeek = _weekStart(
+            AppTimezone.calendar(localNow.year, 1, 1, timeZoneId), timeZoneId);
         // Cap at 12 weeks for readability.
-        final capWeek = currentWeek.subtract(const Duration(days: 7 * 11));
+        final capWeek = AppTimezone.calendar(currentWeek.year,
+            currentWeek.month, currentWeek.day - 7 * 11, timeZoneId);
         final start = _maxDate(
           firstWeek.isAfter(ytdWeek) ? firstWeek : ytdWeek,
           capWeek,
@@ -359,10 +367,12 @@ class StatementReportCalculator {
         final ranges = <({DateTime start, DateTime end, String label})>[];
         for (var week = start;
             !week.isAfter(currentWeek);
-            week = week.add(const Duration(days: 7))) {
+            week = AppTimezone.calendar(
+                week.year, week.month, week.day + 7, timeZoneId)) {
           ranges.add((
             start: week,
-            end: week.add(const Duration(days: 7)),
+            end: AppTimezone.calendar(
+                week.year, week.month, week.day + 7, timeZoneId),
             label: DateFormat.MMMd(locale).format(week),
           ));
         }
@@ -370,27 +380,34 @@ class StatementReportCalculator {
             ? [
                 (
                   start: currentWeek,
-                  end: currentWeek.add(const Duration(days: 7)),
+                  end: AppTimezone.calendar(currentWeek.year, currentWeek.month,
+                      currentWeek.day + 7, timeZoneId),
                   label: DateFormat.MMMd(locale).format(currentWeek),
                 )
               ]
             : ranges;
       case StatementReportPeriod.annual:
-        final currentMonth = DateTime(localNow.year, localNow.month);
-        final firstMonth = DateTime(createdAt.year, createdAt.month);
+        final currentMonth =
+            AppTimezone.calendar(localNow.year, localNow.month, 1, timeZoneId);
+        final firstMonth = AppTimezone.calendar(
+            createdAt.year, createdAt.month, 1, timeZoneId);
         final start = _maxDate(
           firstMonth,
-          DateTime(currentMonth.year, currentMonth.month - 11),
+          AppTimezone.calendar(
+              currentMonth.year, currentMonth.month - 11, 1, timeZoneId),
         );
-        return _monthRanges(start, currentMonth, locale);
+        return _monthRanges(start, currentMonth, locale, timeZoneId);
       case StatementReportPeriod.monthly:
-        final currentMonth = DateTime(localNow.year, localNow.month);
-        final firstMonth = DateTime(createdAt.year, createdAt.month);
+        final currentMonth =
+            AppTimezone.calendar(localNow.year, localNow.month, 1, timeZoneId);
+        final firstMonth = AppTimezone.calendar(
+            createdAt.year, createdAt.month, 1, timeZoneId);
         final start = _maxDate(
           firstMonth,
-          DateTime(currentMonth.year, currentMonth.month - 5),
+          AppTimezone.calendar(
+              currentMonth.year, currentMonth.month - 5, 1, timeZoneId),
         );
-        return _monthRanges(start, currentMonth, locale);
+        return _monthRanges(start, currentMonth, locale, timeZoneId);
     }
   }
 
@@ -398,14 +415,17 @@ class StatementReportCalculator {
     DateTime start,
     DateTime currentMonth,
     String locale,
+    String? timeZoneId,
   ) {
     final ranges = <({DateTime start, DateTime end, String label})>[];
-    for (var month = DateTime(start.year, start.month);
+    for (var month =
+            AppTimezone.calendar(start.year, start.month, 1, timeZoneId);
         !month.isAfter(currentMonth);
-        month = DateTime(month.year, month.month + 1)) {
+        month =
+            AppTimezone.calendar(month.year, month.month + 1, 1, timeZoneId)) {
       ranges.add((
         start: month,
-        end: DateTime(month.year, month.month + 1),
+        end: AppTimezone.calendar(month.year, month.month + 1, 1, timeZoneId),
         label: DateFormat.MMM(locale).format(month),
       ));
     }
@@ -533,9 +553,10 @@ class StatementReportCalculator {
     return false;
   }
 
-  static DateTime _weekStart(DateTime date) {
-    final local = date.toLocal();
-    return DateTime(local.year, local.month, local.day - local.weekday + 1);
+  static DateTime _weekStart(DateTime date, String? timeZoneId) {
+    final local = AppTimezone.convert(date, timeZoneId: timeZoneId);
+    return AppTimezone.calendar(
+        local.year, local.month, local.day - local.weekday + 1, timeZoneId);
   }
 
   static DateTime _maxDate(DateTime a, DateTime b) => a.isAfter(b) ? a : b;

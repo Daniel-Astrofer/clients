@@ -1,3 +1,4 @@
+import 'package:kerosene/core/errors/exceptions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/errors/failures.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -187,6 +188,7 @@ final appPinGateServerSyncProvider = FutureProvider<void>((ref) async {
 });
 
 final sovereigntyStatusProvider = FutureProvider<SecurityStatus>((ref) async {
+  ref.watch(sessionStorageScopeProvider);
   final repository = ref.watch(securityRepositoryProvider);
   final result = await repository.getSovereigntyStatus();
   return result.fold(
@@ -197,6 +199,7 @@ final sovereigntyStatusProvider = FutureProvider<SecurityStatus>((ref) async {
 
 final kfeReserveOverviewProvider =
     FutureProvider<KfeReserveOverview>((ref) async {
+  ref.watch(sessionStorageScopeProvider);
   final repository = ref.watch(securityRepositoryProvider);
   final result = await repository.getKfeReserveOverview();
   return result.fold(
@@ -206,6 +209,7 @@ final kfeReserveOverviewProvider =
 });
 
 final auditStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  ref.watch(sessionStorageScopeProvider);
   final repository = ref.watch(securityRepositoryProvider);
   final result = await repository.getAuditStats();
   return result.fold(
@@ -216,6 +220,7 @@ final auditStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
 final accountSecurityProfileProvider =
     FutureProvider<AccountSecurityProfile>((ref) async {
+  ref.watch(sessionStorageScopeProvider);
   final repository = ref.watch(securityRepositoryProvider);
   final result = await repository.getAccountSecurityProfile();
   return result.fold(
@@ -224,10 +229,35 @@ final accountSecurityProfileProvider =
   );
 });
 
-/// Server PIN status for settings / post-unlock screens.
+/// Management requires a remote observation. Local entry hints never authorize
+/// configuration changes or claim that an uncertain write was completed.
+final appPinManagementStatusProvider = FutureProvider.autoDispose<AppPinStatus>(
+  (ref) async {
+    final scope = ref.watch(sessionStorageScopeProvider);
+    if (scope?.trim().isNotEmpty != true) {
+      throw const AppException(
+          message: 'Account session unavailable.',
+          errorCode: 'ERR_SECURITY_SESSION_CHANGED');
+    }
+    final result =
+        await ref.watch(securityRepositoryProvider).getAppPinStatus();
+    return result.fold((failure) => throw _AppPinStatusFailure(failure),
+        (status) {
+      if (status.minPinLength <= 0 ||
+          status.maxPinLength < status.minPinLength) {
+        throw const AppException(
+            message: 'Invalid PIN limits.',
+            errorCode: 'ERR_SECURITY_PIN_STATUS_INVALID');
+      }
+      return status;
+    });
+  },
+);
+
+/// PIN status for post-unlock screens, with local hints during connectivity loss.
 ///
-/// The entry gate must use [appPinGateStatusProvider] instead — this future
-/// may wait on Tor and must not drive the unlock pad.
+/// The entry gate uses [appPinGateStatusProvider]; configuration changes use
+/// [appPinManagementStatusProvider] and require a remote response.
 final appPinStatusProvider = FutureProvider<AppPinStatus>(
   (ref) async {
     final auth = ref.watch(authControllerProvider);
@@ -342,16 +372,31 @@ class AppEntryPinSession {
   AppEntryPinSession._();
 
   static bool unlocked = false;
+  static String? _unlockedScope;
 
   /// True while a verify/configure request is in flight — blocks server status
   /// sync from rewriting local hints and remounting the pad mid-entry.
-  static bool pinRequestInFlight = false;
+  static Object? _pinRequest;
+  static bool get pinRequestInFlight => _pinRequest != null;
 
-  static void markUnlocked() => unlocked = true;
+  static Object beginPinRequest() => _pinRequest = Object();
+
+  static bool isCurrentPinRequest(Object request) =>
+      identical(_pinRequest, request);
+
+  static void endPinRequest(Object request) {
+    if (isCurrentPinRequest(request)) _pinRequest = null;
+  }
+
+  static void markUnlocked({String? scope}) {
+    unlocked = true;
+    _unlockedScope = scope;
+  }
 
   static void clear() {
     unlocked = false;
-    pinRequestInFlight = false;
+    _unlockedScope = null;
+    _pinRequest = null;
   }
 }
 
@@ -393,22 +438,25 @@ class AppEntryPinUnlockNotifier extends Notifier<bool> {
     // Unlock is sticky until **real sign-out** or a real account switch.
     // AuthLoading / AuthError / server blips must NOT re-ask the entry PIN.
     // Also restore from [AppEntryPinSession] if the notifier is recreated.
+    final currentScope = ref.read(sessionStorageScopeProvider);
+    var lastScope = AppEntryPinSession._unlockedScope ?? currentScope;
+    if (currentScope != null &&
+        lastScope != null &&
+        currentScope != lastScope) {
+      AppEntryPinSession.clear();
+      AppPinSetupHandoff.clear();
+      lastScope = currentScope;
+    }
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (next is AuthAuthenticated) {
-        if (previous is AuthAuthenticated) {
-          final prevId = previous.user.id.trim();
-          final nextId = next.user.id.trim();
-          // Ignore empty/placeholder ids that resolve after the first profile fetch.
-          if (prevId.isNotEmpty &&
-              nextId.isNotEmpty &&
-              prevId != '0' &&
-              nextId != '0' &&
-              prevId != nextId) {
-            AppEntryPinSession.clear();
-            AppPinSetupHandoff.clear();
-            state = false;
-          }
+        final nextScope = sessionStorageScopeFromUser(
+            userId: next.user.id, username: next.user.username);
+        if (lastScope != null && nextScope != lastScope) {
+          AppEntryPinSession.clear();
+          AppPinSetupHandoff.clear();
+          state = false;
         }
+        lastScope = nextScope;
         return;
       }
 
@@ -416,6 +464,7 @@ class AppEntryPinUnlockNotifier extends Notifier<bool> {
       if (next is AuthUnauthenticated) {
         AppEntryPinSession.clear();
         AppPinSetupHandoff.clear();
+        lastScope = null;
         state = false;
       }
       // AuthLoading, AuthServerUnavailable, AuthError, TOTP steps, etc.: keep.
@@ -424,7 +473,9 @@ class AppEntryPinUnlockNotifier extends Notifier<bool> {
   }
 
   void unlock() {
-    AppEntryPinSession.markUnlocked();
+    final scope = ref.read(sessionStorageScopeProvider);
+    if (scope == null) return;
+    AppEntryPinSession.markUnlocked(scope: scope);
     state = true;
   }
 

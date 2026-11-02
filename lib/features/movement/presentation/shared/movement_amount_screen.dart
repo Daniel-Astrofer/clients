@@ -1,6 +1,9 @@
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/components/generic/tor_loading_dots.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
@@ -55,24 +58,33 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
     if (_isContinuing) return;
     HapticFeedback.mediumImpact();
     final flowState = ref.read(movementFlowCoordinatorProvider);
-    final amountBtc = _amountBtcFromInput(
-      amountInput: _amountInput,
+    final journeyMoney = MovementMoney(
       currency: _selectedCurrency,
+      locale: Localizations.localeOf(context),
+      btcDecimalPlaces: ref.read(moneyFormatConfigProvider).btcDecimalPlaces,
       btcUsd: ref.read(latestBtcPriceProvider),
       btcEur: ref.read(btcEurPriceProvider),
       btcBrl: ref.read(btcBrlPriceProvider),
     );
-    if (widget.method == ReceiveAmountMethod.nfc) {
-      final canUseNfc = await ref.read(receiveNfcCompatibilityProvider.future);
-      if (!canUseNfc) {
-        if (!mounted) return;
-        Navigator.of(context).maybePop();
-        return;
-      }
-    }
-
+    final amountBtc = _amountBtcFromInput(
+      amountInput: _amountInput,
+      currency: _selectedCurrency,
+      btcUsd: journeyMoney.btcUsd,
+      btcEur: journeyMoney.btcEur,
+      btcBrl: journeyMoney.btcBrl,
+    );
     setState(() => _isContinuing = true);
     try {
+      if (widget.method == ReceiveAmountMethod.nfc) {
+        final canUseNfc =
+            await ref.read(receiveNfcCompatibilityProvider.future);
+        if (!canUseNfc) {
+          if (!mounted) return;
+          Navigator.of(context).maybePop();
+          return;
+        }
+      }
+
       // NFC still needs the link id before the write screen.
       if (widget.method == ReceiveAmountMethod.nfc) {
         final paymentLink = await _createPaymentLinkIfNeeded(
@@ -86,6 +98,7 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
         await Navigator.of(context).push<void>(
           MaterialPageRoute(
             builder: (context) => ReceiveNfcFlowScreen(
+              money: journeyMoney,
               wallet: widget.wallet,
               onChainWallet: widget.onChainWallet,
               amountBtc: amountBtc,
@@ -102,9 +115,12 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       // QR / link / lightning / p2p: open the receive surface immediately and
       // create the request there so the user is not stuck on the amount screen.
       if (!mounted) return;
+      final requestOwner = ref.read(sessionStorageScopeProvider)?.trim();
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (context) => ReceiveRequestFlowScreen(
+            ownerScope: requestOwner,
+            money: journeyMoney,
             wallet: widget.wallet,
             method: widget.method,
             onChainWallet: widget.onChainWallet,
@@ -210,21 +226,8 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       btcBrl: btcBrl,
     );
     final secondaryLabel = _selectedCurrency == Currency.btc
-        ? _formatFiatReference(
-            btcAmount: amountBtc,
-            btcUsd: btcUsd,
-            btcEur: btcEur,
-            btcBrl: btcBrl,
-            fiatCurrency:
-                money.currency == Currency.btc ? Currency.brl : money.currency,
-            appLocale: money.locale,
-          )
-        : '≈ ${MoneyDisplay.formatCompact(
-            amount: amountBtc,
-            currency: Currency.btc,
-            maxDecimalPlaces: 8,
-            appLocale: money.locale,
-          )}';
+        ? ''
+        : MovementMoney(locale: money.locale).asset(amountBtc);
 
     final title = ReceiveMoneyCopy.amountTitle(context, widget.method);
 
@@ -397,30 +400,5 @@ class _MovementAmountScreenState extends ConsumerState<MovementAmountScreen> {
       ),
       child: Text(option.label),
     );
-  }
-
-  String _formatFiatReference({
-    required double btcAmount,
-    required double? btcUsd,
-    required double? btcEur,
-    required double? btcBrl,
-    required Currency fiatCurrency,
-    Locale? appLocale,
-  }) {
-    if (btcAmount <= 0) {
-      return '≈ ${MoneyDisplay.format(
-        amount: 0,
-        currency: fiatCurrency,
-        appLocale: appLocale,
-      )}';
-    }
-    return '≈ ${MoneyDisplay.formatAmountFromBtc(
-      btcAmount: btcAmount,
-      currency: fiatCurrency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      appLocale: appLocale,
-    )}';
   }
 }

@@ -38,6 +38,43 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
+  testWidgets('on-chain title follows the selected ledger page',
+      (tester) async {
+    await _pumpBalance(tester, wallets: [
+      _wallet(name: 'Carteira Global'),
+      _wallet(id: 'onchain', name: 'On-chain wallet', walletMode: 'ONCHAIN'),
+    ]);
+    await tester.drag(find.byType(PageView), const Offset(-300, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.drag(find.byType(PageView), const Offset(-300, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Conta on-chain'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-balance-hero-onChain')),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('account carousel fits compact screens with enlarged text',
+      (tester) async {
+    for (final scale in [1.0, 2.0]) {
+      await _pumpBalance(tester,
+          wallets: [_wallet(name: 'Carteira com um nome longo')],
+          size: const Size(320, 640),
+          textScale: scale);
+      expect(tester.takeException(), isNull);
+      await tester.drag(find.byType(PageView), const Offset(-260, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    }
+  });
+
   testWidgets('home tabs list platform and cofre environments', (tester) async {
     await _pumpBalance(
       tester,
@@ -68,6 +105,7 @@ void main() {
     expect(
         find.byKey(const ValueKey('home-balance-hero-cold')), findsOneWidget);
     expect(find.text('Cold vault'), findsOneWidget);
+    expect(find.text('Conta de visualização'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -78,8 +116,10 @@ void main() {
 Future<void> _pumpBalance(
   WidgetTester tester, {
   required List<Wallet> wallets,
+  Size size = const Size(390, 844),
+  double textScale = 1,
 }) async {
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(() {
     tester.view.resetPhysicalSize();
@@ -114,7 +154,9 @@ Future<void> _pumpBalance(
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
           return MediaQuery(
-            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            data: MediaQuery.of(context).copyWith(
+                disableAnimations: true,
+                textScaler: TextScaler.linear(textScale)),
             child: child ?? const SizedBox.shrink(),
           );
         },

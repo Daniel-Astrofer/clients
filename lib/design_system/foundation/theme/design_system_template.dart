@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -128,7 +129,7 @@ class DesignSystemTemplateScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const Icon(
+                      const KeroseneIcon(
                         KeroseneIcons.security,
                         color: AppColors.primary,
                         size: 16,
@@ -176,7 +177,7 @@ class DesignSystemTemplateScreen extends StatelessWidget {
               decoration: monochromeInputDecoration(
                 label: context.tr.recipient.toUpperCase(),
                 hintText: context.tr.recipientHint,
-                prefixIcon: const Icon(KeroseneIcons.address, size: 18),
+                prefixIcon: const KeroseneIcon(KeroseneIcons.address, size: 18),
               ),
               style: AppTypography.bodyMedium,
             ),

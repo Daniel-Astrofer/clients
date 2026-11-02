@@ -89,11 +89,8 @@ bool _isGenericWalletPlaceholder(String? raw) {
       lower == 'origem';
 }
 
-String shortenHash(String value, {int head = 10, int tail = 8}) {
-  final normalized = value.trim();
-  if (normalized.length <= head + tail + 1) return normalized;
-  return '${normalized.substring(0, head)}…${normalized.substring(normalized.length - tail)}';
-}
+/// Public identifiers stay complete; legacy sizing arguments remain compatible.
+String shortenHash(String value, {int head = 10, int tail = 8}) => value.trim();
 
 /// Resolve a real wallet/account label from id or name.
 String resolveWalletDisplayName(
@@ -606,9 +603,13 @@ String resolveTransactionActionTitle(
 
 String formatSatsAsBtc(int sats) {
   if (sats == 0) return '0 BTC';
-  final btc = sats / 100000000.0;
-  var text = btc.toStringAsFixed(8);
-  text = text.replaceFirst(RegExp(r'0+$'), '');
-  text = text.replaceFirst(RegExp(r'\.$'), '');
+  final magnitude = sats.abs();
+  final whole = magnitude ~/ 100000000;
+  final fraction = (magnitude % 100000000)
+      .toString()
+      .padLeft(8, '0')
+      .replaceFirst(RegExp(r'0+$'), '');
+  final text =
+      '${sats < 0 ? '-' : ''}$whole${fraction.isEmpty ? '' : '.$fraction'}';
   return '$text BTC';
 }

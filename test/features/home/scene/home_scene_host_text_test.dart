@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
+import 'package:kerosene/core/localization/app_timezone_scope.dart';
 import 'package:kerosene/core/providers/shared_preferences_provider.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
@@ -15,6 +16,50 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final includeName in [true, false]) {
+    testWidgets(
+        'visible Home greeting follows timezone changes, name=$includeName',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final zone = ValueNotifier('UTC');
+      addTearDown(zone.dispose);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          homeGreetingClockProvider
+              .overrideWithValue(() => DateTime.utc(2020, 1, 1, 12)),
+          homeSurfaceProvider.overrideWith(() => _FixedHomeSurfaceNotifier(
+              HomeSurface.localDefaults().copyWith(
+                  restingHeader: HomeRestingHeader(includeName: includeName)))),
+        ],
+        child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ValueListenableBuilder<String>(
+            valueListenable: zone,
+            builder: (_, value, child) =>
+                AppTimezoneScope(timeZoneId: value, child: child!),
+            child: const Scaffold(body: HomeSceneHost(userName: 'Daniel')),
+          ),
+        ),
+      ));
+      await tester.pump();
+      expect(
+          find.text(includeName ? 'Boa tarde,' : 'Boa tarde'), findsOneWidget);
+      expect(find.text('Daniel'), includeName ? findsOneWidget : findsNothing);
+      zone.value = 'Pacific/Honolulu';
+      await tester.pump();
+      expect(find.text(includeName ? 'Bom dia,' : 'Bom dia'), findsOneWidget);
+      zone.value = 'Asia/Tokyo';
+      await tester.pump();
+      expect(
+          find.text(includeName ? 'Boa noite,' : 'Boa noite'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('incoming theater shows Recebido title via scene present',
       (tester) async {

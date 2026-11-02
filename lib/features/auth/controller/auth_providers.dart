@@ -1,3 +1,4 @@
+import 'auth_controller.dart' show sessionStorageScopeProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_route_policy.dart';
@@ -12,12 +13,15 @@ import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/signup_usecase.dart';
 
 final authApiClientProvider = Provider<ApiClient>((ref) {
-  final baseUrl = ref.watch(torApiUrlProvider);
+  final baseUrl = ref.read(torApiUrlProvider);
   final client = ApiClient(
     baseUrl: baseUrl,
     ref: ref,
     routePolicy: ApiClientRoutePolicy.tor,
   );
+  ref.onDispose(() => client.dio.close(force: true));
+  ref.listen(
+      torApiUrlProvider, (_, next) => client.syncBaseUrlForResolvedRoute(next));
   final localDataSource = ref.watch(authLocalDataSourceProvider);
 
   client.addInterceptor(
@@ -59,6 +63,7 @@ final activationStatusProvider =
 
 final securityStatusProvider =
     FutureProvider.autoDispose<AccountSecurityStatusResult>((ref) async {
+  ref.watch(sessionStorageScopeProvider);
   final repository = ref.watch(authRepositoryProvider);
   final result = await repository.getSecurityStatus();
   return result.fold(
@@ -69,6 +74,7 @@ final securityStatusProvider =
 
 final backupCodesStatusProvider =
     FutureProvider.autoDispose<BackupCodesStatusResult>((ref) async {
+  ref.watch(sessionStorageScopeProvider);
   final repository = ref.watch(authRepositoryProvider);
   final result = await repository.getBackupCodesStatus();
   return result.fold(

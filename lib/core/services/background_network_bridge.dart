@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show debugPrint, immutable, kDebugMode;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'background_service_status.dart';
 import 'package:kerosene/core/config/app_config.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 
@@ -9,6 +10,24 @@ import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 /// SharedPreferences is process-scoped on Android/iOS — both isolates read the
 /// same keys when using the default prefs file.
 abstract final class BackgroundNetworkBridge {
+  static const rejectedCredentialHashKey =
+      'bg.notifications.rejected_credential_hash';
+
+  static Future<bool> isCredentialRejected(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    return prefs.getString(rejectedCredentialHashKey) ==
+        backgroundCredentialFingerprint(token);
+  }
+
+  static Future<void> rejectCredential(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setString(
+        rejectedCredentialHashKey, backgroundCredentialFingerprint(token))) {
+      throw StateError('Background credential rejection could not be saved.');
+    }
+  }
+
   static const socksHostKey = 'bg.network.socks_host';
   static const socksPortKey = 'bg.network.socks_port';
   static const apiBaseUrlKey = 'bg.network.api_base_url';

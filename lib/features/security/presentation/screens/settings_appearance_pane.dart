@@ -6,18 +6,50 @@ import 'package:kerosene/design_system/kerosene_design_system.dart';
 
 import 'settings_section_components.dart';
 
-class SettingsAppearancePane extends ConsumerWidget {
+class SettingsAppearancePane extends ConsumerStatefulWidget {
   const SettingsAppearancePane({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsAppearancePane> createState() =>
+      _SettingsAppearancePaneState();
+}
+
+class _SettingsAppearancePaneState
+    extends ConsumerState<SettingsAppearancePane> {
+  bool _saving = false;
+  bool _failed = false;
+
+  Future<void> _save(bool enabled) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      await ref.read(appearanceProvider.notifier).setDarkModeEnabled(enabled);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final appearance = ref.watch(appearanceProvider);
-    final notifier = ref.read(appearanceProvider.notifier);
     final tr = context.tr;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_saving) const LinearProgressIndicator(minHeight: 2),
+        if (_failed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(tr.settingsPreferenceSaveFailed,
+                style: AppTypography.bodyMedium
+                    .copyWith(color: Theme.of(context).colorScheme.error)),
+          ),
         Text(
           tr.settingsAppearanceTitle,
           style: AppTypography.newsreader(
@@ -52,9 +84,11 @@ class SettingsAppearancePane extends ConsumerWidget {
               trailing: SettingsReadonlySwitch(
                 value: appearance.darkModeEnabled,
               ),
-              onTap: () => notifier.setDarkModeEnabled(
-                !appearance.darkModeEnabled,
-              ),
+              onTap: _saving
+                  ? null
+                  : () => _save(
+                        !appearance.darkModeEnabled,
+                      ),
             ),
           ],
         ),

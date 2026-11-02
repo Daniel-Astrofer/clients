@@ -1,14 +1,14 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // architecture-allow-large-file: sovereignty status polling and presentation
 // remain together to preserve the existing provider contract.
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../domain/entities/security_status.dart';
@@ -20,6 +20,9 @@ import 'sovereignty_footer.dart';
 import 'sovereignty_tpm_card.dart';
 import 'sovereignty_kfe_reserve_overview_card.dart';
 import 'sovereignty_kfe_reserve_snapshot_card.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/design_system/components/feedback/state_feedback_view.dart';
 
 class SovereigntyStatusScreen extends ConsumerStatefulWidget {
   const SovereigntyStatusScreen({super.key});
@@ -32,14 +35,67 @@ class SovereigntyStatusScreen extends ConsumerStatefulWidget {
 class _SovereigntyStatusScreenState
     extends ConsumerState<SovereigntyStatusScreen> {
   Timer? _refreshTimer;
+  Future<void>? _refreshInFlight;
+  late final String? _ownerScope;
+  bool _scopeLost = false;
+  final _status = _LastReadout<SecurityStatus>();
+  final _reserves = _LastReadout<KfeReserveOverview>();
+  final _audit = _LastReadout<Map<String, dynamic>>();
+
+  bool get _ownsSession =>
+      mounted &&
+      !_scopeLost &&
+      _ownerScope?.isNotEmpty == true &&
+      ref.read(sessionStorageScopeProvider)?.trim() == _ownerScope;
 
   @override
   void initState() {
     super.initState();
+    _ownerScope = ref.read(sessionStorageScopeProvider)?.trim();
+    ref.listenManual(sessionStorageScopeProvider, (_, next) {
+      if (mounted && next?.trim() != _ownerScope) {
+        setState(() {
+          _scopeLost = true;
+          _status.clear();
+          _reserves.clear();
+          _audit.clear();
+        });
+      }
+    });
+    ref.listenManual(sovereigntyStatusProvider, (previous, next) {
+      if (_ownsSession && _status.observe(next, initial: previous == null)) {
+        setState(() {});
+      }
+    }, fireImmediately: true);
+    ref.listenManual(kfeReserveOverviewProvider, (previous, next) {
+      if (_ownsSession && _reserves.observe(next, initial: previous == null)) {
+        setState(() {});
+      }
+    }, fireImmediately: true);
+    ref.listenManual(auditStatsProvider, (previous, next) {
+      if (_ownsSession && _audit.observe(next, initial: previous == null)) {
+        setState(() {});
+      }
+    }, fireImmediately: true);
+    // A cached response has no known receipt time on a new visit. Refresh it
+    // after the first frame rather than inventing a new consultation timestamp
+    // or notifying another route's provider listeners during widget creation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_ownsSession &&
+          ((_status.value != null && _status.receivedAt == null) ||
+              (_reserves.value != null && _reserves.receivedAt == null) ||
+              (_audit.value != null && _audit.receivedAt == null))) {
+        unawaited(_refreshStatus(feedback: false));
+      }
+    });
     _refreshTimer = Timer.periodic(const Duration(seconds: 12), (_) {
-      ref.invalidate(sovereigntyStatusProvider);
-      ref.invalidate(kfeReserveOverviewProvider);
-      ref.invalidate(auditStatsProvider);
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (!_ownsSession ||
+          ModalRoute.of(context)?.isCurrent == false ||
+          (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
+        return;
+      }
+      unawaited(_refreshStatus(feedback: false));
     });
   }
 
@@ -64,12 +120,31 @@ class _SovereigntyStatusScreenState
     }
   }
 
-  Future<void> _refreshStatus() async {
-    HapticFeedback.selectionClick();
-    ref.invalidate(sovereigntyStatusProvider);
-    ref.invalidate(kfeReserveOverviewProvider);
-    ref.invalidate(auditStatsProvider);
-    await Future<void>.delayed(KeroseneMotion.medium);
+  Future<void> _refreshStatus({bool feedback = true}) {
+    if (!_ownsSession) return Future<void>.value();
+    if (_refreshInFlight != null) return _refreshInFlight!;
+    if (feedback) HapticFeedback.selectionClick();
+    final requests = <Future<Object?>>[
+      ref.read(sovereigntyStatusProvider).isLoading
+          ? ref.read(sovereigntyStatusProvider.future)
+          : ref.refresh(sovereigntyStatusProvider.future),
+      ref.read(kfeReserveOverviewProvider).isLoading
+          ? ref.read(kfeReserveOverviewProvider.future)
+          : ref.refresh(kfeReserveOverviewProvider.future),
+      ref.read(auditStatsProvider).isLoading
+          ? ref.read(auditStatsProvider.future)
+          : ref.refresh(auditStatsProvider.future),
+    ];
+    // Each observed provider exposes its own failure beside the retained data.
+    // Keep the pull-to-refresh indicator until every request has settled.
+    _refreshInFlight = Future.wait(requests, eagerError: false)
+        .then<void>((_) {}, onError: (Object _, StackTrace __) {})
+        .whenComplete(() {
+      _refreshInFlight = null;
+      if (mounted) setState(() {});
+    });
+    setState(() {});
+    return _refreshInFlight!;
   }
 
   bool _allSignalsHealthy(SecurityStatus status) {
@@ -85,6 +160,23 @@ class _SovereigntyStatusScreenState
     final kfeReserveOverviewAsync = ref.watch(kfeReserveOverviewProvider);
     final auditStatsAsync = ref.watch(auditStatsProvider);
 
+    if (!_ownsSession) {
+      return Scaffold(
+        body: SafeArea(
+            child: StateFeedbackView.error(
+          title: _copy(
+              pt: 'Sessão alterada',
+              en: 'Session changed',
+              es: 'La sesión cambió'),
+          description: _copy(
+              pt: 'Volte para consultar os dados da conta atual.',
+              en: 'Go back to view the current account.',
+              es: 'Vuelve para consultar la cuenta actual.'),
+          actionLabel: MaterialLocalizations.of(context).backButtonTooltip,
+          onAction: () => Navigator.of(context).maybePop(),
+        )),
+      );
+    }
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ColoredBox(
@@ -94,15 +186,12 @@ class _SovereigntyStatusScreenState
             children: [
               _buildHeader(context),
               Expanded(
-                child: statusAsync.when(
-                  data: (status) => _buildContent(
-                    status,
-                    kfeReserveOverviewAsync,
-                    auditStatsAsync,
-                  ),
-                  loading: _buildLoadingState,
-                  error: (error, _) => _buildErrorState(error.toString()),
-                ),
+                child: _status.value != null
+                    ? _buildContent(_status.value!, kfeReserveOverviewAsync,
+                        auditStatsAsync)
+                    : statusAsync.isLoading
+                        ? _buildLoadingState()
+                        : _buildErrorState(),
               ),
             ],
           ),
@@ -112,107 +201,100 @@ class _SovereigntyStatusScreenState
   }
 
   Widget _buildHeader(BuildContext context) {
+    final busy = _refreshInFlight != null ||
+        ref.watch(sovereigntyStatusProvider).isLoading ||
+        ref.watch(kfeReserveOverviewProvider).isLoading ||
+        ref.watch(auditStatsProvider).isLoading;
+    final colors = Theme.of(context).colorScheme;
+    final style = IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      backgroundColor: colors.onSurface.withValues(alpha: 0.03),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.onSurface.withValues(alpha: 0.08))),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.pop(context);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.08),
-                ),
-              ),
-              child: Icon(
-                KeroseneIcons.back,
-                color: Theme.of(context).colorScheme.onSurface,
-                size: 16,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.tr.sovereigntyStatusTitle,
-                  style: AppTypography.buttonText.copyWith(
-                    fontSize: 12,
-                    letterSpacing: 1.6,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _copy(
-                    pt: 'Leitura operacional atualizada automaticamente a cada 12 segundos',
-                    en: 'Operational readout automatically refreshed every 12 seconds',
-                    es: 'Lectura operativa actualizada automaticamente cada 12 segundos',
-                  ),
-                  style: AppTypography.bodySmall.copyWith(
+      child: Row(children: [
+        IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () => Navigator.of(context).maybePop(),
+          style: style,
+          icon: const KeroseneIcon(KeroseneIcons.back, size: 16),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(context.tr.sovereigntyStatusTitle,
+              style: AppTypography.buttonText.copyWith(
+                  fontSize: 12, letterSpacing: 1.6, color: colors.onSurface)),
+          const SizedBox(height: 4),
+          Text(
+              _copy(
+                  pt: 'Atualização automática',
+                  en: 'Automatic updates',
+                  es: 'Actualización automática'),
+              style: AppTypography.bodySmall
+                  .copyWith(color: colors.onSurface.withValues(alpha: 0.70))),
+        ])),
+        const SizedBox(width: 12),
+        IconButton(
+          key: const ValueKey('sovereignty-refresh'),
+          tooltip: _copy(pt: 'Atualizar', en: 'Refresh', es: 'Actualizar'),
+          onPressed: busy ? null : _refreshStatus,
+          style: style,
+          icon: const KeroseneIcon(KeroseneIcons.refresh, size: 16),
+        ),
+      ]),
+    );
+  }
+
+  Widget _readoutNotice<T>(
+      _LastReadout<T> snapshot, AsyncValue<T> state, String section) {
+    if (snapshot.value == null) return const SizedBox.shrink();
+    final time = snapshot.receivedAt == null
+        ? null
+        : AppDateTime.formatFull(context, snapshot.receivedAt!);
+    final text = time == null
+        ? _copy(
+            pt:
+                'Consultando $section. Os dados anteriores ainda não foram atualizados.',
+            en:
+                'Checking $section. Previous details have not been updated yet.',
+            es:
+                'Consultando $section. Los datos anteriores aún no se han actualizado.')
+        : state.isLoading
+            ? _copy(
+                pt: 'Atualizando $section. Última consulta: $time.',
+                en: 'Updating $section. Last checked: $time.',
+                es: 'Actualizando $section. Última consulta: $time.')
+            : state.hasError
+                ? _copy(
+                    pt:
+                        'Não foi possível atualizar $section. Última consulta: $time.',
+                    en: 'Could not update $section. Last checked: $time.',
+                    es:
+                        'No se pudo actualizar $section. Última consulta: $time.')
+                : _copy(
+                    pt: 'Consultado em $time',
+                    en: 'Checked at $time',
+                    es: 'Consultado el $time');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        KeroseneIcon(
+            state.hasError ? KeroseneIcons.cloudOff : KeroseneIcons.info,
+            size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text(text,
+                style: AppTypography.bodySmall.copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withValues(alpha: 0.70),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: _refreshStatus,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.08),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    KeroseneIcons.refresh,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    size: 16,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    _copy(pt: 'Atualizar', en: 'Refresh', es: 'Actualizar'),
-                    style: AppTypography.bodySmall.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+                        .withValues(alpha: 0.70)))),
+      ]),
     );
   }
 
@@ -231,13 +313,25 @@ class _SovereigntyStatusScreenState
           parent: BouncingScrollPhysics(),
         ),
         children: [
+          _readoutNotice(
+              _status,
+              ref.watch(sovereigntyStatusProvider),
+              _copy(
+                  pt: 'os dados de segurança',
+                  en: 'security data',
+                  es: 'los datos de seguridad')),
           _buildExecutiveSummary(status),
           const SizedBox(height: 16),
           _buildSignalStrip(status),
           const SizedBox(height: 16),
-          _buildKfeReserveOverviewCard(kfeReserveOverviewAsync),
+          _readoutNotice(_reserves, kfeReserveOverviewAsync,
+              _copy(pt: 'as reservas', en: 'reserves', es: 'las reservas')),
+          _buildKfeReserveOverviewCard(
+              _reserves.display(kfeReserveOverviewAsync)),
           const SizedBox(height: 16),
-          _buildKfeReserveCard(status, auditStatsAsync),
+          _readoutNotice(_audit, auditStatsAsync,
+              _copy(pt: 'a auditoria', en: 'audit data', es: 'la auditoría')),
+          _buildKfeReserveCard(status, _audit.display(auditStatsAsync)),
           const SizedBox(height: 24),
           _buildTpmCard(status.hardwareAttestation),
           const SizedBox(height: 16),
@@ -256,9 +350,13 @@ class _SovereigntyStatusScreenState
   }
 
   Widget _buildExecutiveSummary(SecurityStatus status) {
+    final source = ref.watch(sovereigntyStatusProvider);
+    final current =
+        _status.receivedAt != null && !source.hasError && !source.isLoading;
     final allGood = _allSignalsHealthy(status);
-    final primaryColor =
-        allGood ? AppColors.success : Theme.of(context).colorScheme.error;
+    final primaryColor = allGood
+        ? Theme.of(context).colorScheme.onSurface
+        : Theme.of(context).colorScheme.error;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -282,8 +380,12 @@ class _SovereigntyStatusScreenState
                   color: primaryColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  allGood ? KeroseneIcons.verified : KeroseneIcons.warning,
+                child: KeroseneIcon(
+                  !current
+                      ? KeroseneIcons.info
+                      : allGood
+                          ? KeroseneIcons.verified
+                          : KeroseneIcons.warning,
                   color: primaryColor,
                   size: 24,
                 ),
@@ -294,34 +396,44 @@ class _SovereigntyStatusScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      allGood
+                      !current
                           ? _copy(
-                              pt: 'Operação íntegra',
-                              en: 'Operational integrity confirmed',
-                              es: 'Integridad operativa confirmada',
-                            )
-                          : _copy(
-                              pt: 'Atenção operacional necessária',
-                              en: 'Operational attention required',
-                              es: 'Se requiere atención operativa',
-                            ),
+                              pt: 'Última leitura',
+                              en: 'Last readout',
+                              es: 'Última lectura')
+                          : allGood
+                              ? _copy(
+                                  pt: 'Operação íntegra',
+                                  en: 'Operational integrity confirmed',
+                                  es: 'Integridad operativa confirmada',
+                                )
+                              : _copy(
+                                  pt: 'Atenção operacional necessária',
+                                  en: 'Operational attention required',
+                                  es: 'Se requiere atención operativa',
+                                ),
                       style: AppTypography.h3.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      allGood
+                      !current
                           ? _copy(
-                              pt: 'Hardware, consenso, integridade do ledger e proteção de memória estão consistentes nesta leitura.',
-                              en: 'Hardware, consensus, ledger integrity, and memory protection are consistent in this readout.',
-                              es: 'Hardware, consenso, integridad del ledger y protección de memoria están consistentes en esta lectura.',
-                            )
-                          : _copy(
-                              pt: 'Um ou mais sinais não estão no estado ideal. Revise os blocos abaixo antes de tratar esta leitura como saudável.',
-                              en: 'One or more signals are not in the ideal state. Review the blocks below before treating this readout as healthy.',
-                              es: 'Una o más señales no están en el estado ideal. Revisa los bloques de abajo antes de tratar esta lectura como saludable.',
-                            ),
+                              pt: 'Os dados abaixo são da última consulta concluída. Aguarde a atualização para confirmar o estado atual.',
+                              en: 'These are the last successfully checked details. Wait for an update to confirm the current state.',
+                              es: 'Estos datos son de la última consulta completada. Espera la actualización para confirmar el estado actual.')
+                          : allGood
+                              ? _copy(
+                                  pt: 'Hardware, consenso, integridade do ledger e proteção de memória estão consistentes nesta leitura.',
+                                  en: 'Hardware, consensus, ledger integrity, and memory protection are consistent in this readout.',
+                                  es: 'Hardware, consenso, integridad del ledger y protección de memoria están consistentes en esta lectura.',
+                                )
+                              : _copy(
+                                  pt: 'Um ou mais sinais não estão no estado ideal. Revise os blocos abaixo antes de tratar esta leitura como saudável.',
+                                  en: 'One or more signals are not in the ideal state. Review the blocks below before treating this readout as healthy.',
+                                  es: 'Una o más señales no están en el estado ideal. Revisa los bloques de abajo antes de tratar esta lectura como saludable.',
+                                ),
                       style: AppTypography.bodyMedium.copyWith(
                         color: Theme.of(context)
                             .colorScheme
@@ -448,7 +560,7 @@ class _SovereigntyStatusScreenState
                       ),
                 accentColor: diskPersistence
                     ? Theme.of(context).colorScheme.error
-                    : AppColors.success,
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -471,7 +583,11 @@ class _SovereigntyStatusScreenState
   ) {
     return auditStatsAsync.when(
       loading: _buildKfeReserveLoadingCard,
-      error: (error, _) => _buildKfeReserveUnavailableCard(error.toString()),
+      error: (error, _) => _buildKfeReserveUnavailableCard(_copy(
+        pt: 'Não foi possível consultar a auditoria agora. Atualize para tentar novamente.',
+        en: 'We could not check audit data right now. Refresh to try again.',
+        es: 'No pudimos consultar la auditoría ahora. Actualiza para intentarlo de nuevo.',
+      )),
       data: (stats) {
         if (stats.isEmpty) {
           return _buildKfeReserveUnavailableCard(
@@ -557,7 +673,7 @@ class _SovereigntyStatusScreenState
                   Theme.of(context).colorScheme.error.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: KeroseneIcon(
               KeroseneIcons.wallet,
               color: Theme.of(context).colorScheme.error,
               size: 18,
@@ -689,23 +805,23 @@ class _SovereigntyStatusScreenState
                 padding: EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: (active
-                          ? AppColors.success
+                          ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(context).colorScheme.error)
                       .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: (active
-                            ? AppColors.success
+                            ? Theme.of(context).colorScheme.onSurface
                             : Theme.of(context).colorScheme.error)
                         .withValues(alpha: 0.24),
                   ),
                 ),
                 child: Column(
                   children: [
-                    Icon(
+                    KeroseneIcon(
                       active ? KeroseneIcons.success : KeroseneIcons.cancel,
                       color: active
-                          ? AppColors.success
+                          ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(context).colorScheme.error,
                       size: 14,
                     ),
@@ -834,7 +950,7 @@ class _SovereigntyStatusScreenState
                   .withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: KeroseneIcon(
               KeroseneIcons.schedule,
               color: Theme.of(context).colorScheme.onSurface,
               size: 18,
@@ -912,110 +1028,22 @@ class _SovereigntyStatusScreenState
     );
   }
 
-  Widget _buildErrorState(String error) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Container(
-          padding: EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.error.withValues(alpha: 0.22),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                KeroseneIcons.cloudOff,
-                color: Theme.of(context).colorScheme.error,
-                size: 36,
-              ),
-              SizedBox(height: 16),
-              Text(
-                _copy(
-                  pt: 'Leitura indisponível',
-                  en: 'Readout unavailable',
-                  es: 'Lectura no disponible',
-                ),
-                style: AppTypography.h3.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _copy(
-                  pt: 'Não foi possível alcançar o serviço de atestação neste momento.',
-                  en: 'The attestation service could not be reached at this time.',
-                  es: 'No fue posible alcanzar el servicio de atestación en este momento.',
-                ),
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.70),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error,
-                textAlign: TextAlign.center,
-                style: AppTypography.caption.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.50),
-                ),
-              ),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: _refreshStatus,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .error
-                        .withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .error
-                          .withValues(alpha: 0.22),
-                    ),
-                  ),
-                  child: Text(
-                    _copy(
-                      pt: context.tr.settingsDevicesRetry,
-                      en: 'Try again',
-                      es: 'Intentar de nuevo',
-                    ),
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildErrorState() => StateFeedbackView.error(
+        title: _copy(
+            pt: 'Leitura indisponível',
+            en: 'Readout unavailable',
+            es: 'Lectura no disponible'),
+        description: _copy(
+            pt: 'Não conseguimos consultar os dados de segurança agora. Tente novamente.',
+            en: 'We could not check security data right now. Please try again.',
+            es: 'No pudimos consultar los datos de seguridad ahora. Inténtalo de nuevo.'),
+        actionLabel: context.tr.settingsDevicesRetry,
+        onAction: _refreshStatus,
+      );
 
   String _formatDate(String iso) {
     try {
-      final date = DateTime.parse(iso);
+      final date = AppDateTime.inDisplayZone(context, DateTime.parse(iso));
       return '${date.day.toString().padLeft(2, '0')}/'
           '${date.month.toString().padLeft(2, '0')} '
           '${date.hour.toString().padLeft(2, '0')}:'
@@ -1023,5 +1051,26 @@ class _SovereigntyStatusScreenState
     } catch (_) {
       return iso;
     }
+  }
+}
+
+/// Last successful response and its receipt time, scoped to this screen/session.
+class _LastReadout<T> {
+  T? value;
+  DateTime? receivedAt;
+
+  bool observe(AsyncValue<T> next, {bool initial = false}) {
+    if (next.isLoading || next.hasError || !next.hasValue) return false;
+    value = next.requireValue;
+    receivedAt = initial ? null : DateTime.now();
+    return true;
+  }
+
+  AsyncValue<T> display(AsyncValue<T> state) =>
+      value == null ? state : AsyncData<T>(value as T);
+
+  void clear() {
+    value = null;
+    receivedAt = null;
   }
 }

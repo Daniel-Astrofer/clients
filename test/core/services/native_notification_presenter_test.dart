@@ -5,6 +5,41 @@ import 'package:kerosene/features/notifications/domain/entities/session_notifica
 void main() {
   const presenter = NativeNotificationPresenter();
 
+  test(
+      'lifecycle events preserve facts instead of announcing a generic success',
+      () {
+    for (final kind in [
+      SessionNotificationItem.kindPaymentProcessing,
+      SessionNotificationItem.kindPaymentFailed,
+      SessionNotificationItem.kindPaymentReconciliationRequired,
+      SessionNotificationItem.kindDepositReversed,
+    ]) {
+      final notification = presenter.present(
+          id: '1',
+          kind: kind,
+          title: 'Operação em verificação',
+          body: 'Consulte os detalhes.',
+          metadata: {
+            'eventId': 'event-1',
+            'amountSats': '1500',
+            'rail': 'ONCHAIN'
+          });
+      expect(notification.title, 'Operação em verificação');
+      expect(notification.body, 'Consulte os detalhes.');
+      expect(notification.dedupeKey, 'event-1');
+      expect(NativeNotificationPresenter.isFinancialKind(kind), isTrue);
+      expect(
+          SessionNotificationItem(
+                  id: '1',
+                  title: notification.title,
+                  body: notification.body,
+                  timestamp: DateTime.utc(2026, 10, 9),
+                  kind: kind)
+              .isFinancialEvent,
+          isTrue);
+    }
+  });
+
   group('NativeNotificationPresenter', () {
     test('deposit_detected exposes amount from creditedSats + pending channel',
         () {

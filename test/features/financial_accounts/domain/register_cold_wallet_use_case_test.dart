@@ -141,6 +141,33 @@ void main() {
       );
     });
 
+    test(
+        'public-only registration never saves a seed and records deliberate monitoring',
+        () async {
+      var saves = 0;
+      final useCase = RegisterColdWalletUseCase(
+          seedStore: _FakeSeedStore(onSave: (_, __, ___) => saves++),
+          importColdWallet: (
+                  {required String label,
+                  required String xpub,
+                  required String fingerprint,
+                  required String derivationPath,
+                  required String scriptPolicy}) async =>
+              BitcoinAccount.fromJson({
+                'id': 'registered-public',
+                'type': 'WATCH_ONLY',
+                'status': 'ACTIVE'
+              }));
+      final result = await useCase.registerPublicOnly(
+          label: 'Public fixture',
+          material: const ColdWalletPublicMaterial(
+              xpub: 'public-fixture', fingerprint: '73c5da0a'));
+      expect(saves, 0);
+      expect(result.publicOnly, isTrue);
+      expect(result.seedStored, isFalse);
+      expect(result.walletId, 'registered-public');
+    });
+
     test('resolveColdWalletId prefers coldWalletId', () {
       final account = BitcoinAccount(
         id: 'account-id',

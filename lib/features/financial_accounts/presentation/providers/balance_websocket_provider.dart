@@ -17,7 +17,6 @@ import 'package:kerosene/features/notifications/domain/entities/session_notifica
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
-import 'package:kerosene/features/home/presentation/providers/home_education_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/home_surface_provider.dart';
 import 'package:kerosene/features/home/presentation/providers/incoming_transfer_theater.dart';
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
@@ -209,9 +208,17 @@ final balanceWebSocketServiceProvider =
   // Watch the reactive Tor API URL
   final baseUrl = ref.watch(torApiUrlProvider);
   // Rebuild socket when HTTP silently refreshes the access token.
-  ref.watch(sessionCredentialVersionProvider);
+  final credentialVersion = ref.watch(sessionCredentialVersionProvider);
 
   final userId = authState.user.id;
+  bool ownsSession() {
+    if (!ref.mounted) return false;
+    final current = ref.read(authControllerProvider);
+    return current is AuthAuthenticated &&
+        current.user.id == userId &&
+        ref.read(sessionCredentialVersionProvider) == credentialVersion;
+  }
+
   if (kDebugMode) {
     debugPrint('BalanceWebSocket: preparing balance stream.');
   }
@@ -233,7 +240,7 @@ final balanceWebSocketServiceProvider =
   }
 
   final deviceHash = await DeviceHelper.getDeviceHash();
-  if (!ref.mounted) {
+  if (!ownsSession()) {
     return null;
   }
 
@@ -243,14 +250,16 @@ final balanceWebSocketServiceProvider =
     authToken: token,
     deviceHash: deviceHash,
     resolveAuthToken: () async {
+      if (!ownsSession()) return null;
       try {
         final fresh = await ref.read(authLocalDataSourceProvider).getToken();
-        return _normalizeSessionToken(fresh);
+        return ownsSession() ? _normalizeSessionToken(fresh) : null;
       } catch (_) {
         return null;
       }
     },
     onSessionInvalidated: () {
+      if (!ownsSession()) return;
       if (kDebugMode) {
         debugPrint(
             'BalanceWebSocket: session invalidated by realtime channel.');
@@ -258,7 +267,7 @@ final balanceWebSocketServiceProvider =
       ref.read(sessionInvalidationProvider.notifier).emit();
     },
     onReconnectExhausted: () {
-      if (!ref.mounted) return;
+      if (!ownsSession()) return;
       if (kDebugMode) {
         debugPrint(
           'BalanceWebSocket: reconnect exhausted — forcing Tor REST catch-up.',
@@ -272,7 +281,7 @@ final balanceWebSocketServiceProvider =
       );
     },
     onTransaction: (json) {
-      if (!ref.mounted) return;
+      if (!ownsSession()) return;
       try {
         final tx = Transaction.fromJson(json);
         ref.read(lastTransactionHistoryProvider.notifier).upsertFront(tx);
@@ -282,15 +291,6 @@ final balanceWebSocketServiceProvider =
             ref.read(localTransactionHistoryStoreProvider).mergeAndPersist(
                 sessionScope: scope,
                 incoming: [tx]).catchError((_) => <Transaction>[]),
-          );
-        }
-        // Primary theater path — same id as extrato row.
-        final theater = payloadFromTransaction(tx, read: ref.read);
-        if (theater != null) {
-          presentIncomingTheater(
-            ref.read(homeEducationQueueProvider.notifier),
-            ref.read(homeBalanceReceivePulseProvider.notifier),
-            theater,
           );
         }
         // Eventual consistency only — row already on screen.
@@ -307,7 +307,7 @@ final balanceWebSocketServiceProvider =
       }
     },
     onBtcPrice: (json) {
-      if (!ref.mounted) return;
+      if (!ownsSession()) return;
       try {
         final rates = BackendBtcRates.fromJson(json);
         ref.read(liveBackendBtcRatesProvider.notifier).apply(rates);
@@ -318,6 +318,7 @@ final balanceWebSocketServiceProvider =
       }
     },
     onBalanceUpdate: (update) {
+      if (!ownsSession()) return;
       if (kDebugMode) {
         debugPrint('BalanceWebSocket: balance update received.');
       }
@@ -368,29 +369,9 @@ final balanceWebSocketServiceProvider =
               context: update.context,
             );
       }
-
-      // Fallback theater only when notif/tx WS did not already announce.
-      final queue = ref.read(homeEducationQueueProvider.notifier);
-      if (!queue.hasRecentIncomingEnqueue) {
-        final creditPayload = payloadFromBalanceCredit(
-          walletId: update.walletId,
-          walletName: update.walletName,
-          amountBtc: update.amount,
-          context: update.context,
-          kind: update.kind,
-          bucket: update.bucket,
-          read: ref.read,
-        );
-        if (creditPayload != null && ref.mounted) {
-          presentIncomingTheater(
-            queue,
-            ref.read(homeBalanceReceivePulseProvider.notifier),
-            creditPayload,
-          );
-        }
-      }
     },
     onNotification: (event) {
+      if (!ownsSession()) return;
       final notification = SessionNotificationItem(
         id: event.id,
         title: event.title,
@@ -418,10 +399,11 @@ final balanceWebSocketServiceProvider =
         ref.read(sessionNotificationFeedProvider.notifier).add(notification);
       }
 
-      // The in-app banner is the foreground acknowledgement surface. Incoming
-      // transfers already have a dedicated Home theater celebration, so they
-      // stay out of the banner to avoid presenting the same event twice.
-      if (appInForeground && !isIncoming && !notification.read) {
+      // One discreet acknowledgement surface for both sends and receives.
+      // The financial record remains in the feed regardless of alert preferences.
+      if (appInForeground &&
+          alertPreferences.inAppBannersEnabled &&
+          !notification.read) {
         ref.read(notificationBannerProvider.notifier).show(notification);
       }
 
@@ -433,8 +415,7 @@ final balanceWebSocketServiceProvider =
         forceFullHistory: isIncoming,
       );
 
-      // Theater for receives (independent of OS alert prefs).
-      // When the user is in the app, theater is the primary surface — not shade.
+      // Incoming notifications also hydrate the financial projection.
       if (isIncoming) {
         final optimistic = optimisticTransactionFromNotification(notification);
         if (optimistic != null) {
@@ -450,22 +431,11 @@ final balanceWebSocketServiceProvider =
             );
           }
         }
-        final theater = payloadFromNotification(
-          notification,
-          read: ref.read,
-        );
-        if (theater != null) {
-          presentIncomingTheater(
-            ref.read(homeEducationQueueProvider.notifier),
-            ref.read(homeBalanceReceivePulseProvider.notifier),
-            theater,
-          );
-        }
       }
 
       // Native Android/iOS shade: financial + security when prefs allow.
-      // Skip shade for incoming while foreground — home theater owns that UX.
-      final suppressNativeShade = isIncoming && appInForeground;
+      // Financial events use one in-app acknowledgement while foregrounded.
+      final suppressNativeShade = isFinancial && appInForeground;
       if (keepForAlerts &&
           !suppressNativeShade &&
           NativeNotificationPresenter.isNativeAlertKind(notification.kind)) {
@@ -480,7 +450,7 @@ final balanceWebSocketServiceProvider =
       }
     },
     onHomeUiEvent: (event) {
-      if (!ref.mounted) {
+      if (!ownsSession()) {
         return;
       }
       ref.read(homeSurfaceProvider.notifier).applyEventJson(event);
@@ -497,7 +467,7 @@ final balanceWebSocketServiceProvider =
   } else {
     await service.connect();
   }
-  if (!ref.mounted) {
+  if (!ownsSession()) {
     service.disconnect();
     return null;
   }
@@ -511,20 +481,22 @@ final balanceWebSocketServiceProvider =
     ),
     isRealtimeConnected: () => service.isConnected,
     isPollAllowed: () {
-      if (!ref.mounted) return false;
+      if (!ownsSession()) return false;
       return ref.read(financialPollAllowedProvider);
     },
     scheduler: ref.read(financialRefreshSchedulerProvider),
   )..start();
 
   void onWsConnectivity(bool connected) {
+    if (!ownsSession()) return;
     refreshLoop.onConnectivityChanged();
-    if (!ref.mounted) return;
     if (!connected) {
       // Frames during Tor flap / broker restart are not replayed.
       ref.read(financialDirtyProvider.notifier).markDirty();
       return;
     }
+    unawaited(
+        ref.read(sessionNotificationFeedProvider.notifier).reloadFromServer());
     // Just reconnected: force one full REST catch-up for anything missed
     // while the socket was down (treat kfe→server as Tor-latent too).
     _scheduleFinancialRefreshForEvent(
@@ -631,6 +603,8 @@ bool _shouldKeepNotification(
 Transaction? optimisticTransactionFromNotification(
     SessionNotificationItem notification) {
   if (!isIncomingTransactionNotification(notification)) return null;
+  final timestamp = notification.timestamp;
+  if (timestamp == null) return null;
 
   final meta = notification.metadata;
   final id = (notification.entityId ?? '').trim().isNotEmpty
@@ -670,8 +644,8 @@ Transaction? optimisticTransactionFromNotification(
             : TransactionStatus.pending),
     type: TransactionType.receive,
     confirmations: confs,
-    timestamp: notification.timestamp,
-    updatedAt: notification.timestamp,
+    timestamp: timestamp,
+    updatedAt: timestamp,
     blockchainTxid: meta['txid'] ?? meta['blockchainTxid'],
     description: notification.body,
     isInternal: rail.contains('INTERNAL') || rail.contains('LEDGER'),

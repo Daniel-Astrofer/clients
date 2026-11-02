@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -78,7 +79,7 @@ class HomeOnboardingProgressCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(
+                KeroseneIcon(
                   KeroseneIcons.chevronRight,
                   color: Theme.of(context)
                       .colorScheme
@@ -126,7 +127,7 @@ class _SegmentedPieChartContainer extends StatelessWidget {
           ),
           Center(
             child: isDone
-                ? Icon(
+                ? KeroseneIcon(
                     KeroseneIcons.success,
                     color: AppColors.hexFF4ADE80,
                     size: 16,

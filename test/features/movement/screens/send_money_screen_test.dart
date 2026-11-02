@@ -1,3 +1,4 @@
+import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,12 +15,108 @@ import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart
 import 'package:kerosene/features/financial_accounts/presentation/providers/wallet_provider.dart'
     hide transactionRepositoryProvider;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart';
+import 'package:kerosene/features/movement/presentation/send/send_money_flow_notifier.dart';
 import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/data/entities/payment_link.dart';
 import 'package:kerosene/app/widgets/wallet_expand_chip.dart';
 
 void main() {
+  for (final missing in [false, true]) {
+    testWidgets(
+        'receive retains the requested wallet or blocks fallback: $missing',
+        (tester) async {
+      final wallets = [
+        _wallet(name: 'Default account'),
+        _wallet(
+            id: '61a8bb23-e18e-4f32-8414-9844e7300c99',
+            name: 'New reserve',
+            balance: 0)
+      ];
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            walletProvider.overrideWith(() => _WalletTestNotifier(wallets)),
+            latestBtcPriceProvider.overrideWith((_) => 65000),
+            btcEurPriceProvider.overrideWith((_) => 60000),
+            btcBrlPriceProvider.overrideWith((_) => 350000),
+          ],
+          child: MaterialApp(
+              locale: const Locale('pt'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: ReceiveAmountEntryScreen(
+                  initialWalletId: missing ? 'missing' : wallets.last.id))));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      if (missing) {
+        expect(
+            find.textContaining(
+                'Não foi possível carregar a carteira escolhida'),
+            findsOneWidget);
+        expect(find.text('Default account'), findsNothing);
+        expect(find.text('New reserve'), findsNothing);
+      } else {
+        expect(
+            tester
+                .widget<WalletExpandChip>(find.byType(WalletExpandChip))
+                .selectedWallet
+                ?.id,
+            wallets.last.id);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+  for (final missing in [false, true]) {
+    testWidgets(
+        'an explicit source wallet is retained or visibly unavailable: $missing',
+        (tester) async {
+      final wallets = [
+        _wallet(),
+        _wallet(
+            id: '61a8bb23-e18e-4f32-8414-9844e7300c99',
+            name: 'New reserve',
+            balance: 0)
+      ];
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            walletProvider.overrideWith(() => _WalletTestNotifier(wallets)),
+            latestBtcPriceProvider.overrideWith((_) => 65000),
+            btcEurPriceProvider.overrideWith((_) => 60000),
+            btcBrlPriceProvider.overrideWith((_) => 350000),
+            recentTransactionDestinationsProvider
+                .overrideWith(_EmptyRecentDestinationsNotifier.new),
+          ],
+          child: MaterialApp(
+              locale: const Locale('pt'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: SendMoneyScreen(
+                  initialWalletId: missing ? 'missing' : wallets.last.id))));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(SendMoneyScreen)));
+      if (missing) {
+        expect(
+            find.textContaining(
+                'Não foi possível carregar a carteira escolhida'),
+            findsOneWidget);
+        expect(find.text('Para quem deseja enviar?'), findsNothing);
+        expect(
+            container.read(sendMoneyFlowProvider).requireValue.selectedWallet,
+            isNull);
+      } else {
+        expect(
+            container
+                .read(sendMoneyFlowProvider)
+                .requireValue
+                .selectedWallet
+                ?.id,
+            wallets.last.id);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('send opens on destination, not a wallet selection screen',
       (tester) async {
     final wallets = [
@@ -244,7 +341,8 @@ void main() {
     await tester.enterText(amountInput, '1');
     await tester.pump();
 
-    expect(find.textContaining('350.000,00'), findsOneWidget);
+    expect(tester.widget<TextField>(amountInput).controller!.text, '1');
+    expect(find.textContaining('350.000,00'), findsNothing);
     expect(find.text('Carteira'), findsNothing);
     expect(find.text('Destino'), findsNothing);
     expect(find.text('Saldo disponível'), findsNothing);
@@ -502,6 +600,11 @@ class _WalletTestNotifier extends WalletNotifier {
       selectedWallet: wallets.firstOrNull,
       btcToUsdRate: 65000,
     );
+  }
+
+  @override
+  Future<void> refresh() async {
+    state = build();
   }
 }
 

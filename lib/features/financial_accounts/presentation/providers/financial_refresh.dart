@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'package:kerosene/features/financial_accounts/presentation/state/wallet_state.dart';
+import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
+import 'package:kerosene/features/movement/providers/payment_submission_recovery_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
@@ -27,15 +31,12 @@ Future<bool> refreshFinancialProjection(
   bool forceFullHistory = false,
   FinancialRefreshScope scope = FinancialRefreshScope.full,
 }) async {
-  final authState = ref.read(authControllerProvider);
-  if (authState is! AuthAuthenticated) {
-    return false;
-  }
-  if (forceFullHistory) {
-    ref.read(transactionHistoryCursorProvider.notifier).reset();
-    ref.read(transactionHistoryForceFullProvider.notifier).arm();
-  }
-  return _kickRefresh(ref, scope: scope);
+  if (!ref.mounted) return false;
+  final account = ref.read(sessionStorageScopeProvider);
+  if (account == null) return false;
+  return ref
+      .read(_financialProjectionRefreshProvider)
+      .request(account, scope, forceFullHistory);
 }
 
 /// WidgetRef entrypoint — same contract as [refreshFinancialProjection].
@@ -44,15 +45,96 @@ Future<bool> refreshFinancialProjectionUi(
   bool forceFullHistory = false,
   FinancialRefreshScope scope = FinancialRefreshScope.full,
 }) async {
-  final authState = ref.read(authControllerProvider);
-  if (authState is! AuthAuthenticated) {
-    return false;
+  if (!ref.context.mounted) return false;
+  final account = ref.read(sessionStorageScopeProvider);
+  if (account == null) return false;
+  return ref
+      .read(_financialProjectionRefreshProvider)
+      .request(account, scope, forceFullHistory);
+}
+
+final _financialProjectionRefreshProvider =
+    Provider<_FinancialProjectionRefresh>((ref) {
+  final refresh = _FinancialProjectionRefresh(ref);
+  ref.onDispose(refresh.dispose);
+  return refresh;
+});
+
+class _RefreshBatch {
+  final completion = Completer<bool>();
+  bool pending = false;
+  bool full = false;
+  bool forceFullHistory = false;
+  void merge(FinancialRefreshScope scope, bool force) {
+    pending = true;
+    full |= scope == FinancialRefreshScope.full;
+    forceFullHistory |= force;
   }
-  if (forceFullHistory) {
-    ref.read(transactionHistoryCursorProvider.notifier).reset();
-    ref.read(transactionHistoryForceFullProvider.notifier).arm();
+}
+
+/// Shared by widgets, reconnects and incoming events. A burst is one refresh;
+/// events arriving during I/O request one follow-up before callers see success.
+class _FinancialProjectionRefresh {
+  _FinancialProjectionRefresh(this.ref);
+  final Ref ref;
+  final _batches = <String, _RefreshBatch>{};
+
+  bool _owns(String account) =>
+      ref.mounted && ref.read(sessionStorageScopeProvider) == account;
+
+  Future<bool> request(
+      String account, FinancialRefreshScope scope, bool force) {
+    final existing = _batches[account];
+    if (existing != null) {
+      existing.merge(scope, force);
+      return existing.completion.future;
+    }
+    final batch = _RefreshBatch()..merge(scope, force);
+    _batches[account] = batch;
+    unawaited(_drain(account, batch));
+    return batch.completion.future;
   }
-  return _kickRefreshUi(ref, scope: scope);
+
+  Future<void> _drain(String account, _RefreshBatch batch) async {
+    var ok = false;
+    try {
+      while (batch.pending) {
+        // Leave Riverpod's rebuild pass before invalidating projections or
+        // publishing wallet state. A microtask is not a rendering boundary.
+        await Future<void>.delayed(Duration.zero);
+        if (!_owns(account)) {
+          ok = false;
+          break;
+        }
+        final scope = batch.full
+            ? FinancialRefreshScope.full
+            : FinancialRefreshScope.light;
+        final force = batch.forceFullHistory;
+        batch.pending = batch.full = batch.forceFullHistory = false;
+        if (force) {
+          ref.read(transactionHistoryCursorProvider.notifier).reset();
+          ref.read(transactionHistoryForceFullProvider.notifier).arm();
+        }
+        ok = await _kickRefresh(ref, scope: scope);
+      }
+      if (!batch.completion.isCompleted) {
+        batch.completion.complete(ok && _owns(account));
+      }
+    } catch (error, stack) {
+      if (!batch.completion.isCompleted) {
+        batch.completion.completeError(error, stack);
+      }
+    } finally {
+      if (identical(_batches[account], batch)) _batches.remove(account);
+    }
+  }
+
+  void dispose() {
+    for (final batch in _batches.values) {
+      if (!batch.completion.isCompleted) batch.completion.complete(false);
+    }
+    _batches.clear();
+  }
 }
 
 Future<bool> _kickRefresh(
@@ -61,12 +143,13 @@ Future<bool> _kickRefresh(
 }) async {
   final authState = ref.read(authControllerProvider);
   if (authState is! AuthAuthenticated) return false;
+  final account = ref.read(sessionStorageScopeProvider);
 
   final walletNotifier = ref.read(walletProvider.notifier);
 
-  ref.invalidate(ledgerRepositoryProvider);
-  ref.invalidate(transactionHistoryProvider);
-  ref.invalidate(pagedTransactionHistoryProvider);
+  // The repository has no cached projection. Rebuilding it during a refresh
+  // recursively invalidates consumers that are already rebuilding this frame.
+  invalidateTransactionHistoryProjection(ref);
   ref.invalidate(localTransactionHistoryProvider);
 
   if (scope == FinancialRefreshScope.full) {
@@ -77,61 +160,53 @@ Future<bool> _kickRefresh(
     ref.invalidate(externalTransferDetailProvider);
     ref.invalidate(paymentLinksProvider);
     ref.invalidate(txStatusProvider);
-    ref.invalidate(bitcoinAccountsProvider);
+    unawaited(ref.read(bitcoinAccountsControllerProvider).refresh());
   }
-
-  var walletsOk = false;
-  var historyOk = false;
-
-  try {
-    await walletNotifier.refresh();
-    walletsOk = true;
-  } catch (_) {}
-
-  try {
-    await ref.read(transactionHistoryProvider.future);
-    historyOk = true;
-  } catch (_) {}
-
-  return walletsOk && historyOk;
-}
-
-Future<bool> _kickRefreshUi(
-  WidgetRef ref, {
-  required FinancialRefreshScope scope,
-}) async {
-  final authState = ref.read(authControllerProvider);
-  if (authState is! AuthAuthenticated) return false;
-
-  final walletNotifier = ref.read(walletProvider.notifier);
-
-  ref.invalidate(ledgerRepositoryProvider);
-  ref.invalidate(transactionHistoryProvider);
-  ref.invalidate(pagedTransactionHistoryProvider);
-  ref.invalidate(localTransactionHistoryProvider);
 
   if (scope == FinancialRefreshScope.full) {
-    ref.invalidate(depositsProvider);
-    ref.invalidate(depositBalanceProvider);
-    ref.invalidate(depositDetailProvider);
-    ref.invalidate(externalTransfersProvider);
-    ref.invalidate(externalTransferDetailProvider);
-    ref.invalidate(paymentLinksProvider);
-    ref.invalidate(txStatusProvider);
-    ref.invalidate(bitcoinAccountsProvider);
+    ref.invalidate(pendingPaymentSubmissionsProvider);
+    ref.invalidate(paymentSubmissionLookupProvider);
+    unawaited(
+        ref.read(sessionNotificationFeedProvider.notifier).reloadFromServer());
+  } else {
+    final account = ref.read(sessionStorageScopeProvider);
+    if (account != null &&
+        ref.exists(pendingPaymentSubmissionsProvider(account))) {
+      final pending =
+          ref.read(pendingPaymentSubmissionsProvider(account)).asData?.value ??
+              [];
+      for (final record
+          in pending.where((record) => record.transactionId == null)) {
+        final lookup =
+            paymentSubmissionLookupProvider((account, record.key, null));
+        if (ref.exists(lookup) && !ref.read(lookup).isLoading) {
+          ref.invalidate(lookup);
+        }
+      }
+    }
   }
-
+  final previousSync = ref.read(transactionHistoryLastSyncProvider);
   var walletsOk = false;
   var historyOk = false;
 
   try {
     await walletNotifier.refresh();
-    walletsOk = true;
+    if (!ref.mounted || ref.read(sessionStorageScopeProvider) != account) {
+      return false;
+    }
+    walletsOk = ref.read(walletProvider) is WalletLoaded;
   } catch (_) {}
+
+  if (!ref.mounted || ref.read(sessionStorageScopeProvider) != account) {
+    return false;
+  }
 
   try {
     await ref.read(transactionHistoryProvider.future);
-    historyOk = true;
+    if (!ref.mounted || ref.read(sessionStorageScopeProvider) != account) {
+      return false;
+    }
+    historyOk = ref.read(transactionHistoryLastSyncProvider) != previousSync;
   } catch (_) {}
 
   return walletsOk && historyOk;

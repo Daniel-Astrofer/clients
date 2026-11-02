@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'package:flutter/cupertino.dart';
@@ -242,10 +243,10 @@ class ColdWalletCreationScreenState
     try {
       final seedToStore = mnemonic.trim().toLowerCase();
       final passphraseToStore =
-          level.usesExtraWord ? extraWordController.text.trim() : '';
+          level.usesExtraWord ? extraWordController.text : '';
       final useCase = RegisterColdWalletUseCase(
         importColdWallet:
-            ref.read(bitcoinAccountsProvider.notifier).importColdWallet,
+            ref.read(bitcoinAccountsControllerProvider).importColdWallet,
       );
       final result = await useCase.registerFromMnemonic(
         label: walletLabel,
@@ -290,86 +291,90 @@ class ColdWalletCreationScreenState
     final responsive = context.responsive;
     final colors = BitcoinAccountsColors.of(context);
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.sm,
-                AppSpacing.sm,
-                responsive.horizontalPadding,
-                AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: busy ? null : goBack,
-                    icon: Icon(
-                      KeroseneIcons.chevronLeft,
-                      color: colors.text,
-                      size: 18,
-                    ),
+    return PopScope(
+        canPop: !busy,
+        child: Scaffold(
+          backgroundColor: colors.background,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.sm,
+                    AppSpacing.sm,
+                    responsive.horizontalPadding,
+                    AppSpacing.sm,
                   ),
-                  Expanded(
-                    child: Text(
-                      context.tr.coldWalletCreateTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: colors.text,
-                            fontSize: responsive.compactFontSize(
-                              tiny: 19,
-                              compact: 21,
-                              regular: 22,
-                            ),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  responsive.horizontalPadding,
-                  AppSpacing.sm,
-                  responsive.horizontalPadding,
-                  AppSpacing.lg,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: responsive.mobileContentMaxWidth,
-                    ),
-                    child: TweenAnimationBuilder<double>(
-                      key: ValueKey(step),
-                      tween: Tween(
-                          begin:
-                              KeroseneMotion.reduceMotion(context) ? 1.0 : 0.0,
-                          end: 1.0),
-                      duration: KeroseneMotion.duration(
-                          context, KeroseneMotion.statusChange),
-                      builder: (_, opacity, child) =>
-                          Opacity(opacity: opacity, child: child),
-                      child: switch (step) {
-                        ColdWalletStep.purpose => const SizedBox.shrink(),
-                        ColdWalletStep.prepare => buildPrepare(),
-                        ColdWalletStep.backup => buildBackup(),
-                        ColdWalletStep.verify => buildVerify(),
-                      },
-                    ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: busy ? null : goBack,
+                        icon: KeroseneIcon(
+                          KeroseneIcons.chevronLeft,
+                          color: colors.text,
+                          size: 18,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          context.tr.coldWalletCreateTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: colors.text,
+                                    fontSize: responsive.compactFontSize(
+                                      tiny: 19,
+                                      compact: 21,
+                                      regular: 22,
+                                    ),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      responsive.horizontalPadding,
+                      AppSpacing.sm,
+                      responsive.horizontalPadding,
+                      AppSpacing.lg,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: responsive.mobileContentMaxWidth,
+                        ),
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey(step),
+                          tween: Tween(
+                              begin: KeroseneMotion.reduceMotion(context)
+                                  ? 1.0
+                                  : 0.0,
+                              end: 1.0),
+                          duration: KeroseneMotion.duration(
+                              context, KeroseneMotion.statusChange),
+                          builder: (_, opacity, child) =>
+                              Opacity(opacity: opacity, child: child),
+                          child: switch (step) {
+                            ColdWalletStep.purpose => const SizedBox.shrink(),
+                            ColdWalletStep.prepare => buildPrepare(),
+                            ColdWalletStep.backup => buildBackup(),
+                            ColdWalletStep.verify => buildVerify(),
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   Widget buildPurposeScaffold() {
@@ -397,7 +402,7 @@ class ColdWalletCreationScreenState
                 child: IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: goBack,
-                  icon: Icon(
+                  icon: KeroseneIcon(
                     KeroseneIcons.back,
                     color: colors.text,
                     size: 24,
@@ -510,7 +515,7 @@ class ColdWalletCreationScreenState
         FilledButton.icon(
           style: colors.filledButtonStyle(),
           onPressed: canGenerate ? generateColdWallet : null,
-          icon: const Icon(KeroseneIcons.passkey, size: 18),
+          icon: const KeroseneIcon(KeroseneIcons.passkey, size: 18),
           label: Text(context.tr.coldWalletGenerateAction),
         ),
       ],
@@ -538,7 +543,7 @@ class ColdWalletCreationScreenState
               children: [
                 Row(
                   children: [
-                    Icon(
+                    KeroseneIcon(
                       showWords ? KeroseneIcons.eye : KeroseneIcons.eyeOff,
                       color: colors.mutedText,
                       size: 24,
@@ -595,7 +600,7 @@ class ColdWalletCreationScreenState
                     HapticFeedback.selectionClick();
                     _seedVisibility.toggle();
                   },
-                  icon: Icon(
+                  icon: KeroseneIcon(
                       showWords ? KeroseneIcons.eyeOff : KeroseneIcons.eye),
                   label: Text(
                     showWords
@@ -611,7 +616,7 @@ class ColdWalletCreationScreenState
         FilledButton.icon(
           style: colors.filledButtonStyle(),
           onPressed: showWords ? startVerification : null,
-          icon: const Icon(KeroseneIcons.success, size: 18),
+          icon: const KeroseneIcon(KeroseneIcons.success, size: 18),
           label: Text(context.tr.coldWalletBackupDoneAction),
         ),
       ],
@@ -647,7 +652,7 @@ class ColdWalletCreationScreenState
                   busy || !verificationMatches() ? null : importWatchOnly,
               icon: busy
                   ? const CupertinoActivityIndicator(radius: 9)
-                  : const Icon(KeroseneIcons.security, size: 18),
+                  : const KeroseneIcon(KeroseneIcons.security, size: 18),
               label: Text(
                 busy
                     ? context.tr.coldWalletImportingAction
@@ -728,7 +733,7 @@ class ColdWalletLevelTile extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
+                KeroseneIcon(
                   selected ? KeroseneIcons.success : KeroseneIcons.circle,
                   color: selected ? colors.text : colors.mutedText,
                   size: 18,

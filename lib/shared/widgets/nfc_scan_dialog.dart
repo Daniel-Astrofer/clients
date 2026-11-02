@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -96,7 +97,7 @@ class _NfcScanDialogState extends State<NfcScanDialog> {
       title: Text(context.tr.nfcScannerTitle),
       content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(error ? KeroseneIcons.warning : KeroseneIcons.nfc,
+        KeroseneIcon(error ? KeroseneIcons.warning : KeroseneIcons.nfc,
             size: 48, color: error ? scheme.error : scheme.onSurface),
         const SizedBox(height: 24),
         Semantics(

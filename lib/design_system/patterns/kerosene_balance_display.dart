@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -72,7 +73,7 @@ class KeroseneBalanceDisplay extends StatelessWidget {
                 ],
                 if (onWalletTap != null) ...[
                   SizedBox(width: AppSpacing.xs),
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.arrowDropDown,
                     size: 16,
                     color: palette.textDisabled,

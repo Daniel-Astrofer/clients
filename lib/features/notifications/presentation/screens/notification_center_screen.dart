@@ -1,4 +1,8 @@
-import 'package:kerosene/core/constants/localized_copy.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/design_system/components/feedback/app_notice.dart';
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/core/navigation/app_navigation.dart';
 import 'dart:async';
 
@@ -8,21 +12,28 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
-import 'package:kerosene/design_system/components/feedback/app_notification_surface.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/features/notifications/domain/entities/session_notification_item.dart';
 import 'package:kerosene/features/notifications/presentation/notification_navigation.dart';
 import 'package:kerosene/features/notifications/presentation/notification_visuals.dart';
 import 'package:kerosene/features/notifications/presentation/notification_translator.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
+import '../widgets/notification_sync_status.dart';
 
 Future<void> openNotificationCenter(
   BuildContext context, {
   required GlobalKey originKey,
 }) {
-  return Navigator.of(context).push<void>(_notificationCenterRoute());
+  final navigator = AppNavigation.maybeNavigatorOf(context);
+  if (navigator == null) {
+    AppNotice.showError(context,
+        title: context.tr.notifDialogOpenFailedTitle,
+        message: context.tr.notifDialogOpenFailedMessage);
+    return Future.value();
+  }
+  return navigator.push<void>(_notificationCenterRoute());
 }
 
 Route<void> _notificationCenterRoute() {
@@ -58,9 +69,6 @@ class NotificationCenterScreen extends ConsumerStatefulWidget {
 class _NotificationCenterScreenState
     extends ConsumerState<NotificationCenterScreen> {
   _NotificationCenterFilter _filter = _NotificationCenterFilter.all;
-  bool _loading = true;
-  bool _loadFailed = false;
-
   @override
   void initState() {
     super.initState();
@@ -69,24 +77,34 @@ class _NotificationCenterScreenState
 
   Future<void> _reload() async {
     if (!mounted) return;
-    setState(() {
-      _loading = true;
-      _loadFailed = false;
-    });
-    final ok = await ref
-        .read(sessionNotificationFeedProvider.notifier)
-        .reloadFromServer();
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _loadFailed = !ok;
-    });
+    await ref.read(sessionNotificationFeedProvider.notifier).reloadFromServer();
   }
 
   @override
   Widget build(BuildContext context) {
+    final scope = ref.watch(sessionStorageScopeProvider);
+    ref.listen(sessionStorageScopeProvider, (previous, next) {
+      if (previous != next) Future.microtask(_reload);
+    });
+    if (scope == null) {
+      return Scaffold(
+          body: SafeArea(
+              child: Center(
+                  child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(context.tr.notifSignInToView,
+                            textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        TextButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            child: Text(context.tr.goBack)),
+                      ])))));
+    }
+    bool ownsSession() => ref.read(sessionStorageScopeProvider) == scope;
     final notifications = ref.watch(sessionNotificationFeedProvider);
     final unreadCount = ref.watch(sessionNotificationUnreadCountProvider);
+    final sync = ref.watch(sessionNotificationSyncProvider);
     final filtered = _filteredNotifications(notifications);
     final groups = _groupNotifications(context, filtered);
     final reduceMotion = KeroseneMotion.reduceMotion(context);
@@ -132,53 +150,51 @@ class _NotificationCenterScreenState
                         totalCount: notifications.length,
                         onMarkAllRead: unreadCount == 0
                             ? null
-                            : () => ref
-                                  .read(
-                                    sessionNotificationFeedProvider.notifier,
-                                  )
-                                  .markAllRead(),
+                            : () {
+                                if (!ownsSession()) return;
+                                ref
+                                    .read(sessionNotificationFeedProvider
+                                        .notifier)
+                                    .markAllRead();
+                              },
                         onClear: notifications.isEmpty
                             ? null
-                            : () => ref
-                                  .read(
-                                    sessionNotificationFeedProvider.notifier,
-                                  )
-                                  .clear(),
+                            : () {
+                                if (!ownsSession()) return;
+                                ref
+                                    .read(sessionNotificationFeedProvider
+                                        .notifier)
+                                    .clear();
+                              },
                       ),
                       reduceMotion: reduceMotion,
                       delay: 170,
                     ),
                   ),
                 ),
-                if (_loading && notifications.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+                  sliver: SliverToBoxAdapter(
+                      child: NotificationSyncStatus(onRefresh: () {
+                    if (ownsSession()) unawaited(_reload());
+                  })),
+                ),
+                if ((sync.loading || !sync.hydrated) && notifications.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   )
-                else if (_loadFailed && notifications.isEmpty)
+                else if ((sync.failed || sync.lastSyncedAt == null) &&
+                    notifications.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            const LocalizedCopy(
-                              en: 'Notifications could not be loaded.',
-                              pt: 'Não foi possível carregar as notificações.',
-                              es: 'No se pudieron cargar las notificaciones.',
-                            ).resolve(context),
-                          ),
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: _reload,
-                            child: Text(context.tr.tryAgain),
-                          ),
-                        ],
-                      ),
-                    ),
+                        child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(context.tr.notifSyncNoQuery,
+                                textAlign: TextAlign.center))),
                   )
                 else if (filtered.isEmpty)
                   SliverFillRemaining(
@@ -220,7 +236,9 @@ class _NotificationCenterScreenState
                           return _animated(
                             _NotificationCenterCard(
                               item: item,
-                              onTap: () => _openNotification(item),
+                              onTap: () {
+                                if (ownsSession()) _openNotification(item);
+                              },
                             ),
                             reduceMotion: reduceMotion,
                             delay: 220 + index * 45,
@@ -245,16 +263,15 @@ class _NotificationCenterScreenState
   ) {
     final filtered = switch (_filter) {
       _NotificationCenterFilter.all => List.of(notifications),
-      _NotificationCenterFilter.alerts =>
-        notifications
-            .where((item) => !_isSecurityNotification(context, item))
-            .toList(),
-      _NotificationCenterFilter.security =>
-        notifications
-            .where((item) => _isSecurityNotification(context, item))
-            .toList(),
+      _NotificationCenterFilter.alerts => notifications
+          .where((item) => !_isSecurityNotification(context, item))
+          .toList(),
+      _NotificationCenterFilter.security => notifications
+          .where((item) => _isSecurityNotification(context, item))
+          .toList(),
     };
-    filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    filtered.sort(
+        (a, b) => AppDateTime.compareNewestFirst(a.timestamp, b.timestamp));
     return filtered;
   }
 
@@ -275,9 +292,12 @@ class _NotificationCenterScreenState
   }
 
   Future<void> _openNotification(SessionNotificationItem item) async {
+    final owner = ref.read(sessionStorageScopeProvider);
     await ref.read(sessionNotificationFeedProvider.notifier).markRead(item.id);
 
-    if (!mounted || !item.isActionable) {
+    if (!mounted ||
+        !item.isActionable ||
+        ref.read(sessionStorageScopeProvider) != owner) {
       return;
     }
 
@@ -325,50 +345,42 @@ class _NotificationCenterHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        IconButton(
-          tooltip: context.tr.goBack,
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(KeroseneIcons.back),
-          color: Theme.of(context).colorScheme.onSurface,
-          iconSize: 24,
-          padding: const EdgeInsets.only(right: 14),
-          visualDensity: VisualDensity.compact,
-          alignment: Alignment.centerLeft,
-        ),
-        Expanded(
-          child: Text(
-            context.tr.notifCenterTitle,
-            style: AppTypography.newsreader(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontSize: 30,
-              fontWeight: FontWeight.w700,
-              height: 1,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-        IconButton(
-          tooltip: context.tr.notifCenterSettingsTooltip,
-          onPressed: () =>
-              AppNavigation.push(context, '/settings/notifications'),
-          icon: const Icon(KeroseneIcons.settings),
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: 0.78),
-          iconSize: 18,
-          style: IconButton.styleFrom(
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.08),
-            shape: const CircleBorder(),
-            fixedSize: const Size(48, 48),
-          ),
-        ),
-      ],
-    );
+    final titleStyle = AppTypography.newsreader(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: 30,
+        fontWeight: FontWeight.w700,
+        height: 1);
+    final back = IconButton(
+        tooltip: context.tr.goBack,
+        onPressed: () => Navigator.of(context).pop(),
+        icon: const KeroseneIcon(KeroseneIcons.back),
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        color: Theme.of(context).colorScheme.onSurface);
+    final settings = IconButton(
+        tooltip: context.tr.notifCenterSettingsTooltip,
+        onPressed: () => AppNavigation.push(context, '/settings/notifications'),
+        icon: const KeroseneIcon(KeroseneIcons.settings),
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        color: Theme.of(context).colorScheme.onSurface);
+    return LayoutBuilder(builder: (context, constraints) {
+      final painter = TextPainter(
+          text: TextSpan(text: context.tr.notifCenterTitle, style: titleStyle),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context))
+        ..layout();
+      final fits = painter.width + 96 <= constraints.maxWidth;
+      painter.dispose();
+      final title = Text(context.tr.notifCenterTitle, style: titleStyle);
+      if (fits) return Row(children: [back, Expanded(child: title), settings]);
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [back, const Spacer(), settings]),
+        const SizedBox(height: 8),
+        FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: title),
+      ]);
+    });
   }
 }
 
@@ -429,7 +441,10 @@ class _NotificationCenterActions extends StatelessWidget {
         ? context.tr.notifCenterZero
         : context.tr.notifCenterUnread(unreadCount);
 
-    return Row(
+    return Wrap(
+      spacing: 6,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Container(
           height: 30,
@@ -459,12 +474,10 @@ class _NotificationCenterActions extends StatelessWidget {
             ),
           ),
         ),
-        const Spacer(),
         _NotificationActionTextButton(
           label: context.tr.notifCenterReadAll,
           onPressed: onMarkAllRead,
         ),
-        const SizedBox(width: 6),
         _NotificationActionTextButton(
           label: context.tr.notifCenterClear,
           onPressed: onClear,
@@ -493,9 +506,9 @@ class _NotificationActionTextButton extends StatelessWidget {
         foregroundColor: Theme.of(
           context,
         ).colorScheme.onSurface.withValues(alpha: enabled ? 0.72 : 0.22),
-        minimumSize: const Size(0, 30),
+        minimumSize: const Size(48, 48),
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        tapTargetSize: MaterialTapTargetSize.padded,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
         textStyle: AppTypography.inter(
           fontSize: 11,
@@ -534,7 +547,7 @@ class _NotificationFilterChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          height: 34,
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
@@ -546,7 +559,8 @@ class _NotificationFilterChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 13, color: foreground.withValues(alpha: 0.74)),
+                KeroseneIcon(icon,
+                    size: 13, color: foreground.withValues(alpha: 0.74)),
                 const SizedBox(width: 7),
               ],
               Text(
@@ -576,7 +590,8 @@ class _NotificationCenterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visuals = resolveNotificationVisuals(context, item);
-    final accent = _accentFor(visuals.tone);
+    final brand = KeroseneBrandTheme.of(context);
+    final accent = brand.textPrimary;
 
     return Material(
       color: Colors.transparent,
@@ -586,7 +601,7 @@ class _NotificationCenterCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.fromLTRB(12, 13, 12, 13),
           decoration: BoxDecoration(
-            color: AppColors.hexFF141414,
+            color: KeroseneBrandTheme.of(context).surface,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
               color: Theme.of(
@@ -604,62 +619,32 @@ class _NotificationCenterCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: accent.withValues(alpha: 0.12),
                 ),
-                child: Icon(visuals.icon, size: 18, color: accent),
+                child: KeroseneIcon(visuals.icon, size: 18, color: accent),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            NotificationTranslator.resolveTitle(context, item),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.inter(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.92),
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                              letterSpacing: 0,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          _timeLabel(context, item.timestamp),
-                          style: AppTypography.inter(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.35),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            height: 1.2,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ],
-                    ),
+                    Text(NotificationTranslator.resolveTitle(context, item),
+                        style: AppTypography.bodySmall.copyWith(
+                            color: brand.textPrimary,
+                            fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     Text(
                       NotificationTranslator.resolveBody(context, item),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.inter(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.58),
+                        color: brand.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         height: 1.42,
                         letterSpacing: 0,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(_timeLabel(context, item.timestamp),
+                        style: AppTypography.bodySmall
+                            .copyWith(color: brand.textSecondary)),
                   ],
                 ),
               ),
@@ -700,7 +685,7 @@ class _NotificationEmptyState extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.hexFF141414,
+            color: KeroseneBrandTheme.of(context).surface,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
               color: Theme.of(
@@ -711,7 +696,7 @@ class _NotificationEmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.notificationsOff,
                 color: Theme.of(
                   context,
@@ -769,20 +754,12 @@ bool _isSecurityNotification(
       category == 'seguridad';
 }
 
-Color _accentFor(AppNotificationTone tone) {
-  return switch (tone) {
-    AppNotificationTone.success => AppColors.hexFF22C55E,
-    AppNotificationTone.warning => AppColors.hexFFAEB7C1,
-    AppNotificationTone.error => AppColors.hexFFFF5A67,
-    AppNotificationTone.info => AppColors.hexFFA7B0BA,
-    AppNotificationTone.neutral => AppColors.hexFF9CA3AF,
-  };
-}
-
-String _dateLabel(BuildContext context, DateTime timestamp) {
-  final now = DateTime.now();
-  final today = DateUtils.dateOnly(now);
-  final date = DateUtils.dateOnly(timestamp);
+String _dateLabel(BuildContext context, DateTime? timestamp) {
+  if (timestamp == null) return context.tr.notifDateNotProvided;
+  timestamp = AppDateTime.inDisplayZone(context, timestamp);
+  final now = AppDateTime.inDisplayZone(context, DateTime.now());
+  final today = DateTime.utc(now.year, now.month, now.day);
+  final date = DateTime.utc(timestamp.year, timestamp.month, timestamp.day);
 
   if (date == today) {
     return context.tr.notifCenterToday;
@@ -793,9 +770,10 @@ String _dateLabel(BuildContext context, DateTime timestamp) {
   return MaterialLocalizations.of(context).formatMediumDate(timestamp);
 }
 
-String _timeLabel(BuildContext context, DateTime timestamp) {
+String _timeLabel(BuildContext context, DateTime? timestamp) {
+  if (timestamp == null) return context.tr.notifDateNotProvided;
   return MaterialLocalizations.of(context).formatTimeOfDay(
-    TimeOfDay.fromDateTime(timestamp),
+    TimeOfDay.fromDateTime(AppDateTime.inDisplayZone(context, timestamp)),
     alwaysUse24HourFormat:
         MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? false,
   );

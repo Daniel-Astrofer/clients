@@ -1,3 +1,4 @@
+import 'package:kerosene/core/providers/app_display_preferences_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/locale_provider.dart';
 import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_account_models.dart';
@@ -30,6 +31,7 @@ final statementInsightsReportProvider =
     FutureProvider.family<StatementReport, StatementReportPeriod>(
         (ref, period) async {
   final locale = ref.watch(localeProvider).locale;
+  final preferences = ref.watch(appDisplayPreferencesProvider);
   // Same projection as home/statement — no second merge.
   final transactions = await ref.watch(transactionHistoryProvider.future);
 
@@ -54,5 +56,7 @@ final statementInsightsReportProvider =
     period: period,
     locale: languageTag,
     emptyWalletName: emptyWalletName,
+    timeZoneId:
+        preferences.timeZoneFollowDevice ? null : preferences.timeZoneId,
   );
 });

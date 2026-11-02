@@ -22,7 +22,7 @@ class SettingsGlassPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: KeroseneBrandTokens.border),
+        border: Border.all(color: KeroseneBrandTheme.of(context).border),
       ),
       child: child,
     );
@@ -82,7 +82,7 @@ class SettingsAnimatedIcon extends StatelessWidget {
               semanticLabel: asset.semanticLabel,
               child: Transform.rotate(
                 angle: value * 0.08,
-                child: Icon(
+                child: KeroseneIcon(
                   fallbackIcon,
                   color: Color.lerp(
                     Theme.of(context).colorScheme.onSurfaceVariant,
@@ -130,7 +130,7 @@ class SettingsIconButtonFrame extends StatelessWidget {
               color: Theme.of(context).colorScheme.surface,
               border: Border.all(color: KeroseneBrandTokens.border),
             ),
-            child: Icon(icon,
+            child: KeroseneIcon(icon,
                 color: Theme.of(context).colorScheme.onSurface, size: 20),
           ),
         ),
@@ -173,7 +173,7 @@ class SettingsPaneScaffold extends StatelessWidget {
                   color: Theme.of(context).colorScheme.surface,
                   border: Border.all(color: KeroseneBrandTokens.border),
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   animation.fallbackIcon,
                   color: Theme.of(context).colorScheme.onSurface,
                   size: 22,
@@ -342,7 +342,7 @@ class SettingsActionTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, color: accent, size: 22),
+              KeroseneIcon(icon, color: accent, size: 22),
               SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -365,7 +365,7 @@ class SettingsActionTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.chevronRight,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 20,
@@ -405,7 +405,7 @@ class SettingsPreferenceSwitch extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
+          KeroseneIcon(
             icon,
             color: value
                 ? KeroseneBrandTokens.brand
@@ -478,7 +478,7 @@ class SettingsStatusRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon,
+          KeroseneIcon(icon,
               color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
           SizedBox(width: AppSpacing.md),
           Expanded(
@@ -629,7 +629,7 @@ class _ChoiceTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
+              KeroseneIcon(
                 selected ? KeroseneIcons.check : KeroseneIcons.circle,
                 color: selected
                     ? KeroseneBrandTokens.brand
@@ -677,14 +677,16 @@ class SettingsLoadingPanel extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
-          CupertinoActivityIndicator(radius: 9),
+          CupertinoActivityIndicator(
+              radius: 9, animating: !KeroseneMotion.reduceMotion(context)),
           SizedBox(width: AppSpacing.md),
-          Text(
+          Expanded(
+              child: Text(
             label,
             style: AppTypography.bodyMedium.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -715,7 +717,8 @@ class SettingsEmptyPanel extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          KeroseneIcon(icon,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
           SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(

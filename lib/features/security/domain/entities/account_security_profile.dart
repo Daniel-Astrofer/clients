@@ -103,6 +103,24 @@ class AccountSecurityProfile extends Equatable {
       mode == AccountSecurityMode.passkey ||
       passkeyEnabledForTransactions;
 
+  /// Account changes use the Core mode policy, independent of payment scopes.
+  AccountSecurityProfile forAccountSecurityChange() {
+    final factors = <String>{...requiredFactors};
+    switch (mode) {
+      case AccountSecurityMode.standard:
+      case AccountSecurityMode.passkey:
+        factors.add('PASSKEY');
+      case AccountSecurityMode.shamir:
+        factors.addAll(['SLIP39_SHARES', 'TOTP']);
+      case AccountSecurityMode.multisig2fa:
+        factors.addAll(['PASSPHRASE', 'TOTP']);
+        if (multisigThreshold >= 3) factors.add('PASSKEY');
+    }
+    return copyWith(
+        requiredFactors: factors.toList(),
+        passkeyEnabledForTransactions: factors.contains('PASSKEY'));
+  }
+
   AccountSecurityProfile copyWith({
     AccountSecurityMode? mode,
     int? shamirTotalShares,

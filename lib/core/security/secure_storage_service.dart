@@ -52,6 +52,23 @@ class SecureStorageService {
   }
 
   /// Read a value securely
+  /// New financial journals must distinguish unavailable storage from no data.
+  Future<String?> readStrict({required String key}) => _storage.read(
+        key: _p(key),
+        iOptions: _iosOptions(),
+        aOptions: _androidOptions(),
+        lOptions: _linuxOptions(),
+        wOptions: _windowsOptions(),
+      );
+
+  /// Compatible read for persisted preferences that must not overwrite data
+  /// when the platform is unavailable. Legacy migration errors remain errors.
+  Future<String?> readCompatibleStrict({required String key}) async {
+    final value = await readStrict(key: key);
+    return value ?? await _readLegacy(key, strict: true);
+  }
+
+  /// Read a value securely, including compatibility with legacy namespaces.
   Future<String?> read({required String key}) async {
     try {
       final value = await _storage.read(
@@ -121,7 +138,7 @@ class SecureStorageService {
     }
   }
 
-  Future<String?> _readLegacy(String key) async {
+  Future<String?> _readLegacy(String key, {bool strict = false}) async {
     try {
       final value = await _storage.read(
         key: _p(key),
@@ -144,6 +161,7 @@ class SecureStorageService {
       );
       return value;
     } catch (e) {
+      if (strict) rethrow;
       if (kDebugMode) {
         debugPrint('SecureStorageService: legacy read failed: $e');
       }

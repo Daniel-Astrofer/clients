@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,6 +43,28 @@ bool walletIsLocked(BitcoinAccount account) {
   };
 }
 
+String walletStatusLabel(BuildContext context, BitcoinAccount account) =>
+    switch (account.status.trim().toUpperCase()) {
+      'ACTIVE' => context.tr.walletStateActive,
+      'PENDING' => context.tr.bitcoinAccountsStatusPending,
+      'READY' => context.tr.bitcoinAccountsStatusReady,
+      'DISABLED' => context.tr.bitcoinAccountsStatusDisabled,
+      'ARCHIVED' => context.tr.walletStateArchived,
+      'CREATING' => context.tr.walletStateCreating,
+      'ROTATING_ADDRESS' => context.tr.walletStateRotating,
+      'KEYGEN_FAILED' => context.tr.walletStateFailed,
+      'QUORUM_BLOCKED' => context.tr.walletStateQuorum,
+      'FROZEN' || 'BLOCKED' || 'SUSPENDED' => context.tr.walletStateFrozen,
+      _ => context.tr.walletStateUnknown,
+    };
+
+bool walletCanArchive(BitcoinAccount account) => const [
+      'ACTIVE',
+      'FROZEN',
+      'KEYGEN_FAILED',
+      'QUORUM_BLOCKED'
+    ].contains(account.status.trim().toUpperCase());
+
 class InlineCopyButton extends StatelessWidget {
   final String value;
   final String semanticLabel;
@@ -78,7 +101,7 @@ class InlineCopyButton extends StatelessWidget {
           child: SizedBox(
             width: 38,
             height: 38,
-            child: Icon(KeroseneIcons.copy, color: ink, size: 18),
+            child: KeroseneIcon(KeroseneIcons.copy, color: ink, size: 18),
           ),
         ),
       ),
@@ -117,7 +140,7 @@ class ColdWalletBackendOptions extends ConsumerWidget {
                 HapticFeedback.selectionClick();
                 context.go('/send-money');
               },
-              icon: Icon(KeroseneIcons.send, size: 18),
+              icon: KeroseneIcon(KeroseneIcons.send, size: 18),
               label: Text(
                 context.tr.bitcoinAdvancedNewPsbtAction,
                 style: TextStyle(
@@ -195,7 +218,7 @@ class _WalletExpansionItem extends StatelessWidget {
         children: [
           ListTile(
             title: Text(title),
-            trailing: Icon(
+            trailing: KeroseneIcon(
               expanded ? KeroseneIcons.expandLess : KeroseneIcons.expandMore,
             ),
             onTap: onTap,

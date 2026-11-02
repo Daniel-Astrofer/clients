@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kerosene/core/errors/exceptions.dart';
+import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/auth/domain/entities/user.dart';
@@ -12,6 +14,11 @@ import 'package:kerosene/features/movement/data/entities/tx_status.dart';
 import 'package:kerosene/features/movement/data/repositories/transaction_repository.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
+import 'package:kerosene/features/financial_accounts/domain/entities/wallet.dart';
+import 'package:kerosene/features/movement/presentation/send/send_destination_models.dart';
+import 'package:kerosene/features/movement/presentation/send/send_payment_execution_overlay.dart';
+import 'package:kerosene/features/movement/presentation/send/send_rail_executors.dart';
+import 'package:kerosene/features/security/presentation/widgets/transaction_auth_gate.dart';
 
 void main() {
   const destinationWalletId = '6de12a56-2cc4-47ca-9f9c-5939ffaf35e8';
@@ -325,7 +332,152 @@ void main() {
     // First attempt triggers challenge; retry builder cancels — no ugly error.
     expect(repository.withdrawalDestinations, [destinationWalletId]);
     expect(container.read(paymentLinkNotifierProvider).error, isNull);
+    expect(container.read(paymentLinkNotifierProvider).cause,
+        isA<PaymentAuthorizationCancelledException>());
     expect(container.read(paymentLinkNotifierProvider).isLoading, isFalse);
+  });
+
+  for (final cancelled in [true, false]) {
+    testWidgets(
+        '${cancelled ? 'cancelled' : 'accepted'} proof reaches review through the real payment executor',
+        (tester) async {
+      final repository = _PaymentLinkRepository(
+        _link(
+            paymentRail: 'INTERNAL',
+            depositAddress: 'kerosene:wallet:$destinationWalletId',
+            destinationHash: destinationWalletId),
+        challengeFailures: 1,
+        successResult: const TxStatus(
+            txid: '9229cdb5-f644-4d3e-a924-e3447159b938',
+            status: 'EXECUTING',
+            feeSatoshis: 0,
+            amountReceived: 0.0001),
+      );
+      final container =
+          _container(repository, passkeyAssertionBuilder: (_) async {
+        if (cancelled) {
+          throw const DeviceKeyException('ERR_AUTH_DEVICE_KEY_AUTH_CANCELLED',
+              'A confirmação do dispositivo foi cancelada.');
+        }
+        return '{"signed":true}';
+      });
+      addTearDown(container.dispose);
+      var finished = false;
+      var notices = 0;
+      Object? executionError;
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Consumer(
+              builder: (context, ref, _) => Scaffold(
+                    body: Column(children: [
+                      const Text('Revisão: R\$ 50,00'),
+                      TextButton(
+                          onPressed: () async {
+                            final result =
+                                await SendPaymentExecutionOverlay.show<dynamic>(
+                              context,
+                              onExecute: () => executePaymentLinkSend(
+                                confirmationContext: context,
+                                ref: ref,
+                                wallet: Wallet(
+                                    id: 'payer-wallet-id',
+                                    name: 'Conta',
+                                    address: '',
+                                    balance: 0.001,
+                                    derivationPath: '',
+                                    type: WalletType.segwit,
+                                    createdAt: DateTime(2026),
+                                    updatedAt: DateTime(2026)),
+                                destination: const SendDestinationAnalysis(
+                                    type: SendDestinationType.paymentLink,
+                                    normalizedValue: 'payment-link'),
+                                amount: 0.0001,
+                                toAddress: destinationWalletId,
+                                linkId: 'payment-link',
+                                authResult:
+                                    const TransactionAuthResult.success(),
+                                showSentTransactionNotification: (
+                                    {required wallet,
+                                    required destination,
+                                    required amount,
+                                    required toAddress}) async {
+                                  notices++;
+                                },
+                                isMounted: () => context.mounted,
+                              ).catchError((Object error) {
+                                executionError = error;
+                                throw error;
+                              }),
+                            );
+                            if (cancelled) {
+                              expect(result, isNull);
+                            } else {
+                              expect(result, isA<TxStatus>());
+                              expect((result as TxStatus).isConfirmed, isFalse);
+                              expect(result.status, 'EXECUTING');
+                            }
+                            finished = true;
+                          },
+                          child: const Text('Autorizar')),
+                    ]),
+                  )),
+        ),
+      ));
+      await tester.tap(find.text('Autorizar'));
+      await tester.pumpAndSettle();
+      if (cancelled) {
+        expect(executionError, isA<PaymentAuthorizationCancelledException>());
+      } else {
+        expect(executionError, isNull);
+      }
+      expect(find.byType(SendPaymentExecutionOverlay<dynamic>), findsNothing);
+      await tester.pump();
+      expect(finished, isTrue);
+      expect(find.text('Revisão: R\$ 50,00'), findsOneWidget);
+      expect(find.text('Resultado em verificação'), findsNothing);
+      expect(repository.withdrawalDestinations, hasLength(cancelled ? 1 : 2));
+      expect(notices, cancelled ? 0 : 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test(
+      'keeps a transport failure after signing even when it mentions cancellation',
+      () async {
+    const failure = ServerException(
+      message: 'RPC response lost after user canceled a remote request',
+      errorCode: 'ERR_TRANSPORT_RESPONSE_LOST',
+      statusCode: 503,
+    );
+    final repository = _PaymentLinkRepository(
+      _link(
+        paymentRail: 'INTERNAL',
+        depositAddress: 'kerosene:wallet:$destinationWalletId',
+        destinationHash: destinationWalletId,
+      ),
+      challengeFailures: 1,
+      withdrawalFailure: failure,
+    );
+    final container = _container(repository,
+        passkeyAssertionBuilder: (_) async => '{"signed":true}');
+    addTearDown(container.dispose);
+
+    final result = await container
+        .read(paymentLinkNotifierProvider.notifier)
+        .pay(
+            linkId: 'response-lost-link',
+            payerWalletId: 'payer-wallet-id',
+            idempotencyKey: 'response-lost-idempotency');
+
+    expect(result, isNull);
+    expect(repository.withdrawalDestinations, hasLength(2));
+    expect(container.read(paymentLinkNotifierProvider).error,
+        contains('ERR_TRANSPORT_RESPONSE_LOST'));
+    expect(container.read(paymentLinkNotifierProvider).cause, same(failure));
   });
 
   test('does not retry withdrawal when the link becomes paid', () async {
@@ -439,6 +591,8 @@ class _TestWalletNotifier extends WalletNotifier {
 class _PaymentLinkRepository implements TransactionRepository {
   final PaymentLink link;
   final PaymentLink? retryLink;
+  final Object? withdrawalFailure;
+  final TxStatus successResult;
   int challengeFailures;
   int paymentLinkReads = 0;
   final List<String> withdrawalDestinations = [];
@@ -449,7 +603,13 @@ class _PaymentLinkRepository implements TransactionRepository {
   _PaymentLinkRepository(
     this.link, {
     this.retryLink,
+    this.withdrawalFailure,
     this.challengeFailures = 0,
+    this.successResult = const TxStatus(
+        txid: 'transaction-id',
+        status: 'SETTLED',
+        feeSatoshis: 0,
+        amountReceived: 0.0001),
   });
 
   @override
@@ -487,12 +647,9 @@ class _PaymentLinkRepository implements TransactionRepository {
         message: 'PASSKEY_CHALLENGE_REQUIRED:$_passkeyChallenge',
       );
     }
-    return const TxStatus(
-      txid: 'transaction-id',
-      status: 'SETTLED',
-      feeSatoshis: 0,
-      amountReceived: 0.0001,
-    );
+    final failure = withdrawalFailure;
+    if (failure != null) throw failure;
+    return successResult;
   }
 
   @override

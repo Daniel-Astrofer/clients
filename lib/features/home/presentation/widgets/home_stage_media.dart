@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -103,17 +104,17 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     final h = homeSize(widget.maxHeight.clamp(48, 200));
 
     return switch (media.type) {
-      HomeStageMediaType.icon => Icon(
-        media.resolveIcon(),
-        color: Theme.of(context).colorScheme.onSurface,
-        size: homeSize(28),
-      ),
+      HomeStageMediaType.icon => KeroseneIcon(
+          media.resolveIcon(),
+          color: Theme.of(context).colorScheme.onSurface,
+          size: homeSize(28),
+        ),
       HomeStageMediaType.image || HomeStageMediaType.lottie => _networkOrAsset(
-        media.posterUrl?.isNotEmpty == true
-            ? media.posterUrl!
-            : (media.url ?? ''),
-        h,
-      ),
+          media.posterUrl?.isNotEmpty == true
+              ? media.posterUrl!
+              : (media.url ?? ''),
+          h,
+        ),
       HomeStageMediaType.video => _buildVideo(h),
       _ => const SizedBox.shrink(),
     };
@@ -145,7 +146,7 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
         children: [
           _networkOrAsset(poster, h),
           if (!_failed)
-            Icon(
+            KeroseneIcon(
               KeroseneIcons.playCircle,
               color: Theme.of(
                 context,
@@ -158,7 +159,7 @@ class _HomeStageMediaViewState extends State<HomeStageMediaView> {
     return SizedBox(
       height: h * 0.5,
       child: Center(
-        child: Icon(
+        child: KeroseneIcon(
           KeroseneIcons.videoCameraOff,
           color: Theme.of(
             context,

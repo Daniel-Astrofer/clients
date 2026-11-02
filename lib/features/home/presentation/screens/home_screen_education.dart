@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/core/navigation/app_navigation.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 // architecture-allow-large-file: education sequencing and its existing widget
@@ -129,17 +130,20 @@ class HomeEducationCarouselState extends ConsumerState<HomeEducationCarousel> {
                                     ),
                                   ),
                                   SizedBox(height: homeSize(8)),
-                                  Text(
-                                    card.body,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                      fontSize: HomeTypography.captionSize,
-                                      height: 1.45,
-                                      letterSpacing: 0,
+                                  Flexible(
+                                    child: Text(
+                                      card.body,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                        fontSize: HomeTypography.captionSize,
+                                        height: 1.45,
+                                        letterSpacing: 0,
+                                      ),
                                     ),
                                   ),
                                   SizedBox(height: homeSize(12)),
@@ -267,23 +271,24 @@ class _HomeFeedMediaThumb extends StatelessWidget {
               width: thumbW,
               height: imgH,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  Icon(media.resolveIcon(), color: accent, size: homeSize(21)),
+              errorBuilder: (_, __, ___) => KeroseneIcon(media.resolveIcon(),
+                  color: accent, size: homeSize(21)),
             )
           : Image.network(
               imageUrl,
               width: thumbW,
               height: imgH,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  Icon(media.resolveIcon(), color: accent, size: homeSize(21)),
+              errorBuilder: (_, __, ___) => KeroseneIcon(media.resolveIcon(),
+                  color: accent, size: homeSize(21)),
             );
       child = ClipRRect(
         borderRadius: BorderRadius.circular(homeSize(8)),
         child: image,
       );
     } else {
-      child = Icon(media.resolveIcon(), color: accent, size: homeSize(21));
+      child =
+          KeroseneIcon(media.resolveIcon(), color: accent, size: homeSize(21));
     }
 
     return Container(
@@ -637,7 +642,7 @@ class HomeDistributionEmptyState extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: surface.surfaceBorder),
             ),
-            child: Icon(
+            child: KeroseneIcon(
               KeroseneIcons.wallet,
               color: surface.textPrimary,
               size: homeSize(18),
@@ -1134,7 +1139,7 @@ class HomeSectionHeader extends StatelessWidget {
                 Text(actionLabel!),
                 if (actionTrailingChevron) ...[
                   SizedBox(width: homeSize(2)),
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.chevronRight,
                     size: homeSize(16),
                     color: Theme.of(
@@ -1152,7 +1157,7 @@ class HomeSectionHeader extends StatelessWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             visualDensity: VisualDensity.compact,
-            icon: Icon(
+            icon: KeroseneIcon(
               actionIcon,
               color: Theme.of(context).colorScheme.onSurface,
               size: homeSize(22),

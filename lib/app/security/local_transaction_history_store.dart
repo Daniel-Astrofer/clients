@@ -132,7 +132,7 @@ class LocalTransactionHistoryStore {
           return sqlRows;
         }
         // Tamper — wipe projection.
-        await LocalTransactionSqlite.clear(scope);
+        await LocalTransactionSqlite.clear(scope, requireAcknowledgement: true);
         await _secureStorage.delete(key: _sealKey(scope));
         return const [];
       }
@@ -264,13 +264,16 @@ class LocalTransactionHistoryStore {
   /// Destructive. Do **not** call from logout — only from explicit data wipe.
   Future<void> clear(String sessionScope) async {
     final scope = sessionScope.trim();
-    if (scope.isEmpty) return;
+    if (scope.isEmpty) throw StateError('Local history account unavailable');
+    // Keep the integrity keys/seal intact if the database cannot confirm its
+    // deletion. Otherwise remaining rows could be accepted as an unsealed
+    // migration on the next load.
+    if (_useSqlite && !kIsWeb) {
+      await LocalTransactionSqlite.clear(scope, requireAcknowledgement: true);
+    }
     await _secureStorage.delete(key: _storageKey(scope));
     await _secureStorage.delete(key: _macKeyStorage(scope));
     await _secureStorage.delete(key: _sealKey(scope));
-    if (_useSqlite && !kIsWeb) {
-      await LocalTransactionSqlite.clear(scope);
-    }
   }
 }
 

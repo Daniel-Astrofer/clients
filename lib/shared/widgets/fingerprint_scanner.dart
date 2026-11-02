@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 
@@ -19,7 +20,7 @@ class KeroseneFingerprintScanner extends StatelessWidget {
             color: color.withValues(alpha: 0.08),
             border: Border.all(color: color.withValues(alpha: 0.28)),
           ),
-          child: Icon(
+          child: KeroseneIcon(
             KeroseneIcons.biometric,
             color: color,
             size: size * 0.54,

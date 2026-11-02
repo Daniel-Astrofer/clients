@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import, unused_element
 
 import 'package:flutter/foundation.dart' show listEquals;
@@ -32,10 +33,10 @@ final filteredHomeTransactionsProvider = Provider<List<Transaction>>((ref) {
   ref.keepAlive();
   final transactionsAsync = ref.watch(transactionHistoryProvider);
   final lastHistory = ref.watch(lastTransactionHistoryProvider);
-  final txs = transactionsAsync.asData?.value ??
-      (lastHistory.isNotEmpty ? lastHistory : null);
-
-  if (txs == null) return const [];
+  final txs = mergeTransactionHistoryProjection(
+    remote: transactionsAsync.asData?.value,
+    last: lastHistory,
+  );
 
   final filter = ref.watch(homeActivityFilterProvider);
   final walletState = ref.watch(walletProvider);
@@ -63,9 +64,11 @@ final filteredHomeTransactionsProvider = Provider<List<Transaction>>((ref) {
 final homeHasUnseenCancelledProvider = Provider.autoDispose<bool>((ref) {
   final transactionsAsync = ref.watch(transactionHistoryProvider);
   final lastHistory = ref.watch(lastTransactionHistoryProvider);
-  final txs = transactionsAsync.asData?.value ??
-      (lastHistory.isNotEmpty ? lastHistory : null);
-  if (txs == null || txs.isEmpty) return false;
+  final txs = mergeTransactionHistoryProjection(
+    remote: transactionsAsync.asData?.value,
+    last: lastHistory,
+  );
+  if (txs.isEmpty) return false;
   final archived = ref.watch(activityArchiveProvider);
   for (final tx in txs) {
     if (!tx.isCancelled && !tx.isArchiveEligible) continue;
@@ -79,7 +82,7 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
   final ValueChanged<Wallet> onDepositWallet;
   final VoidCallback? onOpenStatement;
 
-  /// When true, embeds the grouped activity surface in the home
+  /// When true, embeds the independent activity cards in the home
   /// [CustomScrollView]. When false, embeds it as a [Column] (wide layout).
   final bool asSliver;
 
@@ -108,10 +111,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   /// Cached tiles for the entrance pass — avoids rebuilding heavy cards every
   /// animation frame (only opacity/offset wrappers rebuild).
   List<Widget>? _entranceTileCache;
-  List<String>? _entranceIdOrder;
+  List<Transaction>? _entranceTransactions;
 
   /// Steady-state tile cache — scroll reuses built cards instead of recomputing.
-  final Map<String, Widget> _steadyTileCache = <String, Widget>{};
+  /// Complete immutable rows invalidate cards when fees or party data change.
+  final Map<Transaction, Widget> _steadyTileCache = <Transaction, Widget>{};
 
   AnimationController? _entrance;
 
@@ -160,7 +164,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         setState(() {
           _playEntranceReveal = false;
           _entranceTileCache = null;
-          _entranceIdOrder = null;
+          _entranceTransactions = null;
         });
         return;
       }
@@ -175,7 +179,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         setState(() {
           _playEntranceReveal = false;
           _entranceTileCache = null;
-          _entranceIdOrder = null;
+          _entranceTransactions = null;
         });
         ctrl.dispose();
         if (identical(_entrance, ctrl)) _entrance = null;
@@ -187,13 +191,11 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
   }
 
   List<Widget> _ensureEntranceCache(List<Transaction> filteredTxs) {
-    final ids = [for (final tx in filteredTxs) tx.id];
     final cached = _entranceTileCache;
-    final order = _entranceIdOrder;
+    final previous = _entranceTransactions;
     if (cached != null &&
-        order != null &&
-        order.length == ids.length &&
-        listEquals(order, ids)) {
+        previous != null &&
+        listEquals(previous, filteredTxs)) {
       return cached;
     }
 
@@ -205,22 +207,12 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         ),
     ];
     _entranceTileCache = built;
-    _entranceIdOrder = ids;
+    _entranceTransactions = List.of(filteredTxs);
     return built;
   }
 
-  String _steadyTileCacheKey(Transaction tx) {
-    return [
-      tx.id,
-      tx.status.name,
-      tx.displayStatus.name,
-      tx.confirmations,
-      tx.amountSatoshis,
-    ].join('|');
-  }
-
   void _pruneSteadyTileCache(List<Transaction> txs) {
-    final live = <String>{for (final tx in txs) _steadyTileCacheKey(tx)};
+    final live = txs.toSet();
     _steadyTileCache.removeWhere((key, _) => !live.contains(key));
   }
 
@@ -231,7 +223,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       return _buildTransactionTile(tx, expanded: true);
     }
     return _steadyTileCache.putIfAbsent(
-      _steadyTileCacheKey(tx),
+      tx,
       () => _buildTransactionTile(tx, expanded: false),
     );
   }
@@ -253,6 +245,10 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
     final lastSync = ref.watch(transactionHistoryLastSyncProvider);
     final isOnline = ref.watch(networkStatusProvider);
+    final primaryLoaded = ref.watch(
+      transactionHistoryReadinessProvider
+          .select((status) => status.primaryLoaded),
+    );
     final hasWallet = ref.watch(
       walletProvider.select(
         (state) => state is WalletLoaded && state.wallets.isNotEmpty,
@@ -280,11 +276,14 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       return widget.asSliver ? SliverToBoxAdapter(child: err) : err;
     }
 
-    if (historyPhase == 0 && filteredTxs.isEmpty && lastHistoryEmpty) {
+    if (historyPhase == 0 &&
+        filteredTxs.isEmpty &&
+        lastHistoryEmpty &&
+        !primaryLoaded) {
       // Skeleton → data path should re-arm the entrance once.
       _armEntranceReveal = true;
       _entranceTileCache = null;
-      _entranceIdOrder = null;
+      _entranceTransactions = null;
       var skeleton = ColoredBox(
         color: Theme.of(context).scaffoldBackgroundColor,
         child: _TransactionsSkeletonLoading(),
@@ -385,12 +384,9 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
         filteredTxs: visibleTxs,
         animate: _playEntranceReveal && _entrance != null,
       );
-      body = _buildHomeActivityContainer(context, body);
     }
 
     if (widget.asSliver) {
-      // Three rows plus the action are intentionally one surface, so the
-      // activity block reads as a grouped module instead of loose cards.
       return SliverToBoxAdapter(child: body);
     }
 
@@ -434,6 +430,19 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
       final cachedTile = RepaintBoundary(child: tile);
 
+      Widget? dateHeader;
+      if (index == 0) {
+        dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+      } else {
+        final previousTx = filteredTxs[index - 1];
+        if (!_isSameDay(
+          tx.timestamp.toLocal(),
+          previousTx.timestamp.toLocal(),
+        )) {
+          dateHeader = _buildDateHeader(tx.timestamp.toLocal());
+        }
+      }
+
       Widget buildContent(double p, Widget child) {
         final revealed = p <= 0
             ? const SizedBox.shrink()
@@ -445,9 +454,22 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
                 ),
               );
 
-        return Padding(
-          padding: EdgeInsets.only(top: index > 0 ? homeSize(8) : 0),
-          child: KeyedSubtree(key: ValueKey(tx.id), child: revealed),
+        if (dateHeader != null) {
+          return Column(
+            key: ValueKey('col_${tx.id}'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
+              Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
+              SizedBox(height: homeSize(AppSpacing.sm)),
+              revealed,
+            ],
+          );
+        }
+        return KeyedSubtree(
+          key: ValueKey(tx.id),
+          child: revealed,
         );
       }
 
@@ -471,51 +493,20 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     );
   }
 
-  Widget _buildHomeActivityContainer(BuildContext context, Widget child) {
-    final openStatement = widget.onOpenStatement;
-    final language = Localizations.localeOf(context).languageCode;
-    final moreLabel = switch (language) {
-      'en' => 'See more',
-      'es' => 'Ver más',
-      _ => 'Ver mais',
-    };
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
 
-    return HomeGlassPanel(
-      padding: EdgeInsets.fromLTRB(
-        homeSize(10),
-        homeSize(10),
-        homeSize(10),
-        openStatement == null ? homeSize(10) : homeSize(4),
-      ),
-      borderRadius: BorderRadius.circular(homeSize(HomeRadius.card)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          child,
-          if (openStatement != null) ...[
-            SizedBox(height: homeSize(4)),
-            Align(
-              alignment: Alignment.center,
-              child: TextButton(
-                onPressed: openStatement,
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  minimumSize: Size(0, homeSize(40)),
-                  padding: EdgeInsets.symmetric(horizontal: homeSize(16)),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  moreLabel,
-                  style: TextStyle(
-                    fontSize: homeSize(13),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
+  Widget _buildDateHeader(DateTime date) {
+    final label = AppDateTime.formatDate(context, date);
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0, top: 12.0),
+      child: Text(
+        label,
+        style: HomeTypography.dateHeader(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -791,7 +782,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
               ),
             ),
             child: Center(
-              child: Icon(
+              child: KeroseneIcon(
                 icon,
                 color: Theme.of(context).colorScheme.onSurface,
                 size: homeSize(plainCenteredIcon ? 28 : 18),
@@ -853,7 +844,7 @@ class HomeEmptyTransactionsPanel extends StatelessWidget {
                 child: AppButton(
                   label: actionLabel,
                   onPressed: onAction,
-                  icon: Icon(actionIcon, size: homeSize(16)),
+                  icon: KeroseneIcon(actionIcon, size: homeSize(16)),
                   expand: true,
                 ),
               ),

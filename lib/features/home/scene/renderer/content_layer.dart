@@ -629,6 +629,7 @@ class _MarqueeLineState extends State<_MarqueeLine>
         builder: (context, constraints) {
           final painter = TextPainter(
             text: TextSpan(text: widget.text, style: widget.style),
+            textScaler: MediaQuery.textScalerOf(context),
             textDirection: TextDirection.ltr,
             maxLines: 1,
           )..layout();

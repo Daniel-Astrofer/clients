@@ -17,7 +17,7 @@ final priceWebSocketServiceProvider =
   Timer? timer;
 
   ref.onCancel(() {
-    timer = Timer(const Duration(seconds: 5), () {
+    timer = Timer(const Duration(seconds: 30), () {
       keepAlive.close();
     });
   });

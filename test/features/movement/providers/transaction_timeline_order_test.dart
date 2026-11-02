@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 
@@ -27,7 +28,9 @@ void main() {
 
     test('upsertFront keeps event time and chronological order on conf bump',
         () {
-      final container = ProviderContainer();
+      final container = ProviderContainer(overrides: [
+        sessionStorageScopeProvider.overrideWithValue('user_timeline_fixture'),
+      ]);
       addTearDown(container.dispose);
       final notifier = container.read(lastTransactionHistoryProvider.notifier);
       notifier.set([
@@ -92,6 +95,43 @@ void main() {
         ['remote-today', 'pending-newer', 'pending-old'],
       );
     });
+  });
+
+  test('live confirmation replaces a stale REST row without duplicate entries',
+      () {
+    final initial = _tx(
+        id: 'same',
+        timestamp: DateTime.utc(2026, 10, 16),
+        status: TransactionStatus.pending);
+    final live = _tx(
+        id: 'same',
+        timestamp: initial.timestamp,
+        updatedAt: DateTime.utc(2026, 10, 17),
+        confirmations: 3);
+    final merged =
+        mergeTransactionHistoryProjection(remote: [initial], last: [live]);
+    expect(merged, hasLength(1));
+    expect(merged.single.status, TransactionStatus.confirmed);
+    expect(merged.single.confirmations, 3);
+    expect(merged.single.timestamp, initial.timestamp);
+  });
+
+  test('newer REST reorg replaces the earlier live confirmation', () {
+    final live = _tx(
+        id: 'same',
+        timestamp: DateTime.utc(2026, 10, 16),
+        updatedAt: DateTime.utc(2026, 10, 17),
+        confirmations: 3);
+    final reorg = _tx(
+        id: 'same',
+        timestamp: live.timestamp,
+        updatedAt: DateTime.utc(2026, 10, 18),
+        confirmations: 0,
+        status: TransactionStatus.confirming);
+    final merged =
+        mergeTransactionHistoryProjection(remote: [reorg], last: [live]);
+    expect(merged.single.status, TransactionStatus.confirming);
+    expect(merged.single.confirmations, 0);
   });
 }
 

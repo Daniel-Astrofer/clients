@@ -30,7 +30,18 @@ class ApiClient implements ApiTransport {
     AppConfig.authDeviceKeyOnboardingFinish,
     AppConfig.authDeviceKeyVerify,
     AppConfig.authDeviceKeyRegisterFinish,
+    AppConfig.authEmergencyRecoveryStart,
     AppConfig.authEmergencyRecoveryFinish,
+    AppConfig.authEmergencyRecoveryDeviceKeyChallenge,
+    AppConfig.authBackupCodesRegenerate,
+    AppConfig.authTotpSetup,
+    AppConfig.authTotpVerify,
+    AppConfig.authTotpDisable,
+    // Verification mutates the failed-attempt counter. A lost response must
+    // not consume another attempt without an explicit user action.
+    AppConfig.authAppPinVerify,
+    // Recovery consumes a one-use assertion and replaces the PIN atomically.
+    '${AppConfig.authAppPin}/recover',
   };
   late final Dio _dio;
   Dio get dio => _dio; // Added for TokenInterceptor retry logic
@@ -45,9 +56,10 @@ class ApiClient implements ApiTransport {
     int connectTimeout = 60000,
     int receiveTimeout = 60000,
   }) {
+    final normalizedBaseUrl = AppConfig.normalizeUrl(baseUrl);
     _dio = Dio(
       BaseOptions(
-        baseUrl: baseUrl,
+        baseUrl: normalizedBaseUrl,
         connectTimeout: Duration(milliseconds: connectTimeout),
         receiveTimeout: Duration(milliseconds: receiveTimeout),
         headers: {
@@ -60,11 +72,8 @@ class ApiClient implements ApiTransport {
     _configureProxyRouting();
 
     // Adicionar interceptors
-    if (kDebugMode && defaultTargetPlatform == TargetPlatform.linux) {
-      _dio.interceptors.add(_PrettyLogInterceptor());
-    } else {
-      _dio.interceptors.add(_LogInterceptor());
-    }
+    // Auth and recovery payloads contain one-time credentials on every platform.
+    _dio.interceptors.add(_LogInterceptor());
     _dio.interceptors.add(ApiResponseInterceptor());
 
     final retryEvaluator = DefaultRetryEvaluator({
@@ -264,6 +273,18 @@ class ApiClient implements ApiTransport {
   }
 
   Future<void> _prepareRequestRoute() async {
+    if (routePolicy == ApiClientRoutePolicy.clearnet) {
+      final host = Uri.tryParse(_dio.options.baseUrl)
+              ?.host
+              .toLowerCase()
+              .replaceFirst(RegExp(r'\.$'), '') ??
+          '';
+      if (host.endsWith('.onion')) {
+        throw const NetworkException(
+            message: 'Onion endpoints require a Tor route.');
+      }
+      return;
+    }
     await platform.ensureNetworkReady(
       ref: ref,
       routePolicy: routePolicy,
@@ -273,9 +294,11 @@ class ApiClient implements ApiTransport {
     _configureProxyRouting();
   }
 
-  @visibleForTesting
+  /// Updates the private application's resolved relay without rebuilding the
+  /// client or its authentication dependencies. Explicit direct routes stay fixed.
   void syncBaseUrlForResolvedRoute(String resolvedBaseUrl) {
-    final normalized = resolvedBaseUrl.trim();
+    if (routePolicy == ApiClientRoutePolicy.clearnet) return;
+    final normalized = AppConfig.normalizeUrl(resolvedBaseUrl);
     if (normalized.isEmpty || normalized == _dio.options.baseUrl) {
       return;
     }
@@ -342,7 +365,15 @@ class ApiClient implements ApiTransport {
       return true;
     }
 
-    if (_challengeConsumingAuthPaths.contains(_normalizeRequestPath(path))) {
+    final normalizedPath = _normalizeRequestPath(path);
+    // Wallet creation and plan registration have no reusable idempotency key.
+    // A lost POST response must be reconciled by reading inventory/history.
+    if (method.toUpperCase() == 'POST' &&
+        (normalizedPath == AppConfig.kfeWallets ||
+            normalizedPath == AppConfig.adminCellPlans)) {
+      return false;
+    }
+    if (_challengeConsumingAuthPaths.contains(normalizedPath)) {
       return false;
     }
 
@@ -520,19 +551,24 @@ class ApiClient implements ApiTransport {
     }
 
     if (error is DioException) {
-      if (error.response != null) {
+      if (error.response != null && ref.mounted) {
         ref.read(networkStatusProvider.notifier).markOnline();
       }
+      if (error.error is AppException) return error.error as AppException;
 
       switch (error.type) {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          ref.read(networkStatusProvider.notifier).reportError(error);
+          if (ref.mounted) {
+            ref.read(networkStatusProvider.notifier).reportError(error);
+          }
           return const NetworkException(message: 'Tempo de conexão esgotado');
 
         case DioExceptionType.connectionError:
-          ref.read(networkStatusProvider.notifier).reportError(error);
+          if (ref.mounted) {
+            ref.read(networkStatusProvider.notifier).reportError(error);
+          }
           return const NetworkException();
 
         case DioExceptionType.badResponse:
@@ -562,94 +598,28 @@ class ApiClient implements ApiTransport {
 class _LogInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    appLog('[${options.method}] ${options.baseUrl}${options.path}');
+    appLog('[${options.method}] ${options.uri.host}${options.uri.path}');
     super.onRequest(options, handler);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    appLog('[${response.statusCode}] ${response.requestOptions.path}');
+    appLog('[${response.statusCode}] ${response.requestOptions.uri.path}');
     super.onResponse(response, handler);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final code = err.response?.statusCode ?? '?';
-    final path = err.requestOptions.path;
-    final errCode = err.response?.data is Map
-        ? (err.response!.data['errorCode'] ?? '')
-        : '';
-    appLog('[$code] $path${errCode.isNotEmpty ? ' ($errCode)' : ''}');
+    final path = err.requestOptions.uri.path;
+    final rawCode =
+        err.response?.data is Map ? err.response!.data['errorCode'] : null;
+    final errCode =
+        rawCode is String && RegExp(r'^[A-Z][A-Z0-9_]{0,80}$').hasMatch(rawCode)
+            ? ' ($rawCode)'
+            : '';
+    appLog('[$code] $path$errCode');
     super.onError(err, handler);
-  }
-}
-
-class _PrettyLogInterceptor extends Interceptor {
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final buffer = StringBuffer();
-    buffer.writeln('╭── REQUEST ────────────────────────────');
-    buffer.writeln('│ ${options.method} ${options.baseUrl}${options.path}');
-    if (options.queryParameters.isNotEmpty) {
-      buffer.writeln('│ Query: ${options.queryParameters}');
-    }
-    if (options.headers.isNotEmpty) {
-      buffer.writeln('│ Headers:');
-      options.headers.forEach((key, value) {
-        buffer.writeln('│   $key: $value');
-      });
-    }
-    if (options.data != null) {
-      buffer.writeln('│ Body:');
-      buffer.writeln('│   ${_formatData(options.data)}');
-    }
-    buffer.writeln('╰────────────────────────────────────────');
-    appLog(buffer.toString());
-    super.onRequest(options, handler);
-  }
-
-  @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
-    final buffer = StringBuffer();
-    buffer.writeln('╭── RESPONSE ───────────────────────────');
-    buffer.writeln(
-        '│ ${response.statusCode} ${response.requestOptions.baseUrl}${response.requestOptions.path}');
-    if (response.data != null) {
-      buffer.writeln('│ Body:');
-      buffer.writeln('│   ${_formatData(response.data)}');
-    }
-    buffer.writeln('╰────────────────────────────────────────');
-    appLog(buffer.toString());
-    super.onResponse(response, handler);
-  }
-
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    final buffer = StringBuffer();
-    buffer.writeln('╭── ERROR ──────────────────────────────');
-    buffer.writeln(
-        '│ ${err.response?.statusCode ?? '?'} ${err.requestOptions.baseUrl}${err.requestOptions.path}');
-    buffer.writeln('│ Message: ${err.message}');
-    if (err.response?.data != null) {
-      buffer.writeln('│ Data:');
-      buffer.writeln('│   ${_formatData(err.response?.data)}');
-    }
-    buffer.writeln('╰────────────────────────────────────────');
-    appLog(buffer.toString());
-    super.onError(err, handler);
-  }
-
-  String _formatData(dynamic data) {
-    if (data is Map || data is List) {
-      try {
-        return const JsonEncoder.withIndent('  ')
-            .convert(data)
-            .replaceAll('\n', '\n│   ');
-      } catch (_) {
-        return data.toString().replaceAll('\n', '\n│   ');
-      }
-    }
-    return data.toString().replaceAll('\n', '\n│   ');
   }
 }
 

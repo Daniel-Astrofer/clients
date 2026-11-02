@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,10 @@ class MockLoginUseCase implements LoginUseCase {
 }
 
 class MockAuthRepository implements AuthRepository {
+  Completer<bool>? availability;
+  @override
+  Future<bool> isAuthenticated() async =>
+      availability == null ? false : await availability!.future;
   @override
   Future<void> clearInvalidSession() async {}
   @override
@@ -85,7 +90,7 @@ void main() {
 
   group('AuthController Network Failure Tests', () {
     test(
-        'State machine should transition from AuthLoading to AuthError on SocketException during login',
+        'Login reports the network error after the initial session lookup completes',
         () async {
       final mockLoginUseCase = MockLoginUseCase();
       final mockAuthRepo = MockAuthRepository();
@@ -97,7 +102,9 @@ void main() {
 
       final controller = container.read(authControllerProvider.notifier);
 
-      // Attempt login
+      addTearDown(container.dispose);
+      await Future<void>.delayed(Duration.zero);
+      // The entry screen only enables login after startup lookup completes.
       await controller.login(username: 'test', password: 'pass');
 
       // Yield to event loop because auth_controller.dart's fold doesn't await the async callback!
@@ -107,6 +114,26 @@ void main() {
 
       expect(state, isA<AuthError>());
       expect((state as AuthError).message, contains('SocketException'));
+    });
+
+    test('a late initial session probe cannot replace a newer login result',
+        () async {
+      final repository = MockAuthRepository()..availability = Completer<bool>();
+      final container = ProviderContainer(overrides: [
+        loginUseCaseProvider.overrideWithValue(MockLoginUseCase()),
+        authRepositoryProvider.overrideWithValue(repository),
+      ]);
+      addTearDown(container.dispose);
+      final controller = container.read(authControllerProvider.notifier);
+      await Future<void>.delayed(Duration.zero);
+      controller.markSessionInvalidated();
+      await controller.login(username: 'test', password: 'pass');
+      final failure = container.read(authControllerProvider);
+      expect(failure, isA<AuthError>());
+      repository.availability!.complete(false);
+      await Future<void>.delayed(Duration.zero);
+      expect(
+          identical(container.read(authControllerProvider), failure), isTrue);
     });
 
     test('retrySessionCheck forces a remote current-user request', () async {

@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -11,8 +12,8 @@ import 'package:kerosene/features/movement/copy/receive_money_copy.dart';
 import 'package:kerosene/features/movement/presentation/receive/receive_flow_title_bar.dart';
 
 Color get _receiveWalletOptionBg => SendFlowTheme.forVariant(
-  ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
-).surfaceHigh;
+      ThemeTokenBridge.isLight ? Brightness.light : Brightness.dark,
+    ).surfaceHigh;
 
 /// Wallet picker panel for the receive flow (legacy sheet path).
 class ReceiveWalletPickerPanel extends StatelessWidget {
@@ -157,7 +158,7 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Theme.of(context).dividerColor),
                   ),
-                  child: Icon(
+                  child: KeroseneIcon(
                     ReceiveWalletPickerPanel.iconFor(wallet),
                     color: Theme.of(context).colorScheme.onSurface,
                     size: 20,
@@ -197,7 +198,9 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.captionLarge.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
                               .withValues(alpha: 0.75),
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
@@ -215,7 +218,7 @@ class _ReceiveWalletOptionTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
+                KeroseneIcon(
                   selected ? KeroseneIcons.success : KeroseneIcons.chevronRight,
                   color: Theme.of(
                     context,

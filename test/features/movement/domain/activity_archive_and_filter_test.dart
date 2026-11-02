@@ -129,6 +129,43 @@ void main() {
       expect(result.isCancelled, isTrue);
     });
 
+    for (final status in ['pending', 'expired', 'completed']) {
+      test('payment request $status is not a cancellation acknowledgement',
+          () async {
+        final repo = _CancelRoutingRepo()
+          ..requestResponse = PaymentLink(
+              id: 'link-9',
+              userId: 1,
+              amountBtc: 0.01,
+              description: '',
+              depositAddress: '',
+              status: status);
+        await expectLater(
+            cancelActivity(
+                repo, _tx(id: 'pl_link-9').copyAsPaymentLink('link-9')),
+            throwsStateError);
+      });
+    }
+    test('unrelated request id is not accepted as cancellation', () async {
+      final repo = _CancelRoutingRepo()
+        ..requestResponse = const PaymentLink(
+            id: 'other-request',
+            userId: 1,
+            amountBtc: 0.01,
+            description: '',
+            depositAddress: '',
+            status: 'cancelled');
+      await expectLater(
+          cancelActivity(
+              repo, _tx(id: 'pl_link-9').copyAsPaymentLink('link-9')),
+          throwsStateError);
+    });
+    test('empty transaction id sends no cancellation request', () async {
+      final repo = _CancelRoutingRepo();
+      await expectLater(cancelActivity(repo, _tx(id: '').withCancellable()),
+          throwsStateError);
+      expect(repo.cancelledTransactionIds, isEmpty);
+    });
     test('cancelActivity routes normal rows to cancelTransaction', () async {
       final repo = _CancelRoutingRepo();
       final result = await cancelActivity(
@@ -182,6 +219,7 @@ extension on Transaction {
 class _CancelRoutingRepo implements TransactionRepository {
   final cancelledTransactionIds = <String>[];
   final cancelledPaymentRequestIds = <String>[];
+  PaymentLink? requestResponse;
 
   @override
   Future<Transaction> cancelTransaction(String transactionId) async {
@@ -202,6 +240,7 @@ class _CancelRoutingRepo implements TransactionRepository {
   @override
   Future<PaymentLink> cancelPaymentRequest(String requestId) async {
     cancelledPaymentRequestIds.add(requestId);
+    if (requestResponse != null) return requestResponse!;
     return PaymentLink(
       id: requestId,
       userId: 1,

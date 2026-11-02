@@ -1,3 +1,4 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -109,8 +110,7 @@ String bitcoinAccountDisplayValue(String? value) {
 }
 
 String bitcoinAccountsShortText(String value) {
-  if (value.length <= 18) return value;
-  return '${value.substring(0, 8)}…${value.substring(value.length - 6)}';
+  return value.trim();
 }
 
 String bitcoinAccountHistoryDetail(Transaction transaction) {
@@ -129,8 +129,11 @@ String bitcoinAccountHistoryDetail(Transaction transaction) {
   return 'Movimento Bitcoin';
 }
 
-String bitcoinAccountHistoryTimestampLabel(DateTime timestamp) {
-  final local = timestamp.toLocal();
+String bitcoinAccountHistoryTimestampLabel(DateTime timestamp,
+    {BuildContext? context}) {
+  final local = context == null
+      ? timestamp.toLocal()
+      : AppDateTime.inDisplayZone(context, timestamp);
   final day = local.day.toString().padLeft(2, '0');
   final month = local.month.toString().padLeft(2, '0');
   final hour = local.hour.toString().padLeft(2, '0');

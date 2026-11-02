@@ -7,9 +7,16 @@ class PaymentLink extends Equatable {
   final int userId;
   final String? sessionId;
   final double amountBtc;
+
+  /// Exact API amount, retained independently of legacy BTC doubles.
+  final int? amountSatoshis;
+
+  /// Exact receiver credit; zero is a valid recorded net amount.
+  final int? netAmountSatoshis;
   final double grossAmountBtc;
   final double depositFeeBtc;
   final double netAmountBtc;
+  final bool hasNetAmount;
   final String description;
   final String depositAddress;
   final String visibility;
@@ -34,6 +41,9 @@ class PaymentLink extends Equatable {
   final bool terminal;
   final int confirmations;
 
+  /// Cumulative amount observed by the backend; not proof of final credit.
+  final int? partialPaymentReceivedSats;
+
   /// BOLT11 invoice when [paymentRail] is LIGHTNING.
   final String? paymentRequest;
   final String? paymentHash;
@@ -43,9 +53,12 @@ class PaymentLink extends Equatable {
     required this.userId,
     this.sessionId,
     required this.amountBtc,
+    this.amountSatoshis,
+    this.netAmountSatoshis,
     this.grossAmountBtc = 0,
     this.depositFeeBtc = 0,
     this.netAmountBtc = 0,
+    this.hasNetAmount = false,
     required this.description,
     required this.depositAddress,
     this.visibility = 'PRIVATE',
@@ -69,6 +82,7 @@ class PaymentLink extends Equatable {
     this.settlementReference,
     this.terminal = false,
     this.confirmations = 0,
+    this.partialPaymentReceivedSats,
     this.paymentRequest,
     this.paymentHash,
   });
@@ -77,8 +91,13 @@ class PaymentLink extends Equatable {
   bool get isPaid => status == 'paid';
   bool get isCompleted => status == 'completed';
   bool get isVerifyingOnboarding => status == 'verifying_onboarding';
+  bool get isFailed => status == 'failed' || settlementStatus == 'FAILED';
   bool get isCancelled =>
-      status == 'cancelled' || status == 'canceled' || status == 'hidden';
+      status == 'cancelled' ||
+      status == 'canceled' ||
+      status == 'hidden' ||
+      settlementStatus == 'CANCELED' ||
+      settlementStatus == 'CANCELLED';
   bool get isExpired =>
       status == 'expired' ||
       (expiresAt != null && DateTime.now().isAfter(expiresAt!));
@@ -88,6 +107,24 @@ class PaymentLink extends Equatable {
       settlementStatus == 'EXECUTING';
   bool get hasObservedOnchainPayment =>
       isValidatingSettlement || (txid != null && txid!.trim().isNotEmpty);
+
+  /// Settlement is financial completion; block count and terminal failure are not.
+  bool get isSettled {
+    if (isCancelled || isFailed) return false;
+    final settlement = settlementStatus.trim().toUpperCase();
+    if (settlement == 'SETTLED' || settlement == 'COMPLETED') return true;
+    if (isValidatingSettlement ||
+        const ['FAILED', 'CANCELED', 'CANCELLED', 'EXPIRED']
+            .contains(settlement)) {
+      return false;
+    }
+    return isCompleted ||
+        (isPaid &&
+            (isInternalPaymentRequest ||
+                isLightningPaymentRequest ||
+                paymentRail.toUpperCase() == 'INTERNAL'));
+  }
+
   String get displayStatus {
     if (isValidatingSettlement) {
       return settlementStatus;
@@ -119,17 +156,17 @@ class PaymentLink extends Equatable {
     final data = json['data'] is Map
         ? Map<String, dynamic>.from(json['data'] as Map)
         : json;
+    final receiverSats = _exactSats(data['receiverAmountSats']);
+    final grossSats = _exactSats(data['grossAmountSats']);
+    final amountSats = _exactSats(data['amountSats']) ??
+        (receiverSats != null && receiverSats > 0
+            ? receiverSats
+            : grossSats != null && grossSats > 0
+                ? grossSats
+                : null);
     double amountBtc = (data['amountBtc'] as num?)?.toDouble() ?? 0;
-    if (amountBtc == 0) {
-      final rawRec = (data['receiverAmountSats'] as num?)?.toDouble();
-      final rawGross = (data['grossAmountSats'] as num?)?.toDouble();
-      final amountSats = (data['amountSats'] as num?)?.toDouble() ??
-          (rawRec != null && rawRec > 0
-              ? rawRec
-              : (rawGross != null && rawGross > 0 ? rawGross : null));
-      if (amountSats != null && amountSats > 0) {
-        amountBtc = amountSats / 100000000.0;
-      }
+    if (amountBtc == 0 && amountSats != null && amountSats > 0) {
+      amountBtc = amountSats / 100000000.0;
     }
     if (amountBtc == 0 && data['amount'] is num) {
       amountBtc = (data['amount'] as num).toDouble();
@@ -137,8 +174,8 @@ class PaymentLink extends Equatable {
     final grossAmountBtc =
         (data['grossAmountBtc'] as num?)?.toDouble() ?? amountBtc;
     final depositFeeBtc = (data['depositFeeBtc'] as num?)?.toDouble() ?? 0;
-    final netAmountBtc =
-        (data['netAmountBtc'] as num?)?.toDouble() ?? amountBtc;
+    final netAmountBtc = (data['netAmountBtc'] as num?)?.toDouble() ??
+        (receiverSats != null ? receiverSats / 100000000.0 : amountBtc);
 
     final rawStatus = data['status']?.toString() ?? 'pending';
     final rawSettlementStatus =
@@ -159,6 +196,8 @@ class PaymentLink extends Equatable {
       userId: (data['userId'] as num?)?.toInt() ?? 0,
       sessionId: data['sessionId']?.toString(),
       amountBtc: amountBtc,
+      amountSatoshis: amountSats,
+      netAmountSatoshis: receiverSats,
       grossAmountBtc: grossAmountBtc,
       depositFeeBtc: depositFeeBtc,
       netAmountBtc: netAmountBtc,
@@ -212,9 +251,11 @@ class PaymentLink extends Equatable {
         data['terminal'],
         fallback: _terminalSettlementStatus(settlementStatus),
       ),
+      hasNetAmount: receiverSats != null || data['netAmountBtc'] != null,
       confirmations: (data['confirmations'] as num?)?.toInt() ??
           (data['confirmationCount'] as num?)?.toInt() ??
           0,
+      partialPaymentReceivedSats: _exactSats(data['partialPaymentReceived']),
       paymentRequest: data['paymentRequest']?.toString() ??
           data['payment_request']?.toString() ??
           data['bolt11']?.toString() ??
@@ -240,9 +281,12 @@ class PaymentLink extends Equatable {
         userId,
         sessionId,
         amountBtc,
+        amountSatoshis,
+        netAmountSatoshis,
         grossAmountBtc,
         depositFeeBtc,
         netAmountBtc,
+        hasNetAmount,
         description,
         depositAddress,
         visibility,
@@ -266,6 +310,7 @@ class PaymentLink extends Equatable {
         settlementReference,
         terminal,
         confirmations,
+        partialPaymentReceivedSats,
         paymentRequest,
         paymentHash,
       ];
@@ -281,12 +326,10 @@ class PaymentLink extends Equatable {
         (railUpper.contains('ONCHAIN') ||
             depositAddress.trim().isNotEmpty ||
             railUpper.isEmpty);
-    final bool isCompleted = status == 'completed' ||
-        terminal ||
-        (isInternalRail && status == 'paid') ||
-        (!isOnchain && status == 'paid') ||
-        (isOnchain && status == 'paid' && confirmations >= 3);
-    final bool cancelledOrExpired = isCancelled || isExpired;
+    final completed = isSettled;
+    final failed = isFailed;
+    final bool cancelledOrExpired = !completed &&
+        (isCancelled || (isExpired && !this.hasObservedOnchainPayment));
     final railLabel = isInternalRail
         ? 'interno'
         : isLightningRail
@@ -303,7 +346,8 @@ class PaymentLink extends Equatable {
         txid != null &&
         txid!.trim().isNotEmpty &&
         !cancelledOrExpired &&
-        !isCompleted;
+        !failed &&
+        !completed;
     final resolvedRail = isInternalRail
         ? 'INTERNAL'
         : isLightningRail
@@ -321,8 +365,9 @@ class PaymentLink extends Equatable {
                     ? referenceLabel!.trim()
                     : 'Carteira receptora');
 
-    final openQuote = !isCompleted &&
+    final openQuote = !completed &&
         !cancelledOrExpired &&
+        !failed &&
         !isPaid &&
         !terminal &&
         !hasObservedOnchainPayment;
@@ -335,22 +380,24 @@ class PaymentLink extends Equatable {
               ? 'Lightning'
               : 'Rede Bitcoin',
       toAddress: displayDestination,
-      amountSatoshis: (amountBtc * 100000000).round(),
+      amountSatoshis: (completed && hasNetAmount
+              ? netAmountSatoshis
+              : amountSatoshis) ??
+          ((completed && hasNetAmount ? netAmountBtc : amountBtc) * 100000000)
+              .round(),
       feeSatoshis: 0,
-      status: isCompleted
+      status: completed
           ? TransactionStatus.confirmed
-          : cancelledOrExpired
-              ? TransactionStatus.cancelled
-              : hasObservedOnchainPayment
-                  ? TransactionStatus.confirming
-                  : TransactionStatus.pending,
+          : failed
+              ? TransactionStatus.failed
+              : cancelledOrExpired
+                  ? TransactionStatus.cancelled
+                  : hasObservedOnchainPayment
+                      ? TransactionStatus.confirming
+                      : TransactionStatus.pending,
       type: TransactionType.receive,
       // Lightning has no block confirmations (HTLC settles instantly).
-      confirmations: isLightningRail
-          ? 0
-          : isCompleted
-              ? (confirmations > 0 ? confirmations : 3)
-              : confirmations,
+      confirmations: isLightningRail ? 0 : confirmations,
       timestamp: createdAt ?? DateTime.now(),
       description: transactionDescription,
       isInternal: isInternalRail,
@@ -386,6 +433,8 @@ class PaymentLink extends Equatable {
       case 'paid':
       case 'completed':
         return 'SETTLED';
+      case 'failed':
+        return 'FAILED';
       case 'expired':
         return 'EXPIRED';
       case 'cancelled':
@@ -406,6 +455,12 @@ class PaymentLink extends Equatable {
   }) {
     final normalized = status.trim().toUpperCase();
     final hasTxid = txid != null && txid.trim().isNotEmpty;
+    if (const ['FAILED', 'EXPIRED', 'CANCELED', 'CANCELLED', 'HIDDEN']
+        .contains(normalized)) {
+      return normalized == 'HIDDEN' || normalized == 'CANCELED'
+          ? 'cancelled'
+          : normalized.toLowerCase();
+    }
     // Never downgrade an already-paid / settled request to pending — that blocked
     // the receive confirmation screen when settlement was still VALIDATING.
     final alreadyPaid = normalized == 'PAID' ||
@@ -454,6 +509,23 @@ class PaymentLink extends Equatable {
         status == 'FAILED' ||
         status == 'CANCELED' ||
         status == 'EXPIRED';
+  }
+
+  static int? _exactSats(Object? value) {
+    if (value == null) return null;
+    if (value is int && value >= 0) return value;
+    if (value is String) {
+      final parsed = int.tryParse(value.trim());
+      if (parsed != null && parsed >= 0) return parsed;
+    }
+    if (value is double &&
+        value.isFinite &&
+        value >= 0 &&
+        value <= 9007199254740991 &&
+        value == value.truncateToDouble()) {
+      return value.toInt();
+    }
+    throw const FormatException('Invalid integer payment request amount.');
   }
 
   static bool _parseBool(Object? value, {bool fallback = false}) {

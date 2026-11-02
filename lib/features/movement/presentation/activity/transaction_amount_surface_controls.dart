@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -344,7 +345,7 @@ class _TransactionKeyButton extends StatelessWidget {
               ? Tooltip(
                   message: backspaceTooltip,
                   child: ExcludeSemantics(
-                    child: Icon(
+                    child: KeroseneIcon(
                       KeroseneIcons.backspace,
                       color: mutedTextColor,
                       size: 22,
@@ -467,7 +468,7 @@ class TransactionNotice extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: textColor, size: 17),
+            KeroseneIcon(icon, color: textColor, size: 17),
             SizedBox(width: 10),
             Expanded(
               child: Text(

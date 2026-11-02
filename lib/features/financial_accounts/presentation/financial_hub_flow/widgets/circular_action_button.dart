@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/components/buttons/bouncing_button.dart';
 import '../theme/financial_hub_tokens.dart';
@@ -53,7 +54,7 @@ class CircularActionButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
+            child: KeroseneIcon(
               icon,
               color: fgColor,
               size: size * 0.42,

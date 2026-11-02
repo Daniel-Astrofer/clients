@@ -1,3 +1,4 @@
+import 'package:kerosene/features/movement/presentation/shared/movement_money.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,8 @@ import 'package:kerosene/features/movement/presentation/receive/receive_wallet_t
 
 /// Step 1 of receive: amount + local wallet, then method hub.
 class ReceiveAmountEntryScreen extends ConsumerStatefulWidget {
-  const ReceiveAmountEntryScreen({super.key});
+  const ReceiveAmountEntryScreen({super.key, this.initialWalletId});
+  final String? initialWalletId;
 
   @override
   ConsumerState<ReceiveAmountEntryScreen> createState() =>
@@ -29,6 +31,8 @@ class _ReceiveAmountEntryScreenState
     extends ConsumerState<ReceiveAmountEntryScreen> {
   late Currency _selectedCurrency;
   bool _busy = false;
+  bool _loadingRequestedWallet = false;
+  bool _requestedWalletUnavailable = false;
   Wallet? _selectedWallet;
   AmountCalculatorState _calc = const AmountCalculatorState();
 
@@ -40,8 +44,32 @@ class _ReceiveAmountEntryScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput('0');
-      _ensureDefaultWallet();
+      if (widget.initialWalletId != null) {
+        _loadRequestedWallet();
+      } else {
+        _ensureDefaultWallet();
+      }
     });
+  }
+
+  Future<void> _loadRequestedWallet() async {
+    if (_loadingRequestedWallet) return;
+    setState(() => _loadingRequestedWallet = true);
+    try {
+      await ref.read(walletProvider.notifier).refresh();
+      if (!mounted) return;
+      final selected = _eligibleWallets(ref.read(walletProvider))
+          .where((wallet) => wallet.id == widget.initialWalletId)
+          .firstOrNull;
+      setState(() {
+        _selectedWallet = selected;
+        _requestedWalletUnavailable = selected == null;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _requestedWalletUnavailable = true);
+    } finally {
+      if (mounted) setState(() => _loadingRequestedWallet = false);
+    }
   }
 
   void _ensureDefaultWallet() {
@@ -50,7 +78,17 @@ class _ReceiveAmountEntryScreenState
     final stillValid = _selectedWallet != null &&
         wallets.any((w) => w.id == _selectedWallet!.id);
     if (!stillValid) {
-      setState(() => _selectedWallet = wallets.first);
+      if (widget.initialWalletId != null) {
+        final requested = wallets
+            .where((wallet) => wallet.id == widget.initialWalletId)
+            .firstOrNull;
+        setState(() {
+          _selectedWallet = requested;
+          _requestedWalletUnavailable = requested == null;
+        });
+      } else {
+        setState(() => _selectedWallet = wallets.first);
+      }
     }
   }
 
@@ -66,7 +104,7 @@ class _ReceiveAmountEntryScreenState
   }
 
   Future<void> _continue() async {
-    if (_busy) return;
+    if (_busy || _loadingRequestedWallet || _requestedWalletUnavailable) return;
     HapticFeedback.mediumImpact();
     final amountBtc = _amountBtc();
     if (amountBtc <= 0) {
@@ -90,6 +128,14 @@ class _ReceiveAmountEntryScreenState
         context: context,
         wallet: wallet,
         amountBtc: amountBtc,
+        money: MovementMoney(
+            currency: _selectedCurrency,
+            btcDecimalPlaces:
+                ref.read(moneyFormatConfigProvider).btcDecimalPlaces,
+            locale: Localizations.localeOf(context),
+            btcUsd: ref.read(latestBtcPriceProvider),
+            btcEur: ref.read(btcEurPriceProvider),
+            btcBrl: ref.read(btcBrlPriceProvider)),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -187,6 +233,27 @@ class _ReceiveAmountEntryScreenState
     final money = ref.watch(moneyFormatConfigProvider);
     final walletState = ref.watch(walletProvider);
     final wallets = _eligibleWallets(walletState);
+    if (widget.initialWalletId != null &&
+        (_loadingRequestedWallet ||
+            _selectedWallet == null ||
+            _requestedWalletUnavailable)) {
+      return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(),
+          body: Center(
+              child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _loadingRequestedWallet || !_requestedWalletUnavailable
+                      ? const CircularProgressIndicator()
+                      : Column(mainAxisSize: MainAxisSize.min, children: [
+                          Text(context.tr.walletSelectedUnavailable,
+                              textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                              onPressed: _loadRequestedWallet,
+                              child: Text(context.tr.tryAgain))
+                        ]))));
+    }
 
     // Keep selection valid as wallets load/refresh.
     if (wallets.isNotEmpty) {
@@ -210,18 +277,8 @@ class _ReceiveAmountEntryScreenState
     final fiatCurrency =
         money.currency == Currency.btc ? Currency.brl : money.currency;
     final fiatReference = _selectedCurrency == Currency.btc
-        ? '≈ ${MoneyDisplay.formatAmountFromBtc(
-            btcAmount: amountBtc,
-            currency: fiatCurrency,
-            btcUsd: ref.watch(latestBtcPriceProvider),
-            btcEur: ref.watch(btcEurPriceProvider),
-            btcBrl: ref.watch(btcBrlPriceProvider),
-          )}'
-        : '≈ ${MoneyDisplay.formatCompact(
-            amount: amountBtc,
-            currency: Currency.btc,
-            maxDecimalPlaces: 8,
-          )}';
+        ? ''
+        : MovementMoney(locale: money.locale).asset(amountBtc);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

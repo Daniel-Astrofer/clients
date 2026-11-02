@@ -43,6 +43,7 @@ class SendExecuteContext {
   final SendFeeQuote feeQuote;
   final String toAddress;
   final String? pendingPaymentLinkId;
+  final String? idempotencyKey;
   final TransactionAuthResult authResult;
   final Future<void> Function({
     required Wallet wallet,
@@ -64,6 +65,7 @@ class SendExecuteContext {
     required this.feeQuote,
     required this.toAddress,
     required this.pendingPaymentLinkId,
+    this.idempotencyKey,
     required this.authResult,
     required this.showSentTransactionNotification,
     required this.resolveRecentDestinationLabel,

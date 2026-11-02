@@ -74,3 +74,19 @@ class ValidationException extends AppException {
 class CacheException extends AppException {
   const CacheException({super.message = 'Erro ao acessar cache local'});
 }
+
+/// A payment blocked locally before transmission, or a conflicting retry of an
+/// earlier submission whose result still needs a server read.
+class PaymentRecoveryException extends AppException {
+  final bool outcomeUncertain;
+  const PaymentRecoveryException(
+      {required super.message,
+      required super.errorCode,
+      this.outcomeUncertain = false});
+}
+
+/// The user declined the local proof before the authorized payment was submitted.
+/// Transport errors after submission must never be converted to this outcome.
+class PaymentAuthorizationCancelledException implements Exception {
+  const PaymentAuthorizationCancelledException();
+}

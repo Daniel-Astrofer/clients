@@ -96,6 +96,8 @@ class TransactionLedgerAdapter {
   ) {
     // Prefer remote shell for display fields (names, fiat freezes) when available.
     final shell = b;
+    final latest = b.effectiveUpdatedAt.isBefore(a.effectiveUpdatedAt) ? a : b;
+    final fallback = identical(latest, b) ? a : b;
     return Transaction(
       id: row.id.isNotEmpty ? row.id : shell.id,
       fromAddress: shell.fromAddress,
@@ -113,6 +115,8 @@ class TransactionLedgerAdapter {
       amountSatoshis: row.amountSats,
       feeSatoshis: row.feeSats,
       serviceFeeSatoshis: row.serviceFeeSats,
+      totalDebitedSatoshis:
+          latest.totalDebitedSatoshis ?? fallback.totalDebitedSatoshis,
       status: _toTxStatus(row.status),
       type: shell.type,
       // Lightning/internal never carry block confirmations through the ledger.
@@ -141,6 +145,13 @@ class TransactionLedgerAdapter {
           : (shell.rail ?? a.rail),
       provider: row.provider ?? shell.provider ?? a.provider,
       failureCode: shell.failureCode ?? a.failureCode,
+      cancellable: latest.cancellable,
+      cancelTarget: latest.cancelTarget ?? fallback.cancelTarget,
+      paymentRequestId: latest.paymentRequestId ?? fallback.paymentRequestId,
+      paymentRequestPublicId:
+          latest.paymentRequestPublicId ?? fallback.paymentRequestPublicId,
+      paymentRequestStatus:
+          latest.paymentRequestStatus ?? fallback.paymentRequestStatus,
       hasNetworkFee: shell.hasNetworkFee || row.feeSats > 0,
       displayAmountUsd: shell.displayAmountUsd ?? a.displayAmountUsd,
       displayAmountEur: shell.displayAmountEur ?? a.displayAmountEur,

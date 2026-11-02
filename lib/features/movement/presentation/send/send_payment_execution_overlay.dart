@@ -1,5 +1,8 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:kerosene/core/errors/exceptions.dart';
+import 'package:kerosene/core/l10n/l10n_extension.dart';
+import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/core/constants/localized_copy.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/buttons/app_button.dart';
@@ -8,8 +11,8 @@ import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 
 /// One execution per presentation. Results remain visible until acknowledged.
 /// Dismissing a failure returns to review without replaying the operation.
-class SendPaymentExecutionOverlay extends StatefulWidget {
-  final Future<bool> Function() onExecute;
+class SendPaymentExecutionOverlay<T> extends StatefulWidget {
+  final Future<T?> Function() onExecute;
   final String loadingMessage;
   final String successMessage;
   final String errorMessage;
@@ -19,21 +22,21 @@ class SendPaymentExecutionOverlay extends StatefulWidget {
   const SendPaymentExecutionOverlay({
     super.key,
     required this.onExecute,
-    this.loadingMessage = 'Validando...',
-    this.successMessage = 'Confirmada',
-    this.errorMessage = 'Não foi possível processar',
+    this.loadingMessage = '',
+    this.successMessage = '',
+    this.errorMessage = '',
     this.successDelay = Duration.zero,
   });
 
-  static Future<bool?> show(
+  static Future<R?> show<R>(
     BuildContext context, {
-    required Future<bool> Function() onExecute,
-    String loadingMessage = 'Validando...',
-    String successMessage = 'Confirmada',
-    String errorMessage = 'Não foi possível processar',
+    required Future<R?> Function() onExecute,
+    String loadingMessage = '',
+    String successMessage = '',
+    String errorMessage = '',
     Duration successDelay = Duration.zero,
   }) {
-    return showGeneralDialog<bool>(
+    return showGeneralDialog<R>(
       context: context,
       barrierDismissible: false,
       barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.4),
@@ -41,7 +44,7 @@ class SendPaymentExecutionOverlay extends StatefulWidget {
           KeroseneMotion.duration(context, KeroseneMotion.short),
       transitionBuilder: (_, animation, __, child) =>
           FadeTransition(opacity: animation, child: child),
-      pageBuilder: (_, __, ___) => SendPaymentExecutionOverlay(
+      pageBuilder: (_, __, ___) => SendPaymentExecutionOverlay<R>(
         onExecute: onExecute,
         loadingMessage: loadingMessage,
         successMessage: successMessage,
@@ -52,41 +55,70 @@ class SendPaymentExecutionOverlay extends StatefulWidget {
   }
 
   @override
-  State<SendPaymentExecutionOverlay> createState() => _ExecutionState();
+  State<SendPaymentExecutionOverlay<T>> createState() => _ExecutionState<T>();
 }
 
-class _ExecutionState extends State<SendPaymentExecutionOverlay> {
+class _ExecutionState<T> extends State<SendPaymentExecutionOverlay<T>> {
   bool? _result;
   bool _uncertain = false;
+  String? _errorDetails;
 
   @override
   void initState() {
     super.initState();
-    _execute();
+    // Payment notifiers publish loading state. That mutation must occur after
+    // the dialog is mounted, never while Riverpod is building the widget tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && (ModalRoute.of(context)?.isActive ?? true)) {
+        _execute();
+      }
+    });
   }
 
   Future<void> _execute() async {
     try {
       final result = await widget.onExecute();
       if (!mounted) return;
-      setState(() => _result = result);
-      if (result) HapticFeedback.lightImpact();
-    } catch (_) {
-      if (!mounted) return;
+      if (result != null && result != false) {
+        _finish(result);
+        return;
+      }
       setState(() {
         _result = false;
-        _uncertain = true;
+        _uncertain = result == null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      if (error is PaymentAuthorizationCancelledException) {
+        _finish();
+        return;
+      }
+      setState(() {
+        _result = false;
+        _uncertain = error is PaymentRecoveryException
+            ? error.outcomeUncertain
+            : !(error is AppException &&
+                const [401, 403, 428].contains(error.statusCode));
+        // A structured refusal must remain visible in the execution dialog.
+        // Network failures and unknown results still require reconciliation.
+        if (error is AppException) {
+          _errorDetails =
+              ErrorTranslator.translate(context.tr, error.toString());
+        }
       });
     }
   }
 
-  void _retry() {
-    if (_result == null) return;
-    setState(() {
-      _result = null;
-      _uncertain = false;
-    });
-    _execute();
+  void _finish([T? result]) {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isActive) return;
+    final navigator = Navigator.of(context);
+    if (route?.isCurrent ?? true) {
+      navigator.pop<T>(result);
+    } else if (route != null) {
+      navigator.removeRoute(route, result);
+    }
   }
 
   @override
@@ -94,10 +126,30 @@ class _ExecutionState extends State<SendPaymentExecutionOverlay> {
     final scheme = Theme.of(context).colorScheme;
     final busy = _result == null;
     final title = busy
-        ? widget.loadingMessage
+        ? (widget.loadingMessage.isNotEmpty
+            ? widget.loadingMessage
+            : const LocalizedCopy(
+                    en: 'Processing payment',
+                    pt: 'Processando envio',
+                    es: 'Procesando envío')
+                .resolve(context))
         : _result!
-            ? widget.successMessage
-            : widget.errorMessage;
+            ? (widget.successMessage.isNotEmpty
+                ? widget.successMessage
+                : context.tr.txListConfirmed)
+            : widget.errorMessage.isNotEmpty
+                ? widget.errorMessage
+                : _uncertain
+                    ? const LocalizedCopy(
+                            en: 'Checking the result',
+                            pt: 'Resultado em verificação',
+                            es: 'Resultado en verificación')
+                        .resolve(context)
+                    : const LocalizedCopy(
+                            en: 'This step could not be completed',
+                            pt: 'Não foi possível concluir esta etapa',
+                            es: 'No se pudo completar este paso')
+                        .resolve(context);
     return PopScope(
       canPop: false,
       child: Dialog(
@@ -119,14 +171,14 @@ class _ExecutionState extends State<SendPaymentExecutionOverlay> {
                         height: 40,
                         child: Center(
                             child: KeroseneMotion.reduceMotion(context)
-                                ? Icon(KeroseneIcons.pending,
+                                ? KeroseneIcon(KeroseneIcons.pending,
                                     color: scheme.onSurface)
                                 : const SizedBox.square(
                                     dimension: 24,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2))),
                       )
-                    : Icon(
+                    : KeroseneIcon(
                         _result!
                             ? KeroseneIcons.success
                             : KeroseneIcons.warning,
@@ -144,20 +196,28 @@ class _ExecutionState extends State<SendPaymentExecutionOverlay> {
               ),
               if (_result == false) ...[
                 const SizedBox(height: 12),
+                if (_uncertain && _errorDetails != null) ...[
+                  Text(_errorDetails!,
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 8),
+                ],
                 Text(
-                  (_uncertain
-                          ? const LocalizedCopy(
-                              en:
-                                  'The result could not be confirmed. Check your activity before trying again.',
-                              pt:
-                                  'Não foi possível confirmar o resultado. Confira sua atividade antes de tentar novamente.',
-                              es:
-                                  'No se pudo confirmar el resultado. Revisa tu actividad antes de intentarlo de nuevo.')
-                          : const LocalizedCopy(
-                              en: 'Your payment details are saved in the review.',
-                              pt: 'Os dados do pagamento foram mantidos na revisão.',
-                              es: 'Los datos del pago se mantienen en la revisión.'))
-                      .resolve(context),
+                  (_uncertain ? null : _errorDetails) ??
+                      (_uncertain
+                              ? const LocalizedCopy(
+                                  en:
+                                      'The result could not be confirmed. Check your activity before trying again.',
+                                  pt:
+                                      'Não foi possível confirmar o resultado. Confira sua atividade antes de tentar novamente.',
+                                  es:
+                                      'No se pudo confirmar el resultado. Revisa tu actividad antes de intentarlo de nuevo.')
+                              : const LocalizedCopy(
+                                  en: 'Your payment details are saved in the review.',
+                                  pt: 'Os dados do pagamento foram mantidos na revisão.',
+                                  es: 'Los datos del pago se mantienen en la revisión.'))
+                          .resolve(context),
                   textAlign: TextAlign.center,
                   style: AppTypography.bodyMedium
                       .copyWith(color: scheme.onSurfaceVariant),
@@ -165,19 +225,6 @@ class _ExecutionState extends State<SendPaymentExecutionOverlay> {
               ],
               if (!busy) ...[
                 const SizedBox(height: 24),
-                if (_result == false) ...[
-                  AppButton(
-                    label: const LocalizedCopy(
-                      en: 'Try again',
-                      pt: 'Tentar novamente',
-                      es: 'Intentar de nuevo',
-                    ).resolve(context),
-                    variant: AppButtonVariant.secondary,
-                    onPressed: _retry,
-                    expand: true,
-                  ),
-                  const SizedBox(height: 10),
-                ],
                 AppButton(
                   label: (_result!
                           ? const LocalizedCopy(
@@ -187,7 +234,7 @@ class _ExecutionState extends State<SendPaymentExecutionOverlay> {
                               pt: 'Voltar à revisão',
                               es: 'Volver a la revisión'))
                       .resolve(context),
-                  onPressed: () => Navigator.of(context).pop(_result),
+                  onPressed: _finish,
                   expand: true,
                 ),
               ],

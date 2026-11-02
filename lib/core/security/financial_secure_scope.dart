@@ -37,18 +37,23 @@ class _FinancialSecureScopeState extends ConsumerState<FinancialSecureScope> {
     if (!mounted) return;
     final want = ref.read(privacyPreferencesProvider).blockFinancialScreenshots;
     if (want && !_secured) {
-      await SecureScreenGuard.enter();
+      // enter/leave update their reference count before awaiting the platform.
+      // Hold that ownership immediately so metadata updates/disposal cannot
+      // enter twice or leak protection while the native acknowledgement waits.
       _secured = true;
+      await SecureScreenGuard.enter();
     } else if (!want && _secured) {
-      await SecureScreenGuard.leave();
       _secured = false;
+      await SecureScreenGuard.leave();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     ref.listen(privacyPreferencesProvider, (prev, next) {
-      _sync();
+      if (prev?.blockFinancialScreenshots != next.blockFinancialScreenshots) {
+        _sync();
+      }
     });
     return widget.child;
   }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
@@ -140,12 +141,13 @@ class MoneyDisplay {
   }) {
     final decimals = decimalPlaces ?? decimalsFor(currency);
     final locale = resolveNumberLocale(currency, appLocale: appLocale);
+    if (!amount.isFinite) return withSymbol ? '— ${currency.code}' : '—';
 
     if (currency == Currency.btc) {
       final formatter = NumberFormat.decimalPattern(locale)
         ..minimumFractionDigits = decimals
         ..maximumFractionDigits = decimals;
-      final value = formatter.format(amount);
+      final value = _formatBtcValue(formatter, amount, decimals);
       if (!withSymbol) {
         return value;
       }
@@ -157,7 +159,18 @@ class MoneyDisplay {
       symbol: withSymbol ? '${symbolFor(currency)} ' : '',
       decimalDigits: decimals,
     );
-    return formatter.format(amount).trim();
+    final minimum = math.pow(10, -decimals).toDouble();
+    if (amount != 0 && amount.abs() < minimum) {
+      final boundary = formatter
+          .format(minimum)
+          .trim()
+          .replaceAll(RegExp(r'[ \u00a0]+'), ' ');
+      return amount < 0 ? '> -$boundary' : '< $boundary';
+    }
+    return formatter
+        .format(amount)
+        .trim()
+        .replaceAll(RegExp(r'[ \u00a0]+'), ' ');
   }
 
   static String formatCompact({
@@ -172,7 +185,9 @@ class MoneyDisplay {
     final formatter = NumberFormat.decimalPattern(locale)
       ..minimumFractionDigits = 0
       ..maximumFractionDigits = decimals;
-    final value = formatter.format(amount);
+    final value = currency == Currency.btc
+        ? _formatBtcValue(formatter, amount, decimals)
+        : formatter.format(amount);
 
     if (!withSymbol) {
       return value;
@@ -182,6 +197,19 @@ class MoneyDisplay {
         ? tickerSymbolFor(currency)
         : symbolFor(currency);
     return '$symbol $value';
+  }
+
+  static String _formatBtcValue(
+      NumberFormat formatter, double amount, int decimals) {
+    final value = formatter.format(amount);
+    if (decimals < 8 &&
+        amount.isFinite &&
+        amount != 0 &&
+        formatter.parse(value) == 0) {
+      final minimum = formatter.format(math.pow(10, -decimals));
+      return amount > 0 ? '< $minimum' : '> -$minimum';
+    }
+    return value;
   }
 
   static double parseEditableInput(String rawValue) {
@@ -300,7 +328,22 @@ class MoneyDisplay {
     int maxLength = 16,
   }) {
     final decimals = decimalsFor(currency);
-    var text = rawValue.trim().replaceAll(',', '.');
+    var text = rawValue.trim();
+    if (text.contains(RegExp(r'[-−]')) ||
+        (text.startsWith('(') && text.endsWith(')'))) {
+      return '0';
+    }
+    if (text.contains(',') && text.contains('.')) {
+      // A pasted grouped amount can use either 1.234,56 or 1,234.56.
+      // Its final separator is decimal; earlier separators group digits.
+      final decimalIndex =
+          math.max(text.lastIndexOf(','), text.lastIndexOf('.'));
+      text =
+          '${text.substring(0, decimalIndex).replaceAll(RegExp(r'[,.]'), '')}.'
+          '${text.substring(decimalIndex + 1)}';
+    } else {
+      text = text.replaceAll(',', '.');
+    }
     text = text.replaceAll(RegExp(r'[^0-9.]'), '');
 
     if (text.isEmpty) return '0';
@@ -357,6 +400,46 @@ class MoneyDisplay {
     return value;
   }
 
+  /// Canonical operation amount. Quotes and balance precision never round or
+  /// replace the ledger amount. Fiat is shown only from a recorded value.
+  static String formatOperationAmount({
+    required int satoshis,
+    Currency currency = Currency.btc,
+    double? recordedFiat,
+    Locale? appLocale,
+    bool signed = false,
+    bool withSymbol = true,
+  }) {
+    if (currency != Currency.btc &&
+        recordedFiat != null &&
+        recordedFiat.isFinite &&
+        recordedFiat != 0) {
+      final raw = recordedFiat.abs().toString();
+      final exponent = raw.toLowerCase().split('e');
+      final fraction = exponent.first.split('.').skip(1).firstOrNull ?? '';
+      final decimals = math.max(
+          2,
+          fraction.length -
+              (exponent.length > 1 ? int.parse(exponent.last) : 0));
+      final value = format(
+          amount: recordedFiat.abs(),
+          currency: currency,
+          decimalPlaces: decimals,
+          withSymbol: withSymbol,
+          appLocale: appLocale);
+      return '${signed ? (satoshis < 0 ? '-' : '+') : ''}$value';
+    }
+    final magnitude = satoshis.abs();
+    final separator = NumberFormat.decimalPattern(
+            resolveNumberLocale(Currency.btc, appLocale: appLocale))
+        .symbols
+        .DECIMAL_SEP;
+    final whole = magnitude ~/ 100000000;
+    final fraction = (magnitude % 100000000).toString().padLeft(8, '0');
+    final prefix = satoshis < 0 ? '-' : (signed ? '+' : '');
+    return '$prefix$whole$separator$fraction${withSymbol ? ' BTC' : ''}';
+  }
+
   static String formatAmountFromBtc({
     required double btcAmount,
     required Currency currency,
@@ -405,90 +488,26 @@ class MoneyDisplay {
     double? displayBtcBrl,
     bool withSymbol = true,
     bool signed = false,
+    int? decimalPlaces,
     Locale? appLocale,
   }) {
-    final amount = _historicalAmount(
-      btcAmount: btcAmount.abs(),
+    double? recorded(double? value) =>
+        value != null && value.isFinite && value != 0 ? value : null;
+    final frozenAmount = switch (currency) {
+      Currency.usd => recorded(displayAmountUsd),
+      Currency.eur => recorded(displayAmountEur),
+      Currency.brl => recorded(displayAmountBrl),
+      Currency.btc => null,
+    };
+    if (!btcAmount.isFinite) return withSymbol ? '— BTC' : '—';
+    return formatOperationAmount(
+      satoshis: (btcAmount * 100000000).round(),
       currency: currency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      displayAmountUsd: displayAmountUsd,
-      displayAmountEur: displayAmountEur,
-      displayAmountBrl: displayAmountBrl,
-      displayBtcUsd: displayBtcUsd,
-      displayBtcEur: displayBtcEur,
-      displayBtcBrl: displayBtcBrl,
-    );
-
-    final formatted = format(
-      amount: amount,
-      currency: currency,
-      withSymbol: withSymbol,
+      recordedFiat: frozenAmount,
       appLocale: appLocale,
+      signed: signed,
+      withSymbol: withSymbol,
     );
-
-    if (!signed) {
-      return formatted;
-    }
-
-    final prefix = btcAmount >= 0 ? '+' : '-';
-    return '$prefix$formatted';
-  }
-
-  static double _historicalAmount({
-    required double btcAmount,
-    required Currency currency,
-    required double? btcUsd,
-    required double? btcEur,
-    required double? btcBrl,
-    double? displayAmountUsd,
-    double? displayAmountEur,
-    double? displayAmountBrl,
-    double? displayBtcUsd,
-    double? displayBtcEur,
-    double? displayBtcBrl,
-  }) {
-    switch (currency) {
-      case Currency.btc:
-        return btcAmount;
-      case Currency.usd:
-        final frozen = displayAmountUsd;
-        if (frozen != null && frozen != 0) return frozen.abs();
-        return (displayBtcUsd != null && displayBtcUsd > 0
-            ? btcAmount * displayBtcUsd
-            : convertFromBtcAmount(
-                btcAmount: btcAmount,
-                currency: currency,
-                btcUsd: btcUsd,
-                btcEur: btcEur,
-                btcBrl: btcBrl,
-              ));
-      case Currency.eur:
-        final frozen = displayAmountEur;
-        if (frozen != null && frozen != 0) return frozen.abs();
-        return (displayBtcEur != null && displayBtcEur > 0
-            ? btcAmount * displayBtcEur
-            : convertFromBtcAmount(
-                btcAmount: btcAmount,
-                currency: currency,
-                btcUsd: btcUsd,
-                btcEur: btcEur,
-                btcBrl: btcBrl,
-              ));
-      case Currency.brl:
-        final frozen = displayAmountBrl;
-        if (frozen != null && frozen != 0) return frozen.abs();
-        return (displayBtcBrl != null && displayBtcBrl > 0
-            ? btcAmount * displayBtcBrl
-            : convertFromBtcAmount(
-                btcAmount: btcAmount,
-                currency: currency,
-                btcUsd: btcUsd,
-                btcEur: btcEur,
-                btcBrl: btcBrl,
-              ));
-    }
   }
 
   static String formatQuote({

@@ -55,8 +55,7 @@ const _paymentLinkSelfPayException = ValidationException(
 Future<void> _refreshAfterMoneyMoved(Ref ref) async {
   ref.read(transactionHistoryCursorProvider.notifier).reset();
   ref.read(transactionHistoryForceFullProvider.notifier).arm();
-  ref.invalidate(transactionHistoryProvider);
-  ref.invalidate(pagedTransactionHistoryProvider);
+  invalidateTransactionHistoryProjection(ref);
   ref.invalidate(depositsProvider);
   ref.invalidate(depositBalanceProvider);
   ref.invalidate(paymentLinksProvider);
@@ -179,7 +178,7 @@ void sortTransactionsNewestFirst(List<Transaction> txs) {
   });
 }
 
-/// Last successfully merged history (survives FutureProvider reloads).
+/// Last successfully merged history for the active session; survives refreshes.
 final lastTransactionHistoryProvider =
     NotifierProvider<LastTransactionHistoryNotifier, List<Transaction>>(
   LastTransactionHistoryNotifier.new,
@@ -187,7 +186,10 @@ final lastTransactionHistoryProvider =
 
 class LastTransactionHistoryNotifier extends Notifier<List<Transaction>> {
   @override
-  List<Transaction> build() => const [];
+  List<Transaction> build() {
+    ref.watch(sessionStorageScopeProvider);
+    return const [];
+  }
 
   void set(List<Transaction> value) => state = List.unmodifiable(value);
 
@@ -229,7 +231,7 @@ List<Transaction> _mergeLastOverLocalSnapshot({
   );
 }
 
-/// Prefer optimistic [last] rows that remote has not confirmed yet.
+/// Combine live updates and REST rows using the ledger's version/merge rules.
 List<Transaction> mergeTransactionHistoryProjection({
   required List<Transaction>? remote,
   required List<Transaction> last,
@@ -242,28 +244,66 @@ List<Transaction> mergeTransactionHistoryProjection({
   if (last.isEmpty) {
     return remote;
   }
-  final remoteIds = remote.map((t) => t.id).toSet();
-  final pending = last.where((t) => !remoteIds.contains(t.id)).toList();
-  if (pending.isEmpty) {
-    return remote;
+  final byId = {for (final row in remote) row.id: row};
+  for (final local in last) {
+    final server = byId[local.id];
+    byId[local.id] = server == null
+        ? local
+        : TransactionLedgerAdapter.mergeTransactions(local, server);
   }
-  final combined = <Transaction>[...pending, ...remote];
+  final combined = byId.values.toList();
   sortTransactionsNewestFirst(combined);
   return combined;
 }
 
-/// Wall-clock of the last successful history merge (local or remote).
+/// Wall-clock of the last successful remote history merge.
 final transactionHistoryLastSyncProvider =
     NotifierProvider<TransactionHistoryLastSyncNotifier, DateTime?>(
   TransactionHistoryLastSyncNotifier.new,
 );
 
 class TransactionHistoryLastSyncNotifier extends Notifier<DateTime?> {
-  @override
-  DateTime? build() => null;
+  bool refreshFailed = false;
+  bool primaryLoaded = false;
 
-  void touch() => state = DateTime.now();
+  @override
+  DateTime? build() {
+    ref.watch(sessionStorageScopeProvider);
+    refreshFailed = false;
+    primaryLoaded = false;
+    return null;
+  }
+
+  void touch() {
+    refreshFailed = false;
+    primaryLoaded = true;
+    state = DateTime.now();
+  }
+
+  void markPrimaryLoaded() {
+    if (primaryLoaded) return;
+    primaryLoaded = true;
+    ref.notifyListeners();
+  }
+
+  void markFailed() {
+    if (refreshFailed) return;
+    refreshFailed = true;
+    ref.notifyListeners();
+  }
 }
+
+final transactionHistoryReadinessProvider =
+    Provider<({DateTime? lastSyncedAt, bool failed, bool primaryLoaded})>(
+        (ref) {
+  final lastSyncedAt = ref.watch(transactionHistoryLastSyncProvider);
+  final sync = ref.read(transactionHistoryLastSyncProvider.notifier);
+  return (
+    lastSyncedAt: lastSyncedAt,
+    failed: sync.refreshFailed,
+    primaryLoaded: sync.primaryLoaded,
+  );
+});
 
 /// Max server `updatedAt` seen in the last successful remote batch (for `?since=`).
 final transactionHistoryCursorProvider =
@@ -273,7 +313,10 @@ final transactionHistoryCursorProvider =
 
 class TransactionHistoryCursorNotifier extends Notifier<DateTime?> {
   @override
-  DateTime? build() => null;
+  DateTime? build() {
+    ref.watch(sessionStorageScopeProvider);
+    return null;
+  }
 
   void advance(Iterable<Transaction> rows) {
     DateTime? maxAt = state;
@@ -302,7 +345,10 @@ final transactionHistoryForceFullProvider =
 
 class TransactionHistoryForceFullNotifier extends Notifier<bool> {
   @override
-  bool build() => false;
+  bool build() {
+    ref.watch(sessionStorageScopeProvider);
+    return false;
+  }
 
   void arm() => state = true;
 
@@ -361,6 +407,28 @@ Future<List<PaymentLink>> _loadPaymentLinksSafely(Ref ref) async {
 ///
 /// O cache fica indexado pelo escopo da sessão para impedir que histórico de uma
 /// conta seja reutilizado por outra após troca de usuário no mesmo app.
+class TransactionHistoryRevision extends Notifier<int> {
+  TransactionHistoryRevision(String _);
+  @override
+  int build() => 0;
+  void refresh() => state++;
+}
+
+/// Invalidates cached queries for this account, without recreating repositories
+/// or issuing queries for a different account's retained family instances.
+final transactionHistoryRevisionProvider =
+    NotifierProvider.family<TransactionHistoryRevision, int, String>(
+        TransactionHistoryRevision.new);
+
+void invalidateTransactionHistoryProjection(Ref ref) {
+  final account = ref.read(sessionStorageScopeProvider);
+  if (account != null) {
+    ref.read(transactionHistoryRevisionProvider(account).notifier).refresh();
+  }
+  ref.invalidate(transactionHistoryProvider);
+  ref.invalidate(pagedTransactionHistoryProvider);
+}
+
 final transactionHistoryProvider = FutureProvider<List<Transaction>>((
   ref,
 ) async {
@@ -369,18 +437,24 @@ final transactionHistoryProvider = FutureProvider<List<Transaction>>((
     return const <Transaction>[];
   }
   return ref.watch(_scopedTransactionHistoryProvider(sessionScope).future);
-});
+}, retry: (_, __) => null);
 
 final _scopedTransactionHistoryProvider =
     FutureProvider.family<List<Transaction>, String>((ref, sessionScope) async {
+  if (ref.watch(sessionStorageScopeProvider) != sessionScope) return const [];
+  bool ownsSession() =>
+      ref.mounted && ref.read(sessionStorageScopeProvider) == sessionScope;
+
+  ref.watch(transactionHistoryRevisionProvider(sessionScope));
   final ledgerRepo = ref.watch(ledgerRepositoryProvider);
   final localStore = ref.watch(localTransactionHistoryStoreProvider);
   final ledgerSync = LocalLedgerSync(localStore);
   final localCached = await localStore.load(sessionScope);
+  if (!ownsSession()) return const [];
 
   if (localCached.isNotEmpty) {
     Future.microtask(() {
-      if (!ref.mounted) return;
+      if (!ownsSession()) return;
       // Never clobber WS/optimistic rows that are only in memory yet.
       final last = ref.read(lastTransactionHistoryProvider);
       ref.read(lastTransactionHistoryProvider.notifier).set(
@@ -428,23 +502,63 @@ final _scopedTransactionHistoryProvider =
   final externalTransfersFuture = _loadExternalTransfersSafely(ref);
   final paymentLinksFuture = _loadPaymentLinksSafely(ref);
 
-  final result = await ledgerRepo.getHistory(page: 0, size: 100, since: since);
-  final externalTransfers = await externalTransfersFuture;
-  final paymentLinks = await paymentLinksFuture;
-
+  var result = await ledgerRepo.getHistory(page: 0, size: 100, since: since);
+  if (!ownsSession()) return const [];
+  if (since != null) {
+    var batch = result.fold((_) => <Transaction>[], (rows) => rows);
+    final all = List<Transaction>.from(batch);
+    final seen = all.map((row) => row.id).toSet();
+    var page = 1;
+    // Consume the complete incremental interval before advancing its checkpoint.
+    // A failed page leaves the previous checkpoint intact and follows the normal
+    // offline/error branch below, rather than committing a partial history.
+    while (batch.length == 100) {
+      final next =
+          await ledgerRepo.getHistory(page: page++, size: 100, since: since);
+      if (!ownsSession()) return const [];
+      if (next.isLeft()) {
+        result = next;
+        break;
+      }
+      batch = next.fold((_) => <Transaction>[], (rows) => rows);
+      final fresh = batch.where((row) => seen.add(row.id)).toList();
+      if (batch.isNotEmpty && fresh.isEmpty) {
+        throw StateError('History pagination did not advance.');
+      }
+      all.addAll(fresh);
+      result = next.map((_) => all);
+    }
+  }
   return result.fold(
     (failure) async {
+      ref.read(transactionHistoryLastSyncProvider.notifier).markFailed();
       // Offline / unreachable — serve secure local projection.
       if (localCached.isNotEmpty) {
         // ignore: unawaited_futures
         LedgerTelemetry.recordOfflineServed();
-        ref.read(lastTransactionHistoryProvider.notifier).set(localCached);
-        ref.read(transactionHistoryLastSyncProvider.notifier).touch();
-        return localCached;
+        final projected = _mergeLastOverLocalSnapshot(
+          localCached: localCached,
+          last: ref.read(lastTransactionHistoryProvider),
+        );
+        ref.read(lastTransactionHistoryProvider.notifier).set(projected);
+        return projected;
       }
       throw Exception(failure.message);
     },
     (transactions) async {
+      final primary = mergeTransactionHistoryProjection(
+        remote: transactions,
+        last: _mergeLastOverLocalSnapshot(
+          localCached: localCached,
+          last: ref.read(lastTransactionHistoryProvider),
+        ),
+      );
+      ref.read(lastTransactionHistoryProvider.notifier).set(primary);
+      ref.read(transactionHistoryLastSyncProvider.notifier).markPrimaryLoaded();
+      final externalTransfers = await externalTransfersFuture;
+      if (!ownsSession()) return const [];
+      final paymentLinks = await paymentLinksFuture;
+      if (!ownsSession()) return const [];
       final online = _mergeExternalHistory(
         kfeTransactions: transactions,
         externalTransfers: externalTransfers,
@@ -469,6 +583,7 @@ final _scopedTransactionHistoryProvider =
         sessionScope: sessionScope,
         remote: online,
       );
+      if (!ownsSession()) return const [];
       // Keep any WS/optimistic rows the incremental remote batch has not
       // echoed yet (common right after onchain settle while Tor catches up).
       final projected = mergeTransactionHistoryProjection(
@@ -481,7 +596,7 @@ final _scopedTransactionHistoryProvider =
       return projected;
     },
   );
-});
+}, retry: (_, __) => null);
 
 final pagedTransactionHistoryProvider =
     FutureProvider.family<List<Transaction>, ({int page, int size})>((
@@ -497,14 +612,23 @@ final pagedTransactionHistoryProvider =
     page: request.page,
     size: request.size,
   )).future);
-});
+}, retry: (_, __) => null);
 
 final _scopedPagedTransactionHistoryProvider = FutureProvider.family<
     List<Transaction>,
     ({String sessionScope, int page, int size})>((ref, request) async {
+  if (ref.watch(sessionStorageScopeProvider) != request.sessionScope) {
+    return const [];
+  }
+  bool ownsSession() =>
+      ref.mounted &&
+      ref.read(sessionStorageScopeProvider) == request.sessionScope;
+
+  ref.watch(transactionHistoryRevisionProvider(request.sessionScope));
   // Page 0 shares the same LocalLedgerSync projection as the main feed.
   if (request.page == 0) {
     final full = await ref.watch(transactionHistoryProvider.future);
+    if (!ownsSession()) return const [];
     return full.take(request.size).toList(growable: false);
   }
 
@@ -514,11 +638,12 @@ final _scopedPagedTransactionHistoryProvider = FutureProvider.family<
     page: request.page,
     size: request.size,
   );
+  if (!ownsSession()) return const [];
   return result.fold(
     (failure) => throw Exception(failure.message),
     (transactions) => transactions,
   );
-});
+}, retry: (_, __) => null);
 
 /// Histórico filtrado por tipo
 final filteredTransactionsProvider = Provider<AsyncValue<List<Transaction>>>((
@@ -705,14 +830,18 @@ final externalTransferDetailProvider =
 class AsyncActionState {
   final bool isLoading;
   final String? error;
+  final Object? cause;
   final dynamic result;
 
-  const AsyncActionState({this.isLoading = false, this.error, this.result});
+  const AsyncActionState(
+      {this.isLoading = false, this.error, this.cause, this.result});
 
-  AsyncActionState copyWith({bool? isLoading, String? error, dynamic result}) {
+  AsyncActionState copyWith(
+      {bool? isLoading, String? error, Object? cause, dynamic result}) {
     return AsyncActionState(
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      cause: cause,
       result: result ?? this.result,
     );
   }
@@ -787,7 +916,7 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
         );
       }
 
-      state = AsyncActionState(error: e.toString());
+      state = AsyncActionState(error: e.toString(), cause: e);
       return null;
     }
   }
@@ -811,11 +940,12 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
     var stepUpAction = actionRequired;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final assertion = await buildTransactionalPasskeyAssertion(
-          ref: ref,
-          challenge: challenge,
-          actionRequired: stepUpAction,
-        );
+        final assertion = await _collectPaymentAuthorization(
+            () => buildTransactionalPasskeyAssertion(
+                  ref: ref,
+                  challenge: challenge,
+                  actionRequired: stepUpAction,
+                ));
         final result = await _repository.sendTransaction(
           toAddress: toAddress,
           amount: amount,
@@ -836,15 +966,15 @@ class SendTransactionNotifier extends Notifier<AsyncActionState> {
         state = AsyncActionState(result: result);
         return result;
       } catch (signErr) {
-        if (isAuthUserCancellation(signErr)) {
-          state = const AsyncActionState();
+        if (signErr is PaymentAuthorizationCancelledException) {
+          state = AsyncActionState(cause: signErr);
           return null;
         }
         final renewed = _extractStepUpChallenge(signErr);
         if (renewed == null ||
             renewed.legacyChallenge == challenge ||
             attempt == 1) {
-          state = AsyncActionState(error: signErr.toString());
+          state = AsyncActionState(error: signErr.toString(), cause: signErr);
           return null;
         }
         challenge = renewed.legacyChallenge;
@@ -906,7 +1036,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
       state = AsyncActionState(result: result);
       return result;
     } catch (e) {
-      state = AsyncActionState(error: e.toString());
+      state = AsyncActionState(error: e.toString(), cause: e);
       return null;
     }
   }
@@ -959,7 +1089,7 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         );
       }
 
-      state = AsyncActionState(error: e.toString());
+      state = AsyncActionState(error: e.toString(), cause: e);
       return null;
     }
   }
@@ -1048,19 +1178,19 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
       try {
         final link = await _repository.getPaymentLink(linkId);
         _ensurePaymentLinkPayable(link);
-        final TransactionalPasskeyAssertion assertion;
-        if (_passkeyAssertionBuilder != null &&
-            stepUpAction?.isFinancialApproval != true) {
-          assertion = TransactionalPasskeyAssertion(
-            json: await _passkeyAssertionBuilder!(challenge),
-          );
-        } else {
-          assertion = await buildTransactionalPasskeyAssertion(
+        final assertion = await _collectPaymentAuthorization(() async {
+          if (_passkeyAssertionBuilder != null &&
+              stepUpAction?.isFinancialApproval != true) {
+            return TransactionalPasskeyAssertion(
+              json: await _passkeyAssertionBuilder!(challenge),
+            );
+          }
+          return buildTransactionalPasskeyAssertion(
             ref: ref,
             challenge: challenge,
             actionRequired: stepUpAction,
           );
-        }
+        });
         final result = await _repository.withdraw(
           fromWalletName: payerWalletId,
           toAddress: _withdrawalDestination(link),
@@ -1081,15 +1211,15 @@ class PaymentLinkNotifier extends Notifier<AsyncActionState> {
         state = AsyncActionState(result: result);
         return result;
       } catch (signErr) {
-        if (isAuthUserCancellation(signErr)) {
-          state = const AsyncActionState();
+        if (signErr is PaymentAuthorizationCancelledException) {
+          state = AsyncActionState(cause: signErr);
           return null;
         }
         final renewed = _extractStepUpChallenge(signErr);
         if (renewed == null ||
             renewed.legacyChallenge == challenge ||
             attempt == 1) {
-          state = AsyncActionState(error: signErr.toString());
+          state = AsyncActionState(error: signErr.toString(), cause: signErr);
           return null;
         }
         challenge = renewed.legacyChallenge;
@@ -1187,12 +1317,12 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
           );
         } catch (retryErr) {
           // Never leave the confirmation UI spinning after step-up failure.
-          state = AsyncActionState(error: retryErr.toString());
+          state = AsyncActionState(error: retryErr.toString(), cause: retryErr);
           return null;
         }
       }
 
-      state = AsyncActionState(error: e.toString());
+      state = AsyncActionState(error: e.toString(), cause: e);
       return null;
     }
   }
@@ -1220,11 +1350,12 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
     var stepUpAction = actionRequired;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final assertion = await buildTransactionalPasskeyAssertion(
-          ref: ref,
-          challenge: challenge,
-          actionRequired: stepUpAction,
-        );
+        final assertion = await _collectPaymentAuthorization(
+            () => buildTransactionalPasskeyAssertion(
+                  ref: ref,
+                  challenge: challenge,
+                  actionRequired: stepUpAction,
+                ));
         final result = await _repository.withdraw(
           fromWalletName: fromWalletName,
           toAddress: toAddress,
@@ -1249,15 +1380,15 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
         state = AsyncActionState(result: result);
         return result;
       } catch (signErr) {
-        if (isAuthUserCancellation(signErr)) {
-          state = const AsyncActionState();
+        if (signErr is PaymentAuthorizationCancelledException) {
+          state = AsyncActionState(cause: signErr);
           return null;
         }
         final renewed = _extractStepUpChallenge(signErr);
         if (renewed == null ||
             renewed.legacyChallenge == challenge ||
             attempt == 1) {
-          state = AsyncActionState(error: signErr.toString());
+          state = AsyncActionState(error: signErr.toString(), cause: signErr);
           return null;
         }
         challenge = renewed.legacyChallenge;
@@ -1278,6 +1409,20 @@ class WithdrawNotifier extends Notifier<AsyncActionState> {
 
 final withdrawProvider =
     NotifierProvider<WithdrawNotifier, AsyncActionState>(WithdrawNotifier.new);
+
+// Keep cancellation classification inside the local proof step. A later RPC
+// error may mention cancellation while its financial outcome is still unknown.
+Future<TransactionalPasskeyAssertion> _collectPaymentAuthorization(
+    Future<TransactionalPasskeyAssertion> Function() collect) async {
+  try {
+    return await collect();
+  } catch (error) {
+    if (isAuthUserCancellation(error)) {
+      throw const PaymentAuthorizationCancelledException();
+    }
+    rethrow;
+  }
+}
 
 /// True when the user dismissed device-key / passkey / vault biometrics mid-flow.
 ///

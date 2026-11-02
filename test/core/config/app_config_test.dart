@@ -22,6 +22,42 @@ void main() {
     expect(AppConfig.activeNodeName, 'localhost');
   });
 
+  test('normalizeUrl prepends http:// when scheme is absent', () {
+    expect(
+      AppConfig.normalizeUrl('u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion'),
+      'http://u3hrcmbbd5lqnkffqub5qzdaihoutztgh3rtrtrtrcv2bget6btnpdad.onion',
+    );
+    expect(
+      AppConfig.normalizeUrl('  example.com/api  '),
+      'http://example.com/api',
+    );
+    expect(
+      AppConfig.normalizeUrl('http://example.com'),
+      'http://example.com',
+    );
+    expect(
+      AppConfig.normalizeUrl('https://example.com'),
+      'https://example.com',
+    );
+    expect(AppConfig.normalizeUrl(''), '');
+  });
+
+  test('activeNodeUrl and apiUrl automatically normalize bare host/onion URLs', () {
+    final prevNode = AppConfig.activeNodeUrl;
+    final prevApi = AppConfig.apiUrl;
+    addTearDown(() {
+      AppConfig.activeNodeUrl = prevNode;
+      AppConfig.apiUrl = prevApi;
+    });
+
+    AppConfig.activeNodeUrl = 'node.onion';
+    expect(AppConfig.activeNodeUrl, 'http://node.onion');
+    expect(AppConfig.onionBaseUrl, 'http://node.onion');
+
+    AppConfig.apiUrl = 'api.onion';
+    expect(AppConfig.apiUrl, 'http://api.onion');
+  });
+
   test('release builds require explicit node dart-defines', () {
     expect(
       () => AppConfig.validateReleaseNodeConfiguration(releaseBuild: false),

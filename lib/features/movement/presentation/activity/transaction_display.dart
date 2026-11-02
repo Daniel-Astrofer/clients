@@ -54,6 +54,7 @@ class TransactionDisplay {
     double? btcEur,
     double? btcBrl,
     Locale? appLocale,
+    int btcDecimalPlaces = 8,
   }) {
     final presentation = TransactionPresentation.fromTransaction(
       context,
@@ -65,6 +66,7 @@ class TransactionDisplay {
       btcEur: btcEur,
       btcBrl: btcBrl,
       appLocale: appLocale,
+      btcDecimalPlaces: btcDecimalPlaces,
     );
     final network = resolveTransactionNetwork(
       tx,

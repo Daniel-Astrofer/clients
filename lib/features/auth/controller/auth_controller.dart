@@ -1,20 +1,18 @@
 // architecture-allow-large-file: auth state transitions and compatibility
 // adapters remain co-located to preserve DI and session contracts.
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:dartz/dartz.dart' show Either;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/signup_usecase.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../domain/entities/user.dart';
 import 'package:kerosene/features/auth/domain/entities/login_result.dart';
-import '../../../core/services/background_service.dart';
+import '../../../core/providers/background_alerts_runtime_provider.dart';
 import '../../../core/services/device_key_service.dart';
-import '../../../app/notifications/notification_service.dart';
 import '../../../core/services/passkey_service.dart';
 import '../../../core/security/device_credential_enroll_policy.dart';
 import '../../../core/errors/failures.dart';
-import '../../../core/providers/alert_preferences_provider.dart';
 import '../presentation/state/auth_state.dart';
 import '../presentation/state/passkey_register_result.dart';
 import 'auth_providers.dart';
@@ -30,9 +28,12 @@ class AuthController extends Notifier<AuthState> {
   late SignupUseCase signupUseCase;
   late AuthRepository authRepository;
   final PasskeyService passkeyService = PasskeyService.instance;
+  DeviceKeyService get deviceKeyService => DeviceKeyService.instance;
   Timer? _onboardingPollTimer;
   bool _isPollingOnboarding = false;
   bool _isCompletingOnboarding = false;
+  AuthAuthenticated? _credentialEnrollmentOwner;
+  Future<PasskeyRegisterResult>? _credentialEnrollment;
   static const int _maxTransparentChallengeRenewals = 2;
   static final RegExp _passkeyErrorCodePattern = RegExp(
     r'(ERR_AUTH_PASSKEY_NO_LOCAL_CREDENTIALS|ERR_AUTH_PASSKEY_AUTH_CANCELLED|ERR_AUTH_PASSKEY_NOT_REGISTERED|ERR_AUTH_PASSKEY_CORRUPTED_KEY_MATERIAL)',
@@ -79,14 +80,12 @@ class AuthController extends Notifier<AuthState> {
 
     // Stay on AuthLoading (K logo shell) until the first session probe finishes,
     // so cold start never flashes Welcome/PIN before the K loading.
+    final initialProbe = AuthLoading();
     Future.microtask(() async {
-      if (!ref.mounted) return;
-      if (state is AuthInitial) {
-        state = const AuthLoading();
-      }
-      await _checkAuthStatus();
+      if (!ref.mounted || !identical(state, initialProbe)) return;
+      await _checkAuthStatus(ownerOperation: initialProbe);
     });
-    return const AuthLoading();
+    return initialProbe;
   }
 
   void _stopOnboardingPolling() {
@@ -96,18 +95,25 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> _syncBackgroundAlertsService() async {
-    // Ensure channels + OS permission path is warm before background isolate.
-    try {
-      await NotificationService().init();
-    } catch (_) {
-      // Non-fatal — background service still starts.
+    if (!ref.mounted) return;
+    final current = state;
+    if (current is AuthAuthenticated) {
+      await ref
+          .read(backgroundAlertsRuntimeProvider.notifier)
+          .activateFor(current.user.id);
     }
-    final backgroundAlertsEnabled = await loadBackgroundAlertsEnabled();
-    if (backgroundAlertsEnabled) {
-      await startBackgroundService();
-      return;
+  }
+
+  Future<bool> _prepareBackgroundSession(AuthLoading operation) async {
+    await ref.read(backgroundAlertsRuntimeProvider.notifier).deactivate();
+    if (!ref.mounted || !identical(state, operation)) return false;
+    if (ref.read(backgroundAlertsRuntimeProvider).phase ==
+        BackgroundAlertsPhase.failedStop) {
+      state = const AuthError('ERR_BACKGROUND_SESSION_STOP',
+          errorCode: 'ERR_BACKGROUND_SESSION_STOP');
+      return false;
     }
-    await stopBackgroundService();
+    return true;
   }
 
   void _startOnboardingPolling({
@@ -241,16 +247,29 @@ class AuthController extends Notifier<AuthState> {
   Future<void> _checkAuthStatus({
     bool forceRemote = false,
     bool probeWhenUnauthenticated = false,
+    AuthLoading? ownerOperation,
+    String? pendingSignupUsername,
   }) async {
     try {
       final isAuth = await authRepository.isAuthenticated();
+      if (!ref.mounted ||
+          (ownerOperation != null &&
+              !_ownsOnboardingOperation(ownerOperation))) {
+        return;
+      }
       if (isAuth) {
         final result = await authRepository.getCurrentUser(
           forceRemote: forceRemote,
         );
-        result.fold(
-          (failure) {
-            if (failure is AuthFailure) {
+        if (ownerOperation != null &&
+            !_ownsOnboardingOperation(ownerOperation)) {
+          return;
+        }
+        await result.fold<Future<void>>(
+          (failure) async {
+            if (pendingSignupUsername != null) {
+              state = AuthOnboardingOutcomeUnknown(pendingSignupUsername);
+            } else if (failure is AuthFailure) {
               // Token actually expired or invalid
               state = const AuthUnauthenticated();
             } else {
@@ -258,7 +277,17 @@ class AuthController extends Notifier<AuthState> {
               state = AuthServerUnavailable(failure.message);
             }
           },
-          (user) {
+          (user) async {
+            if (pendingSignupUsername != null &&
+                user.username != pendingSignupUsername) {
+              await authRepository.clearInvalidSession();
+              if (ownerOperation != null &&
+                  !_ownsOnboardingOperation(ownerOperation)) {
+                return;
+              }
+              state = AuthOnboardingOutcomeUnknown(pendingSignupUsername);
+              return;
+            }
             state = AuthAuthenticated(user);
             unawaited(_syncBackgroundAlertsService());
           },
@@ -266,16 +295,29 @@ class AuthController extends Notifier<AuthState> {
       } else {
         if (probeWhenUnauthenticated) {
           final result = await authRepository.checkServerAvailability();
+          if (ownerOperation != null &&
+              !_ownsOnboardingOperation(ownerOperation)) {
+            return;
+          }
           result.fold(
             (failure) => state = AuthServerUnavailable(failure.message),
             (_) => state = const AuthUnauthenticated(),
           );
           return;
         }
-        state = const AuthUnauthenticated();
+        state = pendingSignupUsername != null
+            ? AuthOnboardingOutcomeUnknown(pendingSignupUsername)
+            : const AuthUnauthenticated();
       }
     } catch (e) {
-      state = AuthServerUnavailable(e.toString());
+      if (!ref.mounted ||
+          (ownerOperation != null &&
+              !_ownsOnboardingOperation(ownerOperation))) {
+        return;
+      }
+      state = pendingSignupUsername != null
+          ? AuthOnboardingOutcomeUnknown(pendingSignupUsername)
+          : AuthServerUnavailable(e.toString());
     }
   }
 
@@ -283,19 +325,25 @@ class AuthController extends Notifier<AuthState> {
     required String username,
     required String password,
   }) async {
+    if (state is AuthLoading) return;
     _stopOnboardingPolling();
+    final operation = AuthLoading();
     try {
-      state = const AuthLoading();
+      state = operation;
+      if (!await _prepareBackgroundSession(operation)) return;
       final result = await loginUseCase(
         LoginParams(username: username, passphrase: password),
       );
 
-      result.fold(
+      if (!ref.mounted || !identical(state, operation)) return;
+
+      await result.fold<Future<void>>(
         (failure) async {
           await authRepository.clearInvalidSession();
+          if (!ref.mounted || !identical(state, operation)) return;
           state = _mapFailureToAuthError(failure);
         },
-        (loginResult) {
+        (loginResult) async {
           if (loginResult.requiresTotp) {
             state = AuthRequiresLoginTotp(
               username: username,
@@ -303,12 +351,14 @@ class AuthController extends Notifier<AuthState> {
               preAuthToken: loginResult.jwt,
             );
           } else {
-            _checkAuthStatus();
+            await loginWithPasskey(username);
           }
         },
       );
     } catch (e) {
-      state = AuthError('Erro inesperado: $e');
+      if (ref.mounted && identical(state, operation)) {
+        state = AuthError('Erro inesperado: $e');
+      }
     }
   }
 
@@ -320,8 +370,11 @@ class AuthController extends Notifier<AuthState> {
     int? shamirThreshold,
     int? multisigThreshold,
   }) async {
+    if (state is AuthLoading) return;
+    final operation = AuthLoading();
     try {
-      state = const AuthLoading();
+      state = operation;
+      if (!await _prepareBackgroundSession(operation)) return;
       final result = await signupUseCase(
         SignupParams(
           username: username,
@@ -333,6 +386,7 @@ class AuthController extends Notifier<AuthState> {
         ),
       );
 
+      if (!ref.mounted || !identical(state, operation)) return;
       result.fold(
         (failure) {
           state = _mapFailureToAuthError(failure);
@@ -348,9 +402,14 @@ class AuthController extends Notifier<AuthState> {
         ),
       );
     } catch (e) {
-      state = AuthError('Erro inesperado: $e');
+      if (ref.mounted && identical(state, operation)) {
+        state = const AuthError('Não foi possível iniciar o cadastro agora.');
+      }
     }
   }
+
+  AuthState _resumableState() =>
+      state is AuthError ? (state as AuthError).resumeState ?? state : state;
 
   Future<void> verifyTotp({
     required String username,
@@ -358,42 +417,63 @@ class AuthController extends Notifier<AuthState> {
     required String totpSecret,
     required String totpCode,
   }) async {
-    final currentState = state;
-    if (currentState is! AuthRequiresTotpSetup) {
+    if (state is AuthLoading) return;
+    final currentState = _resumableState();
+    if (currentState is! AuthRequiresTotpSetup ||
+        currentState.username != username) {
       state = const AuthError(
-        'Sessão de cadastro inválida. Reinicie a criação da conta.',
-      );
+          'Sessão de cadastro inválida. Reinicie a criação da conta.');
       return;
     }
-
-    state = const AuthLoading();
-    final result = await authRepository.verifyTotp(
-      sessionId: currentState.sessionId,
-      totpCode: totpCode,
-    );
-
-    result.fold(
-      (failure) => state = _mapFailureToAuthError(failure),
-      (sessionId) => state = AuthTotpVerified(sessionId, username),
-    );
+    final operation = AuthLoading();
+    state = operation;
+    try {
+      final result = await authRepository.verifyTotp(
+          sessionId: currentState.sessionId, totpCode: totpCode);
+      if (!ref.mounted || !identical(state, operation)) return;
+      result.fold((failure) {
+        final expired =
+            failure.errorCode == 'AUTH_011' || failure.statusCode == 408;
+        final canRetry = !expired &&
+            (failure.errorCode == 'AUTH_008' ||
+                failure is NetworkFailure ||
+                failure.statusCode == 429 ||
+                (failure.statusCode != null && failure.statusCode! >= 500) ||
+                (failure.statusCode == null && failure is! AuthFailure));
+        state = AuthError(failure.message,
+            statusCode: failure.statusCode,
+            errorCode: failure.errorCode,
+            data: failure.data,
+            resumeState: canRetry ? currentState : null);
+      }, (sessionId) {
+        if (sessionId != currentState.sessionId) {
+          state = const AuthError('Resposta de cadastro inválida.',
+              errorCode: 'ERR_SIGNUP_SESSION_MISMATCH');
+        } else {
+          state = AuthTotpVerified(sessionId, username);
+        }
+      });
+    } catch (_) {
+      if (ref.mounted && identical(state, operation)) {
+        state = AuthError('Não foi possível verificar o código agora.',
+            errorCode: 'ERR_NETWORK', resumeState: currentState);
+      }
+    }
   }
 
   Future<void> skipTotpSetup() async {
-    final currentState = state;
+    if (state is AuthLoading) return;
+    final currentState = _resumableState();
     if (currentState is! AuthRequiresTotpSetup) {
       state = const AuthError(
-        'Sessão de cadastro inválida. Reinicie a criação da conta.',
-      );
+          'Sessão de cadastro inválida. Reinicie a criação da conta.');
       return;
     }
-
     if (!currentState.totpOptional) {
-      state = const AuthError(
-        'TOTP é obrigatório para este perfil de segurança.',
-      );
+      state = AuthError('TOTP é obrigatório para este perfil de segurança.',
+          resumeState: currentState);
       return;
     }
-
     state = AuthTotpVerified(currentState.sessionId, currentState.username);
   }
 
@@ -403,7 +483,10 @@ class AuthController extends Notifier<AuthState> {
     required String totpCode,
     String? preAuthToken,
   }) async {
-    state = const AuthLoading();
+    if (state is AuthLoading) return;
+    final operation = AuthLoading();
+    state = operation;
+    if (!await _prepareBackgroundSession(operation)) return;
     final result = await authRepository.verifyLoginTotp(
       username: username,
       passphrase: passphrase,
@@ -411,14 +494,25 @@ class AuthController extends Notifier<AuthState> {
       preAuthToken: preAuthToken,
     );
 
-    result.fold((failure) => state = _mapFailureToAuthError(failure), (user) {
-      state = AuthAuthenticated(user);
-      unawaited(_syncBackgroundAlertsService());
-    });
+    if (!ref.mounted || !identical(state, operation)) return;
+
+    await result.fold<Future<void>>(
+      (failure) async => state = _mapFailureToAuthError(failure),
+      (user) async {
+        final deviceSessionEstablished = await authRepository.isAuthenticated();
+        if (!ref.mounted || !identical(state, operation)) return;
+        if (!deviceSessionEstablished) {
+          await loginWithPasskey(username);
+          return;
+        }
+        state = AuthAuthenticated(user);
+        unawaited(_syncBackgroundAlertsService());
+      },
+    );
   }
 
-  /// After password (+ optional TOTP) succeeded and JWT is stored, load `/auth/me`
-  /// and mark the session authenticated. Used when this device has no local passkey.
+  /// Compatibility entry point that only restores an already-final device session.
+  /// Password and primary TOTP never persist a token for this check to restore.
   Future<void> establishSessionAfterPasswordLogin() async {
     state = const AuthLoading();
     await _checkAuthStatus(forceRemote: true);
@@ -436,9 +530,10 @@ class AuthController extends Notifier<AuthState> {
     _stopOnboardingPolling();
     try {
       state = const AuthLoading();
-      await authRepository.logout();
-      await stopBackgroundService();
-      state = const AuthUnauthenticated();
+      await ref.read(backgroundAlertsRuntimeProvider.notifier).deactivate();
+      final result = await authRepository.logout();
+      result.fold((failure) => state = _mapFailureToAuthError(failure),
+          (_) => state = const AuthUnauthenticated());
     } catch (e) {
       state = AuthError('Erro ao sair: $e');
     }
@@ -447,11 +542,11 @@ class AuthController extends Notifier<AuthState> {
   void markSessionInvalidated() {
     _stopOnboardingPolling();
     state = const AuthUnauthenticated();
-    unawaited(stopBackgroundService());
+    unawaited(ref.read(backgroundAlertsRuntimeProvider.notifier).deactivate());
   }
 
   void clearError() {
-    if (state is AuthError) {
+    if (state is AuthError || state is AuthOnboardingOutcomeUnknown) {
       state = const AuthUnauthenticated();
     }
   }
@@ -479,15 +574,22 @@ class AuthController extends Notifier<AuthState> {
           'Por favor, insira o usuário para entrar com a chave do dispositivo');
       return;
     }
-    state = const AuthLoading();
+    final operation = AuthLoading();
+    state = operation;
+    bool current() => ref.mounted && identical(state, operation);
 
-    // N+2: prefer Device Key login when local material exists.
-    if (await DeviceKeyService.instance.hasRegisteredDeviceKey(username)) {
-      await _loginWithDeviceKey(username);
+    final hasDeviceKey =
+        await DeviceKeyService.instance.hasRegisteredDeviceKey(username);
+    if (!current()) return;
+    if (hasDeviceKey) {
+      await _loginWithDeviceKey(username, operation);
       return;
     }
 
-    if (!await DeviceCredentialEnrollPolicy.allowWebAuthnShapedAuth()) {
+    final allowLegacy =
+        await DeviceCredentialEnrollPolicy.allowWebAuthnShapedAuth();
+    if (!current()) return;
+    if (!allowLegacy) {
       state = const AuthError(
         DeviceCredentialEnrollPolicy.reconfigureRequiredMessage,
         errorCode: DeviceCredentialEnrollPolicy.reconfigureRequiredCode,
@@ -495,27 +597,24 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
-    // Legacy WebAuthn-shaped login (rollback path only on tier A).
     final startResult = await authRepository.passkeyLoginStart(username);
-
+    if (!current()) return;
     await startResult.fold(
       (failure) async {
-        state = _mapFailureToAuthError(failure);
+        if (current()) state = _mapFailureToAuthError(failure);
       },
       (challengeHex) async {
         try {
-          // 2. Sign challenge with device key (biometric-gated)
           final credential = await passkeyService.authenticate(
             challengeHex: challengeHex,
             username: username,
           );
-
-          // 3. Finish login with backend (credential already has the right structure)
+          if (!current()) return;
           final finishResult = await authRepository.passkeyLoginFinish(
             username: username,
             credential: PasskeyService.toWirePayload(credential),
           );
-
+          if (!current()) return;
           await finishResult.fold(
             (failure) async {
               final renewedChallenge = _extractPasskeyChallenge(failure);
@@ -528,18 +627,19 @@ class AuthController extends Notifier<AuthState> {
                   );
                   return;
                 }
-                state = _mapFailureToAuthError(failure);
+                if (current()) state = _mapFailureToAuthError(failure);
                 return;
               }
-
               final renewedCredential = await passkeyService.authenticate(
                 challengeHex: renewedChallenge,
                 username: username,
               );
+              if (!current()) return;
               final renewedFinish = await authRepository.passkeyLoginFinish(
                 username: username,
                 credential: PasskeyService.toWirePayload(renewedCredential),
               );
+              if (!current()) return;
               await renewedFinish.fold(
                 (secondFailure) async {
                   if (_isPasskeyChallengeExpired(secondFailure) &&
@@ -551,31 +651,39 @@ class AuthController extends Notifier<AuthState> {
                     );
                     return;
                   }
-                  state = _mapFailureToAuthError(secondFailure);
+                  if (current()) state = _mapFailureToAuthError(secondFailure);
                 },
                 (loginResult) async {
                   await passkeyService
                       .commitAuthenticationCounter(renewedCredential);
-                  _completePasskeyLogin(username, loginResult);
+                  if (current()) {
+                    _completePasskeyLogin(username, loginResult, operation);
+                  }
                 },
               );
             },
             (loginResult) async {
               await passkeyService.commitAuthenticationCounter(credential);
-              _completePasskeyLogin(username, loginResult);
+              if (current()) {
+                _completePasskeyLogin(username, loginResult, operation);
+              }
             },
           );
         } catch (e) {
-          state = _mapPasskeyExceptionToAuthError(
-            e,
-            fallbackMessage: 'Erro na autenticação via passkey',
-          );
+          if (current()) {
+            state = _mapPasskeyExceptionToAuthError(
+              e,
+              fallbackMessage: 'Erro na autenticação via passkey',
+            );
+          }
         }
       },
     );
   }
 
-  void _completePasskeyLogin(String username, LoginResult loginResult) {
+  void _completePasskeyLogin(
+      String username, LoginResult loginResult, AuthLoading operation) {
+    if (!ref.mounted || !identical(state, operation)) return;
     if (loginResult.requiresTotp) {
       state = AuthRequiresLoginTotp(
         username: username,
@@ -583,7 +691,7 @@ class AuthController extends Notifier<AuthState> {
         preAuthToken: loginResult.jwt,
       );
     } else {
-      _checkAuthStatus();
+      unawaited(_checkAuthStatus(ownerOperation: operation));
     }
   }
 
@@ -620,11 +728,14 @@ class AuthController extends Notifier<AuthState> {
   /// Device-binding conflicts (AUTH_024) are returned as
   /// [PasskeyRegisterResult.deviceConflict] so settings can confirm unlink and
   /// retry while the session stays alive.
-  Future<void> _loginWithDeviceKey(String username) async {
+  Future<void> _loginWithDeviceKey(
+      String username, AuthLoading operation) async {
+    bool current() => ref.mounted && identical(state, operation);
     final startResult = await authRepository.deviceKeyLoginStart(username);
+    if (!current()) return;
     await startResult.fold(
       (failure) async {
-        state = _mapFailureToAuthError(failure);
+        if (current()) state = _mapFailureToAuthError(failure);
       },
       (challengeJson) async {
         try {
@@ -633,21 +744,26 @@ class AuthController extends Notifier<AuthState> {
             challenge: challenge,
             username: username,
           );
+          if (!current()) return;
           final finishResult =
               await authRepository.deviceKeyLoginFinish(assertion);
+          if (!current()) return;
           await finishResult.fold(
             (failure) async {
-              state = _mapFailureToAuthError(failure);
+              if (current()) state = _mapFailureToAuthError(failure);
             },
             (loginResult) async {
-              _completePasskeyLogin(username, loginResult);
+              _completePasskeyLogin(username, loginResult, operation);
             },
           );
         } catch (e) {
-          state = _mapPasskeyExceptionToAuthError(
-            e,
-            fallbackMessage: 'Erro na autenticação com a chave do dispositivo',
-          );
+          if (current()) {
+            state = _mapPasskeyExceptionToAuthError(
+              e,
+              fallbackMessage:
+                  'Erro na autenticação com a chave do dispositivo',
+            );
+          }
         }
       },
     );
@@ -655,91 +771,142 @@ class AuthController extends Notifier<AuthState> {
 
   Future<PasskeyRegisterResult> registerPasskey({
     bool confirmUnlinkDevice = false,
-  }) async {
-    final currentState = state;
-    if (currentState is! AuthAuthenticated) {
-      return const PasskeyRegisterResult.notAuthenticated();
+  }) {
+    final owner = state;
+    if (owner is! AuthAuthenticated) {
+      return Future.value(const PasskeyRegisterResult.notAuthenticated());
     }
-
-    final sessionUser = currentState.user;
-    final username = sessionUser.name;
-
-    // N+1: prefer canonical Device Key enroll on mobile/desktop first-class.
-    if (await DeviceCredentialEnrollPolicy.preferCanonicalDeviceKeyEnroll()) {
-      return _registerDeviceKeyAuthenticated(
-        username: username,
-        sessionUser: sessionUser,
-        confirmUnlinkDevice: confirmUnlinkDevice,
-      );
+    final pending = _credentialEnrollment;
+    if (pending != null) {
+      return identical(_credentialEnrollmentOwner, owner)
+          ? pending
+          : Future.value(const PasskeyRegisterResult.failure(
+              errorCode: 'ERR_AUTH_DEVICE_KEY_REGISTRATION_BUSY',
+              message:
+                  'Existe uma vinculação em andamento neste aparelho. Aguarde sua conclusão.'));
     }
+    _credentialEnrollmentOwner = owner;
+    final operation = _registerAuthenticatedCredential(owner,
+        confirmUnlinkDevice: confirmUnlinkDevice);
+    _credentialEnrollment = operation;
+    operation.then<void>((_) {
+      if (identical(_credentialEnrollment, operation)) {
+        _credentialEnrollment = null;
+        _credentialEnrollmentOwner = null;
+      }
+    });
+    return operation;
+  }
 
-    final startResult = await authRepository.passkeyRegisterStart(username);
-    final challengeHex = startResult.fold<String?>(
-      (failure) => null,
-      (value) => value,
-    );
-    if (challengeHex == null) {
-      final failure = startResult.fold((f) => f, (_) => null)!;
-      return PasskeyRegisterResult.failure(
-        message: failure.message,
-        errorCode: failure.errorCode,
-        data: failure.data,
-      );
-    }
+  bool _ownsCredentialEnrollment(AuthAuthenticated owner) =>
+      ref.mounted && identical(state, owner);
 
+  Future<PasskeyRegisterResult> _registerAuthenticatedCredential(
+      AuthAuthenticated owner,
+      {required bool confirmUnlinkDevice}) async {
+    final username = owner.user.username;
     try {
+      final canonical =
+          await DeviceCredentialEnrollPolicy.preferCanonicalDeviceKeyEnroll();
+      if (!_ownsCredentialEnrollment(owner)) {
+        return const PasskeyRegisterResult.notAuthenticated();
+      }
+      if (canonical) {
+        return await _registerDeviceKeyAuthenticated(
+            username: username,
+            owner: owner,
+            confirmUnlinkDevice: confirmUnlinkDevice);
+      }
+      final start = await authRepository.passkeyRegisterStart(username);
+      if (!_ownsCredentialEnrollment(owner)) {
+        return const PasskeyRegisterResult.notAuthenticated();
+      }
+      final failure = start.fold((f) => f, (_) => null);
+      if (failure != null) {
+        return PasskeyRegisterResult.failure(
+            message: failure.message,
+            errorCode: failure.errorCode,
+            data: failure.data);
+      }
+      final challenge = start.fold((_) => '', (value) => value);
+      final credential = await passkeyService.register(
+          challengeHex: challenge,
+          username: username,
+          confirmUnlinkDevice: confirmUnlinkDevice);
+      if (!_ownsCredentialEnrollment(owner)) {
+        return const PasskeyRegisterResult.notAuthenticated();
+      }
+      final finish = await authRepository.passkeyRegisterFinish(credential);
+      if (!_ownsCredentialEnrollment(owner)) {
+        return const PasskeyRegisterResult.notAuthenticated();
+      }
+      final finishFailure = finish.fold((f) => f, (_) => null);
+      if (finishFailure != null) {
+        return _credentialEnrollmentFailure(finishFailure);
+      }
       if (confirmUnlinkDevice) {
         await passkeyService.prepareDeviceRebind(newUsername: username);
-      }
-      final credential = await passkeyService.register(
-        challengeHex: challengeHex,
-        username: username,
-        confirmUnlinkDevice: confirmUnlinkDevice,
-      );
-
-      final finishResult =
-          await authRepository.passkeyRegisterFinish(credential);
-
-      final finishFailure = finishResult.fold((f) => f, (_) => null);
-      if (finishFailure != null) {
-        if (_isDeviceBindingConflict(finishFailure)) {
-          return PasskeyRegisterResult.deviceConflict(
-            message: finishFailure.message,
-            errorCode: finishFailure.errorCode,
-            data: finishFailure.data,
-          );
+        if (!_ownsCredentialEnrollment(owner)) {
+          return const PasskeyRegisterResult.notAuthenticated();
         }
-        return PasskeyRegisterResult.failure(
-          message: finishFailure.message,
-          errorCode: finishFailure.errorCode,
-          data: finishFailure.data,
-        );
       }
-
-      await passkeyService.markDeviceBound(username: username);
-      final refreshedUser = await authRepository.getCurrentUser();
-      // Always keep an authenticated session after a successful bind.
-      refreshedUser.fold(
-        (_) {
-          if (state is! AuthAuthenticated) {
-            state = AuthAuthenticated(sessionUser);
-          }
-        },
-        (user) => state = AuthAuthenticated(user),
-      );
-      debugPrint('Passkey registered successfully.');
-      return const PasskeyRegisterResult.success();
-    } catch (e) {
-      final mapped = _mapPasskeyExceptionToAuthError(
-        e,
-        fallbackMessage: 'Erro no registro de passkey',
-      );
+      return await _finishAuthenticatedCredential(owner);
+    } catch (error) {
+      if (!_ownsCredentialEnrollment(owner)) {
+        return const PasskeyRegisterResult.notAuthenticated();
+      }
+      final mapped = _mapPasskeyExceptionToAuthError(error,
+          fallbackMessage:
+              'Não foi possível confirmar o registro da chave deste aparelho');
       return PasskeyRegisterResult.failure(
-        message: mapped.message,
-        errorCode: mapped.errorCode,
-        data: mapped.data,
-      );
+          message: mapped.message,
+          errorCode: error is DeviceKeyException
+              ? error.code
+              : mapped.errorCode ??
+                  RegExp(r'ERR_AUTH_DEVICE_KEY_[A-Z_]+')
+                      .firstMatch(error.toString())
+                      ?.group(0),
+          data: mapped.data);
     }
+  }
+
+  PasskeyRegisterResult _credentialEnrollmentFailure(Failure failure) =>
+      _isDeviceBindingConflict(failure)
+          ? PasskeyRegisterResult.deviceConflict(
+              message: failure.message,
+              errorCode: failure.errorCode,
+              data: failure.data)
+          : PasskeyRegisterResult.failure(
+              message: failure.message,
+              errorCode: failure.errorCode,
+              data: failure.data);
+
+  Future<PasskeyRegisterResult> _finishAuthenticatedCredential(
+      AuthAuthenticated owner) async {
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
+    }
+    await passkeyService.markDeviceBound(username: owner.user.username);
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
+    }
+    final refreshed = await authRepository.getCurrentUser(forceRemote: true);
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
+    }
+    final user = refreshed.fold<User?>((_) => null, (value) => value);
+    if (user != null) {
+      final id = owner.user.id.trim();
+      final sameAccount = id.isNotEmpty && id != '0'
+          ? user.id.trim() == id
+          : user.username.trim().toLowerCase() ==
+              owner.user.username.trim().toLowerCase();
+      if (!sameAccount) return const PasskeyRegisterResult.notAuthenticated();
+      state = AuthAuthenticated(user);
+    }
+    // The binding was acknowledged. A profile lookup failure leaves the same
+    // authenticated session intact; it must never resurrect a previous one.
+    return const PasskeyRegisterResult.success();
   }
 
   bool _isDeviceBindingConflict(Failure failure) {
@@ -758,75 +925,97 @@ class AuthController extends Notifier<AuthState> {
 
   Future<PasskeyRegisterResult> _registerDeviceKeyAuthenticated({
     required String username,
-    required User sessionUser,
+    required AuthAuthenticated owner,
     bool confirmUnlinkDevice = false,
   }) async {
-    final startResult = await authRepository.deviceKeyRegisterStart();
-    final challengeJson = startResult.fold<Map<String, dynamic>?>(
-      (failure) => null,
-      (value) => value,
-    );
-    if (challengeJson == null) {
-      final failure = startResult.fold((f) => f, (_) => null)!;
-      return PasskeyRegisterResult.failure(
-        message: failure.message,
-        errorCode: failure.errorCode,
-        data: failure.data,
-      );
+    final start = await authRepository.deviceKeyRegisterStart();
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
     }
-
-    try {
-      final challenge = DeviceKeyChallenge.fromJson(challengeJson);
-      final credential = await DeviceKeyService.instance.register(
+    final failure = start.fold((f) => f, (_) => null);
+    if (failure != null) return _credentialEnrollmentFailure(failure);
+    final challenge = DeviceKeyChallenge.fromJson(
+        start.fold((_) => const <String, dynamic>{}, (value) => value));
+    final credential = await deviceKeyService.register(
         challenge: challenge,
         username: username,
         sessionId: '',
-      );
-      if (confirmUnlinkDevice) {
-        credential['confirmUnlinkDevice'] = true;
-        credential['confirm_unlink_device'] = true;
-      }
+        activateImmediately: false);
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
+    }
+    final credentialId = credential['credentialId'];
+    if (credentialId is! String || credentialId.trim().isEmpty) {
+      throw StateError('Prepared credential identifier unavailable');
+    }
+    if (confirmUnlinkDevice) {
+      credential['confirmUnlinkDevice'] = true;
+      credential['confirm_unlink_device'] = true;
+    }
+    final finish = await authRepository.deviceKeyRegisterFinish(credential);
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
+    }
+    final finishFailure = finish.fold((f) => f, (_) => null);
+    if (finishFailure != null) {
+      return _credentialEnrollmentFailure(finishFailure);
+    }
+    await deviceKeyService.activateRegistration(
+        username: username, credentialId: credentialId);
+    if (!_ownsCredentialEnrollment(owner)) {
+      return const PasskeyRegisterResult.notAuthenticated();
+    }
+    return _finishAuthenticatedCredential(owner);
+  }
 
-      final finishResult =
-          await authRepository.deviceKeyRegisterFinish(credential);
-      final finishFailure = finishResult.fold((f) => f, (_) => null);
-      if (finishFailure != null) {
-        if (_isDeviceBindingConflict(finishFailure)) {
-          return PasskeyRegisterResult.deviceConflict(
-            message: finishFailure.message,
-            errorCode: finishFailure.errorCode,
-            data: finishFailure.data,
-          );
-        }
-        return PasskeyRegisterResult.failure(
-          message: finishFailure.message,
-          errorCode: finishFailure.errorCode,
-          data: finishFailure.data,
+  bool _ownsOnboardingOperation(AuthLoading operation) =>
+      ref.mounted && identical(state, operation);
+
+  AuthError _onboardingEnrollmentError(
+      AuthError error, AuthTotpVerified context) {
+    final expired = error.errorCode == 'AUTH_013' ||
+        error.errorCode == 'AUTH_011' ||
+        error.statusCode == 408;
+    return AuthError(error.message,
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        data: error.data,
+        resumeState: expired ? null : context);
+  }
+
+  Future<void> _completeOnboardingEnrollment({
+    required AuthTotpVerified context,
+    required AuthLoading operation,
+    required Future<Either<Failure, LoginResult>> completion,
+  }) async {
+    try {
+      final result = await completion;
+      if (!_ownsOnboardingOperation(operation)) return;
+      await result.fold((failure) async {
+        final expired =
+            failure.errorCode == 'AUTH_013' || failure.errorCode == 'AUTH_011';
+        final uncertain = !expired &&
+            (failure is NetworkFailure ||
+                failure.statusCode == 408 ||
+                (failure.statusCode != null && failure.statusCode! >= 500) ||
+                (failure.statusCode == null && failure is! AuthFailure));
+        state = uncertain
+            ? AuthOnboardingOutcomeUnknown(context.username)
+            : _onboardingEnrollmentError(
+                _mapFailureToAuthError(failure), context);
+      }, (_) async {
+        await passkeyService.markDeviceBound(username: context.username);
+        if (!_ownsOnboardingOperation(operation)) return;
+        await _checkAuthStatus(
+          forceRemote: true,
+          ownerOperation: operation,
+          pendingSignupUsername: context.username,
         );
+      });
+    } catch (_) {
+      if (_ownsOnboardingOperation(operation)) {
+        state = AuthOnboardingOutcomeUnknown(context.username);
       }
-
-      await passkeyService.markDeviceBound(username: username);
-      final refreshedUser = await authRepository.getCurrentUser();
-      refreshedUser.fold(
-        (_) {
-          if (state is! AuthAuthenticated) {
-            state = AuthAuthenticated(sessionUser);
-          }
-        },
-        (user) => state = AuthAuthenticated(user),
-      );
-      debugPrint('Device Key registered successfully.');
-      return const PasskeyRegisterResult.success();
-    } catch (e) {
-      final mapped = _mapPasskeyExceptionToAuthError(
-        e,
-        fallbackMessage: 'Erro no registro da chave do dispositivo',
-      );
-      return PasskeyRegisterResult.failure(
-        message: mapped.message,
-        errorCode: mapped.errorCode,
-        data: mapped.data,
-      );
     }
   }
 
@@ -834,127 +1023,97 @@ class AuthController extends Notifier<AuthState> {
     String sessionId, {
     bool confirmUnlinkDevice = false,
   }) async {
-    final currentState = state;
-    String? username;
-    if (currentState is AuthTotpVerified) {
-      username = currentState.username;
-    }
-
-    state = const AuthLoading();
-
-    if (await DeviceCredentialEnrollPolicy.preferCanonicalDeviceKeyEnroll()) {
-      await _registerDeviceKeyOnboarding(
-        sessionId: sessionId,
-        username: username,
-        confirmUnlinkDevice: confirmUnlinkDevice,
-      );
+    if (state is AuthLoading || state is AuthOnboardingOutcomeUnknown) return;
+    final currentState = _resumableState();
+    if (currentState is! AuthTotpVerified ||
+        currentState.sessionId != sessionId) {
+      state = const AuthError(
+          'Sessão de cadastro inválida. Reinicie a criação da conta.',
+          errorCode: 'ERR_SIGNUP_SESSION_MISMATCH');
       return;
     }
+    final operation = AuthLoading();
+    state = operation;
+    try {
+      final canonical =
+          await DeviceCredentialEnrollPolicy.preferCanonicalDeviceKeyEnroll();
+      if (!_ownsOnboardingOperation(operation)) return;
+      if (canonical) {
+        await _registerDeviceKeyOnboarding(
+            context: currentState,
+            operation: operation,
+            confirmUnlinkDevice: confirmUnlinkDevice);
+        return;
+      }
 
-    // Legacy WebAuthn-shaped path (allowed only when policy permits).
-    final result = await authRepository.passkeyRegisterOnboardingStart(
-      sessionId: sessionId,
-      username: username,
-    );
-
-    await result.fold(
-      (failure) async {
-        state = _mapFailureToAuthError(failure);
-      },
-      (challengeHex) async {
-        try {
-          final effectiveUsername =
-              username ?? 'User_${sessionId.substring(0, 4)}';
-
-          if (confirmUnlinkDevice) {
-            await passkeyService.prepareDeviceRebind(
-              newUsername: effectiveUsername,
-            );
-          }
-
-          final credential = await passkeyService.register(
-            challengeHex: challengeHex,
-            username: effectiveUsername,
-            confirmUnlinkDevice: confirmUnlinkDevice,
-          );
-
-          final finishResult =
-              await authRepository.passkeyRegisterOnboardingFinish(
-            sessionId,
-            credential,
-          );
-
-          await finishResult.fold(
-            (failure) async {
-              state = _mapFailureToAuthError(failure);
-            },
-            (_) async {
-              await passkeyService.markDeviceBound(username: effectiveUsername);
-              await _checkAuthStatus();
-            },
-          );
-        } catch (e) {
-          state = _mapPasskeyExceptionToAuthError(
-            e,
-            fallbackMessage: 'Erro no registro de passkey',
-          );
+      // Retain the legacy path only where the existing runtime policy permits.
+      final result = await authRepository.passkeyRegisterOnboardingStart(
+          sessionId: sessionId, username: currentState.username);
+      if (!_ownsOnboardingOperation(operation)) return;
+      await result.fold((failure) async {
+        state = _onboardingEnrollmentError(
+            _mapFailureToAuthError(failure), currentState);
+      }, (challengeHex) async {
+        if (confirmUnlinkDevice) {
+          await passkeyService.prepareDeviceRebind(
+              newUsername: currentState.username);
+          if (!_ownsOnboardingOperation(operation)) return;
         }
-      },
-    );
+        final credential = await passkeyService.register(
+            challengeHex: challengeHex,
+            username: currentState.username,
+            confirmUnlinkDevice: confirmUnlinkDevice);
+        if (!_ownsOnboardingOperation(operation)) return;
+        await _completeOnboardingEnrollment(
+          context: currentState,
+          operation: operation,
+          completion: authRepository.passkeyRegisterOnboardingFinish(
+              sessionId, credential),
+        );
+      });
+    } catch (error) {
+      if (_ownsOnboardingOperation(operation)) {
+        final knownCode =
+            _passkeyErrorCodePattern.firstMatch(error.toString())?.group(1);
+        state = _onboardingEnrollmentError(
+            error is DeviceKeyException
+                ? AuthError(error.message, errorCode: error.code)
+                : AuthError('Não foi possível vincular este dispositivo agora.',
+                    errorCode: knownCode),
+            currentState);
+      }
+    }
   }
 
   Future<void> _registerDeviceKeyOnboarding({
-    required String sessionId,
-    String? username,
+    required AuthTotpVerified context,
+    required AuthLoading operation,
     bool confirmUnlinkDevice = false,
   }) async {
     final startResult = await authRepository.deviceKeyRegisterOnboardingStart(
-      sessionId: sessionId,
-      username: username,
-    );
-
-    await startResult.fold(
-      (failure) async {
-        state = _mapFailureToAuthError(failure);
-      },
-      (challengeJson) async {
-        try {
-          final effectiveUsername =
-              username ?? 'User_${sessionId.substring(0, 4)}';
-          final challenge = DeviceKeyChallenge.fromJson(challengeJson);
-          final credential = await DeviceKeyService.instance.register(
-            challenge: challenge,
-            username: effectiveUsername,
-            sessionId: sessionId,
-          );
-          if (confirmUnlinkDevice) {
-            credential['confirmUnlinkDevice'] = true;
-            credential['confirm_unlink_device'] = true;
-          }
-
-          final finishResult =
-              await authRepository.deviceKeyRegisterOnboardingFinish(
-            sessionId,
-            credential,
-          );
-
-          await finishResult.fold(
-            (failure) async {
-              state = _mapFailureToAuthError(failure);
-            },
-            (_) async {
-              await passkeyService.markDeviceBound(username: effectiveUsername);
-              await _checkAuthStatus();
-            },
-          );
-        } catch (e) {
-          state = _mapPasskeyExceptionToAuthError(
-            e,
-            fallbackMessage: 'Erro no registro da chave do dispositivo',
-          );
-        }
-      },
-    );
+        sessionId: context.sessionId, username: context.username);
+    if (!_ownsOnboardingOperation(operation)) return;
+    await startResult.fold((failure) async {
+      state =
+          _onboardingEnrollmentError(_mapFailureToAuthError(failure), context);
+    }, (challengeJson) async {
+      final challenge = DeviceKeyChallenge.fromJson(challengeJson);
+      final credential = await deviceKeyService.register(
+          challenge: challenge,
+          username: context.username,
+          sessionId: context.sessionId);
+      if (!_ownsOnboardingOperation(operation)) return;
+      if (confirmUnlinkDevice) {
+        credential['confirmUnlinkDevice'] = true;
+        credential['confirm_unlink_device'] = true;
+      }
+      await _completeOnboardingEnrollment(
+        context: context,
+        operation: operation,
+        completion: authRepository.deviceKeyRegisterOnboardingFinish(
+            context.sessionId, credential),
+      );
+    });
   }
 
   Future<void> _loadActivationDepositState({

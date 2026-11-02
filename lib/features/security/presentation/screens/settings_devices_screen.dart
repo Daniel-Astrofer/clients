@@ -1,3 +1,5 @@
+import 'security_profile_view.dart';
+import 'security_credential_enrollment_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,13 +7,11 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/core/services/device_key_service.dart';
 import 'package:kerosene/core/services/passkey_service.dart';
-import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 
 import 'security_settings_components.dart';
-import 'settings_modern_components.dart';
 import 'settings_navigation.dart';
 
 /// Authorized passkey/device-key inventory — real data, no placeholders.
@@ -25,6 +25,7 @@ class SettingsDevicesScreen extends ConsumerStatefulWidget {
 
 class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
   bool? _needsLegacyMigration;
+  String? _migrationScope;
 
   @override
   void initState() {
@@ -37,23 +38,52 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
   Future<void> _probeLegacyMigration() async {
     final auth = ref.read(authControllerProvider);
     if (auth is! AuthAuthenticated) {
-      if (mounted) setState(() => _needsLegacyMigration = false);
+      if (mounted) {
+        setState(() {
+          _needsLegacyMigration = false;
+          _migrationScope = null;
+        });
+      }
       return;
     }
     final username = auth.user.username;
+    final scope = ref.read(sessionStorageScopeProvider);
     final hasDeviceKey = await DeviceKeyService.instance.hasRegisteredDeviceKey(
       username,
     );
+    if (!mounted || ref.read(sessionStorageScopeProvider) != scope) return;
     final hasShaped = await PasskeyService.instance.hasRegisteredPasskey(
       username: username,
     );
-    if (!mounted) return;
-    setState(() => _needsLegacyMigration = hasShaped && !hasDeviceKey);
+    if (!mounted || ref.read(sessionStorageScopeProvider) != scope) return;
+    setState(() {
+      _needsLegacyMigration = hasShaped && !hasDeviceKey;
+      _migrationScope = scope;
+    });
+  }
+
+  Future<void> _refreshProfile() async {
+    ref.invalidate(accountSecurityProfileProvider);
+    try {
+      await ref.read(accountSecurityProfileProvider.future);
+    } catch (_) {
+      // SecurityProfileView renders this provider's error, retains the known
+      // profile with its lookup time, and disables stale mutation actions.
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final profileAsync = ref.watch(accountSecurityProfileProvider);
+    final scope = ref.watch(sessionStorageScopeProvider);
+    ref.listen(sessionStorageScopeProvider, (previous, next) {
+      if (previous != next) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _probeLegacyMigration();
+        });
+      }
+    });
+    final needsLegacyMigration =
+        _migrationScope == scope ? _needsLegacyMigration : null;
     final viewPadding = MediaQuery.viewPaddingOf(context);
 
     return Scaffold(
@@ -64,10 +94,7 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
           backgroundColor: Theme.of(
             context,
           ).colorScheme.surfaceContainerHighest,
-          onRefresh: () async {
-            ref.invalidate(accountSecurityProfileProvider);
-            await ref.read(accountSecurityProfileProvider.future);
-          },
+          onRefresh: _refreshProfile,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
@@ -118,7 +145,7 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                             ),
                           ),
                           SizedBox(height: AppSpacing.xxl),
-                          if (_needsLegacyMigration == true) ...[
+                          if (needsLegacyMigration == true) ...[
                             Container(
                               padding: EdgeInsets.all(AppSpacing.lg),
                               decoration: BoxDecoration(
@@ -162,8 +189,8 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                             ),
                             const SizedBox(height: AppSpacing.lg),
                           ],
-                          profileAsync.when(
-                            data: (profile) => Column(
+                          SecurityProfileView(
+                            builder: (profile, current) => Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 PasskeyInventoryCard(
@@ -171,46 +198,18 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.lg),
                                 FilledButton.icon(
-                                  onPressed: () async {
-                                    HapticFeedback.selectionClick();
-                                    final result = await ref
-                                        .read(authControllerProvider.notifier)
-                                        .registerPasskey();
-                                    ref.invalidate(
-                                      accountSecurityProfileProvider,
-                                    );
-                                    await _probeLegacyMigration();
-                                    if (!context.mounted) return;
-                                    if (result.isSuccess) {
-                                      AppNotice.showInfo(
-                                        context,
-                                        title: context
-                                            .tr
-                                            .settingsDevicesPasskeyRegistered,
-                                        message:
-                                            'Chave do dispositivo vinculada. A lista foi atualizada.',
-                                      );
-                                    } else if (result.isDeviceConflict) {
-                                      AppNotice.showInfo(
-                                        context,
-                                        title: context.tr.settingsDevicesInUse,
-                                        message:
-                                            'Confirme a desvinculação em Configurações → Biometria se precisar reatribuir.',
-                                      );
-                                    } else if (result.isFailure) {
-                                      AppNotice.showError(
-                                        context,
-                                        title: context
-                                            .tr
-                                            .settingsDevicesRegisterFail,
-                                        message: ErrorTranslator.translate(
-                                          context.tr,
-                                          result.message,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  icon: const Icon(KeroseneIcons.biometric),
+                                  onPressed: !current
+                                      ? null
+                                      : () async {
+                                          await openCredentialEnrollment(
+                                              context,
+                                              returnToDevices: true);
+                                          if (mounted) {
+                                            await _probeLegacyMigration();
+                                          }
+                                        },
+                                  icon: const KeroseneIcon(
+                                      KeroseneIcons.biometric),
                                   label: Text(
                                     context.tr.settingsDevicesRegisterPasskey,
                                   ),
@@ -225,56 +224,6 @@ class _SettingsDevicesScreenState extends ConsumerState<SettingsDevicesScreen> {
                                   ),
                                 ),
                               ],
-                            ),
-                            loading: () => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 48),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.54),
-                                ),
-                              ),
-                            ),
-                            error: (error, _) => SettingsGlassPanel(
-                              padding: EdgeInsets.all(AppSpacing.lg),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    context.tr.settingsDevicesLoadError,
-                                    style: AppTypography.inter(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    ErrorTranslator.translate(
-                                      context.tr,
-                                      error.toString(),
-                                    ),
-                                    style: AppTypography.inter(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                      fontSize: 14,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: AppSpacing.md),
-                                  TextButton(
-                                    onPressed: () => ref.invalidate(
-                                      accountSecurityProfileProvider,
-                                    ),
-                                    child: Text(
-                                      context.tr.settingsDevicesRetry,
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                         ],

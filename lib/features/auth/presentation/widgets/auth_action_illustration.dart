@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -47,6 +48,8 @@ class AuthActionIllustration extends StatefulWidget {
 class _AuthActionIllustrationState extends State<AuthActionIllustration>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  bool _reduceMotion = false;
+  bool _configuredMotion = false;
 
   bool get _repeats {
     switch (widget.mode) {
@@ -71,7 +74,17 @@ class _AuthActionIllustrationState extends State<AuthActionIllustration>
       vsync: this,
       duration: widget.duration,
     );
-    _restart();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = KeroseneMotion.reduceMotion(context);
+    if (!_configuredMotion || _reduceMotion != reduceMotion) {
+      _configuredMotion = true;
+      _reduceMotion = reduceMotion;
+      _restart();
+    }
   }
 
   @override
@@ -87,6 +100,10 @@ class _AuthActionIllustrationState extends State<AuthActionIllustration>
 
   void _restart() {
     _controller.stop();
+    if (_reduceMotion) {
+      _controller.value = 1;
+      return;
+    }
     _controller.reset();
     if (_repeats) {
       _controller.repeat();
@@ -485,14 +502,14 @@ class _ConnectionScene extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(
+                  KeroseneIcon(
                     sourceIcon == KeroseneIcons.key
                         ? KeroseneIcons.shield
                         : KeroseneIcons.sync,
                     size: 44,
                     color: color.withValues(alpha: 0.14),
                   ),
-                  Icon(
+                  KeroseneIcon(
                     sourceIcon == KeroseneIcons.key
                         ? KeroseneIcons.key
                         : KeroseneIcons.sync,
@@ -551,7 +568,7 @@ class _FingerprintScene extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: Icon(
+              child: KeroseneIcon(
                 KeroseneIcons.biometric,
                 size: 58,
                 color: color.withValues(
@@ -604,7 +621,7 @@ class _FingerprintScene extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.06 * a),
                   border: Border.all(color: color.withValues(alpha: 0.18 * a)),
                 ),
-                child: Icon(
+                child: KeroseneIcon(
                   KeroseneIcons.touch,
                   size: 16,
                   color: color.withValues(alpha: 0.88 * a),
@@ -716,7 +733,7 @@ class _RecoveryScene extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  KeroseneIcon(
                     KeroseneIcons.archive,
                     size: 34,
                     color: color.withValues(alpha: 0.96),
@@ -779,7 +796,7 @@ class _RecoveryCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
           child: Column(
             children: [
-              Icon(
+              KeroseneIcon(
                 icon,
                 size: 24,
                 color: color.withValues(alpha: 0.92 * fade),
@@ -843,7 +860,7 @@ class _TerminalScene extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
+            child: KeroseneIcon(
               icon,
               size: 52,
               color: color.withValues(alpha: 0.95),
@@ -863,7 +880,7 @@ class _TerminalScene extends StatelessWidget {
                 color: badgeColor.withValues(alpha: 0.94),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
               ),
-              child: Icon(
+              child: KeroseneIcon(
                 badgeIcon,
                 size: 18,
                 color: Colors.black.withValues(alpha: 0.82),
@@ -904,7 +921,7 @@ class _SideGlyph extends StatelessWidget {
               : Colors.white.withValues(alpha: 0.04 * fade),
           border: Border.all(color: color.withValues(alpha: 0.18 * fade)),
         ),
-        child: Icon(
+        child: KeroseneIcon(
           icon,
           size: 20,
           color: color.withValues(alpha: 0.90 * fade),

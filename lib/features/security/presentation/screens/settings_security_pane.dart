@@ -1,13 +1,17 @@
+import 'security_profile_view.dart';
+import 'security_credential_enrollment_screen.dart';
+import 'settings_account_confirmation.dart';
+import 'package:kerosene/features/movement/presentation/activity/statement_screen.dart'
+    deferred as statement;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/privacy_preferences_provider.dart';
 import 'package:kerosene/app/security/local_transaction_history_store.dart';
-import 'package:kerosene/core/utils/error_translator.dart';
 import 'package:kerosene/design_system/kerosene_design_system.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart'
-    show authControllerProvider, sessionStorageScopeProvider;
+    show authControllerProvider, sessionStorageScopeProvider, AuthAuthenticated;
 import 'package:kerosene/core/telemetry/ledger_telemetry.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
@@ -19,101 +23,63 @@ import 'security_totp_screen.dart' deferred as security_totp;
 import 'settings_backup_codes_screen.dart';
 import 'settings_devices_screen.dart';
 import 'settings_formatters.dart';
-import 'settings_modern_components.dart';
 import 'settings_recovery_hub_screen.dart';
 import 'settings_route_helpers.dart';
 import 'settings_section_components.dart';
 
-class SettingsSecurityPane extends ConsumerWidget {
+class SettingsSecurityPane extends ConsumerStatefulWidget {
   const SettingsSecurityPane({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(accountSecurityProfileProvider);
+  ConsumerState<SettingsSecurityPane> createState() =>
+      _SettingsSecurityPaneState();
+}
 
-    Future<void> registerPasskey({bool confirmUnlinkDevice = false}) async {
-      final result =
-          await ref.read(authControllerProvider.notifier).registerPasskey(
-                confirmUnlinkDevice: confirmUnlinkDevice,
-              );
-      if (!context.mounted) return;
+class _SettingsSecurityPaneState extends ConsumerState<SettingsSecurityPane> {
+  bool _openingPin = false;
 
-      if (result.isDeviceConflict) {
-        final l10n = context.tr;
-        final data = result.data is Map
-            ? Map<String, dynamic>.from(result.data as Map)
-            : const <String, dynamic>{};
-        final previous = (data['previousUsernameMasked'] ??
-                data['previous_username_masked'] ??
-                '***')
-            .toString();
-        final guidanceRaw = data['guidance']?.toString().trim();
-        final guidance = (guidanceRaw == null || guidanceRaw.isEmpty)
-            ? l10n.authDeviceUnlinkDefaultGuidance
-            : guidanceRaw;
-        final confirmed = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(l10n.authDeviceUnlinkTitle),
-            content: Text(l10n.authDeviceUnlinkBody(previous, guidance)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.authDeviceUnlinkCancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(
-                  l10n.authDeviceUnlinkConfirmLink,
-                  style: const TextStyle(color: Colors.redAccent),
-                ),
-              ),
-            ],
-          ),
-        );
-        if (confirmed == true && context.mounted) {
-          await registerPasskey(confirmUnlinkDevice: true);
-        }
-        return;
-      }
-
-      if (result.isSuccess) {
-        ref.invalidate(accountSecurityProfileProvider);
-        if (context.mounted) {
-          AppNotice.showInfo(
-            context,
-            title: context.tr.settingsSecurityPasskeyOkTitle,
-            message: context.tr.settingsSecurityPasskeyOkMessage,
-          );
-        }
-        return;
-      }
-
-      if (context.mounted) {
-        AppNotice.showError(
-          context,
-          title: context.tr.settingsSecurityPasskeyFailTitle,
-          message: ErrorTranslator.translate(context.tr, result.message),
-        );
-      }
+  @override
+  Widget build(BuildContext context) {
+    final ownerScope = ref.watch(sessionStorageScopeProvider)?.trim();
+    Future<void> registerPasskey() async {
+      await openCredentialEnrollment(context);
     }
 
     Future<void> openAppPinSheet(AppPinStatus status) async {
-      final refreshed = await showModalBottomSheet<bool>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AppPinManagementSheet(
-          initialStatus: status,
-          mode:
-              status.enabled ? AppPinSheetMode.change : AppPinSheetMode.enable,
-        ),
-      );
+      if (_openingPin ||
+          ownerScope == null ||
+          !context.mounted ||
+          ref.read(sessionStorageScopeProvider)?.trim() != ownerScope) {
+        return;
+      }
+      _openingPin = true;
+      try {
+        final refreshed = await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          sheetAnimationStyle: AnimationStyle(
+              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+              reverseDuration:
+                  KeroseneMotion.duration(context, KeroseneMotion.short)),
+          builder: (_) => AppPinManagementSheet(
+            ownerScope: ownerScope,
+            initialStatus: status,
+            mode: status.enabled
+                ? AppPinSheetMode.change
+                : AppPinSheetMode.enable,
+          ),
+        );
 
-      if (refreshed == true) {
-        ref.invalidate(accountSecurityProfileProvider);
-        ref.invalidate(appPinStatusProvider);
+        if (refreshed == true &&
+            context.mounted &&
+            ref.read(sessionStorageScopeProvider)?.trim() == ownerScope) {
+          ref.invalidate(accountSecurityProfileProvider);
+          ref.invalidate(appPinStatusProvider);
+          ref.invalidate(appPinManagementStatusProvider);
+        }
+      } finally {
+        _openingPin = false;
       }
     }
 
@@ -150,26 +116,13 @@ class SettingsSecurityPane extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xxl),
-        profileAsync.when(
-          data: (profile) => _SecurityAdvancedContent(
-            profile: profile,
-            onOpenAppPin: openAppPinSheet,
-            onOpenTotpSecurity: openTotpSecurity,
-            onRegisterPasskey: registerPasskey,
-          ),
-          loading: () => SettingsLoadingPanel(
-            label: context.tr.settingsSecurityLoading,
-          ),
-          error: (_, __) => Column(children: [
-            SettingsEmptyPanel(
-                icon: KeroseneIcons.warning,
-                title: context.tr.settingsSecurityLoadErrorTitle,
-                body: context.tr.settingsSecurityLoadErrorBody),
-            TextButton(
-                onPressed: () => ref.invalidate(accountSecurityProfileProvider),
-                child: Text(context.tr.tryAgain)),
-          ]),
-        ),
+        SecurityProfileView(
+            builder: (profile, current) => _SecurityAdvancedContent(
+                profile: profile,
+                mutationsAllowed: current,
+                onOpenAppPin: openAppPinSheet,
+                onOpenTotpSecurity: openTotpSecurity,
+                onRegisterPasskey: registerPasskey)),
         const SizedBox(height: AppSpacing.xxl),
         const _LocalLedgerWipeSection(),
       ],
@@ -212,129 +165,216 @@ class _LedgerTelemetryRow extends ConsumerWidget {
 }
 
 /// Explicit wipe of on-device extrato. Logout never does this.
-class _LocalLedgerWipeSection extends ConsumerWidget {
+class _LocalLedgerWipeSection extends ConsumerStatefulWidget {
   const _LocalLedgerWipeSection();
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final privacy = ref.watch(privacyPreferencesProvider);
-    return SettingsSection(
-      title: context.tr.settingsSecurityLocalDataSection,
-      children: [
-        SettingsSectionRow(
-          icon: KeroseneIcons.lock,
-          title: context.tr.settingsSecurityBlockCaptures,
-          subtitle: privacy.blockFinancialScreenshots
-              ? 'Ativo: impede screenshots e prévia no multitarefa (Android).'
-              : 'Desligado. Ative para esconder saldo e extrato em capturas.',
-          trailing: SettingsReadonlySwitch(
-            value: privacy.blockFinancialScreenshots,
-          ),
-          onTap: () async {
-            HapticFeedback.selectionClick();
-            await ref
-                .read(privacyPreferencesProvider.notifier)
-                .setBlockFinancialScreenshots(
-                  !privacy.blockFinancialScreenshots,
-                );
-          },
-        ),
-        SettingsSectionRow(
-          icon: KeroseneIcons.trash,
-          title: context.tr.settingsSecurityWipeLedgerTitle,
-          subtitle: context.tr.settingsSecurityWipeLedgerSubtitle,
-          onTap: () => _confirmAndWipe(context, ref),
-        ),
-        ExpansionTile(
-          title: Text(context.tr.settingsSecurityLedgerDiagTitle),
-          children: const [_LedgerTelemetryRow()],
-        ),
-      ],
-    );
+  ConsumerState<_LocalLedgerWipeSection> createState() =>
+      _LocalLedgerWipeState();
+}
+
+class _LocalLedgerWipeState extends ConsumerState<_LocalLedgerWipeSection> {
+  bool _wiping = false;
+  bool _clearing = false;
+  bool _savingPrivacy = false;
+  bool _privacyFailed = false;
+  String? _privacyScope;
+  String? _wipeResult;
+  bool _wipeFailed = false;
+  String? _resultScope;
+
+  bool _owns(String scope) =>
+      mounted && ref.read(sessionStorageScopeProvider)?.trim() == scope;
+
+  Future<void> _savePrivacy(bool enabled) async {
+    if (_savingPrivacy) return;
+    final scope = ref.read(sessionStorageScopeProvider)?.trim();
+    setState(() {
+      _savingPrivacy = true;
+      _privacyFailed = false;
+      _privacyScope = scope;
+    });
+    try {
+      await ref
+          .read(privacyPreferencesProvider.notifier)
+          .setBlockFinancialScreenshots(enabled);
+    } catch (_) {
+      if (mounted && ref.read(sessionStorageScopeProvider)?.trim() == scope) {
+        setState(() => _privacyFailed = true);
+      }
+    } finally {
+      if (mounted) setState(() => _savingPrivacy = false);
+    }
   }
 
-  Future<void> _confirmAndWipe(BuildContext context, WidgetRef ref) async {
-    HapticFeedback.mediumImpact();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text(
-          context.tr.settingsSecurityWipeConfirmTitle,
-          style: AppTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          context.tr.settingsSecurityWipeConfirmBody,
-          style: AppTypography.inter(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            height: 1.45,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.tr.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(
-              context.tr.settingsSecurityWipeConfirmAction,
-              style: const TextStyle(color: Colors.redAccent),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    final scope = ref.read(sessionStorageScopeProvider);
-    if (scope == null || scope.trim().isEmpty) {
-      if (context.mounted) {
-        AppNotice.showError(
-          context,
-          title: context.tr.settingsSecurityWipeSessionMissingTitle,
-          message: context.tr.settingsSecurityWipeSessionMissingMessage,
-        );
-      }
+  Future<void> _confirmAndWipe() async {
+    if (_wiping) return;
+    final scope = ref.read(sessionStorageScopeProvider)?.trim();
+    if (scope == null || scope.isEmpty) {
+      setState(() {
+        _resultScope = scope;
+        _wipeFailed = true;
+        _wipeResult = context.tr.settingsSecurityWipeSessionMissingMessage;
+      });
       return;
     }
-
+    final tr = context.tr;
+    final auth = ref.read(authControllerProvider);
+    final user = auth is AuthAuthenticated ? auth.user : null;
+    setState(() {
+      _wiping = true;
+      _wipeFailed = false;
+      _wipeResult = null;
+      _resultScope = scope;
+    });
     try {
+      HapticFeedback.mediumImpact();
+      final confirmed = await confirmAccountSetting(context,
+          ownerScope: scope,
+          accountName: user?.username,
+          accountId: user?.id,
+          title: tr.settingsSecurityWipeConfirmTitle,
+          body: tr.settingsSecurityWipeConfirmBody,
+          confirmLabel: tr.settingsSecurityWipeConfirmAction);
+      if (!confirmed || !_owns(scope)) return;
+      setState(() => _clearing = true);
       await ref.read(localTransactionHistoryStoreProvider).clear(scope);
+      if (!mounted || !_owns(scope)) return;
       ref.read(lastTransactionHistoryProvider.notifier).set(const []);
       ref.read(transactionHistoryCursorProvider.notifier).reset();
       ref.invalidate(transactionHistoryProvider);
       ref.invalidate(localTransactionHistoryProvider);
-      if (context.mounted) {
-        AppNotice.showInfo(
-          context,
-          title: context.tr.settingsSecurityWipeOkTitle,
-          message: context.tr.settingsSecurityWipeOkMessage,
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        AppNotice.showError(
-          context,
-          title: context.tr.settingsSecurityWipeFailTitle,
-          message: e.toString(),
-        );
+      setState(() => _wipeResult = tr.settingsSecurityWipeOkMessage);
+      AppNotice.showInfo(context,
+          title: tr.settingsSecurityWipeOkTitle,
+          message: tr.settingsSecurityWipeOkMessage);
+    } catch (_) {
+      if (!mounted || !_owns(scope)) return;
+      setState(() {
+        _wipeFailed = true;
+        _wipeResult = tr.settingsSecurityWipeFailMessage;
+      });
+      AppNotice.showError(context,
+          title: tr.settingsSecurityWipeFailTitle,
+          message: tr.settingsSecurityWipeFailMessage);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _wiping = false;
+          _clearing = false;
+        });
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final privacy = ref.watch(privacyPreferencesProvider);
+    final scope = ref.watch(sessionStorageScopeProvider)?.trim();
+    final tr = context.tr;
+    final showResult = _resultScope == scope && _wipeResult != null;
+    return SettingsSection(
+      title: tr.settingsSecurityLocalDataSection,
+      children: [
+        if (_savingPrivacy ||
+            privacy.loading ||
+            (_clearing && scope == _resultScope))
+          TickerMode(
+              enabled: !KeroseneMotion.reduceMotion(context),
+              child: const LinearProgressIndicator(minHeight: 2)),
+        SettingsSectionRow(
+          icon: KeroseneIcons.lock,
+          title: tr.settingsSecurityBlockCaptures,
+          subtitle: privacy.loading
+              ? tr.settingsSecurityLoading
+              : privacy.readFailed
+                  ? tr.settingsPrivacyLoadFailed
+                  : privacy.blockFinancialScreenshots
+                      ? tr.settingsPrivacyCaptureEnabled
+                      : tr.settingsPrivacyCaptureDisabled,
+          trailing: privacy.loading
+              ? const SizedBox.shrink()
+              : privacy.readFailed
+                  ? const KeroseneIcon(KeroseneIcons.warning)
+                  : SettingsReadonlySwitch(
+                      value: privacy.blockFinancialScreenshots),
+          onTap: _savingPrivacy || privacy.loading
+              ? null
+              : privacy.readFailed
+                  ? () => ref.read(privacyPreferencesProvider.notifier).reload()
+                  : () => _savePrivacy(!privacy.blockFinancialScreenshots),
+        ),
+        if (_privacyFailed && _privacyScope == scope)
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const KeroseneIcon(KeroseneIcons.error, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(tr.settingsPreferenceSaveFailed,
+                        style: AppTypography.bodyMedium)),
+              ])),
+        SettingsSectionRow(
+          icon: KeroseneIcons.trash,
+          title: tr.settingsSecurityWipeLedgerTitle,
+          subtitle: tr.settingsSecurityWipeLedgerSubtitle,
+          onTap: _wiping ? null : _confirmAndWipe,
+        ),
+        if (showResult)
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          KeroseneIcon(
+                              _wipeFailed
+                                  ? KeroseneIcons.error
+                                  : KeroseneIcons.success,
+                              size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(_wipeResult!,
+                                  key: const ValueKey('settings-ledger-result'),
+                                  style: AppTypography.bodyMedium)),
+                        ]),
+                    const SizedBox(height: 12),
+                    AppButton(
+                        label: _wipeFailed
+                            ? tr.tryAgain
+                            : tr.settingsSecurityViewStatement,
+                        variant: AppButtonVariant.secondary,
+                        expand: true,
+                        onPressed: _wiping
+                            ? null
+                            : _wipeFailed
+                                ? _confirmAndWipe
+                                : () => pushSettingsDeferred(
+                                    context,
+                                    statement.loadLibrary,
+                                    (_) => statement
+                                        .TransactionStatementScreen())),
+                  ])),
+        ExpansionTile(
+            title: Text(tr.settingsSecurityLedgerDiagTitle),
+            children: const [_LedgerTelemetryRow()]),
+      ],
+    );
   }
 }
 
 class _SecurityAdvancedContent extends StatelessWidget {
   final AccountSecurityProfile profile;
+  final bool mutationsAllowed;
   final Future<void> Function(AppPinStatus status) onOpenAppPin;
   final VoidCallback onOpenTotpSecurity;
   final Future<void> Function() onRegisterPasskey;
 
   const _SecurityAdvancedContent({
     required this.profile,
+    this.mutationsAllowed = true,
     required this.onOpenAppPin,
     required this.onOpenTotpSecurity,
     required this.onRegisterPasskey,
@@ -360,7 +400,7 @@ class _SecurityAdvancedContent extends StatelessWidget {
               subtitle: appPin.enabled
                   ? context.tr.settingsSecurityChangePinEnabled
                   : context.tr.settingsSecurityChangePinDisabled,
-              onTap: () => onOpenAppPin(appPin),
+              onTap: mutationsAllowed ? () => onOpenAppPin(appPin) : null,
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.biometric,
@@ -368,10 +408,10 @@ class _SecurityAdvancedContent extends StatelessWidget {
               subtitle: registeredPasskey
                   ? context.tr.settingsSecurityBiometricsOn
                   : context.tr.settingsSecurityBiometricsOff,
-              trailing: Icon(registeredPasskey
+              trailing: KeroseneIcon(registeredPasskey
                   ? KeroseneIcons.verified
                   : KeroseneIcons.next),
-              onTap: onRegisterPasskey,
+              onTap: mutationsAllowed ? onRegisterPasskey : null,
             ),
             SettingsSectionRow(
               icon: KeroseneIcons.verified,
@@ -380,7 +420,7 @@ class _SecurityAdvancedContent extends StatelessWidget {
                   ? context.tr.settingsSecurityTotpOn(
                       settingsSecurityModeLabel(profile.mode))
                   : context.tr.settingsSecurityTotpOff,
-              onTap: onOpenTotpSecurity,
+              onTap: mutationsAllowed ? onOpenTotpSecurity : null,
             ),
           ],
         ),

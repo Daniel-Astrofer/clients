@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // architecture-allow-large-file: statement insight rendering and its data
 // compatibility paths remain together pending safe extraction.
 import 'dart:math' as math;
@@ -58,7 +59,8 @@ class _TransactionStatementInsightsState
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(
           children: [
-            Icon(KeroseneIcons.warning, color: _onSurfaceVariant, size: 28),
+            KeroseneIcon(KeroseneIcons.warning,
+                color: _onSurfaceVariant, size: 28),
             const SizedBox(height: 12),
             Text(
               context.tr.financialStatementLoadErrorTitle,
@@ -166,8 +168,7 @@ class _KpiSummaryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasMovement =
-        report.includedTransactionCount > 0 ||
+    final hasMovement = report.includedTransactionCount > 0 ||
         report.incomingSats > 0 ||
         report.outgoingSats > 0;
 
@@ -178,7 +179,8 @@ class _KpiSummaryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(KeroseneIcons.chart, color: _onSurfaceVariant, size: 18),
+              KeroseneIcon(KeroseneIcons.chart,
+                  color: _onSurfaceVariant, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -326,7 +328,8 @@ class _PartialHistoryBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(KeroseneIcons.info, color: _neutralAccent, size: 16),
+            const KeroseneIcon(KeroseneIcons.info,
+                color: _neutralAccent, size: 16),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -376,7 +379,7 @@ class _KpiTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: accent, size: 14),
+                KeroseneIcon(icon, color: accent, size: 14),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -438,7 +441,7 @@ class _SecondaryMetricRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: _onSurfaceVariant, size: 14),
+        KeroseneIcon(icon, color: _onSurfaceVariant, size: 14),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -560,7 +563,7 @@ class _RangeSelector extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Icon(
+              KeroseneIcon(
                 KeroseneIcons.chevronDown,
                 color: _onSurfaceVariant,
                 size: 14,
@@ -770,7 +773,7 @@ class _WalletBarGroup extends StatelessWidget {
             child: FractionallySizedBox(
               heightFactor:
                   _barFraction(bucket.values[index].sats, axisMaxSats) *
-                  progress,
+                      progress,
               alignment: Alignment.bottomCenter,
               child: _GradientBar(
                 topColor: bucket.values[index].color,
@@ -924,7 +927,7 @@ class _MonthlyMetric extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: _onSurfaceVariant, size: 14),
+              KeroseneIcon(icon, color: _onSurfaceVariant, size: 14),
               const SizedBox(width: 7),
               Text(
                 label,
@@ -1196,7 +1199,7 @@ class _DominantSliceBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            const KeroseneIcon(
               KeroseneIcons.trendUp,
               color: AppColors.hexFF63FEA7,
               size: 12,
@@ -1283,9 +1286,8 @@ class _InsightViewModel {
   factory _InsightViewModel.from(StatementReport report) {
     final colorsByWalletId = <String, Color>{};
     for (var index = 0; index < report.wallets.length; index++) {
-      colorsByWalletId[report.wallets[index].id] = report.wallets.length == 1
-          ? _singleWalletColor
-          : _walletColor(index);
+      colorsByWalletId[report.wallets[index].id] =
+          report.wallets.length == 1 ? _singleWalletColor : _walletColor(index);
     }
 
     final buckets = [
@@ -1302,9 +1304,8 @@ class _InsightViewModel {
         ),
     ];
 
-    final dominantId = report.distribution.isEmpty
-        ? null
-        : report.distribution.first.walletId;
+    final dominantId =
+        report.distribution.isEmpty ? null : report.distribution.first.walletId;
 
     final distribution = [
       for (final segment in report.distribution)

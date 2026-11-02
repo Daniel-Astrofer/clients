@@ -106,17 +106,13 @@ class ColdWalletPublicMaterialDeriver {
       allowInvalidChecksum: allowInvalidChecksum,
     );
     if (!parsed.isValid) {
-      throw ArgumentError.value(
-        mnemonic,
-        'mnemonic',
-        parsed.message ?? 'Invalid BIP39 mnemonic.',
-      );
+      throw ArgumentError('Invalid BIP39 recovery phrase.');
     }
     final normalizedMnemonic = parsed.phrase;
     final path = (derivationPath ?? appColdWalletDerivationPath).trim();
     final seed = bip39.mnemonicToSeed(
       normalizedMnemonic,
-      passphrase: extraWord.trim(),
+      passphrase: extraWord,
     );
     try {
       return _materialFromSeed(
@@ -137,11 +133,7 @@ class ColdWalletPublicMaterialDeriver {
   }) {
     final info = detected ?? ElectrumSeedUtils.detect(mnemonic);
     if (info == null) {
-      throw ArgumentError.value(
-        mnemonic,
-        'mnemonic',
-        'Semente não é Electrum válida (HMAC Seed version).',
-      );
+      throw ArgumentError('Invalid Electrum recovery phrase.');
     }
     final path = (derivationPathOverride ?? info.accountDerivationPath).trim();
     final seed = ElectrumSeedUtils.mnemonicToSeed(

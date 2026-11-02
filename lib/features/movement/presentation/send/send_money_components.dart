@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
@@ -33,7 +34,7 @@ class InternalTopBar extends StatelessWidget {
           children: [
             IconButton(
               onPressed: onBack,
-              icon: const Icon(KeroseneIcons.back, size: 22),
+              icon: const KeroseneIcon(KeroseneIcons.back, size: 22),
               tooltip: context.tr.authBackAction,
               style: IconButton.styleFrom(
                 foregroundColor: textColor,
@@ -108,7 +109,7 @@ class InternalKeypad extends StatelessWidget {
             ),
           ),
           child: isBackspace
-              ? const Icon(KeroseneIcons.backspace, size: 24)
+              ? const KeroseneIcon(KeroseneIcons.backspace, size: 24)
               : Text(display),
         ),
       ),
@@ -219,7 +220,7 @@ class InternalQuickAction extends StatelessWidget {
               message: tooltip,
               child: Center(
                 child: iconWidget ??
-                    Icon(
+                    KeroseneIcon(
                       icon,
                       size: 24,
                       color: textColor,

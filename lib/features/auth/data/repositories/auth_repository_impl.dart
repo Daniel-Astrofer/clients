@@ -1,3 +1,4 @@
+import '../../domain/entities/account_security_change_factors.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
@@ -14,6 +15,12 @@ import '../models/user_model.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
+  // A TOTP continuation proves device authentication only when this repository
+  // received that exact pre-auth token from a successful passkey assertion.
+  // Intentionally memory-only: restarting must repeat the device proof.
+  ({String username, String token})? _pendingDeviceTotp;
+  int _loginGeneration = 0;
+  Future<void> _sessionMutation = Future<void>.value();
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
@@ -27,24 +34,19 @@ class AuthRepositoryImpl implements AuthRepository {
     required String passphrase,
   }) async {
     try {
+      final generation = ++_loginGeneration;
+      _pendingDeviceTotp = null;
+      // Password success is only the primary step. Never persist its JWT: a
+      // cancelled device prompt or process restart must not restore that session.
+      await _mutateSession(() async {
+        _ensureLoginGeneration(generation);
+        await localDataSource.removeToken();
+      });
       final loginResult = await remoteDataSource.login(
         username: username,
         passphrase: passphrase,
       );
-      // Persist only final JWTs. A pre_auth_token is temporary and must not be
-      // stored as the session token, otherwise the backend JWT filter will
-      // reject later requests with "invalid compact jwt".
-      if (!loginResult.requiresTotp &&
-          loginResult.jwt.isNotEmpty &&
-          loginResult.jwt.contains('.')) {
-        await localDataSource.saveToken(loginResult.jwt);
-        await _saveSessionUser(
-          userId: loginResult.userId,
-          username: username,
-        );
-      } else {
-        await localDataSource.removeToken();
-      }
+      _ensureLoginGeneration(generation);
       return Right(loginResult);
     } on AuthException catch (e) {
       return Left(AuthFailure(
@@ -153,6 +155,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String? preAuthToken,
   }) async {
     try {
+      final generation = _loginGeneration;
       final token = preAuthToken?.trim() ?? '';
       if (token.isEmpty) {
         return const Left(
@@ -165,27 +168,52 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
+      final pendingDevice = _pendingDeviceTotp;
+      final deviceVerified = pendingDevice != null &&
+          pendingDevice.username == username.trim().toLowerCase() &&
+          pendingDevice.token == token;
+      if (!deviceVerified) {
+        _pendingDeviceTotp = null;
+        await _mutateSession(() async {
+          _ensureLoginGeneration(generation);
+          await localDataSource.removeToken();
+        });
+      }
+
       final loginResult = await remoteDataSource.verifyLoginTotp(
         username: username,
         totpCode: totpCode,
         preAuthToken: token,
       );
+      _ensureLoginGeneration(generation);
       final userId = loginResult.userId.trim();
       final jwt = loginResult.jwt.trim();
-      if (loginResult.requiresTotp || userId.isEmpty || jwt.isEmpty) {
+      if (loginResult.requiresTotp || userId.isEmpty || !jwt.contains('.')) {
         throw ServerException(
           message: 'Não conseguimos concluir a autenticação agora.',
         );
       }
-
-      await localDataSource.saveToken(jwt);
 
       final user = UserModel(
         id: userId,
         username: username,
         createdAt: DateTime.now(),
       );
-      await localDataSource.saveUser(user);
+      if (deviceVerified) {
+        if (_pendingDeviceTotp != pendingDevice) {
+          throw const AuthException(
+              message: 'A sessão de confirmação mudou. Entre novamente.',
+              errorCode: 'ERR_AUTH_INVALID_PREAUTH');
+        }
+        _pendingDeviceTotp = null;
+        await _mutateSession(() async {
+          _ensureLoginGeneration(generation);
+          await localDataSource.saveUser(user);
+          _ensureLoginGeneration(generation);
+          await localDataSource.saveToken(jwt);
+        });
+      }
+      _ensureLoginGeneration(generation);
       return Right(user);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -209,10 +237,15 @@ class AuthRepositoryImpl implements AuthRepository {
     int? multisigThreshold,
   }) async {
     try {
-      await localDataSource.removeToken();
-      await localDataSource.removeUser();
-      await localDataSource.removeTotpSecret();
-      await localDataSource.removeBackupCodes();
+      final generation = ++_loginGeneration;
+      _pendingDeviceTotp = null;
+      await _mutateSession(() async {
+        _ensureLoginGeneration(generation);
+        await localDataSource.removeToken();
+        await localDataSource.removeUser();
+        await localDataSource.removeTotpSecret();
+        await localDataSource.removeBackupCodes();
+      });
 
       final result = await remoteDataSource.signup(
         username: username,
@@ -222,7 +255,11 @@ class AuthRepositoryImpl implements AuthRepository {
         shamirThreshold: shamirThreshold,
         multisigThreshold: multisigThreshold,
       );
-      await localDataSource.saveBackupCodes(result.backupCodes);
+      await _mutateSession(() async {
+        _ensureLoginGeneration(generation);
+        await localDataSource.saveBackupCodes(result.backupCodes);
+      });
+      _ensureLoginGeneration(generation);
       return Right(result);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -288,14 +325,20 @@ class AuthRepositoryImpl implements AuthRepository {
     Map<String, dynamic> credential,
   ) async {
     try {
+      final generation = _loginGeneration;
       final loginResult =
           await remoteDataSource.passkeyRegisterOnboardingFinish(
         sessionId,
         credential,
       );
+      _ensureLoginGeneration(generation);
       if (loginResult.jwt.isNotEmpty) {
-        await localDataSource.saveToken(loginResult.jwt);
+        await _mutateSession(() async {
+          _ensureLoginGeneration(generation);
+          await localDataSource.saveToken(loginResult.jwt);
+        });
       }
+      _ensureLoginGeneration(generation);
       return Right(loginResult);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -313,6 +356,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, String>> passkeyLoginStart(String username) async {
     try {
+      ++_loginGeneration;
+      _pendingDeviceTotp = null;
       final opts = await remoteDataSource.passkeyLoginStart(username);
       return Right(opts);
     } on AppException catch (e) {
@@ -332,22 +377,13 @@ class AuthRepositoryImpl implements AuthRepository {
     required Map<String, dynamic> credential,
   }) async {
     try {
+      final generation = _loginGeneration;
       final loginResult = await remoteDataSource.passkeyLoginFinish(
         username,
         credential,
       );
 
-      if (loginResult.jwt.isNotEmpty) {
-        await localDataSource.saveToken(loginResult.jwt);
-      }
-
-      // We still update the local user info if needed
-      final user = UserModel(
-        id: loginResult.userId.isNotEmpty ? loginResult.userId : '0',
-        username: username,
-        createdAt: DateTime.now(),
-      );
-      await localDataSource.saveUser(user);
+      await _acceptDeviceLogin(username, loginResult, generation);
 
       return Right(loginResult);
     } on AppException catch (e) {
@@ -461,15 +497,21 @@ class AuthRepositoryImpl implements AuthRepository {
     Map<String, dynamic> credential,
   ) async {
     try {
+      final generation = _loginGeneration;
       final result = await remoteDataSource.deviceKeyRegisterOnboardingFinish(
         sessionId,
         credential,
       );
+      _ensureLoginGeneration(generation);
       if (!result.requiresTotp &&
           result.jwt.isNotEmpty &&
           result.jwt.contains('.')) {
-        await localDataSource.saveToken(result.jwt);
+        await _mutateSession(() async {
+          _ensureLoginGeneration(generation);
+          await localDataSource.saveToken(result.jwt);
+        });
       }
+      _ensureLoginGeneration(generation);
       return Right(result);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -488,6 +530,8 @@ class AuthRepositoryImpl implements AuthRepository {
     String username,
   ) async {
     try {
+      ++_loginGeneration;
+      _pendingDeviceTotp = null;
       final challenge = await remoteDataSource.deviceKeyLoginStart(username);
       return Right(challenge);
     } on AppException catch (e) {
@@ -507,12 +551,10 @@ class AuthRepositoryImpl implements AuthRepository {
     Map<String, dynamic> credential,
   ) async {
     try {
+      final generation = _loginGeneration;
       final result = await remoteDataSource.deviceKeyLoginFinish(credential);
-      if (!result.requiresTotp &&
-          result.jwt.isNotEmpty &&
-          result.jwt.contains('.')) {
-        await localDataSource.saveToken(result.jwt);
-      }
+      await _acceptDeviceLogin(
+          credential['username']?.toString() ?? '', result, generation);
       return Right(result);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -620,10 +662,9 @@ class AuthRepositoryImpl implements AuthRepository {
     required String totpCode,
   }) async {
     try {
+      // Clear legacy raw-code cache before mutation; new codes stay in memory.
+      await localDataSource.removeBackupCodes();
       final dto = await remoteDataSource.verifyTotpSetup(totpCode: totpCode);
-      if (dto.newlyGeneratedCodes.isNotEmpty) {
-        await localDataSource.saveBackupCodes(dto.newlyGeneratedCodes);
-      }
       return Right(dto);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -637,9 +678,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> disableTotp() async {
+  Future<Either<Failure, void>> disableTotp({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  }) async {
     try {
-      await remoteDataSource.disableTotp();
+      await remoteDataSource.disableTotp(factors: factors);
       await localDataSource.removeTotpSecret();
       await localDataSource.removeBackupCodes();
       return const Right(null);
@@ -659,9 +702,6 @@ class AuthRepositoryImpl implements AuthRepository {
       getBackupCodesStatus() async {
     try {
       final dto = await remoteDataSource.getBackupCodesStatus();
-      if (dto.newlyGeneratedCodes.isNotEmpty) {
-        await localDataSource.saveBackupCodes(dto.newlyGeneratedCodes);
-      }
       return Right(dto);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -675,13 +715,14 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, BackupCodesStatusResult>>
-      regenerateBackupCodes() async {
+  Future<Either<Failure, BackupCodesStatusResult>> regenerateBackupCodes({
+    AccountSecurityChangeFactors factors = const AccountSecurityChangeFactors(),
+  }) async {
     try {
-      final dto = await remoteDataSource.regenerateBackupCodes();
-      if (dto.newlyGeneratedCodes.isNotEmpty) {
-        await localDataSource.saveBackupCodes(dto.newlyGeneratedCodes);
-      }
+      // Clear legacy raw-code cache before mutation; new codes stay in memory.
+      await localDataSource.removeBackupCodes();
+      final dto =
+          await remoteDataSource.regenerateBackupCodes(factors: factors);
       return Right(dto);
     } on AppException catch (e) {
       return Left(ServerFailure(
@@ -737,13 +778,15 @@ class AuthRepositoryImpl implements AuthRepository {
   // ─── Logout ───────────────────────────────────────────────────────────────────
   @override
   Future<Either<Failure, void>> logout() async {
+    ++_loginGeneration;
+    _pendingDeviceTotp = null;
     try {
       try {
         await remoteDataSource.logout();
       } catch (_) {
         debugPrint('Remote logout failed; clearing local session.');
       }
-      await localDataSource.clearAll();
+      await _mutateSession(localDataSource.clearAll);
       return const Right(null);
     } catch (e) {
       return Left(UnknownFailure(message: 'Erro ao fazer logout: $e'));
@@ -765,10 +808,15 @@ class AuthRepositoryImpl implements AuthRepository {
   // Called when the stored token is mismatched/stale so the user must re-login.
   @override
   Future<void> clearInvalidSession() async {
-    try {
-      await localDataSource.removeToken();
-      await localDataSource.removeUser();
-    } catch (_) {}
+    ++_loginGeneration;
+    _pendingDeviceTotp = null;
+    // Both removals are attempted; storage failure must reach the caller.
+    await _mutateSession(() async {
+      await Future.wait([
+        localDataSource.removeToken(),
+        localDataSource.removeUser(),
+      ]);
+    });
   }
 
   @override
@@ -824,6 +872,55 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
+  }
+
+  void _ensureLoginGeneration(int generation) {
+    if (generation != _loginGeneration) {
+      throw const AuthException(
+          message: 'A tentativa de autenticação mudou. Entre novamente.',
+          errorCode: 'ERR_AUTH_INVALID_PREAUTH');
+    }
+  }
+
+  Future<void> _mutateSession(Future<void> Function() mutation) {
+    // Keep ordering even after a previous caller received a storage error.
+    // A logout queued during a token write clears that write afterwards.
+    final next = _sessionMutation.then((_) => mutation(),
+        onError: (Object _, StackTrace __) => mutation());
+    _sessionMutation = next;
+    return next;
+  }
+
+  Future<void> _acceptDeviceLogin(
+      String username, LoginResult result, int generation) async {
+    _ensureLoginGeneration(generation);
+    final normalizedUsername = username.trim().toLowerCase();
+    final token = result.jwt.trim();
+    if (normalizedUsername.isEmpty || token.isEmpty) {
+      throw const ServerException(
+          message: 'Resposta de autenticação inválida.');
+    }
+    if (result.requiresTotp) {
+      _pendingDeviceTotp = (username: normalizedUsername, token: token);
+      await _mutateSession(() async {
+        _ensureLoginGeneration(generation);
+        await localDataSource.removeToken();
+      });
+      return;
+    }
+    if (!token.contains('.')) {
+      throw const ServerException(
+          message: 'Resposta de autenticação inválida.');
+    }
+    _pendingDeviceTotp = null;
+    await _mutateSession(() async {
+      _ensureLoginGeneration(generation);
+      await _saveSessionUser(
+          userId: result.userId, username: normalizedUsername);
+      _ensureLoginGeneration(generation);
+      await localDataSource.saveToken(token);
+    });
+    _ensureLoginGeneration(generation);
   }
 
   Future<void> _saveSessionUser({

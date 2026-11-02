@@ -1,3 +1,5 @@
+import 'package:kerosene/core/utils/app_date_time.dart';
+import 'package:flutter/widgets.dart';
 import 'package:kerosene/features/notifications/domain/entities/device_token.dart';
 import 'package:kerosene/features/security/domain/entities/account_security_profile.dart';
 import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
@@ -12,9 +14,11 @@ String settingsFormatHandle(String username) {
   return normalized[0].toUpperCase() + normalized.substring(1);
 }
 
-String settingsDateLabel(DateTime? value) {
+String settingsDateLabel(DateTime? value, {BuildContext? context}) {
   if (value == null) return 'Não informado';
-  final local = value.toLocal();
+  final local = context == null
+      ? value.toLocal()
+      : AppDateTime.inDisplayZone(context, value);
   String two(int input) => input.toString().padLeft(2, '0');
   return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
 }

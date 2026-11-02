@@ -27,6 +27,14 @@ class SessionNotificationItem extends Equatable {
   static const kindDepositDetected = 'deposit_detected';
   static const kindDepositConfirmed = 'deposit_confirmed';
   static const kindPaymentSent = 'payment_sent';
+  static const kindPaymentProcessing = 'payment_processing';
+  static const kindPaymentBroadcast = 'payment_broadcast';
+  static const kindPaymentConfirmed = 'payment_confirmed';
+  static const kindPaymentFailed = 'payment_failed';
+  static const kindPaymentReconciliationRequired =
+      'payment_reconciliation_required';
+  static const kindDepositDropped = 'deposit_dropped';
+  static const kindDepositReversed = 'deposit_reversed';
   static const kindLightningInvoicePaid = 'lightning_invoice_paid';
   static const kindLightningPaymentSent = 'lightning_payment_sent';
   static const kindLightningPaymentFailed = 'lightning_payment_failed';
@@ -36,7 +44,7 @@ class SessionNotificationItem extends Equatable {
   final String id;
   final String title;
   final String body;
-  final DateTime timestamp;
+  final DateTime? timestamp;
   final String kind;
   final String severity;
   final String? deeplink;
@@ -77,10 +85,8 @@ class SessionNotificationItem extends Equatable {
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       body: json['body']?.toString() ?? '',
-      timestamp: _parseDateTime(
-            json['timestamp'] ?? json['createdAt'],
-          ) ??
-          DateTime.now(),
+      timestamp: _parseDateTime(json['timestamp']) ??
+          _parseDateTime(json['createdAt']),
       kind: json['kind']?.toString() ?? kindSystemInfo,
       severity: json['severity']?.toString() ?? severityInfo,
       deeplink: json['deeplink']?.toString(),
@@ -130,6 +136,13 @@ class SessionNotificationItem extends Equatable {
         kindDepositDetected,
         kindDepositConfirmed,
         kindPaymentSent,
+        kindPaymentProcessing,
+        kindPaymentBroadcast,
+        kindPaymentConfirmed,
+        kindPaymentFailed,
+        kindPaymentReconciliationRequired,
+        kindDepositDropped,
+        kindDepositReversed,
         kindLightningInvoicePaid,
         kindLightningPaymentSent,
         kindLightningPaymentFailed,
@@ -180,7 +193,7 @@ class SessionNotificationItem extends Equatable {
       'id': id,
       'title': title,
       'body': body,
-      'timestamp': timestamp.toUtc().toIso8601String(),
+      'timestamp': timestamp?.toUtc().toIso8601String(),
       'kind': kind,
       'severity': severity,
       'deeplink': deeplink,

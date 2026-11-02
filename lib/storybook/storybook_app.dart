@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/theme/kerosene_ui_scale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:storybook_flutter/storybook_flutter.dart';
@@ -167,6 +168,7 @@ class KeroseneStorybook extends StatelessWidget {
             notificationsListProvider.overrideWith((ref) async => const []),
           ],
           child: MaterialApp(
+            builder: (context, child) => KeroseneUiScale(child: child!),
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
             locale: Locale(language),

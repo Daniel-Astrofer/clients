@@ -1,167 +1,147 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
-import 'package:kerosene/core/providers/price_provider.dart';
-import 'package:kerosene/design_system/foundation/theme/app_colors.dart';
-import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
-import 'package:kerosene/core/utils/app_date_time.dart';
-import 'package:kerosene/core/utils/safe_display_text.dart';
-import 'package:kerosene/features/movement/presentation/activity/transaction_presentation.dart';
-import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
-import 'package:kerosene/features/movement/presentation/activity/transaction_visuals.dart';
-import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:kerosene/design_system/foundation/interaction/kerosene_pressable.dart';
+import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
+import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/features/auth/controller/auth_controller.dart'
+    show sessionStorageScopeProvider;
+import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_presentation.dart';
+import 'package:kerosene/features/movement/presentation/shared/financial_status_badge.dart';
 
-class TransactionListItem extends ConsumerWidget {
+class TransactionListItem extends ConsumerStatefulWidget {
   final Transaction transaction;
 
   const TransactionListItem({super.key, required this.transaction});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final visual = TransactionVisualSpec.fromTransaction(transaction);
+  ConsumerState<TransactionListItem> createState() =>
+      _TransactionListItemState();
+}
+
+class _TransactionListItemState extends ConsumerState<TransactionListItem> {
+  bool _opening = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = KeroseneBrandTheme.of(context);
     final money = ref.watch(moneyFormatConfigProvider);
-    final btcUsd = ref.watch(latestBtcPriceProvider);
-    final btcEur = ref.watch(btcEurPriceProvider);
-    final btcBrl = ref.watch(btcBrlPriceProvider);
+    final owner = ref.watch(sessionStorageScopeProvider);
+    final transaction = widget.transaction;
     final presentation = TransactionPresentation.fromTransaction(
       context,
       transaction,
       displayCurrency: money.currency,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
+      btcUsd: null,
+      btcEur: null,
+      btcBrl: null,
       appLocale: money.locale,
+      btcDecimalPlaces: money.btcDecimalPlaces,
+      includeExpandPayload: false,
     );
-    final amountLabel = presentation.primaryAmountLabel;
-    final btcAmountLabel = money.formatAmountFromBtc(
-      btcAmount: transaction.signedAmountBTC,
-      currency: Currency.btc,
-      btcUsd: btcUsd,
-      btcEur: btcEur,
-      btcBrl: btcBrl,
-      signed: true,
+    final status =
+        FinancialStatusBadge.transaction(context, transaction.status);
+    final amount = Text(
+      presentation.primaryAmountLabel,
+      style: AppTypography.bodyMedium.copyWith(
+        fontWeight: FontWeight.w700,
+        color: palette.textPrimary,
+      ),
     );
+    final heading = Row(children: [
+      ActivityGlyph.forAxes(presentation.axes, size: 36),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(
+          presentation.title,
+          style: AppTypography.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: palette.textPrimary,
+          ),
+        ),
+      ),
+    ]);
 
-    final title = presentation.title;
-    final counterparty = presentation.subtitle;
-    final displayAddress = SafeDisplayText.displayAddress(
-      context,
-      counterparty,
-    );
-    final cardGradient = LinearGradient(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-      colors: [
-        Color.lerp(AppColors.hexFF101923, visual.amountColor, 0.18)!,
-        Colors.black,
-        AppColors.hexFF121A24,
-      ],
-    );
-
-    return KerosenePressable(
-      onPressed: () => TransactionDetailScreen.open(context, transaction),
-      borderRadius: BorderRadius.circular(20),
-      child: Material(
-        color: Colors.transparent,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: KerosenePressable(
+        enabled: !_opening && owner?.isNotEmpty == true,
+        onPressed: () async {
+          if (_opening ||
+              !mounted ||
+              owner?.isNotEmpty != true ||
+              ref.read(sessionStorageScopeProvider) != owner) {
+            return;
+          }
+          setState(() => _opening = true);
+          try {
+            await TransactionDetailScreen.open(context, transaction);
+          } finally {
+            if (mounted) setState(() => _opening = false);
+          }
+        },
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              gradient: cardGradient,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: visual.amountColor.withValues(alpha: 0.18),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: palette.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: palette.border),
+          ),
+          child: LayoutBuilder(builder: (context, constraints) {
+            final compact = constraints.maxWidth < 360 ||
+                MediaQuery.textScalerOf(context).scale(14) > 17;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TransactionTypeIconBadge(
-                  transaction: transaction,
-                  spec: visual,
-                  size: 44,
-                  iconSize: 20,
-                  borderRadius: 14,
-                  backgroundColor: AppColors.hexFF111720,
-                  borderColor: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.18),
-                ),
-                SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        displayAddress,
-                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.4)),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                if (compact)
+                  heading
+                else
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(child: heading),
+                    const SizedBox(width: 16),
+                    Flexible(child: amount),
+                  ]),
+                const SizedBox(height: 10),
+                Text(
+                  presentation.subtitle,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: palette.textSecondary,
+                    height: 1.35,
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                if (compact) ...[
+                  const SizedBox(height: 12),
+                  amount,
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(
-                      amountLabel,
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: visual.amountColor,
-                          ),
-                    ),
-                    if (money.currency != Currency.btc) ...[
-                      SizedBox(height: 2),
-                      Text(
-                        btcAmountLabel,
-                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.3),
-                            ),
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      KeroseneIcon(status.icon,
+                          size: 14, color: palette.textSecondary),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(presentation.statusLabel,
+                            style: AppTypography.bodySmall
+                                .copyWith(color: palette.textSecondary)),
                       ),
-                    ],
-                    SizedBox(height: 2),
-                    Text(
-                      AppDateTime.formatRelative(
-                        context,
-                        transaction.timestamp,
-                      ),
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.3)),
-                    ),
+                    ]),
+                    Text(presentation.tertiary,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: palette.textMuted)),
                   ],
                 ),
               ],
-            ),
-          ),
+            );
+          }),
         ),
       ),
     );

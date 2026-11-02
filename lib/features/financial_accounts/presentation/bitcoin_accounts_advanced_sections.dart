@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors, unused_import
 // architecture-allow-large-file: account detail sections share layout and
 // callback contracts; extraction is deferred to a behavior-preserving pass.
@@ -21,7 +22,6 @@ import 'bitcoin_accounts_provider.dart';
 import 'bitcoin_widgets/bottom_sheets.dart';
 import 'bitcoin_accounts_internal_sections.dart';
 import 'dart:convert';
-
 
 class ColdWalletSection extends StatelessWidget {
   final List<BitcoinAccount> accounts;
@@ -87,7 +87,8 @@ class ColdWalletTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(KeroseneIcons.coldWallet, color: colors.text, size: 22),
+              KeroseneIcon(KeroseneIcons.coldWallet,
+                  color: colors.text, size: 22),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -209,7 +210,7 @@ class AdvancedSubsection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: colors.text, size: 16),
+                KeroseneIcon(icon, color: colors.text, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -452,10 +453,8 @@ class PsbtWorkflowRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: SelectableText(
                   shortText(workflow.destinationAddress),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.inter(
                     color: colors.text,
                     fontSize: 13,
@@ -490,14 +489,14 @@ class PsbtWorkflowRow extends StatelessWidget {
               OutlinedButton.icon(
                 style: colors.outlinedButtonStyle(minHeight: 38),
                 onPressed: onCopyUnsigned,
-                icon: const Icon(KeroseneIcons.copy, size: 15),
+                icon: const KeroseneIcon(KeroseneIcons.copy, size: 15),
                 label: Text(context.tr.bitcoinAdvancedCopyUnsignedAction),
               ),
               if (onSubmitSigned != null)
                 OutlinedButton.icon(
                   style: colors.outlinedButtonStyle(minHeight: 38),
                   onPressed: onSubmitSigned,
-                  icon: const Icon(KeroseneIcons.send, size: 15),
+                  icon: const KeroseneIcon(KeroseneIcons.send, size: 15),
                   label: Text(context.tr.bitcoinAdvancedSubmitSignatureAction),
                 ),
             ],
@@ -592,7 +591,8 @@ class TaxEventRow extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(KeroseneIcons.history, color: colors.mutedText, size: 18),
+          KeroseneIcon(KeroseneIcons.history,
+              color: colors.mutedText, size: 18),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -629,7 +629,7 @@ class TaxEventRow extends ConsumerWidget {
           PopupMenuButton<String>(
             tooltip: context.tr.bitcoinTaxClassifyTooltip,
             color: colors.surfaceRaised,
-            icon: Icon(
+            icon: KeroseneIcon(
               KeroseneIcons.chevronDown,
               color: colors.text,
               size: 18,
@@ -697,12 +697,12 @@ class TaxExportActions extends ConsumerWidget {
         children: [
           OutlinedButton.icon(
             onPressed: () => exportTaxEvents(context, ref, 'json'),
-            icon: const Icon(KeroseneIcons.download, size: 15),
+            icon: const KeroseneIcon(KeroseneIcons.download, size: 15),
             label: Text(context.tr.bitcoinTaxExportJsonAction),
           ),
           OutlinedButton.icon(
             onPressed: () => exportTaxEvents(context, ref, 'csv'),
-            icon: const Icon(KeroseneIcons.download, size: 15),
+            icon: const KeroseneIcon(KeroseneIcons.download, size: 15),
             label: Text(context.tr.bitcoinTaxExportCsvAction),
           ),
         ],
@@ -975,7 +975,7 @@ class ManagementItem extends StatelessWidget {
                           color: colors.background,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
+                        child: KeroseneIcon(
                           KeroseneIcons.chevronDown,
                           color: colors.text,
                           size: 18,

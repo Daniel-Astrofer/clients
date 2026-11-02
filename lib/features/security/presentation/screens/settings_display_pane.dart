@@ -12,11 +12,35 @@ import 'package:kerosene/design_system/kerosene_design_system.dart';
 
 import 'settings_section_components.dart';
 
-class SettingsDisplayPane extends ConsumerWidget {
+class SettingsDisplayPane extends ConsumerStatefulWidget {
   const SettingsDisplayPane({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsDisplayPane> createState() =>
+      _SettingsDisplayPaneState();
+}
+
+class _SettingsDisplayPaneState extends ConsumerState<SettingsDisplayPane> {
+  bool _saving = false;
+  bool _failed = false;
+
+  Future<void> _save(Future<void> Function() apply) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      await apply();
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final preferences = ref.watch(appDisplayPreferencesProvider);
     final notifier = ref.read(appDisplayPreferencesProvider.notifier);
     final tr = context.tr;
@@ -24,6 +48,14 @@ class SettingsDisplayPane extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_saving) const LinearProgressIndicator(minHeight: 2),
+        if (_failed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(tr.settingsPreferenceSaveFailed,
+                style: AppTypography.bodyMedium
+                    .copyWith(color: Theme.of(context).colorScheme.error)),
+          ),
         Text(
           tr.settingsDisplayTitle,
           style: AppTypography.newsreader(
@@ -56,7 +88,9 @@ class SettingsDisplayPane extends ConsumerWidget {
                 subtitle: _languageSubtitle(tr, locale),
                 selected:
                     preferences.locale.languageCode == locale.languageCode,
-                onTap: () => notifier.setLocale(locale),
+                onTap: _saving
+                    ? null
+                    : () => _save(() => notifier.setLocale(locale)),
               ),
           ],
         ),
@@ -73,7 +107,9 @@ class SettingsDisplayPane extends ConsumerWidget {
                     '${MoneyDisplay.tickerSymbolFor(currency)} ${currency.code}',
                 subtitle: _currencySubtitle(tr, currency),
                 selected: preferences.currency == currency,
-                onTap: () => notifier.setCurrency(currency),
+                onTap: _saving
+                    ? null
+                    : () => _save(() => notifier.setCurrency(currency)),
               ),
           ],
         ),
@@ -86,14 +122,16 @@ class SettingsDisplayPane extends ConsumerWidget {
               title: tr.settingsDisplayFollowDeviceTimezone,
               subtitle: AppTimezone.displayLabel(AppTimezone.detectId()),
               selected: preferences.timeZoneFollowDevice,
-              onTap: () => notifier.setTimeZoneFollowDevice(true),
+              onTap: _saving
+                  ? null
+                  : () => _save(() => notifier.setTimeZoneFollowDevice(true)),
             ),
             _DisplayOptionRow(
               icon: KeroseneIcons.schedule,
               title: tr.settingsDisplayPinnedTimezone,
               subtitle: AppTimezone.displayLabel(preferences.timeZoneId),
               selected: !preferences.timeZoneFollowDevice,
-              onTap: () => _pickTimezone(context, ref),
+              onTap: _saving ? null : () => _pickTimezone(context, ref),
             ),
           ],
         ),
@@ -160,8 +198,7 @@ class SettingsDisplayPane extends ConsumerWidget {
                     itemCount: AppTimezone.curatedZones.length,
                     itemBuilder: (context, index) {
                       final zone = AppTimezone.curatedZones[index];
-                      final isSelected = zone == current ||
-                          (current.startsWith('UTC') && zone == 'UTC');
+                      final isSelected = zone == current;
                       return ListTile(
                         title: Text(
                           AppTimezone.shortLabel(zone),
@@ -180,7 +217,7 @@ class SettingsDisplayPane extends ConsumerWidget {
                           ),
                         ),
                         trailing: isSelected
-                            ? Icon(
+                            ? KeroseneIcon(
                                 KeroseneIcons.check,
                                 color: Theme.of(context).colorScheme.onSurface,
                                 size: 18,
@@ -199,9 +236,9 @@ class SettingsDisplayPane extends ConsumerWidget {
     );
     if (selected == null) return;
     HapticFeedback.selectionClick();
-    await ref
+    await _save(() => ref
         .read(appDisplayPreferencesProvider.notifier)
-        .setTimeZoneId(selected);
+        .setTimeZoneId(selected));
   }
 }
 
@@ -210,7 +247,7 @@ class _DisplayOptionRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _DisplayOptionRow({
     required this.icon,

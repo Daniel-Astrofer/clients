@@ -61,7 +61,8 @@ class ReceiveRequestsScenarioPreview extends StatelessWidget {
         bitcoinAccountsServiceProvider.overrideWithValue(
           _ReceiveRequestsScenarioService(scenario),
         ),
-        bitcoinAccountsProvider.overrideWith(BitcoinAccountsNotifier.new),
+        bitcoinAccountsByScopeProvider
+            .overrideWith2(BitcoinAccountsNotifier.new),
       ],
       child: const BitcoinAccountsScreen(),
     );

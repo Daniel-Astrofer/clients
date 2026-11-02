@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/errors/exceptions.dart';
-import '../../../core/network/api_client.dart';
+import '../../../core/network/api_transport.dart';
 import '../../../core/network/api_client_provider.dart';
 
 class AdminDataService {
-  final ApiClient _api;
+  final ApiTransport _api;
 
   AdminDataService(this._api);
 
@@ -92,6 +92,29 @@ class AdminDataService {
 
   Future<Map<String, dynamic>> fetchReleaseSnapshot() async {
     return _fetchMap(AppConfig.adminOperationsRelease, 'fetchReleaseSnapshot');
+  }
+
+  Future<Map<String, dynamic>> fetchCellOperations() =>
+      _fetchMap(AppConfig.adminCellOperations, 'fetchCellOperations');
+
+  Future<Map<String, dynamic>> fetchCellUpdates() =>
+      _fetchMap(AppConfig.adminCellUpdates, 'fetchCellUpdates');
+
+  Future<Map<String, dynamic>> createCellPlan(
+      Map<String, dynamic> target) async {
+    try {
+      final response = await _api.post(AppConfig.adminCellPlans, data: {
+        'targetReleaseId': target['releaseId'],
+        'targetSequence': target['sequence'],
+        'targetDigest': target['digest'],
+        'deploymentManifestDigest': target['deploymentManifestDigest'],
+        'packageManifestDigest': target['packageManifestDigest'],
+      });
+      if (response.data is Map) return Map<String, dynamic>.from(response.data);
+      throw _invalidResponse('createCellPlan', response.data);
+    } catch (e) {
+      _throwAdminFailure('createCellPlan', e);
+    }
   }
 
   Future<Map<String, dynamic>> fetchMobileRelease() async {

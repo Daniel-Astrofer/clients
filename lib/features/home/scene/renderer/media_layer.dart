@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -94,7 +95,7 @@ class _IconMedia extends StatelessWidget {
       'info' => KeroseneIcons.info,
       _ => KeroseneIcons.info,
     };
-    return Icon(
+    return KeroseneIcon(
       icon,
       color: Theme.of(context).colorScheme.onSurface,
       size: size,

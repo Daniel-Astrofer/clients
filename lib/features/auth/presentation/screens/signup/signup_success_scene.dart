@@ -1,3 +1,4 @@
+import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
 // ignore_for_file: use_key_in_widget_constructors
 
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class SignupSuccessScene extends StatefulWidget {
   final String subtitle;
   final String actionLabel;
   final VoidCallback onContinue;
+  final bool isLoading;
 
   const SignupSuccessScene({
     required this.appTitle,
@@ -31,6 +33,7 @@ class SignupSuccessScene extends StatefulWidget {
     required this.subtitle,
     required this.actionLabel,
     required this.onContinue,
+    this.isLoading = false,
   });
 
   @override
@@ -152,88 +155,96 @@ class SignupSuccessSceneState extends State<SignupSuccessScene>
 
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: context.responsive.formConstraints,
-                child: Semantics(
-                  label: widget.appTitle,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Spacer(flex: 2),
-                      if (badgeProgress > 0.001)
-                        Transform.scale(
-                          scale: 0.92 + (0.08 * badgeProgress),
-                          child: Opacity(
-                            opacity: settled ? 1 : badgeProgress,
-                            child: Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _signupPanel,
-                                border: Border.all(color: _signupBorderSoft),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.hexFF63FEA7.withValues(
-                                      alpha:
-                                          0.15 * (settled ? 1 : badgeProgress),
+            child: SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: context.responsive.formMaxWidth,
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: Semantics(
+                    label: widget.appTitle,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 24),
+                        if (badgeProgress > 0.001)
+                          Transform.scale(
+                            scale: 0.92 + (0.08 * badgeProgress),
+                            child: Opacity(
+                              opacity: settled ? 1 : badgeProgress,
+                              child: Container(
+                                width: 96,
+                                height: 96,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _signupPanel,
+                                  border: Border.all(color: _signupBorderSoft),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.hexFF63FEA7.withValues(
+                                        alpha: 0.15 *
+                                            (settled ? 1 : badgeProgress),
+                                      ),
+                                      blurRadius: 60,
+                                      spreadRadius: 2,
                                     ),
-                                    blurRadius: 60,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.hexFF63FEA7
-                                          .withValues(alpha: 0.10),
+                                  ],
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppColors.hexFF63FEA7
+                                            .withValues(alpha: 0.10),
+                                      ),
                                     ),
-                                  ),
-                                  const Icon(
-                                    KeroseneIcons.success,
-                                    color: AppColors.hexFF63FEA7,
-                                    size: 52,
-                                  ),
-                                ],
+                                    const KeroseneIcon(
+                                      KeroseneIcons.success,
+                                      color: AppColors.hexFF63FEA7,
+                                      size: 52,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
+                        const SizedBox(height: 34),
+                        reveal(
+                          progress: headingProgress,
+                          child: Text(
+                            _withSuccessBang(widget.title),
+                            textAlign: TextAlign.center,
+                            style: SignupTypography.successTitle(),
+                          ),
                         ),
-                      const SizedBox(height: 34),
-                      reveal(
-                        progress: headingProgress,
-                        child: Text(
-                          _withSuccessBang(widget.title),
-                          textAlign: TextAlign.center,
-                          style: SignupTypography.successTitle(),
+                        const SizedBox(height: 16),
+                        reveal(
+                          progress: bodyProgress,
+                          child: Text(
+                            widget.subtitle,
+                            textAlign: TextAlign.center,
+                            style: SignupTypography.successSubtitle(),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      reveal(
-                        progress: bodyProgress,
-                        child: Text(
-                          widget.subtitle,
-                          textAlign: TextAlign.center,
-                          style: SignupTypography.successSubtitle(),
+                        const SizedBox(height: 32),
+                        reveal(
+                          progress: buttonProgress,
+                          dy: 12,
+                          child: SignupPrimaryButton(
+                            text: widget.actionLabel,
+                            onPressed:
+                                widget.isLoading ? null : widget.onContinue,
+                            isLoading: widget.isLoading,
+                            borderRadius: 999,
+                          ),
                         ),
-                      ),
-                      const Spacer(flex: 3),
-                      reveal(
-                        progress: buttonProgress,
-                        dy: 12,
-                        child: SignupPrimaryButton(
-                          text: widget.actionLabel,
-                          onPressed: widget.onContinue,
-                          borderRadius: 999,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                    ],
+                        const SizedBox(height: 28),
+                      ],
+                    ),
                   ),
                 ),
               ),
