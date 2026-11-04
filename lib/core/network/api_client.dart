@@ -15,6 +15,7 @@ import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'api_transport.dart';
 import 'request_coalescer.dart';
+import 'encrypted_etag_cache_interceptor.dart';
 
 /// Cliente HTTP configurado com Dio
 class ApiClient implements ApiTransport {
@@ -131,6 +132,9 @@ class ApiClient implements ApiTransport {
         ),
       ),
     );
+
+    // Encrypted ETag Interceptor for 240 FPS (HTTP 304 Zero-Copy / Zero-Network)
+    _dio.interceptors.add(EncryptedETagCacheInterceptor());
 
     _initCookieManager();
   }
