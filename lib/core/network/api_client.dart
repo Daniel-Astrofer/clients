@@ -14,6 +14,7 @@ import 'package:kerosene/core/network/api_client_platform.dart' as platform;
 import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/utils/snackbar_helper.dart';
 import 'api_transport.dart';
+import 'request_coalescer.dart';
 
 /// Cliente HTTP configurado com Dio
 class ApiClient implements ApiTransport {
@@ -48,7 +49,6 @@ class ApiClient implements ApiTransport {
   final Ref ref; // Add Ref to access providers
 
   final ApiClientRoutePolicy routePolicy;
-  final Map<String, Future<Response>> _inFlightGets = {};
 
   ApiClient({
     required String baseUrl,
@@ -139,6 +139,10 @@ class ApiClient implements ApiTransport {
     await platform.initializeCookieSupport(_dio);
   }
 
+  final RequestCoalescer _requestCoalescer = RequestCoalescer(
+    coalesceWindow: const Duration(seconds: 2),
+  );
+
   /// Adicionar um interceptor customizado
   void addInterceptor(Interceptor interceptor) {
     _dio.interceptors.insert(
@@ -147,7 +151,7 @@ class ApiClient implements ApiTransport {
     ); // Insert at beginning to run before others
   }
 
-  /// GET request
+  /// GET request com Single-Flight Coalescing
   @override
   Future<Response> get(
     String path, {
@@ -155,26 +159,20 @@ class ApiClient implements ApiTransport {
     Map<String, String>? headers,
     Options? options,
   }) async {
-    final cacheKey = '$path?${queryParameters?.entries.map((e) => '${e.key}=${e.value}').join('&') ?? ''}';
-    final inFlight = _inFlightGets[cacheKey];
-    if (inFlight != null) {
-      return inFlight;
-    }
-
-    final future = _executeGet(
-      path,
+    final key = _requestCoalescer.computeKey(
+      method: 'GET',
+      path: path,
       queryParameters: queryParameters,
-      headers: headers,
-      options: options,
     );
-    _inFlightGets[cacheKey] = future;
-    try {
-      return await future;
-    } finally {
-      if (identical(_inFlightGets[cacheKey], future)) {
-        _inFlightGets.remove(cacheKey);
-      }
-    }
+
+    return _requestCoalescer.run(key, () {
+      return _executeGet(
+        path,
+        queryParameters: queryParameters,
+        headers: headers,
+        options: options,
+      );
+    });
   }
 
   Future<Response> _executeGet(

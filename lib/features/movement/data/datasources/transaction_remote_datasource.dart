@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/isolate_data_decoder.dart';
 import '../../../../core/utils/bitcoin_network.dart';
 import '../../../../core/utils/device_helper.dart';
 import '../../../../core/utils/qr_payment_parser.dart';
@@ -129,7 +130,12 @@ class TransactionRemoteDataSourceImpl implements TransactionRemoteDataSource {
 
   Future<Map<String, dynamic>> _getKfeDashboard() async {
     final response = await apiClient.get(AppConfig.kfeDashboard);
-    return _parseJsonResponse(response.data);
+    final data = response.data;
+    if (data is String && data.length > 1024) {
+      final decoded = await IsolateDataDecoder.decodeString(data);
+      return _parseJsonResponse(decoded);
+    }
+    return _parseJsonResponse(data);
   }
 
   List<Map<String, dynamic>> _kfeWalletsFromDashboard(
