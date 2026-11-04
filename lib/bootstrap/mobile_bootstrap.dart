@@ -16,6 +16,7 @@ import 'package:kerosene/design_system/foundation/theme/app_theme.dart';
 
 import 'package:kerosene/core/navigation/deferred_page.dart';
 import 'package:kerosene/core/navigation/route_transition_observer.dart';
+import 'package:kerosene/core/performance/frame_budget_monitor_240hz.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/app/router/mobile_go_router.dart';
 import '../core/providers/shared_preferences_provider.dart';
@@ -74,6 +75,7 @@ RouteTransitionBusyObserver? _routeTransitionBusyObserver;
 
 Future<void> bootstrapMobile() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FrameBudgetMonitor240Hz.attach();
   GoogleFonts.config.allowRuntimeFetching = false;
 
   // Make dual Linux profiles obvious in logs (primary_ vs secondary_).
