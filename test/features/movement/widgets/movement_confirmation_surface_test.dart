@@ -49,20 +49,20 @@ void main() {
       expect(tester.getSize(identifier).width, lessThanOrEqualTo(272));
       expect(tester.getSize(identifier).height, greaterThan(80));
       expect(tester.widget<SelectableText>(identifier).style!.fontFamily,
-          contains('JetBrainsMono'));
+          contains('Moderat Mono'));
       final amount = find.byWidgetPredicate((widget) =>
           widget is Text &&
           widget.data == '0,00000001 BTC' &&
           widget.style?.fontSize == 14);
       expect(amount, findsOneWidget);
       expect(tester.widget<Text>(amount).style!.fontFamily,
-          contains('PlusJakartaSans'));
+          contains('Aeonik Pro'));
       expect(
           tester
               .widget<Text>(find.text('Aguardando confirmação'))
               .style!
               .fontFamily,
-          contains('PlayfairDisplay'));
+          contains('Aeonik Pro'));
       expect(tester.takeException(), isNull);
     });
   }

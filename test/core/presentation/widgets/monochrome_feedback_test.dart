@@ -41,7 +41,7 @@ void main() {
       final mark = tester.widget<Icon>(find.byIcon(KeroseneIcons.pending));
       expect(mark.color!.computeLuminance(), lessThan(0.05));
       expect(tester.widget<Text>(find.text('1 BTC')).style!.fontFamily,
-          contains('PlusJakartaSans'));
+          contains('Aeonik Pro'));
       expect(tester.takeException(), isNull);
     });
     testWidgets('states retain distinct icons and monochrome ink: $variant',

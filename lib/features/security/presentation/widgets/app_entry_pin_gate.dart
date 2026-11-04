@@ -16,6 +16,7 @@ import 'package:kerosene/features/security/domain/entities/app_pin_status.dart';
 import 'package:kerosene/features/security/presentation/providers/security_provider.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'pin_entry_scaffold.dart';
+import 'pin_background_rotator.dart';
 
 /// App entry PIN (authenticated / token session).
 ///
@@ -579,6 +580,7 @@ class _AppEntryPinLockScreenState extends ConsumerState<_AppEntryPinLockScreen>
       listenable: Listenable.merge([_pinNotifier, _errorNotifier]),
       builder: (context, _) {
         return PinEntryScaffold(
+          background: const PinBackgroundRotator(),
           instruction: widget.status.locked
               ? context.tr.appEntryLockedHelper
               : _appEntryPinUnlockInstruction(context),

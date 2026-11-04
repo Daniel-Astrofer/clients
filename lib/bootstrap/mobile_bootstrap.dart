@@ -145,33 +145,40 @@ Future<void> _bootstrapGraphics(ProviderContainer container) async {
   // Arm FrameTiming monitor (builds notifier + timings callback).
   container.read(graphicsRuntimeDegradeProvider);
 
-  // Warm fragment programs + prefetch deferred libs after first frame so
-  // navigation is not first-use of loadLibrary / SkSL on the gesture path.
-  // Prefetch adjacent surfaces in parallel with shaders — never wait on SkSL
-  // before loading send/receive deferred units (first-tap transition hitch).
+  // Warm fragment programs + prefetch deferred libs after initial entrance
+  // animation settles so Welcome / PIN / Signup don't compete with SkSL &
+  // 6 simultaneous loadLibrary calls on frame 2.
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    prefetchDeferredLibraries([
-      (load: home.loadLibrary, key: DeferredLibraryKeys.home),
-      (load: settings.loadLibrary, key: DeferredLibraryKeys.settings),
-      (load: deposits.loadLibrary, key: DeferredLibraryKeys.deposits),
-      (
-        load: bitcoin_accounts.loadLibrary,
-        key: DeferredLibraryKeys.bitcoinAccounts
-      ),
-      (load: send_money.loadLibrary, key: DeferredLibraryKeys.sendMoney),
-      (load: receive.loadLibrary, key: DeferredLibraryKeys.receive),
-    ]);
     unawaited(() async {
-      try {
-        await container.read(homeAuroraShaderProvider.future);
-      } catch (error, stack) {
-        debugPrint('home aurora shader warm-up failed: $error\n$stack');
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      final loaders = <({Future<void> Function() load, Object key})>[
+        (load: home.loadLibrary, key: DeferredLibraryKeys.home),
+        (load: settings.loadLibrary, key: DeferredLibraryKeys.settings),
+        (load: deposits.loadLibrary, key: DeferredLibraryKeys.deposits),
+        (
+          load: bitcoin_accounts.loadLibrary,
+          key: DeferredLibraryKeys.bitcoinAccounts
+        ),
+        (load: send_money.loadLibrary, key: DeferredLibraryKeys.sendMoney),
+        (load: receive.loadLibrary, key: DeferredLibraryKeys.receive),
+      ];
+      for (final entry in loaders) {
+        loadDeferredLibrary(entry.load, key: entry.key).ignore();
+        await Future<void>.delayed(const Duration(milliseconds: 60));
       }
+
       try {
         await container.read(geminiGlowShaderProvider.future);
       } catch (error, stack) {
         debugPrint('gemini glow shader warm-up failed: $error\n$stack');
       }
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      try {
+        await container.read(homeAuroraShaderProvider.future);
+      } catch (error, stack) {
+        debugPrint('home aurora shader warm-up failed: $error\n$stack');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 60));
       try {
         await container.read(metalShaderProvider.future);
       } catch (error, stack) {
@@ -429,6 +436,7 @@ class _AppRealtimeBootstrapState extends ConsumerState<_AppRealtimeBootstrap>
     final foreground = state == AppLifecycleState.resumed ||
         state == AppLifecycleState.inactive;
     ref.read(appForegroundProvider.notifier).setForeground(foreground);
+    unawaited(notifyBackgroundAppLifecycle(foreground: foreground));
   }
 
   @override

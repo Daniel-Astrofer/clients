@@ -11,6 +11,7 @@ import 'package:kerosene/features/home/presentation/screens/home_screen_transact
 import 'package:kerosene/features/home/presentation/screens/home_screen_surface.dart'
     show HomeGlassPanel;
 import 'package:kerosene/features/movement/domain/entities/transaction.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import '../../goldens/golden_harness.dart';
 
@@ -36,15 +37,15 @@ Transaction _row(String id, {bool confirmed = false, int debit = 100000}) =>
           confirmed ? TransactionStatus.confirmed : TransactionStatus.pending,
       type: TransactionType.send,
       confirmations: confirmed ? 3 : 0,
-      timestamp: DateTime.utc(2026, 10, 16),
-      updatedAt: DateTime.utc(2026, 10, confirmed ? 17 : 16),
+      timestamp: DateTime.now().toUtc(),
+      updatedAt: DateTime.now().toUtc(),
       rail: 'ONCHAIN',
     );
 
 void main() {
   setUpAll(initializeGoldenHarness);
 
-  testWidgets('Home replaces a cached card when the recorded debit changes',
+  testWidgets('Home groups transactions in a single HomeGlassPanel with dividers and opens detail on tap',
       (tester) async {
     await pumpFullScreenGolden(
         tester,
@@ -61,15 +62,40 @@ void main() {
         .upsertFront(_row('live'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(find.textContaining('0.00100000 BTC'), findsOneWidget);
-    expect(find.byType(HomeGlassPanel), findsNothing,
-        reason: 'Original Home cards are independent, without an outer panel.');
+    expect(find.textContaining('0.001 BTC', findRichText: true), findsOneWidget);
+    expect(find.byType(HomeGlassPanel), findsOneWidget,
+        reason: 'Home transactions are enclosed inside a single joint panel.');
+
     container
         .read(lastTransactionHistoryProvider.notifier)
         .upsertFront(_row('live', debit: 110000));
     await tester.pump();
-    expect(find.textContaining('0.00110000 BTC'), findsOneWidget);
-    expect(find.textContaining('0.00100000 BTC'), findsNothing);
+    expect(find.textContaining('0.0011 BTC', findRichText: true), findsOneWidget);
+    expect(find.textContaining('0.001 BTC', findRichText: true), findsNothing);
+
+    // Add another row to verify dividers and no external date header
+    container.read(lastTransactionHistoryProvider.notifier).upsertFront(
+          _row('second_row', confirmed: true),
+        );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final panel = find.byType(HomeGlassPanel);
+    expect(panel, findsOneWidget,
+        reason: 'Home transactions are enclosed inside a single joint panel.');
+    expect(
+        find.descendant(of: panel, matching: find.byType(Divider)),
+        findsNWidgets(2),
+        reason: 'Rows are separated only by 1px dividers inside the panel.');
+    expect(find.text('16 de outubro de 2026'), findsNothing,
+        reason: 'No external date header should be rendered on Home.');
+
+    // Tap a row: must open TransactionDetailScreen rather than expanding
+    await tester.tap(find.textContaining('0.0011 BTC', findRichText: true));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(TransactionDetailScreen), findsOneWidget,
+        reason: 'Tapping a home row opens the transaction detail screen.');
     expect(tester.takeException(), isNull);
   });
 

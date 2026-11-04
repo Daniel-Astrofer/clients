@@ -39,4 +39,26 @@ void main() {
     expect(find.byType(SlideTransition), findsOneWidget);
     expect(find.text('screen'), findsOneWidget);
   });
+
+  testWidgets('flow slide transition wraps child in RepaintBoundary',
+      (tester) async {
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Builder(
+          builder: (context) {
+            return buildKeroseneFlowSlideTransitionFrom(
+              animation: const AlwaysStoppedAnimation<double>(1),
+              begin: const Offset(1, 0),
+              child: const Text('flow screen'),
+            );
+          },
+        ),
+      ),
+    );
+
+    expect(find.byType(RepaintBoundary), findsOneWidget);
+    expect(find.byType(SlideTransition), findsOneWidget);
+    expect(find.text('flow screen'), findsOneWidget);
+  });
 }

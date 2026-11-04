@@ -48,6 +48,7 @@ class ApiClient implements ApiTransport {
   final Ref ref; // Add Ref to access providers
 
   final ApiClientRoutePolicy routePolicy;
+  final Map<String, Future<Response>> _inFlightGets = {};
 
   ApiClient({
     required String baseUrl,
@@ -78,8 +79,7 @@ class ApiClient implements ApiTransport {
 
     final retryEvaluator = DefaultRetryEvaluator({
       408, // RequestTimeout
-      // 500 removido — server 500 não se recupera com retry
-      502, // BadGateway
+      // 500 e 502 removidos — erros 500/502 não se recuperam com retry imediato e congestionam o circuito Tor
       503, // ServiceUnavailable
       504, // GatewayTimeout
       440, // LoginTimeout
@@ -98,11 +98,10 @@ class ApiClient implements ApiTransport {
           final firstLine = msg.split('\n').first;
           appLog('[Retry] $firstLine');
         },
-        retries: 3,
+        retries: 2,
         retryDelays: const [
-          Duration(seconds: 1),
           Duration(seconds: 2),
-          Duration(seconds: 3),
+          Duration(seconds: 4),
         ],
         retryEvaluator: (error, attempt) {
           if (!shouldRetryRequest(
@@ -151,6 +150,34 @@ class ApiClient implements ApiTransport {
   /// GET request
   @override
   Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+    Options? options,
+  }) async {
+    final cacheKey = '$path?${queryParameters?.entries.map((e) => '${e.key}=${e.value}').join('&') ?? ''}';
+    final inFlight = _inFlightGets[cacheKey];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _executeGet(
+      path,
+      queryParameters: queryParameters,
+      headers: headers,
+      options: options,
+    );
+    _inFlightGets[cacheKey] = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_inFlightGets[cacheKey], future)) {
+        _inFlightGets.remove(cacheKey);
+      }
+    }
+  }
+
+  Future<Response> _executeGet(
     String path, {
     Map<String, dynamic>? queryParameters,
     Map<String, String>? headers,

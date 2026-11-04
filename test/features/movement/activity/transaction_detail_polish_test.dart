@@ -86,9 +86,9 @@ void main() {
     await pumpPolishedDetail(tester, detailPolishFixture(incoming: true),
         scale: 1.4);
     final paragraph =
-        tester.renderObject<RenderParagraph>(find.text('Recebimento'));
+        tester.renderObject<RenderParagraph>(find.text('bc1qso...abcdef'));
     final boxes = paragraph.getBoxesForSelection(
-        const TextSelection(baseOffset: 0, extentOffset: 11));
+        const TextSelection(baseOffset: 0, extentOffset: 15));
     expect(boxes.map((box) => box.top).toSet(), hasLength(1));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());

@@ -2,6 +2,7 @@ import 'package:kerosene/features/movement/presentation/shared/movement_money.da
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/providers/money_format_provider.dart';
 import 'package:kerosene/core/providers/price_provider.dart';
@@ -41,13 +42,17 @@ class _ReceiveAmountEntryScreenState
     super.initState();
     // Primary unit follows the user's app money preference (BRL / USD / …).
     _selectedCurrency = ref.read(moneyFormatConfigProvider).currency;
+    if (widget.initialWalletId == null) {
+      final wallets = _eligibleWallets(ref.read(walletProvider));
+      if (wallets.isNotEmpty) {
+        _selectedWallet = wallets.first;
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput('0');
       if (widget.initialWalletId != null) {
         _loadRequestedWallet();
-      } else {
-        _ensureDefaultWallet();
       }
     });
   }
@@ -72,30 +77,9 @@ class _ReceiveAmountEntryScreenState
     }
   }
 
-  void _ensureDefaultWallet() {
-    final wallets = _eligibleWallets(ref.read(walletProvider));
-    if (wallets.isEmpty) return;
-    final stillValid = _selectedWallet != null &&
-        wallets.any((w) => w.id == _selectedWallet!.id);
-    if (!stillValid) {
-      if (widget.initialWalletId != null) {
-        final requested = wallets
-            .where((wallet) => wallet.id == widget.initialWalletId)
-            .firstOrNull;
-        setState(() {
-          _selectedWallet = requested;
-          _requestedWalletUnavailable = requested == null;
-        });
-      } else {
-        setState(() => _selectedWallet = wallets.first);
-      }
-    }
-  }
-
   double _amountBtc() {
-    final flow = ref.read(movementFlowCoordinatorProvider);
     return MoneyDisplay.convertToBtcAmount(
-      amount: MoneyDisplay.parseEditableInput(flow.amountInput),
+      amount: MoneyDisplay.parseEditableInput(_calc.display),
       currency: _selectedCurrency,
       btcUsd: ref.read(latestBtcPriceProvider),
       btcEur: ref.read(btcEurPriceProvider),
@@ -123,6 +107,9 @@ class _ReceiveAmountEntryScreenState
       ref
           .read(movementFlowCoordinatorProvider.notifier)
           .setSelectedWallet(wallet);
+      ref
+          .read(movementFlowCoordinatorProvider.notifier)
+          .setAmountInput(_calc.display);
 
       await pushReceiveHub(
         context: context,
@@ -155,23 +142,15 @@ class _ReceiveAmountEntryScreenState
       currency: _selectedCurrency,
     );
     setState(() => _calc = calc);
-    ref
-        .read(movementFlowCoordinatorProvider.notifier)
-        .setAmountInput(calc.display);
   }
 
   void _onCalculatorOp(String op) {
     final next = AmountCalculator.onOperator(
-      state: _calc.copyWith(
-        display: ref.read(movementFlowCoordinatorProvider).amountInput,
-      ),
+      state: _calc,
       operator: op,
       currency: _selectedCurrency,
     );
     setState(() => _calc = next);
-    ref
-        .read(movementFlowCoordinatorProvider.notifier)
-        .setAmountInput(next.display);
     if (next.justResolved) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -184,8 +163,7 @@ class _ReceiveAmountEntryScreenState
 
   void _toggleAmountCurrency(Currency fiatCurrency) {
     HapticFeedback.selectionClick();
-    final flow = ref.read(movementFlowCoordinatorProvider);
-    final current = MoneyDisplay.parseEditableInput(flow.amountInput);
+    final current = MoneyDisplay.parseEditableInput(_calc.display);
     final asBtc = MoneyDisplay.convertToBtcAmount(
       amount: current,
       currency: _selectedCurrency,
@@ -210,7 +188,6 @@ class _ReceiveAmountEntryScreenState
       _selectedCurrency = nextCurrency;
       _calc = AmountCalculatorState(display: nextRaw);
     });
-    ref.read(movementFlowCoordinatorProvider.notifier).setAmountInput(nextRaw);
   }
 
   String _trimAmountZeros(String value) {
@@ -222,14 +199,10 @@ class _ReceiveAmountEntryScreenState
 
   void _onWalletSelected(Wallet wallet) {
     setState(() => _selectedWallet = wallet);
-    ref
-        .read(movementFlowCoordinatorProvider.notifier)
-        .setSelectedWallet(wallet);
   }
 
   @override
   Widget build(BuildContext context) {
-    final flow = ref.watch(movementFlowCoordinatorProvider);
     final money = ref.watch(moneyFormatConfigProvider);
     final walletState = ref.watch(walletProvider);
     final wallets = _eligibleWallets(walletState);
@@ -255,24 +228,15 @@ class _ReceiveAmountEntryScreenState
                         ]))));
     }
 
-    // Keep selection valid as wallets load/refresh.
-    if (wallets.isNotEmpty) {
-      final valid = _selectedWallet != null &&
-          wallets.any((w) => w.id == _selectedWallet!.id);
-      if (!valid) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _ensureDefaultWallet();
-        });
-      }
-    }
+    final effectiveWallet =
+        _selectedWallet ?? (wallets.isNotEmpty ? wallets.first : null);
 
     final amountBtc = MoneyDisplay.convertToBtcAmount(
-      amount: MoneyDisplay.parseEditableInput(flow.amountInput),
+      amount: MoneyDisplay.parseEditableInput(_calc.display),
       currency: _selectedCurrency,
-      btcUsd: ref.watch(latestBtcPriceProvider),
-      btcEur: ref.watch(btcEurPriceProvider),
-      btcBrl: ref.watch(btcBrlPriceProvider),
+      btcUsd: ref.read(latestBtcPriceProvider),
+      btcEur: ref.read(btcEurPriceProvider),
+      btcBrl: ref.read(btcBrlPriceProvider),
     );
     final fiatCurrency =
         money.currency == Currency.btc ? Currency.brl : money.currency;
@@ -283,35 +247,43 @@ class _ReceiveAmountEntryScreenState
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
-      body: TransactionValueEntrySurface(
-        onBack: () => Navigator.of(context).maybePop(),
-        showCurrencyPrefix: true,
-        showCurrencyChip: false,
-        amountInput: flow.amountInput,
-        expressionLabel: _calc.expressionLabel(
+      body: RepaintBoundary(
+        child: TransactionValueEntrySurface(
+          onBack: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+          showCurrencyPrefix: true,
+          showCurrencyChip: false,
+          amountInput: _calc.display,
+          expressionLabel: _calc.expressionLabel(
+            currency: _selectedCurrency,
+            locale: Localizations.localeOf(context),
+          ),
+          resolveAmount: _calc.justResolved,
+          unitLabel: MoneyDisplay.tickerSymbolFor(_selectedCurrency),
           currency: _selectedCurrency,
-          locale: Localizations.localeOf(context),
+          fiatReference: fiatReference,
+          showKeypad: false,
+          useSystemKeyboard: true,
+          onAmountTextChanged: _onAmountChanged,
+          onCurrencyTap: () => _toggleAmountCurrency(fiatCurrency),
+          configuration: effectiveWallet == null
+              ? null
+              : WalletExpandChip(
+                  wallets: wallets,
+                  selectedWallet: effectiveWallet,
+                  onWalletSelected: _onWalletSelected,
+                ),
+          bottomAccessory: AmountCalculatorToolbar(onOperator: _onCalculatorOp),
+          ctaLabel: context.tr.continueButton,
+          ctaEnabled: amountBtc > 0 && !_busy && wallets.isNotEmpty,
+          isBusy: _busy,
+          onCta: _continue,
         ),
-        resolveAmount: _calc.justResolved,
-        unitLabel: MoneyDisplay.tickerSymbolFor(_selectedCurrency),
-        currency: _selectedCurrency,
-        fiatReference: fiatReference,
-        showKeypad: false,
-        useSystemKeyboard: true,
-        onAmountTextChanged: _onAmountChanged,
-        onCurrencyTap: () => _toggleAmountCurrency(fiatCurrency),
-        configuration: wallets.isEmpty
-            ? null
-            : WalletExpandChip(
-                wallets: wallets,
-                selectedWallet: _selectedWallet ?? wallets.first,
-                onWalletSelected: _onWalletSelected,
-              ),
-        bottomAccessory: AmountCalculatorToolbar(onOperator: _onCalculatorOp),
-        ctaLabel: context.tr.continueButton,
-        ctaEnabled: amountBtc > 0 && !_busy && wallets.isNotEmpty,
-        isBusy: _busy,
-        onCta: _continue,
       ),
     );
   }

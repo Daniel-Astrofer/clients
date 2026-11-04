@@ -872,10 +872,9 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
   double _countFrom = 0;
   double _countTo = 0;
   bool _counting = false;
-
-  /// Stable glyph identities — remount only when a digit is born.
-  final List<_AmountGlyph> _glyphs = <_AmountGlyph>[];
-  int _nextGlyphId = 0;
+  Timer? _focusTimer;
+  Animation<double>? _routeAnimation;
+  AnimationStatusListener? _routeAnimationListener;
 
   @override
   void initState() {
@@ -896,20 +895,39 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     });
     final hasExpr = (widget.expressionLabel ?? '').trim().isNotEmpty;
     _expression.value = hasExpr ? 1 : 0;
-    _syncGlyphs(
-      MoneyDisplay.formatEditableInput(
-        rawValue: initial,
-        currency: widget.currency,
-        withSymbol: false,
-      ),
-      animate: false,
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _focus.requestFocus();
-      _controller.selection = TextSelection.collapsed(
-        offset: _controller.text.length,
-      );
+      final route = ModalRoute.of(context);
+      if (route != null &&
+          route.animation != null &&
+          !route.animation!.isCompleted) {
+        _routeAnimation = route.animation;
+        _routeAnimationListener = (AnimationStatus status) {
+          if (status == AnimationStatus.completed) {
+            _cleanupRouteAnimationListener();
+            if (mounted) {
+              _focusTimer?.cancel();
+              _focusTimer = Timer(const Duration(milliseconds: 150), () {
+                if (mounted) {
+                  _focus.requestFocus();
+                  _controller.selection = TextSelection.collapsed(
+                    offset: _controller.text.length,
+                  );
+                }
+              });
+            }
+          }
+        };
+        _routeAnimation!.addStatusListener(_routeAnimationListener!);
+      } else {
+        _focusTimer = Timer(const Duration(milliseconds: 250), () {
+          if (!mounted) return;
+          _focus.requestFocus();
+          _controller.selection = TextSelection.collapsed(
+            offset: _controller.text.length,
+          );
+        });
+      }
     });
   }
 
@@ -932,7 +950,11 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
     if (oldWidget.amountInput != widget.amountInput ||
         oldWidget.currency != widget.currency) {
       final next = _rawOrZero(widget.amountInput);
-      // Ignore echo of our own emit — never clobber the TextField mid-typing.
+      // While the user is actively typing, never clobber the controller mid-keystroke.
+      if (_focus.hasFocus && oldWidget.currency == widget.currency) {
+        return;
+      }
+      // Ignore echo of our own emit.
       if (next == _lastEmitted && oldWidget.currency == widget.currency) {
         return;
       }
@@ -957,192 +979,22 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
       );
       _syncing = false;
       _lastEmitted = next;
-      _syncGlyphs(
-        MoneyDisplay.formatEditableInput(
-          rawValue: next,
-          currency: widget.currency,
-          withSymbol: false,
-          appLocale: Localizations.localeOf(context),
-        ),
-        animate: !_counting && oldWidget.currency == widget.currency,
-      );
       setState(() {});
     }
   }
 
-  static bool _isAmountSep(String char) {
-    if (char.isEmpty) return false;
-    final c = char.characters.first;
-    // Decimal / grouping separators across locales (., ‚ ' thin space, etc.).
-    return c == '.' ||
-        c == ',' ||
-        c == ' ' ||
-        c == '\u00A0' ||
-        c == '\u202F' ||
-        c == '\u2009' ||
-        c == "'" ||
-        c == '’';
-  }
-
-  void _syncGlyphs(String display, {required bool animate}) {
-    final chars = display.characters.toList(growable: false);
-    if (chars.isEmpty) {
-      _glyphs
-        ..clear()
-        ..add(
-          _AmountGlyph(
-            id: _nextGlyphId++,
-            char: '0',
-            enter: false,
-            expandWidth: false,
-            exiting: false,
-          ),
-        );
-      return;
+  void _cleanupRouteAnimationListener() {
+    if (_routeAnimation != null && _routeAnimationListener != null) {
+      _routeAnimation!.removeStatusListener(_routeAnimationListener!);
+      _routeAnimation = null;
+      _routeAnimationListener = null;
     }
-
-    if (!animate) {
-      _glyphs
-        ..clear()
-        ..addAll([
-          for (final c in chars)
-            _AmountGlyph(
-              id: _nextGlyphId++,
-              char: c,
-              enter: false,
-              expandWidth: false,
-              exiting: false,
-            ),
-        ]);
-      return;
-    }
-
-    final active = _glyphs.where((g) => !g.exiting).toList(growable: false);
-    final activeStr = active.map((g) => g.char).join();
-    final nextStr = chars.join();
-    if (nextStr == activeStr) return;
-
-    final prevDigits =
-        active.where((g) => !_isAmountSep(g.char)).toList(growable: false);
-    final prevSeps =
-        active.where((g) => _isAmountSep(g.char)).toList(growable: false);
-    final nextDigitChars =
-        chars.where((c) => !_isAmountSep(c)).toList(growable: false);
-    final nextSepCount = chars.length - nextDigitChars.length;
-
-    final sharedDigits = prevDigits.length < nextDigitChars.length
-        ? prevDigits.length
-        : nextDigitChars.length;
-    final insertedDigits = nextDigitChars.length - sharedDigits;
-    final removedDigits = prevDigits.length - sharedDigits;
-
-    final nextDigitGlyphs = <_AmountGlyph>[];
-    final exitingFront = <_AmountGlyph>[];
-
-    for (var i = 0; i < insertedDigits; i++) {
-      nextDigitGlyphs.add(
-        _AmountGlyph(
-          id: _nextGlyphId++,
-          char: nextDigitChars[i],
-          enter: true,
-          expandWidth: true,
-          exiting: false,
-        ),
-      );
-    }
-
-    for (var i = 0; i < sharedDigits; i++) {
-      final prev = prevDigits[prevDigits.length - sharedDigits + i];
-      nextDigitGlyphs.add(
-        _AmountGlyph(
-          id: prev.id,
-          char: nextDigitChars[insertedDigits + i],
-          enter: false,
-          expandWidth: false,
-          exiting: false,
-        ),
-      );
-    }
-
-    for (var i = 0; i < removedDigits; i++) {
-      final prev = prevDigits[i];
-      exitingFront.add(
-        _AmountGlyph(
-          id: prev.id,
-          char: prev.char,
-          enter: false,
-          expandWidth: true,
-          exiting: true,
-        ),
-      );
-    }
-
-    final nextSepGlyphs = <_AmountGlyph>[];
-    for (var i = 0; i < nextSepCount; i++) {
-      if (i < prevSeps.length) {
-        nextSepGlyphs.add(
-          _AmountGlyph(
-            id: prevSeps[i].id,
-            char:
-                chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
-            enter: false,
-            expandWidth: false,
-            exiting: false,
-          ),
-        );
-      } else {
-        nextSepGlyphs.add(
-          _AmountGlyph(
-            id: _nextGlyphId++,
-            char:
-                chars.where((c) => _isAmountSep(c)).toList(growable: false)[i],
-            enter: true,
-            expandWidth: true,
-            exiting: false,
-          ),
-        );
-      }
-    }
-
-    final exitingSeps = <_AmountGlyph>[];
-    for (var i = nextSepCount; i < prevSeps.length; i++) {
-      final prev = prevSeps[i];
-      exitingSeps.add(
-        _AmountGlyph(
-          id: prev.id,
-          char: prev.char,
-          enter: false,
-          expandWidth: true,
-          exiting: true,
-        ),
-      );
-    }
-
-    final rebuilt = <_AmountGlyph>[...exitingFront, ...exitingSeps];
-    var digitIndex = 0;
-    var sepIndex = 0;
-    for (final c in chars) {
-      if (_isAmountSep(c)) {
-        rebuilt.add(nextSepGlyphs[sepIndex++]);
-      } else {
-        rebuilt.add(nextDigitGlyphs[digitIndex++]);
-      }
-    }
-
-    _glyphs
-      ..clear()
-      ..addAll(rebuilt);
-  }
-
-  void _onGlyphExitComplete(int id) {
-    if (!mounted) return;
-    final idx = _glyphs.indexWhere((g) => g.id == id);
-    if (idx < 0) return;
-    setState(() => _glyphs.removeAt(idx));
   }
 
   @override
   void dispose() {
+    _cleanupRouteAnimationListener();
+    _focusTimer?.cancel();
     _controller.dispose();
     _focus.dispose();
     _countUp.dispose();
@@ -1198,7 +1050,6 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
       HapticFeedback.selectionClick();
     }
 
-    _syncGlyphs(nextDisplay, animate: !KeroseneMotion.reduceMotion(context));
     widget.onChanged(sanitized);
     setState(() {});
   }
@@ -1246,10 +1097,9 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
   @override
   Widget build(BuildContext context) {
     final color = widget.hasWarning ? _C.warning : _C.text;
-    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 40;
-    final baseSize = keyboardOpen ? 40.0 : 56.0;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final baseSize = screenHeight < 640 ? 40.0 : 48.0;
     final symbol = MoneyDisplay.tickerSymbolFor(widget.currency);
-    final reduce = KeroseneMotion.reduceMotion(context);
     final expression = widget.expressionLabel?.trim() ?? '';
     final hasExpression = expression.isNotEmpty;
     final style = _amountStyle(color, fontSize: baseSize);
@@ -1285,25 +1135,7 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
               Text(symbol, style: symbolStyle),
               const SizedBox(width: 8),
             ],
-            reduce || _counting
-                ? Text(display, style: style)
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      for (final g in _glyphs)
-                        _RevolutDigit(
-                          key: ValueKey<int>(g.id),
-                          char: g.char,
-                          style: style,
-                          enter: g.enter,
-                          expandWidth: g.expandWidth,
-                          exiting: g.exiting,
-                          onExitComplete: () => _onGlyphExitComplete(g.id),
-                        ),
-                    ],
-                  ),
+            Text(display, style: style),
             const SizedBox(width: 3),
             Baseline(
               baseline: baseSize * 0.92,
@@ -1322,7 +1154,7 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
 
         return Semantics(
           liveRegion: true,
-          label: '$symbol $display',
+          label: ' ',
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1364,8 +1196,11 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
                   alignment: Alignment.center,
                   clipBehavior: Clip.none,
                   children: [
-                    IgnorePointer(
-                      child: FittedBox(fit: BoxFit.scaleDown, child: amountRow),
+                    RepaintBoundary(
+                      child: IgnorePointer(
+                        child:
+                            FittedBox(fit: BoxFit.scaleDown, child: amountRow),
+                      ),
                     ),
                     // Full-bleed invisible editor — never inside Transform.
                     Positioned.fill(
@@ -1373,7 +1208,7 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
                         key: const ValueKey('movement-amount-input'),
                         controller: _controller,
                         focusNode: _focus,
-                        autofocus: true,
+                        autofocus: false,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -1412,120 +1247,6 @@ class _NativeAmountFieldState extends State<_NativeAmountField>
           ),
         );
       },
-    );
-  }
-}
-
-class _AmountGlyph {
-  final int id;
-  final String char;
-  final bool enter;
-
-  /// Layout width animates with the glyph (insert → grow, delete → shrink).
-  final bool expandWidth;
-  final bool exiting;
-
-  const _AmountGlyph({
-    required this.id,
-    required this.char,
-    required this.enter,
-    required this.expandWidth,
-    required this.exiting,
-  });
-}
-
-/// Digit / decimal / grouping sep — insert & delete share the same motion.
-class _RevolutDigit extends StatefulWidget {
-  final String char;
-  final TextStyle style;
-  final bool enter;
-  final bool expandWidth;
-  final bool exiting;
-  final VoidCallback? onExitComplete;
-
-  const _RevolutDigit({
-    super.key,
-    required this.char,
-    required this.style,
-    required this.enter,
-    this.expandWidth = false,
-    this.exiting = false,
-    this.onExitComplete,
-  });
-
-  @override
-  State<_RevolutDigit> createState() => _RevolutDigitState();
-}
-
-class _RevolutDigitState extends State<_RevolutDigit>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _t;
-  late final Animation<double> _appear;
-
-  @override
-  void initState() {
-    super.initState();
-    _t = AnimationController(vsync: this, duration: KeroseneMotion.inputDigit);
-    _appear = CurvedAnimation(parent: _t, curve: KeroseneMotion.standard);
-    if (widget.exiting) {
-      _t.value = 1;
-      _runExit();
-    } else if (widget.enter) {
-      _t.forward();
-    } else {
-      _t.value = 1;
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _RevolutDigit oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.exiting && !oldWidget.exiting) {
-      _runExit();
-    } else if (widget.enter && !oldWidget.enter && !widget.exiting) {
-      // Grouping side-change (insert or delete) — pulse only this digit.
-      _t.forward(from: 0);
-    }
-  }
-
-  void _runExit() {
-    _t.reverse().whenComplete(() {
-      if (mounted) widget.onExitComplete?.call();
-    });
-  }
-
-  @override
-  void dispose() {
-    _t.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _appear,
-      builder: (context, child) {
-        final t = _appear.value;
-        final scale = 0.72 + 0.28 * t;
-        Widget glyph = Transform.scale(
-          scale: scale,
-          alignment: Alignment.center,
-          filterQuality: FilterQuality.medium,
-          child: child,
-        );
-        // Width grow/shrink pushes neighbors (digits, `.`, `,`) smoothly.
-        if (widget.expandWidth || widget.exiting) {
-          glyph = ClipRect(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              widthFactor: t <= 0 ? 0.001 : t,
-              child: glyph,
-            ),
-          );
-        }
-        return glyph;
-      },
-      child: Text(widget.char, style: widget.style),
     );
   }
 }

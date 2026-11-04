@@ -48,9 +48,40 @@ class AuthMotionEntrance extends StatefulWidget {
 class _AuthMotionEntranceState extends State<AuthMotionEntrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  CurvedAnimation? _curved;
+  Animation<Offset>? _slide;
+  Animation<double>? _scale;
+  bool _settled = false;
 
   Duration get _totalDuration =>
       widget.duration + AuthMotion.staggerDelay(widget.index);
+
+  void _rebuildAnimations() {
+    _curved?.dispose();
+    final delay = AuthMotion.staggerDelay(widget.index);
+    final total = _totalDuration;
+    if (total == Duration.zero) {
+      _curved = null;
+      _slide = null;
+      _scale = null;
+      return;
+    }
+    final start =
+        (delay.inMicroseconds / total.inMicroseconds).clamp(0.0, 0.98);
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(start, 1, curve: KeroseneMotion.entrance),
+    );
+    _curved = curved;
+    _slide = Tween<Offset>(
+      begin: widget.offset,
+      end: Offset.zero,
+    ).animate(curved);
+    _scale = Tween<double>(
+      begin: widget.scaleBegin,
+      end: 1,
+    ).animate(curved);
+  }
 
   @override
   void initState() {
@@ -58,7 +89,24 @@ class _AuthMotionEntranceState extends State<AuthMotionEntrance>
     _controller = AnimationController(
       vsync: this,
       duration: _totalDuration,
-    );
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && !_settled && mounted) {
+          setState(() => _settled = true);
+        }
+      });
+    _rebuildAnimations();
+  }
+
+  @override
+  void didUpdateWidget(covariant AuthMotionEntrance oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index ||
+        oldWidget.duration != widget.duration ||
+        oldWidget.offset != widget.offset ||
+        oldWidget.scaleBegin != widget.scaleBegin) {
+      _controller.duration = _totalDuration;
+      _rebuildAnimations();
+    }
   }
 
   @override
@@ -70,6 +118,7 @@ class _AuthMotionEntranceState extends State<AuthMotionEntrance>
       _controller.duration = total;
     }
     if (reduce || total == Duration.zero) {
+      _settled = true;
       _controller.value = 1;
       return;
     }
@@ -80,41 +129,30 @@ class _AuthMotionEntranceState extends State<AuthMotionEntrance>
 
   @override
   void dispose() {
+    _curved?.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (KeroseneMotion.reduceMotion(context)) {
+    if (_settled ||
+        KeroseneMotion.reduceMotion(context) ||
+        _curved == null ||
+        _slide == null ||
+        _scale == null) {
       return widget.child;
     }
 
-    final delay = AuthMotion.staggerDelay(widget.index);
-    final total = _totalDuration;
-    if (total == Duration.zero) {
-      return widget.child;
-    }
-    final start =
-        (delay.inMicroseconds / total.inMicroseconds).clamp(0.0, 0.98);
-    final curved = CurvedAnimation(
-      parent: _controller,
-      curve: Interval(start, 1, curve: KeroseneMotion.entrance),
-    );
-
-    return FadeTransition(
-      opacity: curved,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: widget.offset,
-          end: Offset.zero,
-        ).animate(curved),
-        child: ScaleTransition(
-          scale: Tween<double>(
-            begin: widget.scaleBegin,
-            end: 1,
-          ).animate(curved),
-          child: widget.child,
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: _curved!,
+        child: SlideTransition(
+          position: _slide!,
+          child: ScaleTransition(
+            scale: _scale!,
+            child: widget.child,
+          ),
         ),
       ),
     );

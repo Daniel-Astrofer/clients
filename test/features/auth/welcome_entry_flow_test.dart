@@ -43,14 +43,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('entry actions are available before the decorative preview',
+  testWidgets('entry actions are available below the decorative preview',
       (tester) async {
     await welcome(tester);
     for (final label in ['Create account', 'Already have an account']) {
-      final rect = tester.getRect(find.text(label));
-      expect(rect.top, greaterThanOrEqualTo(0));
-      expect(rect.bottom, lessThanOrEqualTo(640));
-      expect(find.text(label).hitTestable(), findsOneWidget);
+      final text = find.text(label);
+      await tester.ensureVisible(text);
+      await tester.pump();
+      expect(text.hitTestable(), findsOneWidget);
     }
     expect(tester.takeException(), isNull);
   });

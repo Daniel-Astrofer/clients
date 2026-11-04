@@ -7,7 +7,7 @@ import 'package:kerosene/design_system/foundation/theme/app_spacing.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
 
-/// Canonical balance display — Playfair Display 48px w590 hero amount.
+/// Canonical balance display — Moderat Mono 48px hero amount.
 class KeroseneBalanceDisplay extends StatelessWidget {
   final String amount;
   final String currency;

@@ -78,6 +78,7 @@ class _FinancialProjectionRefresh {
   _FinancialProjectionRefresh(this.ref);
   final Ref ref;
   final _batches = <String, _RefreshBatch>{};
+  DateTime? _lastDrainFinished;
 
   bool _owns(String account) =>
       ref.mounted && ref.read(sessionStorageScopeProvider) == account;
@@ -111,11 +112,23 @@ class _FinancialProjectionRefresh {
             : FinancialRefreshScope.light;
         final force = batch.forceFullHistory;
         batch.pending = batch.full = batch.forceFullHistory = false;
+
+        final now = DateTime.now();
+        if (_lastDrainFinished != null &&
+            now.difference(_lastDrainFinished!) < const Duration(seconds: 3) &&
+            !force &&
+            ok) {
+          break;
+        }
+
         if (force) {
           ref.read(transactionHistoryCursorProvider.notifier).reset();
           ref.read(transactionHistoryForceFullProvider.notifier).arm();
         }
         ok = await _kickRefresh(ref, scope: scope);
+        if (ok) {
+          _lastDrainFinished = DateTime.now();
+        }
       }
       if (!batch.completion.isCompleted) {
         batch.completion.complete(ok && _owns(account));

@@ -4,14 +4,17 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kerosene/core/config/app_config.dart';
 import 'package:kerosene/core/providers/alert_preferences_provider.dart';
 import 'package:kerosene/core/services/background_network_bridge.dart';
 import 'package:kerosene/core/services/background_service.dart';
 import 'package:kerosene/app/notifications/notification_service.dart';
 import 'package:kerosene/core/services/push_token_source.dart';
+import 'package:kerosene/core/providers/tor_providers.dart';
 import 'package:kerosene/core/utils/device_helper.dart';
 import 'package:kerosene/features/auth/controller/auth_controller.dart';
+import 'package:kerosene/features/financial_accounts/presentation/providers/financial_surface_provider.dart';
 import 'package:kerosene/features/notifications/presentation/providers/session_notification_provider.dart';
 
 /// Ensures OS notifications can actually fire after login:
@@ -48,14 +51,18 @@ class NotificationDeliveryBootstrap {
       }
 
       // Ensure background isolate has a reachable API base (local Tor relay or clearnet).
+      final resolvedApiUrl = _ref.read(torApiUrlProvider);
       await BackgroundNetworkBridge.publishMainIsolateRouting(
-        apiBaseUrl: AppConfig.apiUrl,
+        apiBaseUrl: resolvedApiUrl.isNotEmpty ? resolvedApiUrl : AppConfig.apiUrl,
         torEnabled: AppConfig.isTorEnabled,
       );
 
       final prefs = _ref.read(alertPreferencesProvider);
       if (prefs.backgroundAlertsEnabled) {
         await startBackgroundService();
+        await notifyBackgroundAppLifecycle(
+          foreground: _ref.read(appForegroundProvider),
+        );
       } else {
         await stopBackgroundService();
       }
@@ -94,6 +101,16 @@ class NotificationDeliveryBootstrap {
       final secondary =
           PushTokenSource.secondaryLocalAlertToken(installId: installId);
 
+      final prefs = await SharedPreferences.getInstance();
+      final registrationFingerprint = '$installId:$platform:$appVersion:$primary:$secondary';
+      const cacheKey = 'notif_registered_tokens_fingerprint';
+      if (prefs.getString(cacheKey) == registrationFingerprint) {
+        if (kDebugMode) {
+          debugPrint('NotificationDelivery: device tokens already registered.');
+        }
+        return;
+      }
+
       await _registerOne(
         platform: platform,
         token: primary,
@@ -108,6 +125,7 @@ class NotificationDeliveryBootstrap {
           appVersion: appVersion,
         );
       }
+      await prefs.setString(cacheKey, registrationFingerprint);
       _ref.invalidate(activeDeviceTokensProvider);
     } catch (e) {
       if (kDebugMode) {

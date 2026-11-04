@@ -46,7 +46,7 @@ void main() {
       expect(spec.direction, KeroseneIcons.dirOut);
     });
 
-    test('payment link open uses QR primary + receive dir + rail pip', () {
+    test('payment link open uses QR primary + receive dir and no second floating pip', () {
       final link = PaymentLink(
         id: 'pl_1',
         userId: 1,
@@ -59,11 +59,11 @@ void main() {
       );
       final spec = ActivityGlyphSpec.fromPaymentLink(link);
       expect(spec.primary, KeroseneIcons.productPaymentLink);
-      expect(spec.productPip, KeroseneIcons.railLightning);
+      expect(spec.productPip, isNull);
       expect(spec.direction, KeroseneIcons.dirIn);
     });
 
-    test('settled payment-link receive is QR not internal arrows', () {
+    test('settled payment-link receive is QR with single direction badge', () {
       final axes = const TransactionAxes(
         direction: TxDirection.incoming,
         rail: TxRail.internal,
@@ -75,7 +75,7 @@ void main() {
       expect(spec.primary, KeroseneIcons.productPaymentLink);
       expect(spec.primary, isNot(KeroseneIcons.railInternal));
       expect(spec.direction, KeroseneIcons.dirIn);
-      expect(spec.productPip, KeroseneIcons.railInternal);
+      expect(spec.productPip, isNull);
     });
 
     test('fee has no direction badge', () {

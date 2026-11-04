@@ -12,6 +12,7 @@ import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
 import 'package:kerosene/design_system/components/generic/app_primary_navigation.dart';
+import 'package:kerosene/design_system/components/generic/kerosene_logo.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
 import 'package:kerosene/features/financial_accounts/presentation/providers/balance_settings_provider.dart';
 import 'package:kerosene/features/home/domain/entities/home_stage.dart';
@@ -969,37 +970,49 @@ class _RestingGreetingText extends ConsumerWidget {
     return Semantics(
       label: text,
       excludeSemantics: true,
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            resting.includeName ? '$greeting,' : greeting,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: homeFontSize(12),
-              fontWeight: FontWeight.w400,
-              height: 1.45,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          KeroseneLogo(
+            size: homeSize(28),
+            showText: false,
+            color: theme.colorScheme.onSurface,
           ),
-          if (resting.includeName && userName.trim().isNotEmpty) ...[
-            SizedBox(height: homeSize(10)),
-            Text(
-              userName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: homeFontSize(20),
-                fontWeight: FontWeight.w600,
-                height: 1.45,
-                color: theme.colorScheme.onSurface,
+          SizedBox(width: homeSize(10)),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                resting.includeName ? '$greeting,' : greeting,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: homeFontSize(12),
+                  fontWeight: FontWeight.w400,
+                  height: 1.45,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+              if (resting.includeName && userName.trim().isNotEmpty) ...[
+                SizedBox(height: homeSize(2)),
+                Text(
+                  userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: homeFontSize(18),
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );

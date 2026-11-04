@@ -127,4 +127,30 @@ void main() {
     expect(app.dio.options.baseUrl, 'http://127.0.0.1:43123');
     expect(auth.dio.options.baseUrl, 'http://127.0.0.1:43123');
   });
+
+  test('concurrent identical GET requests are coalesced into a single network call', () async {
+    final adapter = _EchoAdapter();
+    final factory = Provider<ApiClient>((ref) {
+      final client = ApiClient(
+        baseUrl: 'https://public.example.test',
+        ref: ref,
+        routePolicy: ApiClientRoutePolicy.clearnet,
+      );
+      client.dio.httpClientAdapter = adapter;
+      ref.onDispose(() => client.dio.close(force: true));
+      return client;
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final client = container.read(factory);
+
+    final results = await Future.wait([
+      client.get('/kfe/dashboard'),
+      client.get('/kfe/dashboard'),
+      client.get('/kfe/dashboard'),
+    ]);
+
+    expect(results.length, 3);
+    expect(adapter.uris.length, 1, reason: 'Three concurrent GETs must coalesce into a single HTTP call');
+  });
 }

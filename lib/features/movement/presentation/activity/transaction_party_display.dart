@@ -613,3 +613,210 @@ String formatSatsAsBtc(int sats) {
       '${sats < 0 ? '-' : ''}$whole${fraction.isEmpty ? '' : '.$fraction'}';
   return '$text BTC';
 }
+
+String abbreviateHash(String hash) {
+  final trimmed = hash.trim();
+  if (trimmed.length <= 14) return trimmed;
+  return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 6)}';
+}
+
+bool looksLikeHashOrAddress(String text) {
+  final clean = text.trim();
+  if (clean.length < 10) return false;
+  final lower = clean.toLowerCase();
+  if (lower.startsWith('bc1') ||
+      lower.startsWith('tb1') ||
+      lower.startsWith('bcrt1') ||
+      lower.startsWith('lnbc') ||
+      lower.startsWith('lntb') ||
+      lower.startsWith('lnbcrt') ||
+      lower.startsWith('1') ||
+      lower.startsWith('3') ||
+      lower.startsWith('2') ||
+      lower.startsWith('0x')) {
+    return true;
+  }
+  if (RegExp(r'^[0-9a-fA-F]{16,}$').hasMatch(clean)) {
+    return true;
+  }
+  return false;
+}
+
+bool isGenericNetworkWord(String text) {
+  final valLower = text.toLowerCase().trim();
+  if (valLower.isEmpty || valLower == '—') return true;
+  if (RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  ).hasMatch(valLower)) {
+    return true;
+  }
+  return valLower.contains('rede bitcoin') ||
+      valLower.contains('bitcoin network') ||
+      valLower.contains('on-chain') ||
+      valLower.contains('onchain') ||
+      valLower.contains('lightning') ||
+      valLower.contains('endereço externo') ||
+      valLower.contains('external address') ||
+      valLower.contains('link de pagamento') ||
+      valLower.contains('link de cobrança') ||
+      valLower.contains('payment link') ||
+      valLower.contains('pagador') ||
+      valLower.contains('payer') ||
+      valLower.contains('recebimento') ||
+      valLower.contains('carteira receptora') ||
+      valLower.contains('carteira') ||
+      valLower.contains('minha carteira') ||
+      valLower.contains('depósito') ||
+      valLower.contains('deposito') ||
+      valLower == 'destino' ||
+      valLower == 'origem' ||
+      valLower == 'kerosene';
+}
+
+String? resolvePayerHash(Transaction tx) {
+  final from = tx.fromAddress.trim();
+  if (from.isNotEmpty &&
+      !isGenericNetworkWord(from) &&
+      (looksLikeOnchainAddress(from) || looksLikeHashOrAddress(from))) {
+    return abbreviateHash(from);
+  }
+  final txid = tx.blockchainTxid?.trim();
+  if (txid != null && txid.isNotEmpty && txid != '—') {
+    return abbreviateHash(txid);
+  }
+  final ph = tx.paymentHash?.trim();
+  if (ph != null && ph.isNotEmpty && ph != '—') {
+    return abbreviateHash(ph);
+  }
+  final ext = tx.externalReference?.trim();
+  if (ext != null &&
+      ext.isNotEmpty &&
+      ext != '—' &&
+      !isGenericNetworkWord(ext) &&
+      (looksLikeOnchainAddress(ext) || looksLikeHashOrAddress(ext))) {
+    return abbreviateHash(ext);
+  }
+  final to = tx.toAddress.trim();
+  if (to.isNotEmpty &&
+      to != '—' &&
+      !isGenericNetworkWord(to) &&
+      (looksLikeOnchainAddress(to) || looksLikeHashOrAddress(to))) {
+    return abbreviateHash(to);
+  }
+  return null;
+}
+
+String resolveTransactionPartyTitle(
+  Transaction tx, {
+  String? subtitle,
+  String? defaultTitle,
+}) {
+  if (tx.isPaymentLink) {
+    final directSender = tx.senderDisplayName?.trim();
+    if (directSender != null &&
+        directSender.isNotEmpty &&
+        directSender != '—' &&
+        !isGenericNetworkWord(directSender) &&
+        looksLikeUsername(directSender)) {
+      return directSender;
+    }
+
+    final payerHash = resolvePayerHash(tx);
+    if (payerHash != null && payerHash.isNotEmpty) {
+      return payerHash;
+    }
+  }
+
+  final directName =
+      (tx.isCredit ? tx.senderDisplayName : tx.receiverDisplayName)?.trim();
+  if (directName != null &&
+      directName.isNotEmpty &&
+      directName != '—' &&
+      !isGenericNetworkWord(directName)) {
+    return directName;
+  }
+
+  final label = tx.counterpartyLabel?.trim();
+  if (label != null &&
+      label.isNotEmpty &&
+      label != '—' &&
+      !isGenericNetworkWord(label)) {
+    return label;
+  }
+
+  if (subtitle != null) {
+    var clean = subtitle.trim();
+    final lower = clean.toLowerCase();
+    if (lower.startsWith('para: ')) {
+      clean = clean.substring(6).trim();
+    } else if (lower.startsWith('para ')) {
+      clean = clean.substring(5).trim();
+    } else if (lower.startsWith('de: ')) {
+      clean = clean.substring(4).trim();
+    } else if (lower.startsWith('de ')) {
+      clean = clean.substring(3).trim();
+    } else if (lower.startsWith('to: ')) {
+      clean = clean.substring(4).trim();
+    } else if (lower.startsWith('to ')) {
+      clean = clean.substring(3).trim();
+    } else if (lower.startsWith('from: ')) {
+      clean = clean.substring(6).trim();
+    } else if (lower.startsWith('from ')) {
+      clean = clean.substring(5).trim();
+    }
+
+    if (clean.isNotEmpty &&
+        clean != '—' &&
+        !isGenericNetworkWord(clean)) {
+      if (looksLikeHashOrAddress(clean) || looksLikeOnchainAddress(clean)) {
+        return abbreviateHash(clean);
+      }
+      return clean;
+    }
+  }
+
+  final address = (tx.isCredit ? tx.fromAddress : tx.toAddress).trim();
+  if (address.isNotEmpty &&
+      address != '—' &&
+      !isGenericNetworkWord(address)) {
+    return abbreviateHash(address);
+  }
+
+  final txid = tx.blockchainTxid?.trim();
+  if (txid != null && txid.isNotEmpty && txid != '—') {
+    return abbreviateHash(txid);
+  }
+
+  final paymentHash = tx.paymentHash?.trim();
+  if (paymentHash != null && paymentHash.isNotEmpty && paymentHash != '—') {
+    return abbreviateHash(paymentHash);
+  }
+
+  final ext = tx.externalReference?.trim();
+  if (ext != null &&
+      ext.isNotEmpty &&
+      ext != '—' &&
+      !isGenericNetworkWord(ext) &&
+      (looksLikeHashOrAddress(ext) || looksLikeOnchainAddress(ext))) {
+    return abbreviateHash(ext);
+  }
+
+  if (tx.isCredit) {
+    final toAddr = tx.toAddress.trim();
+    if (toAddr.isNotEmpty &&
+        toAddr != '—' &&
+        !isGenericNetworkWord(toAddr)) {
+      return abbreviateHash(toAddr);
+    }
+  }
+
+  final desc = tx.description?.trim();
+  if (desc != null &&
+      desc.isNotEmpty &&
+      desc != '—' &&
+      !isGenericNetworkWord(desc)) {
+    return desc;
+  }
+
+  return defaultTitle ?? (tx.isDebit ? 'Envio' : 'Recebimento');
+}

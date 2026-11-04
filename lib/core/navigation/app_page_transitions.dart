@@ -8,7 +8,8 @@ const Duration kKerosenePageReverseTransitionDuration = KeroseneMotion.pageOut;
 
 /// Shared with the in-flow send wizard (destination → wallet → amount → review).
 const Duration kKeroseneFlowNavDuration = KeroseneMotion.pageTransition;
-const Curve kKeroseneFlowNavCurve = Curves.easeInOutCubic;
+const Curve kKeroseneFlowNavCurve = Curves.easeOutCubic;
+const Curve kKeroseneFlowNavReverseCurve = Curves.easeInCubic;
 
 const PageTransitionsTheme kerosenePageTransitionsTheme = PageTransitionsTheme(
   builders: <TargetPlatform, PageTransitionsBuilder>{
@@ -143,14 +144,16 @@ Widget buildKeroseneFlowSlideTransitionFrom({
   final curved = CurvedAnimation(
     parent: animation,
     curve: kKeroseneFlowNavCurve,
-    reverseCurve: kKeroseneFlowNavCurve,
+    reverseCurve: kKeroseneFlowNavReverseCurve,
   );
-  return SlideTransition(
-    position: Tween<Offset>(
-      begin: begin,
-      end: Offset.zero,
-    ).animate(curved),
-    child: child,
+  return RepaintBoundary(
+    child: SlideTransition(
+      position: Tween<Offset>(
+        begin: begin,
+        end: Offset.zero,
+      ).animate(curved),
+      child: child,
+    ),
   );
 }
 

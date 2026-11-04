@@ -15,15 +15,16 @@ import 'package:kerosene/features/movement/presentation/activity/transaction_pal
 class ActivityGlyphSpec {
   final IconData primary;
   final IconData? direction;
-  final IconData? productPip;
   final bool emphasizeProduct;
 
   const ActivityGlyphSpec({
     required this.primary,
     this.direction,
-    this.productPip,
+    @Deprecated('Removed: only one floating icon allowed') IconData? productPip,
     this.emphasizeProduct = false,
   });
+
+  IconData? get productPip => null;
 
   /// Settled / in-flight movement from taxonomy axes.
   factory ActivityGlyphSpec.fromAxes(TransactionAxes axes) {
@@ -36,12 +37,11 @@ class ActivityGlyphSpec {
     }
 
     // Payment link / invoice: QR is the product (not internal ↔ arrows).
-    // Rail (LN / on-chain / internal) sits as a small pip; direction is badge.
+    // Only one floating icon is allowed (direction badge).
     if (axes.product == TxProduct.paymentLink) {
       return ActivityGlyphSpec(
         primary: KeroseneIcons.productPaymentLink,
         direction: _directionBadge(axes.direction),
-        productPip: _railPrimary(axes.rail),
         emphasizeProduct: true,
       );
     }
@@ -53,7 +53,6 @@ class ActivityGlyphSpec {
     return ActivityGlyphSpec(
       primary: primary,
       direction: direction,
-      productPip: null,
       emphasizeProduct: false,
     );
   }
@@ -63,18 +62,12 @@ class ActivityGlyphSpec {
     return ActivityGlyphSpec.fromAxes(axes);
   }
 
-  /// Open / unpaid payment request — QR primary, rail pip, receive direction.
+  /// Open / unpaid payment request — QR primary, receive direction.
   factory ActivityGlyphSpec.fromPaymentLink(PaymentLink link) {
-    final rail = link.isLightningPaymentRequest
-        ? TxRail.lightning
-        : link.isInternalPaymentRequest
-            ? TxRail.internal
-            : TxRail.onchain;
     return ActivityGlyphSpec(
       primary: KeroseneIcons.productPaymentLink,
       // Open invoice is always a receive request from the merchant side.
       direction: KeroseneIcons.dirIn,
-      productPip: _railPrimary(rail),
       emphasizeProduct: true,
     );
   }
@@ -119,7 +112,7 @@ class ActivityGlyph extends StatelessWidget {
     this.wellColor = TransactionPalette.iconWell,
     this.wellBorder = TransactionPalette.iconWellBorder,
     this.iconColor = AppColors.hexFFF2F2F3,
-    this.badgeWellColor = AppColors.activityIconWell,
+    this.badgeWellColor = Colors.black,
     this.badgeIconColor = AppColors.hexFFF2F2F3,
     this.pipWellColor,
     this.pipIconColor,
@@ -181,10 +174,9 @@ class ActivityGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primarySize = size * (showWell ? 0.46 : 0.52);
-    final badgeSize = size * 0.40;
-    final badgeIconSize = size * 0.20;
-    final pipSize = size * 0.34;
-    final pipIconSize = size * 0.17;
+    // Floating icon increased by 25% (from 0.60 to 0.75; icon from 0.30 to 0.375)
+    final badgeSize = size * 0.75;
+    final badgeIconSize = size * 0.375;
 
     return KeroseneUiScale.icon(
         context,
@@ -211,11 +203,12 @@ class ActivityGlyph extends StatelessWidget {
                 size: primarySize,
                 color: iconColor,
               ),
-              // Direction badge — bottom-end (secondary; never alone).
+              // Direction badge — bottom-end (single floating icon).
+              // Sits with half of its diameter over the edge of the parent well.
               if (spec.direction != null)
                 Positioned(
-                  right: showWell ? -1 : 0,
-                  bottom: showWell ? -1 : 0,
+                  right: -badgeSize / 2,
+                  bottom: -badgeSize / 2,
                   child: Container(
                     width: badgeSize,
                     height: badgeSize,
@@ -229,27 +222,6 @@ class ActivityGlyph extends StatelessWidget {
                       spec.direction,
                       size: badgeIconSize,
                       color: badgeIconColor,
-                    ),
-                  ),
-                ),
-              // Product or rail pip — top-end.
-              if (spec.productPip != null)
-                Positioned(
-                  right: showWell ? -1 : 0,
-                  top: showWell ? -1 : 0,
-                  child: Container(
-                    width: pipSize,
-                    height: pipSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: pipWellColor ?? badgeWellColor,
-                      border: Border.all(color: wellBorder, width: 1.1),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      spec.productPip,
-                      size: pipIconSize,
-                      color: pipIconColor ?? badgeIconColor,
                     ),
                   ),
                 ),

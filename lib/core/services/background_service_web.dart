@@ -9,6 +9,8 @@ Future<void> stopBackgroundService() async {}
 
 Future<void> requestBackgroundNotificationPoll() async {}
 
+Future<void> notifyBackgroundAppLifecycle({required bool foreground}) async {}
+
 Future<void> markBackgroundNotificationsSeen(Iterable<String> ids) async {}
 
 bool get backgroundServiceSupported => false;

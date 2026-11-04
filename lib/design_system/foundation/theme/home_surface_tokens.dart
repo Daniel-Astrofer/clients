@@ -172,7 +172,8 @@ class HomeSurfaceTheme extends ThemeExtension<HomeSurfaceTheme> {
       ThemeTokenBridge.isLight ? light : dark;
 
   static HomeSurfaceTheme of(BuildContext context) {
-    return Theme.of(context).extension<HomeSurfaceTheme>() ?? current;
+    return Theme.of(context).extension<HomeSurfaceTheme>() ??
+        (Theme.of(context).brightness == Brightness.light ? light : dark);
   }
 
   TextStyle get title => AppTypography.h3.copyWith(
@@ -293,7 +294,7 @@ abstract class HomeTypography {
   // To resize all section titles, edit sectionTitleSize above.
   // ============================================================
 
-  // -- Operational headings (Plus Jakarta Sans) --
+  // -- Operational headings (Aeonik Pro) --
 
   /// Section header: "Atividades recentes", "Distribuição de fundos", etc.
   static TextStyle sectionHeader({Color? color}) => AppTypography.inter(
@@ -313,17 +314,17 @@ abstract class HomeTypography {
         letterSpacing: 0,
       );
 
-  /// Large hero title: onboarding, welcome, statement.
+  /// Large hero title: onboarding, welcome, statement (Aeonik Pro).
   static TextStyle heroTitle({Color? color, double fontSize = 32}) =>
       AppTypography.playfairDisplay(
         color: color,
         fontSize: fontSize,
-        fontWeight: AppTypography.w510,
+        fontWeight: FontWeight.w600,
         height: 1.2,
         letterSpacing: -0.5,
       );
 
-  // -- Plus Jakarta Sans (body / labels) --
+  // -- Aeonik Pro (body / labels) --
 
   /// Date / group headers: "Hoje", "Ontem", section labels like "TOTAL".
   static TextStyle dateHeader({Color? color}) => AppTypography.label.copyWith(
@@ -336,7 +337,7 @@ abstract class HomeTypography {
   static TextStyle filterChip({Color? color}) => AppTypography.label.copyWith(
         color: color,
         fontSize: captionSize,
-        fontWeight: FontWeight.w500,
+        fontWeight: AppTypography.w500,
         letterSpacing: 0,
       );
 
@@ -344,7 +345,7 @@ abstract class HomeTypography {
   static TextStyle bodyText({Color? color}) =>
       AppTypography.bodyMedium.copyWith(
         color: color,
-        fontWeight: FontWeight.w400,
+        fontWeight: AppTypography.w400,
         letterSpacing: 0,
       );
 
@@ -356,7 +357,7 @@ abstract class HomeTypography {
         height: 1.4,
       );
 
-  // -- Amounts (Plus Jakarta Sans + tabular) --
+  // -- Amounts (Aeonik Pro + tabular) --
 
   /// Balance hero (BTC total).
   static TextStyle balanceHero({Color? color}) =>
@@ -366,7 +367,7 @@ abstract class HomeTypography {
   static TextStyle transactionAmount({Color? color}) =>
       AppTypography.homeBalance(color: color).copyWith(
         fontSize: bodySize,
-        fontWeight: FontWeight.w700,
+        fontWeight: AppTypography.w590,
         letterSpacing: 0,
       );
 

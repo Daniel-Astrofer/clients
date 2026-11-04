@@ -1,11 +1,11 @@
-"""Generate iOS LaunchImage PNGs from the kerosene-logo-white.png foreground."""
+"""Generate iOS LaunchImage PNGs from the kerosene-logo.jpeg foreground."""
 from pathlib import Path
 import sys
 
 from PIL import Image
 
 out_dir = Path(__file__).resolve().parent
-src = out_dir.parents[3] / "assets" / "logo" / "kerosene-logo-white.png"
+src = out_dir.parents[3] / "assets" / "logo" / "kerosene-logo.png"
 
 if not src.is_file():
     print(f"Source not found: {src}")

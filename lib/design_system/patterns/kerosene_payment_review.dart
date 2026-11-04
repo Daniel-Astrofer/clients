@@ -11,7 +11,7 @@ import 'package:kerosene/design_system/patterns/kerosene_financial_surface.dart'
 /// The canonical payment review summary — amount, source, recipient, fee, total.
 ///
 /// Follows the send-review-screen contract:
-/// - Amount: Playfair Display 32px w590
+/// - Amount: Moderat Mono 32px
 /// - Recipient/source: 15px w400
 /// - Fee: 13px tertiary color
 /// - Total: 15px w590

@@ -13,7 +13,7 @@ class AdminTypography {
   static const String titleFontFamily = AppTypography.displayFontFamily;
   static const String monoFontFamily = AppTypography.monoFontFamily;
 
-  // --- Playfair Display titles ---
+  // --- Moderat Mono titles ---
   static final TextStyle displayLarge = AppTypography.playfairDisplay(
     fontSize: 48,
     color: AdminColors.textPrimary,
@@ -50,24 +50,24 @@ class AdminTypography {
     height: 1.35,
   );
 
-  // --- Plus Jakarta Sans body ---
+  // --- Aeonik Pro body ---
   static final TextStyle bodyLarge = AppTypography.inter(
     fontSize: 15,
-    fontWeight: FontWeight.w400,
+    fontWeight: AppTypography.w400,
     color: AdminColors.textPrimary,
     height: 1.5,
   );
 
   static final TextStyle bodyMedium = AppTypography.inter(
     fontSize: 13,
-    fontWeight: FontWeight.w400,
+    fontWeight: AppTypography.w400,
     color: AdminColors.textSecondary,
     height: 1.5,
   );
 
   static final TextStyle bodySmall = AppTypography.inter(
     fontSize: 12,
-    fontWeight: FontWeight.w400,
+    fontWeight: AppTypography.w400,
     color: AdminColors.textTertiary,
     height: 1.4,
   );
