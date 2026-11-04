@@ -48,7 +48,7 @@ void main() {
 
   test('operational heading and metadata use coherent type tokens', () {
     expect(
-        HomeTypography.sectionHeader().fontFamily, contains('PlusJakartaSans'));
+        HomeTypography.sectionHeader().fontFamily, contains('Aeonik Pro'));
     expect(HomeTypography.sectionHeader().fontWeight, FontWeight.w600);
     expect(HomeTypography.smallLabelSize, greaterThanOrEqualTo(12));
     expect(HomeRadius.card, 20);

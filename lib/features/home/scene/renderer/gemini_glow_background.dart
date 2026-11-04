@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/performance/app_interaction_busy.dart';
+import 'package:kerosene/core/performance/kerosene_graphics_policy.dart';
 import 'package:kerosene/core/providers/shader_provider.dart';
+import 'package:kerosene/features/home/presentation/providers/home_scroll_busy_provider.dart';
 import 'package:kerosene/features/home/presentation/screens/home_screen.dart'
     show HomeLedgerBalanceView, homeLedgerBalanceViewProvider;
 import 'package:kerosene/features/home/presentation/widgets/home_stage_atmosphere.dart';
@@ -52,10 +55,13 @@ class _SceneGeminiGlowBackgroundState
   bool _seeded = false;
 
   late final Ticker _ticker;
+  final ValueNotifier<int> _paintRevision = ValueNotifier<int>(0);
   double _seconds = 0;
   Duration? _lastTick;
   bool _ticking = false;
   bool _reduceMotion = false;
+  bool _allowMotion = true;
+  bool _interactionBusy = false;
 
   ui.FragmentShader? _shader;
 
@@ -77,6 +83,7 @@ class _SceneGeminiGlowBackgroundState
   @override
   void dispose() {
     _ticker.dispose();
+    _paintRevision.dispose();
     _shader?.dispose();
     super.dispose();
   }
@@ -85,7 +92,8 @@ class _SceneGeminiGlowBackgroundState
     if (!mounted) return;
     _reduceMotion = KeroseneMotion.reduceMotion(context);
     final enabled = TickerMode.valuesOf(context).enabled;
-    final want = !_reduceMotion && enabled;
+    final want =
+        !_reduceMotion && enabled && _allowMotion && !_interactionBusy;
     if (want && !_ticking) {
       _lastTick = null;
       _ticker.start();
@@ -95,7 +103,7 @@ class _SceneGeminiGlowBackgroundState
       _ticking = false;
       _lastTick = null;
     }
-    if (_reduceMotion) _settleVisualState();
+    if (_reduceMotion || !_allowMotion) _settleVisualState();
   }
 
   void _settleVisualState() {
@@ -143,7 +151,8 @@ class _SceneGeminiGlowBackgroundState
       _intensity = _intensityTarget;
     }
 
-    if (mounted) setState(() {});
+    // Repaint the CustomPainter directly without marking the widget element dirty.
+    _paintRevision.value++;
   }
 
   double _expNeg(double x) {
@@ -201,7 +210,7 @@ class _SceneGeminiGlowBackgroundState
     if (theaterPiece &&
         (!wasTheater || (id.isNotEmpty && id != _lastSceneId))) {
       // A small lift acknowledges new content without a flash.
-      if (!_reduceMotion) {
+      if (!_reduceMotion && _allowMotion) {
         _surge = (_surge * 0.25 + 0.12).clamp(0.0, 0.18);
         ref.read(homeAuroraInteractionProvider).pulseFromScene(strength: 0.4);
       }
@@ -220,16 +229,32 @@ class _SceneGeminiGlowBackgroundState
 
   @override
   Widget build(BuildContext context) {
+    final policy = ref.watch(graphicsPolicyProvider);
+    final scrollBusy = ref.watch(homeScrollBusyProvider);
+    final transitionBusy = ref.watch(routeTransitionBusyProvider);
+
+    final nextAllowMotion =
+        policy.allowAuroraShaderMotion && policy.allowAmbientGpuLoops;
+    final nextBusy = scrollBusy || transitionBusy;
+    if (_allowMotion != nextAllowMotion || _interactionBusy != nextBusy) {
+      _allowMotion = nextAllowMotion;
+      _interactionBusy = nextBusy;
+      _ensureTicking();
+    }
+
     ref.listen<HomeScene>(homeSceneProvider, (_, next) {
       _applySceneTargets(next);
-      if (_reduceMotion) setState(_settleVisualState);
+      if (_reduceMotion || !_allowMotion) {
+        _settleVisualState();
+        _paintRevision.value++;
+      }
     });
 
     ref.listen(homeLedgerBalanceViewProvider, (prev, next) {
       if (prev == next) return;
       final scene = ref.read(homeSceneProvider);
       // Scene notifier retints resting aurora; we only add a soft pulse.
-      if (!scene.hasForegroundContent && !_reduceMotion) {
+      if (!scene.hasForegroundContent && !_reduceMotion && _allowMotion) {
         _surge = (_surge * 0.25 + 0.10).clamp(0.0, 0.16);
       }
     });
@@ -257,15 +282,14 @@ class _SceneGeminiGlowBackgroundState
           isComplex: true,
           willChange: _ticking,
           painter: _GeminiGlowShaderPainter(
+            repaint: _paintRevision,
             shader: shader,
-            timeSec: _seconds,
-            // Pull-to-refresh must not move or retint the shader.
-            pull: 0.0,
-            intensity: _intensity.clamp(0.0, 1.0),
-            theater: _theater.clamp(0.0, 1.0),
-            surge: _surge.clamp(0.0, 1.0),
-            primary: _primary,
-            secondary: _secondary,
+            readTimeSec: () => _seconds,
+            readIntensity: () => _intensity.clamp(0.0, 1.0),
+            readTheater: () => _theater.clamp(0.0, 1.0),
+            readSurge: () => _surge.clamp(0.0, 1.0),
+            readPrimary: () => _primary,
+            readSecondary: () => _secondary,
             verticalOriginPx: widget.verticalOriginPx,
             logicalHeightPx: widget.logicalHeightPx,
           ),
@@ -278,32 +302,34 @@ class _SceneGeminiGlowBackgroundState
 
 class _GeminiGlowShaderPainter extends CustomPainter {
   final ui.FragmentShader shader;
-  final double timeSec;
-  final double pull;
-  final double intensity;
-  final double theater;
-  final double surge;
-  final Color primary;
-  final Color secondary;
+  final double Function() readTimeSec;
+  final double Function() readIntensity;
+  final double Function() readTheater;
+  final double Function() readSurge;
+  final Color Function() readPrimary;
+  final Color Function() readSecondary;
   final double verticalOriginPx;
   final double logicalHeightPx;
 
   const _GeminiGlowShaderPainter({
+    required Listenable repaint,
     required this.shader,
-    required this.timeSec,
-    required this.pull,
-    required this.intensity,
-    required this.theater,
-    required this.surge,
-    required this.primary,
-    required this.secondary,
+    required this.readTimeSec,
+    required this.readIntensity,
+    required this.readTheater,
+    required this.readSurge,
+    required this.readPrimary,
+    required this.readSecondary,
     required this.verticalOriginPx,
     required this.logicalHeightPx,
-  });
+  }) : super(repaint: repaint);
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
+
+    final primary = readPrimary();
+    final secondary = readSecondary();
 
     // Uniform order must match gemini_glow.frag:
     // 0-1 uSize, 2 uTime, 3 uPull, 4 uIntensity, 5 uTheater, 6 uSurge,
@@ -311,11 +337,11 @@ class _GeminiGlowShaderPainter extends CustomPainter {
     // 15 uVerticalOriginPx, 16 uLogicalHeightPx
     shader.setFloat(0, size.width);
     shader.setFloat(1, size.height);
-    shader.setFloat(2, timeSec);
-    shader.setFloat(3, pull);
-    shader.setFloat(4, intensity);
-    shader.setFloat(5, theater);
-    shader.setFloat(6, surge);
+    shader.setFloat(2, readTimeSec());
+    shader.setFloat(3, 0.0);
+    shader.setFloat(4, readIntensity());
+    shader.setFloat(5, readTheater());
+    shader.setFloat(6, readSurge());
     shader.setFloat(7, primary.r);
     shader.setFloat(8, primary.g);
     shader.setFloat(9, primary.b);
@@ -337,14 +363,7 @@ class _GeminiGlowShaderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GeminiGlowShaderPainter oldDelegate) {
-    return oldDelegate.timeSec != timeSec ||
-        oldDelegate.pull != pull ||
-        oldDelegate.intensity != intensity ||
-        oldDelegate.theater != theater ||
-        oldDelegate.surge != surge ||
-        oldDelegate.primary != primary ||
-        oldDelegate.secondary != secondary ||
-        oldDelegate.verticalOriginPx != verticalOriginPx ||
+    return oldDelegate.verticalOriginPx != verticalOriginPx ||
         oldDelegate.logicalHeightPx != logicalHeightPx ||
         oldDelegate.shader != shader;
   }

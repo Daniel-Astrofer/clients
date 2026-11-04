@@ -94,7 +94,7 @@ class SendMoneyScreen extends ConsumerStatefulWidget {
 
 class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     with FinancialSurfaceMixin, TickerProviderStateMixin {
-  bool _journeyReady = false;
+  late bool _journeyReady = widget.initialWalletId == null;
   bool _initialWalletSelected = false;
   bool _initialWalletUnavailable = false;
   Color get internalBlack => Theme.of(context).scaffoldBackgroundColor;
@@ -108,6 +108,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
   /// Shared push/pop motion for every send-flow screen (incl. review).
   static const Duration _navDuration = kKeroseneFlowNavDuration;
   static const Curve _navCurve = kKeroseneFlowNavCurve;
+  static const Curve _navReverseCurve = kKeroseneFlowNavReverseCurve;
   String? _pendingPaymentLinkId;
   NetworkFeeTier get _selectedFeeTier =>
       ref.read(sendMoneyFlowProvider).value?.selectedFeeTier ??
@@ -192,7 +193,7 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       CurvedAnimation(
         parent: controller,
         curve: _navCurve,
-        reverseCurve: _navCurve,
+        reverseCurve: _navReverseCurve,
       ),
     );
   }
@@ -230,8 +231,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
       if (widget.initialWalletId != null) {
         await _loadRequestedWallet();
         if (!mounted) return;
-      } else {
-        setState(() => _journeyReady = true);
       }
       final walletState = ref.read(walletProvider);
       if (walletState is WalletInitial || walletState is WalletError) {
@@ -383,7 +382,6 @@ class SendMoneyScreenState extends ConsumerState<SendMoneyScreen>
     }
     final currentStepWatch =
         ref.watch(sendMoneyFlowProvider).value?.currentStep ?? 0;
-    ref.watch(balanceWebSocketServiceProvider);
     var isLoading = false;
     if (currentStepWatch == 1) {
       final isSending = ref.watch(

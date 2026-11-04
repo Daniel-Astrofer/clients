@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/responsive/kerosene_responsive.dart';
 import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.dart';
+import 'package:kerosene/design_system/components/generic/kerosene_logo.dart';
 import 'package:kerosene/design_system/foundation/theme/app_typography.dart';
 import '../../controller/auth_controller.dart';
 
@@ -65,24 +66,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       minHeight: constraints.maxHeight,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 42, 24, 28),
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
                       child: AuthMotionStagger(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const _WelcomeHeader(),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            height: (constraints.maxHeight * 0.32)
+                                .clamp(180.0, 320.0)
+                                .toDouble(),
+                            child: const Center(child: _PhoneHeroImage()),
+                          ),
                           const SizedBox(height: 28),
                           _WelcomeActions(
                             onCreateAccount:
                                 _openingRoute ? null : () => _open('/signup'),
                             onSignIn:
                                 _openingRoute ? null : () => _open('/login'),
-                          ),
-                          const SizedBox(height: 34),
-                          SizedBox(
-                            height: (constraints.maxHeight * 0.36)
-                                .clamp(220.0, 340.0)
-                                .toDouble(),
-                            child: const Center(child: _PhoneHeroImage()),
                           ),
                         ],
                       ),
@@ -104,37 +105,29 @@ class _WelcomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = KeroseneBrandTheme.of(context);
-    final titleSize = context.responsive.isTinyPhone ? 28.0 : 30.0;
+    final titleSize = context.responsive.isTinyPhone ? 24.0 : 28.0;
     return Column(
       children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(text: context.tr.welcomeHeaderTitleCustody),
-              TextSpan(
-                text: context.tr.welcomeHeaderTitleSimplicity,
-                style: AppTypography.inter(
-                  color: colors.textSecondary,
-                  fontSize: titleSize,
-                  fontWeight: FontWeight.w500,
-                  height: 1.05,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
+        KeroseneLogo(
+          size: context.responsive.isTinyPhone ? 36.0 : 42.0,
+          showText: false,
+          color: colors.textPrimary,
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Praticidade e segurança para gastar em bitcoin onde quiser.',
           textAlign: TextAlign.center,
-          style: AppTypography.inter(
+          style: AppTypography.playfairDisplay(
             color: colors.textPrimary,
             fontSize: titleSize,
-            fontWeight: FontWeight.w500,
-            height: 1.05,
-            letterSpacing: 0,
+            fontWeight: AppTypography.w510,
+            height: 1.15,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 16),
         Text(
-          context.tr.welcomeHeaderSubtitle,
+          'Fomos projetados há oferecer praticidade e segurança em um unico lugar.',
           textAlign: TextAlign.center,
           style: AppTypography.inter(
             color: colors.textSecondary,
@@ -159,21 +152,27 @@ class _PhoneHeroImage extends StatelessWidget {
         final imageSize =
             constraints.biggest.shortestSide.clamp(0.0, 340.0).toDouble();
 
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final targetCacheSize = (imageSize * dpr).round();
+
         // The existing illustration depicts the dark interface. Keep its
         // background intentional in both themes and remove legacy rail colors.
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: ColoredBox(
-            color: Colors.black,
-            child: Image.asset(
-              _WelcomeScreenState._phoneMockupAsset,
-              width: imageSize,
-              height: imageSize,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              color: Colors.grey,
-              colorBlendMode: BlendMode.saturation,
-              excludeFromSemantics: true,
+        return RepaintBoundary(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: ColoredBox(
+              color: Colors.black,
+              child: Image.asset(
+                _WelcomeScreenState._phoneMockupAsset,
+                width: imageSize,
+                height: imageSize,
+                cacheWidth: targetCacheSize > 0 ? targetCacheSize : null,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+                color: Colors.grey,
+                colorBlendMode: BlendMode.saturation,
+                excludeFromSemantics: true,
+              ),
             ),
           ),
         );

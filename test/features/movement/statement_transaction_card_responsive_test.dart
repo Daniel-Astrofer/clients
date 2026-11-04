@@ -23,8 +23,8 @@ import 'package:kerosene/core/providers/price_provider.dart';
 import 'package:kerosene/core/providers/appearance_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_list_item.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
-import 'package:kerosene/features/movement/presentation/activity/transaction_palette.dart';
 import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
 import 'package:kerosene/features/movement/data/entities/transaction.dart';
 import 'package:kerosene/core/l10n/app_localizations.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icons.dart';
@@ -172,7 +172,7 @@ void main() {
                   transaction: current,
                   mode: mode,
                   expanded: true,
-                  density: StatementTransactionCardDensity.home)));
+                  density: StatementTransactionCardDensity.full)));
       final cancel = find.byKey(const ValueKey('activity-cancel'));
       await tester.ensureVisible(cancel);
       await tester.pump();
@@ -216,7 +216,7 @@ void main() {
     expect(takeAllExceptions(tester), isEmpty);
   });
 
-  testWidgets('expanded Home rows follow updated confirmation data',
+  testWidgets('expanded statement rows follow updated confirmation data',
       (tester) async {
     StateSetter? update;
     Transaction current = transaction;
@@ -226,7 +226,7 @@ void main() {
       update = setState;
       return StatementTransactionCard(
           transaction: current,
-          density: StatementTransactionCardDensity.home,
+          density: StatementTransactionCardDensity.full,
           expanded: true);
     })));
     expect(find.widgetWithText(SelectableText, '1/6'), findsOneWidget);
@@ -245,57 +245,6 @@ void main() {
     await tester.pump();
     expect(find.widgetWithText(SelectableText, '3/6'), findsOneWidget);
     expect(find.widgetWithText(SelectableText, '1/6'), findsNothing);
-    expect(takeAllExceptions(tester), isEmpty);
-  });
-
-  testWidgets('expanded Home exposes and copies the complete TXID',
-      (tester) async {
-    await pumpCard(tester,
-        size: compactPortrait,
-        theme: AppTheme.darkTheme,
-        child: SingleChildScrollView(
-            child: StatementTransactionCard(
-                transaction: transaction,
-                density: StatementTransactionCardDensity.home,
-                expanded: true)));
-    expect(find.text(transaction.blockchainTxid!), findsOneWidget);
-    final copy = find.byKey(const ValueKey('statement-copy-txid'));
-    await tester.ensureVisible(copy);
-    await tester.pump();
-    await tester.tap(copy);
-    await tester.pump();
-    expect(clipboardText, transaction.blockchainTxid);
-    expect(AppScreenFeedbackBus.current.value?.type, AppNoticeType.success);
-    expect(tester.getSize(copy).width, greaterThanOrEqualTo(48));
-    await tester.pump(const Duration(seconds: 4));
-    expect(AppScreenFeedbackBus.current.value, isNull);
-    expect(takeAllExceptions(tester), isEmpty);
-  });
-
-  testWidgets('failed copying a field produces an explicit error',
-      (tester) async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') {
-        throw PlatformException(code: 'denied');
-      }
-      return null;
-    });
-    await pumpCard(tester,
-        size: compactPortrait,
-        theme: AppTheme.darkTheme,
-        child: SingleChildScrollView(
-            child: StatementTransactionCard(
-                transaction: transaction,
-                density: StatementTransactionCardDensity.home,
-                expanded: true)));
-    final copy = find.byKey(const ValueKey('statement-copy-txid'));
-    await tester.ensureVisible(copy);
-    await tester.pump();
-    await tester.tap(copy);
-    await tester.pump();
-    expect(AppScreenFeedbackBus.current.value?.type, AppNoticeType.error);
-    AppScreenFeedbackBus.clear();
     expect(takeAllExceptions(tester), isEmpty);
   });
 
@@ -350,7 +299,7 @@ void main() {
       });
     }
 
-    testWidgets('Home restores the original paper card and compact layout',
+    testWidgets('Home density renders flush dark surface row and opens details on tap',
         (tester) async {
       await loadAppFonts();
       await pumpCard(
@@ -371,19 +320,15 @@ void main() {
       final material = tester.widget<Material>(
         find.descendant(of: card, matching: find.byType(Material)).first,
       );
-      final ink = tester.widget<Ink>(
-        find.descendant(of: card, matching: find.byType(Ink)).first,
-      );
-      final decoration = ink.decoration! as BoxDecoration;
+      expect(material.type, MaterialType.transparency);
+      expect(
+          find.descendant(of: card, matching: find.byType(InkWell)), findsOneWidget);
 
-      final original = TransactionCardColors.resolve(transaction);
-      expect(material.color, original.background);
-      expect(decoration.color, original.background);
-      expect(decoration.border!.top.color, original.border);
-      expect(decoration.boxShadow, isNull);
+      await tester.tap(card);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(TransactionDetailScreen), findsOneWidget);
       expect(takeAllExceptions(tester), isEmpty);
-      await expectLater(
-          card, matchesGoldenFile('goldens/home_transaction_original.png'));
     });
 
     testWidgets('stacked card grows for complete identifiers', (tester) async {
@@ -612,6 +557,51 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
+    });
+
+    testWidgets('Home density for payment link shows abbreviated hash of who paid',
+        (tester) async {
+      await loadAppFonts();
+      final linkTx = Transaction(
+        id: 'pl_test_123',
+        fromAddress: 'Rede Bitcoin',
+        toAddress: 'bc1q9xxxxpayeraddress00000000000000000000000',
+        amountSatoshis: 250000,
+        feeSatoshis: 0,
+        status: TransactionStatus.confirmed,
+        type: TransactionType.receive,
+        confirmations: 1,
+        timestamp: DateTime.now(),
+        rail: 'ONCHAIN',
+        provider: 'PAYMENT_LINK',
+        blockchainTxid:
+            '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
+      );
+
+      await pumpCard(
+        tester,
+        size: regularPortrait,
+        theme: AppTheme.darkTheme,
+        child: SingleChildScrollView(
+          child: SizedBox(
+            width: 340,
+            child: StatementTransactionCard(
+              transaction: linkTx,
+              density: StatementTransactionCardDensity.home,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.textContaining('4a5e1e...eda33b', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Link de pagamento', findRichText: true),
+          findsNothing);
+      expect(find.textContaining('Pagador on-chain', findRichText: true),
+          findsNothing);
+      expect(takeAllExceptions(tester), isEmpty);
     });
   });
 }

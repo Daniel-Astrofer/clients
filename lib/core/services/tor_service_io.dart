@@ -288,11 +288,17 @@ class TorService {
 
     relayServer.listen((clientSocket) async {
       debugPrint('🧅 Tor Relay: Received connection on 127.0.0.1:$relayPort');
+      var clientClosed = false;
+      clientSocket.done.then(
+        (_) => clientClosed = true,
+        onError: (_) => clientClosed = true,
+      );
       try {
         final tunnel = await _openSocksTunnel(
           targetHost: targetHost,
           targetPort: targetPort,
           logPrefix: 'TorService [Relay]',
+          isClientCancelled: () => clientClosed,
         );
 
         // Bi-Directional Pipe
@@ -338,9 +344,10 @@ class TorService {
     required String targetHost,
     required int targetPort,
     required String logPrefix,
+    bool Function()? isClientCancelled,
   }) async {
     int relayAttempts = 0;
-    const int maxRelayAttempts = 10;
+    const int maxRelayAttempts = 3;
     Socket? torSocket;
     StreamIterator<Uint8List>? torIter;
     final readBuffer = <int>[];
@@ -360,6 +367,11 @@ class TorService {
     }
 
     while (relayAttempts < maxRelayAttempts) {
+      if (isClientCancelled?.call() == true) {
+        throw const SocketException(
+          'Client disconnected before tunnel established',
+        );
+      }
       relayAttempts++;
       await torIter?.cancel();
       torSocket?.destroy();
@@ -445,6 +457,11 @@ class TorService {
         }
       }
 
+      if (isClientCancelled?.call() == true) {
+        throw const SocketException(
+          'Client disconnected before tunnel established',
+        );
+      }
       await Future.delayed(_relayRetryDelay(relayAttempts));
     }
 
@@ -504,8 +521,7 @@ class TorService {
       code == 0xF1 || code == 0xF6 || code == 0xF7;
 
   Duration _relayRetryDelay(int attempt) {
-    final seconds = attempt * 3;
-    return Duration(seconds: seconds > 15 ? 15 : seconds);
+    return Duration(milliseconds: attempt * 400);
   }
 }
 

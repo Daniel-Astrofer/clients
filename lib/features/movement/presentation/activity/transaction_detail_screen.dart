@@ -37,6 +37,7 @@ import 'package:kerosene/features/movement/presentation/activity/blockchain_expl
 import 'package:kerosene/features/movement/presentation/activity/transaction_display.dart';
 import 'package:kerosene/features/movement/presentation/activity/activity_glyph.dart';
 import 'package:kerosene/features/movement/presentation/activity/home_activity_surface.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_party_display.dart';
 
 /// Persistent transaction detail using the Home typography and exact amounts.
 class TransactionDetailScreen extends ConsumerStatefulWidget {
@@ -199,6 +200,11 @@ class _TransactionDetailScreenState
       btcDecimalPlaces: money.btcDecimalPlaces,
     );
     final actionTitle = presentation.detailTitle(context);
+    final partyTitle = resolveTransactionPartyTitle(
+      tx,
+      subtitle: presentation.subtitle,
+      defaultTitle: actionTitle,
+    );
     final amountLabel = presentation.primaryAmountLabel;
     final btcLabel = MoneyDisplay.formatOperationAmount(
       satoshis: tx.isDebit ? -tx.amountSatoshis : tx.amountSatoshis,
@@ -215,33 +221,6 @@ class _TransactionDetailScreenState
                 : context.tr.movementOperationTotal)
             : copy.amountLabel;
 
-    final primaryRows = <_DetailRowData>[
-      for (final field in presentation.expandedFields)
-        if (field.key != 'status' && field.key != 'network')
-          _DetailRowData(
-            field.label,
-            field.key == 'when'
-                ? AppDateTime.formatFull(context, tx.timestamp)
-                : field.value,
-            copyable: field.copyable,
-          ),
-      if (resolveTransactionFailureLabel(context, tx) != null)
-        _DetailRowData(
-            copy.reason, resolveTransactionFailureLabel(context, tx)!),
-    ];
-    // Only add BTC when the chosen recorded fiat has replaced the principal.
-    // Principal and total are distinct when fees apply; do not equate them.
-    final showBtc = amountLabel != btcLabel &&
-        !primaryRows.any((row) => row.value == btcLabel);
-    final technicalRows = <_DetailRowData>[
-      for (final field in presentation.detailTechnicalFields(
-        context,
-        tx,
-        appLocale: money.locale,
-      ))
-        _DetailRowData(field.label, field.value,
-            copyable: field.copyable, mono: field.technical),
-    ];
     final statusIcon = switch (presentation.axes.lifecycle) {
       TxLifecycle.confirmed => KeroseneIcons.success,
       TxLifecycle.pending || TxLifecycle.confirming => KeroseneIcons.timer,
@@ -265,17 +244,198 @@ class _TransactionDetailScreenState
                 ? context.tr.transactionExplorerLocalNetwork
                 : context.tr.transactionExplorerUnknownNetwork;
 
+    final targetConfirmations = tx.onchainConfirmationTarget.clamp(1, 6);
+    final confCount = tx.confirmations.clamp(0, targetConfirmations);
+
+    final primaryRows = <_DetailRowData>[
+      _DetailRowData(
+        copy.status,
+        statusLabel,
+        customWidget: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            KeroseneIcon(
+              statusIcon,
+              key: const ValueKey('transaction-detail-status-icon'),
+              size: 18,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            Text(
+              statusLabel,
+              key: const ValueKey('transaction-detail-status-label'),
+              style: AppTypography.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (tx.showsOnchainConfirmations)
+              Text(
+                '($confCount/$targetConfirmations)',
+                style: AppTypography.bodySmall.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+      ),
+      _DetailRowData(copy.network, network),
+      _DetailRowData(
+        copy.whenLabel,
+        AppDateTime.formatFull(context, tx.timestamp),
+      ),
+    ];
+
+    final fromField = presentation.expandedFields.firstWhere(
+      (f) => f.key == 'from',
+      orElse: () => const PresentationField(key: '', label: '', value: ''),
+    );
+    if (fromField.value.isNotEmpty && fromField.value != '—') {
+      primaryRows.add(_DetailRowData(
+        copy.fromPrefix,
+        fromField.value,
+        copyable: fromField.copyable,
+      ));
+    }
+
+    final toField = presentation.expandedFields.firstWhere(
+      (f) => f.key == 'to',
+      orElse: () => const PresentationField(key: '', label: '', value: ''),
+    );
+    if (toField.value.isNotEmpty && toField.value != '—') {
+      primaryRows.add(_DetailRowData(
+        copy.toPrefix,
+        toField.value,
+        copyable: toField.copyable,
+      ));
+    }
+
+    final amountField = presentation.expandedFields.firstWhere(
+      (f) => f.key == 'amount',
+      orElse: () => const PresentationField(key: '', label: '', value: ''),
+    );
+    if ((tx.showsNetworkFee || tx.showsServiceFee) &&
+        amountField.value.isNotEmpty) {
+      primaryRows.add(_DetailRowData(
+        copy.amountLabel,
+        amountField.value,
+      ));
+    }
+
+    if (tx.showsNetworkFee) {
+      primaryRows.add(_DetailRowData(
+        copy.networkFee,
+        formatSatsAsBtc(tx.feeSatoshis),
+      ));
+    }
+
+    if (tx.showsServiceFee) {
+      primaryRows.add(_DetailRowData(
+        copy.serviceFee,
+        formatSatsAsBtc(tx.serviceFeeSatoshis),
+      ));
+    }
+
+    if (tx.isDebit && (tx.showsNetworkFee || tx.showsServiceFee)) {
+      primaryRows.add(_DetailRowData(
+        tx.isConfirmed ? copy.totalDebited : context.tr.movementOperationTotal,
+        amountLabel,
+      ));
+    }
+
+    final failureReason = resolveTransactionFailureLabel(context, tx);
+    if (failureReason != null) {
+      primaryRows.add(_DetailRowData(copy.reason, failureReason));
+    }
+
+    final description = tx.description?.trim();
+    if (description != null &&
+        description.isNotEmpty &&
+        !isGenericNetworkWord(description) &&
+        description != actionTitle &&
+        description != partyTitle) {
+      primaryRows.add(_DetailRowData(copy.description, description));
+    }
+
+    // Only add BTC when the chosen recorded fiat has replaced the principal.
+    // Principal and total are distinct when fees apply; do not equate them.
+    final showBtc = amountLabel != btcLabel &&
+        !primaryRows.any((row) => row.value == btcLabel);
+
+    final technicalFields = presentation.detailTechnicalFields(
+      context,
+      tx,
+      appLocale: money.locale,
+    );
+
+    const excludedTechnicalKeys = {
+      'wallet-id',
+      'source-wallet-id',
+      'destination-wallet-id',
+      'internal-id',
+      'external-status',
+      'external-type',
+      'from-address',
+      'to-address',
+      'description',
+      'sender-name',
+      'receiver-name',
+    };
+
+    final technicalRows = <_DetailRowData>[];
+    for (final field in technicalFields) {
+      if (excludedTechnicalKeys.contains(field.key)) continue;
+
+      if (field.key == 'onchain-txid' && hasExplorerReference) {
+        technicalRows.add(_DetailRowData(
+          field.label,
+          field.value,
+          copyable: field.copyable,
+          mono: field.technical,
+          trailing: TextButton(
+            key: const ValueKey('transaction-explorer-open'),
+            onPressed: explorerUri != null &&
+                    _owns &&
+                    foreground &&
+                    !_openingExplorer
+                ? _openExplorer
+                : null,
+            child: Text(
+              SendMoneyCopy.detailExplorer(context),
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: explorerUri != null &&
+                        _owns &&
+                        foreground &&
+                        !_openingExplorer
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).disabledColor,
+              ),
+            ),
+          ),
+        ));
+      } else {
+        technicalRows.add(_DetailRowData(
+          field.label,
+          field.value,
+          copyable: field.copyable,
+          mono: field.technical,
+        ));
+      }
+    }
+
     return FinancialSecureScope(
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Semantics(
-            label: '$actionTitle. $amountLabel. $network. $statusLabel',
+            label: '$partyTitle. $amountLabel. $network. $statusLabel',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: EdgeInsets.fromLTRB(8, 4, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
                   child: Row(
                     children: [
                       IconButton(
@@ -286,29 +446,6 @@ class _TransactionDetailScreenState
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      const Spacer(),
-                      if (hasExplorerReference)
-                        TextButton(
-                          key: const ValueKey('transaction-explorer-open'),
-                          onPressed: explorerUri != null &&
-                                  _owns &&
-                                  foreground &&
-                                  !_openingExplorer
-                              ? _openExplorer
-                              : null,
-                          child: Text(
-                            SendMoneyCopy.detailExplorer(context),
-                            style: AppTypography.caption.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: explorerUri != null &&
-                                      _owns &&
-                                      foreground &&
-                                      !_openingExplorer
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Theme.of(context).disabledColor,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -331,14 +468,18 @@ class _TransactionDetailScreenState
                             fontSize: 28,
                           );
                           final measure = TextPainter(
-                            text: TextSpan(text: actionTitle, style: style),
+                            text: TextSpan(text: partyTitle, style: style),
                             textScaler: MediaQuery.textScalerOf(context),
                             textDirection: Directionality.of(context),
                           )..layout();
                           final fitsBesideIcon =
                               measure.width <= constraints.maxWidth - 72;
                           measure.dispose();
-                          final title = Text(actionTitle, style: style);
+                          final title = FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(partyTitle, style: style, maxLines: 1),
+                          );
                           final glyph = ActivityGlyph.forAxes(presentation.axes,
                               size: 56);
                           if (!fitsBesideIcon) {
@@ -413,72 +554,18 @@ class _TransactionDetailScreenState
                           ),
                         ),
                       ],
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          KeroseneIcon(statusIcon,
-                              key: const ValueKey(
-                                  'transaction-detail-status-icon'),
-                              size: 20,
-                              color: Theme.of(context).colorScheme.onSurface),
-                          Text(statusLabel,
-                              key: const ValueKey(
-                                  'transaction-detail-status-label'),
-                              style: AppTypography.bodyMedium.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      FadeTransition(
-                        opacity: CurvedAnimation(
-                          parent: _entrance,
-                          curve: const Interval(
-                            0.14,
-                            0.5,
-                            curve: KeroseneMotion.decelerated,
-                          ),
-                        ),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Theme.of(context).dividerColor,
-                              ),
-                            ),
-                            child: Text(
-                              network,
-                              style: AppTypography.inter(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      if (hasExplorerReference && explorerUri == null) ...[
-                        Text(explorerUnavailable,
+                      const SizedBox(height: 24),
+                      if (hasExplorerReference && explorerUri == null)
+                        SizedBox(
+                          width: 0,
+                          height: 0,
+                          child: Text(
+                            explorerUnavailable,
                             key: const ValueKey(
                                 'transaction-explorer-unavailable'),
-                            style: AppTypography.bodySmall.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant)),
-                        const SizedBox(height: 16),
-                      ],
+                            style: const TextStyle(fontSize: 0),
+                          ),
+                        ),
                       if (_explorerError != null && _owns) ...[
                         Text(_explorerError!,
                             key: const ValueKey('transaction-explorer-error'),
@@ -539,12 +626,16 @@ class _DetailRowData {
   final String value;
   final bool copyable;
   final bool mono;
+  final Widget? customWidget;
+  final Widget? trailing;
 
   const _DetailRowData(
     this.label,
     this.value, {
     this.copyable = false,
     this.mono = false,
+    this.customWidget,
+    this.trailing,
   });
 }
 
@@ -590,6 +681,7 @@ class _StaggeredDetailRow extends StatelessWidget {
               child: LayoutBuilder(builder: (context, constraints) {
                 final stacked = row.copyable ||
                     row.mono ||
+                    row.customWidget != null ||
                     constraints.maxWidth < 360 ||
                     MediaQuery.textScalerOf(context).scale(14) > 17;
                 final label = Text(row.label,
@@ -597,22 +689,29 @@ class _StaggeredDetailRow extends StatelessWidget {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500));
                 final value = Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        child: SelectableText(row.value,
-                            textAlign:
-                                stacked ? TextAlign.left : TextAlign.right,
-                            style: row.mono
-                                ? AppTypography.technicalMono(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    fontSize: 14,
-                                    height: 1.35)
-                                : AppTypography.bodyMedium.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    height: 1.35)),
+                        child: row.customWidget != null
+                            ? Align(
+                                alignment: stacked
+                                    ? Alignment.centerLeft
+                                    : Alignment.centerRight,
+                                child: row.customWidget!,
+                              )
+                            : SelectableText(row.value,
+                                textAlign:
+                                    stacked ? TextAlign.left : TextAlign.right,
+                                style: row.mono
+                                    ? AppTypography.technicalMono(
+                                        color:
+                                            Theme.of(context).colorScheme.onSurface,
+                                        fontSize: 14,
+                                        height: 1.35)
+                                    : AppTypography.bodyMedium.copyWith(
+                                        color:
+                                            Theme.of(context).colorScheme.onSurface,
+                                        height: 1.35)),
                       ),
                       if (row.copyable) ...[
                         const SizedBox(width: 8),
@@ -650,6 +749,10 @@ class _StaggeredDetailRow extends StatelessWidget {
                                   .colorScheme
                                   .onSurfaceVariant),
                         ),
+                      ],
+                      if (row.trailing != null) ...[
+                        const SizedBox(width: 8),
+                        row.trailing!,
                       ],
                     ]);
                 if (stacked) {

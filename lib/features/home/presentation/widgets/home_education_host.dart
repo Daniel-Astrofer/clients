@@ -173,20 +173,21 @@ class _HomeEducationHostState extends ConsumerState<HomeEducationHost> {
       return;
     }
 
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (!shouldOfferTotpEducation(
+      totpEnabled: false,
+      userId: auth.user.id,
+      prefs: prefs,
+    )) {
+      debugPrint('[homeEducation] TOTP tip on cooldown — skip');
+      return;
+    }
+
     try {
       final status = await ref.read(securityStatusProvider.future);
       if (!mounted) return;
       if (status.totpEnabled) {
         debugPrint('[homeEducation] TOTP already enabled — skip theater tip');
-        return;
-      }
-      final prefs = ref.read(sharedPreferencesProvider);
-      if (!shouldOfferTotpEducation(
-        totpEnabled: false,
-        userId: auth.user.id,
-        prefs: prefs,
-      )) {
-        debugPrint('[homeEducation] TOTP tip on cooldown — skip');
         return;
       }
       enqueueTotpEducation(ref.read(homeEducationQueueProvider.notifier));

@@ -43,7 +43,7 @@ void main() {
                   padding: const EdgeInsets.all(24),
                   child: StatementTransactionCard(
                       transaction: transaction,
-                      density: StatementTransactionCardDensity.home,
+                      density: StatementTransactionCardDensity.full,
                       expanded: true),
                 )),
               )),

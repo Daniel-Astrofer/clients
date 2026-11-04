@@ -167,60 +167,60 @@ class Tor {
     // Generate a random port.
     int newPort = await _getRandomUnusedPort();
 
-    // Start the Tor service in an isolate.
-    final tor = await Isolate.run(() async {
-      // Load the Tor library.
+    // Start and bootstrap the Tor service in a background isolate so blocking
+    // Rust/Tokio FFI never freezes the Flutter UI thread.
+    final statePath = stateDir.path;
+    final cachePath = cacheDir.path;
+    final result = await Isolate.run(() {
       var lib = rust.NativeLibrary(load(libName));
+      final statePathNative = statePath.toNativeUtf8();
+      final cachePathNative = cachePath.toNativeUtf8();
+      try {
+        final tor = lib.tor_start(
+          newPort,
+          statePathNative.cast<Char>(),
+          cachePathNative.cast<Char>(),
+        );
 
-      // Start the Tor service.
-      final tor = lib.tor_start(
-        newPort,
-        stateDir.path.toNativeUtf8() as Pointer<Char>,
-        cacheDir.path.toNativeUtf8() as Pointer<Char>,
-      );
+        if (tor.client == nullptr) {
+          throwRustException(lib);
+        }
 
-      // Throw an exception if the Tor service fails to start.
-      if (tor.client == nullptr) {
-        throwRustException(lib);
+        final bootstrapped = lib.tor_client_bootstrap(tor.client);
+        if (!bootstrapped) {
+          throwRustException(lib);
+        }
+
+        return (clientAddress: tor.client.address, proxyAddress: tor.proxy.address);
+      } finally {
+        calloc.free(statePathNative);
+        calloc.free(cachePathNative);
       }
-
-      return tor;
     });
 
-    // Set the client pointer and started flag.
-    _clientPtr = Pointer.fromAddress(tor.client.address);
-    _proxyPtr = Pointer.fromAddress(tor.proxy.address);
+    // Set the client pointer, started and bootstrapped flags.
+    _clientPtr = Pointer.fromAddress(result.clientAddress);
+    _proxyPtr = Pointer.fromAddress(result.proxyAddress);
     _started = true;
-
-    // Bootstrap the Tor service.
-    bootstrap();
+    _bootstrapped = true;
 
     // Set the proxy port.
     _proxyPort = newPort;
     broadcastState();
   }
 
-  /// Bootstrap the Tor service.
-  ///
-  /// This will bootstrap the Tor service and establish a Tor circuit.  This
-  /// function should only be called after the Tor service has been started.
-  ///
-  /// This function will block until the Tor service has bootstrapped.
-  ///
-  /// Throws an exception if the Tor service fails to bootstrap.
-  ///
-  /// Returns void.
-  void bootstrap() {
-    // Load the Tor library.
-    final lib = rust.NativeLibrary(_lib);
-
-    // Bootstrap the Tor service.
-    _bootstrapped = lib.tor_client_bootstrap(_clientPtr);
-
-    // Throw an exception if the Tor service fails to bootstrap.
-    if (!bootstrapped) {
-      throwRustException(lib);
-    }
+  /// Bootstrap the Tor service asynchronously without blocking the UI isolate.
+  Future<void> bootstrap() async {
+    if (_bootstrapped || _clientPtr == nullptr) return;
+    final clientAddress = _clientPtr.address;
+    await Isolate.run(() {
+      final lib = rust.NativeLibrary(load(libName));
+      final ok = lib.tor_client_bootstrap(Pointer.fromAddress(clientAddress));
+      if (!ok) {
+        throwRustException(lib);
+      }
+    });
+    _bootstrapped = true;
   }
 
   String takeLastErrorMessage() {

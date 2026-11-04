@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -375,29 +376,81 @@ int transactionAddressCompletenessBonus(Transaction transaction) {
   return score;
 }
 
-Future<List<ExternalTransfer>> _loadExternalTransfersSafely(Ref ref) async {
-  if (ref.watch(sessionStorageScopeProvider) == null) {
+DateTime? _lastExternalTransfersFetch;
+List<ExternalTransfer>? _cachedExternalTransfers;
+String? _externalTransfersScope;
+
+DateTime? _lastPaymentLinksFetch;
+List<PaymentLink>? _cachedPaymentLinks;
+String? _paymentLinksScope;
+
+void invalidateExternalHistoryCache() {
+  _lastExternalTransfersFetch = null;
+  _cachedExternalTransfers = null;
+  _externalTransfersScope = null;
+  _lastPaymentLinksFetch = null;
+  _cachedPaymentLinks = null;
+  _paymentLinksScope = null;
+}
+
+Future<List<ExternalTransfer>> _loadExternalTransfersSafely(
+  Ref ref, {
+  bool force = false,
+}) async {
+  final scope = ref.watch(sessionStorageScopeProvider);
+  if (scope == null) {
     return const <ExternalTransfer>[];
   }
 
+  final now = DateTime.now();
+  if (!force &&
+      _externalTransfersScope == scope &&
+      _cachedExternalTransfers != null &&
+      _lastExternalTransfersFetch != null &&
+      now.difference(_lastExternalTransfersFetch!) < const Duration(seconds: 60)) {
+    return _cachedExternalTransfers!;
+  }
+
   try {
-    return await ref
+    final result = await ref
         .watch(transactionRepositoryProvider)
         .getExternalTransfers();
+    _externalTransfersScope = scope;
+    _cachedExternalTransfers = result;
+    _lastExternalTransfersFetch = now;
+    return result;
   } catch (_) {
-    return const <ExternalTransfer>[];
+    return _cachedExternalTransfers ?? const <ExternalTransfer>[];
   }
 }
 
-Future<List<PaymentLink>> _loadPaymentLinksSafely(Ref ref) async {
-  if (ref.watch(sessionStorageScopeProvider) == null) {
+Future<List<PaymentLink>> _loadPaymentLinksSafely(
+  Ref ref, {
+  bool force = false,
+}) async {
+  final scope = ref.watch(sessionStorageScopeProvider);
+  if (scope == null) {
     return const <PaymentLink>[];
   }
 
+  final now = DateTime.now();
+  if (!force &&
+      _paymentLinksScope == scope &&
+      _cachedPaymentLinks != null &&
+      _lastPaymentLinksFetch != null &&
+      now.difference(_lastPaymentLinksFetch!) < const Duration(seconds: 60)) {
+    return _cachedPaymentLinks!;
+  }
+
   try {
-    return await ref.watch(transactionRepositoryProvider).getPaymentLinks();
+    final result =
+        await ref.watch(transactionRepositoryProvider).getPaymentLinks();
+    _paymentLinksScope = scope;
+    _cachedPaymentLinks = result;
+    _lastPaymentLinksFetch = now;
+    return result;
   } catch (_) {
-    return const <PaymentLink>[];
+    return _cachedPaymentLinks ?? const <PaymentLink>[];
   }
 }
 
@@ -453,7 +506,7 @@ final _scopedTransactionHistoryProvider =
   if (!ownsSession()) return const [];
 
   if (localCached.isNotEmpty) {
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!ownsSession()) return;
       // Never clobber WS/optimistic rows that are only in memory yet.
       final last = ref.read(lastTransactionHistoryProvider);
@@ -472,6 +525,7 @@ final _scopedTransactionHistoryProvider =
   final forceFull = ref.read(transactionHistoryForceFullProvider);
   if (forceFull) {
     ref.read(transactionHistoryForceFullProvider.notifier).clear();
+    invalidateExternalHistoryCache();
   }
   final cursor = ref.read(transactionHistoryCursorProvider);
   DateTime? since;
@@ -498,9 +552,6 @@ final _scopedTransactionHistoryProvider =
     // ignore: unawaited_futures
     LedgerTelemetry.recordFullPull();
   }
-
-  final externalTransfersFuture = _loadExternalTransfersSafely(ref);
-  final paymentLinksFuture = _loadPaymentLinksSafely(ref);
 
   var result = await ledgerRepo.getHistory(page: 0, size: 100, since: since);
   if (!ownsSession()) return const [];
@@ -555,9 +606,9 @@ final _scopedTransactionHistoryProvider =
       );
       ref.read(lastTransactionHistoryProvider.notifier).set(primary);
       ref.read(transactionHistoryLastSyncProvider.notifier).markPrimaryLoaded();
-      final externalTransfers = await externalTransfersFuture;
+      final externalTransfers = await _loadExternalTransfersSafely(ref);
       if (!ownsSession()) return const [];
-      final paymentLinks = await paymentLinksFuture;
+      final paymentLinks = await _loadPaymentLinksSafely(ref);
       if (!ownsSession()) return const [];
       final online = _mergeExternalHistory(
         kfeTransactions: transactions,

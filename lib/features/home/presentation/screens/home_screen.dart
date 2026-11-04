@@ -37,10 +37,7 @@ import 'package:kerosene/features/movement/domain/entities/payment_link.dart';
 import 'package:kerosene/features/movement/domain/entities/tx_status.dart';
 import 'package:kerosene/features/movement/presentation/hub/movement_hub_screen.dart'
     deferred as deposits;
-import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
-    deferred as send_money;
-import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'
-    deferred as receive;
+
 import 'package:kerosene/app/security/local_transaction_history_store.dart';
 import 'package:kerosene/features/movement/providers/transaction_provider.dart';
 import 'package:kerosene/features/movement/presentation/activity/statement_transaction_card.dart';
@@ -330,16 +327,6 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       await context.push('/onboarding/first-access');
       return;
     }
-    // Ensure the deferred send unit is loaded before the slide starts — otherwise
-    // the first Enviar animates a placeholder and swaps mid-transition (jank).
-    try {
-      await loadDeferredLibrary(
-        send_money.loadLibrary,
-        key: DeferredLibraryKeys.sendMoney,
-      );
-    } catch (_) {
-      // DeferredPage on the route will surface the error if load still fails.
-    }
     if (!mounted) return;
 
     final params = <String, String>{};
@@ -379,19 +366,9 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       await context.push('/onboarding/first-access');
       return;
     }
-    // Ensure the deferred receive unit is loaded before the slide starts —
-    // otherwise the first Receber animates a placeholder and swaps mid-transition.
-    try {
-      await loadDeferredLibrary(
-        receive.loadLibrary,
-        key: DeferredLibraryKeys.receive,
-      );
-    } catch (_) {
-      // DeferredPage on the route will surface the error if load still fails.
-    }
     if (!mounted) return;
     // Amount-first receive — wallet is chosen in-flow, never from home.
-    await context.push('/receive');
+    context.go('/receive');
   }
 
   void _openDepositForWallet(Wallet _) {

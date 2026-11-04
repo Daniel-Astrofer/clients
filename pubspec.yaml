@@ -106,15 +106,66 @@ flutter:
 
   assets:
     - 'assets/welcome_phone_mockup.png'
+    - 'assets/fonts/'
+    - 'assets/google_fonts/'
     - 'assets/logo/'
+    - 'assets/pin/'
+
+  fonts:
+    - family: Aeonik Pro
+      fonts:
+        - asset: assets/fonts/AeonikPro-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/AeonikPro-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/AeonikPro-Light.ttf
+          weight: 300
+        - asset: assets/fonts/AeonikPro-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/AeonikPro-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/AeonikPro-Medium.ttf
+          weight: 600
+        - asset: assets/fonts/AeonikPro-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/AeonikPro-Black.ttf
+          weight: 900
+    - family: Moderat Mono
+      fonts:
+        - asset: assets/fonts/ModeratMono-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/ModeratMono-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/ModeratMono-Light.ttf
+          weight: 300
+        - asset: assets/fonts/ModeratMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/ModeratMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/ModeratMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/ModeratMono-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/ModeratMono-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/ModeratMono-Black.ttf
+          weight: 900
 
   shaders:
     - 'assets/shaders/home_aurora.frag'
     - 'assets/shaders/gemini_glow.frag'
+    - 'assets/shaders/bitcoin_hodl.frag'
+    - 'assets/shaders/card_wood.frag'
+    - 'assets/shaders/card_metal.frag'
+    - 'assets/shaders/card_diamond.frag'
+    - 'assets/shaders/card_ruby.frag'
+    - 'assets/shaders/card_emerald.frag'
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  # Raster still derived from kerosene-logo-white.json for OS launcher icons.
-  image_path: "assets/logo/kerosene-logo-white.png"
+  # Raster still derived from kerosene-logo.jpeg for OS launcher icons.
+  image_path: "assets/logo/kerosene-logo.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/logo/kerosene-logo.png"

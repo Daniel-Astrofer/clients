@@ -22,11 +22,11 @@ import 'package:kerosene/features/home/presentation/screens/onboarding_steps_scr
 import 'package:kerosene/features/movement/presentation/activity/statement_screen.dart'
     deferred as deposits;
 import 'package:kerosene/features/movement/presentation/receive/receive_amount_entry_screen.dart'
-    deferred as receive;
+    as receive;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen.dart'
-    deferred as send_money;
+    as send_money;
 import 'package:kerosene/features/movement/presentation/send/send_money_screen_review.dart'
-    deferred as send_money_review;
+    as send_money_review;
 import 'package:kerosene/features/movement/presentation/send/send_payment_review_args.dart';
 import 'package:kerosene/features/security/presentation/screens/settings_screen.dart'
     deferred as settings;
@@ -110,15 +110,10 @@ GoRouter buildMobileGoRouter({
                       : QrPaymentParser.encodePaymentLink(linkId));
               return keroseneFlowSlidePage<void>(
                 key: state.pageKey,
-                child: DeferredPage(
-                  loadLibrary: send_money.loadLibrary,
-                  libraryKey: DeferredLibraryKeys.sendMoney,
-                  animateReveal: false,
-                  builder: (_) => send_money.SendMoneyScreen(
-                    initialWalletId: state.uri.queryParameters['walletId'],
-                    initialAddress: initialAddress,
-                    initialAmountBtc: amount,
-                  ),
+                child: send_money.SendMoneyScreen(
+                  initialWalletId: state.uri.queryParameters['walletId'],
+                  initialAddress: initialAddress,
+                  initialAmountBtc: amount,
                 ),
               );
             },
@@ -129,28 +124,23 @@ GoRouter buildMobileGoRouter({
                   final args =
                       state.extra as InternalTransferReviewArgs<dynamic>;
                   return privateRouteBuilder(
-                    DeferredPage(
-                      loadLibrary: send_money_review.loadLibrary,
-                      libraryKey: DeferredLibraryKeys.sendMoneyReview,
-                      builder: (_) => send_money_review
-                          .InternalTransferReviewScreen<dynamic>(
-                        title: args.title,
-                        amountBtcLabel: args.amountBtcLabel,
-                        fiatAmountLabel: args.fiatAmountLabel,
-                        confirmLabel: args.confirmLabel,
-                        submittingLabel: args.submittingLabel,
-                        destinationLabel: args.destinationLabel,
-                        networkLabel: args.networkLabel,
-                        fromWalletLabel: args.fromWalletLabel,
-                        rows: args.rows,
-                        card: args.card,
-                        requiresFirstSendAck: args.requiresFirstSendAck,
-                        firstSendAddressPreview: args.firstSendAddressPreview,
-                        firstSendAddress: args.firstSendAddress,
-                        authNextStepLabel: args.authNextStepLabel,
-                        onConfirm: args.onConfirm,
-                        receiptBuilder: args.receiptBuilder,
-                      ),
+                    send_money_review.InternalTransferReviewScreen<dynamic>(
+                      title: args.title,
+                      amountBtcLabel: args.amountBtcLabel,
+                      fiatAmountLabel: args.fiatAmountLabel,
+                      confirmLabel: args.confirmLabel,
+                      submittingLabel: args.submittingLabel,
+                      destinationLabel: args.destinationLabel,
+                      networkLabel: args.networkLabel,
+                      fromWalletLabel: args.fromWalletLabel,
+                      rows: args.rows,
+                      card: args.card,
+                      requiresFirstSendAck: args.requiresFirstSendAck,
+                      firstSendAddressPreview: args.firstSendAddressPreview,
+                      firstSendAddress: args.firstSendAddress,
+                      authNextStepLabel: args.authNextStepLabel,
+                      onConfirm: args.onConfirm,
+                      receiptBuilder: args.receiptBuilder,
                     ),
                   );
                 },
@@ -220,25 +210,6 @@ GoRouter buildMobileGoRouter({
         ),
       ),
       GoRoute(
-        path: '/receive',
-        pageBuilder: (context, state) {
-          // Same proven slide as send — avoid custom Offset(-1) + deferred fade
-          // stacking that left a black frame while the library loaded.
-          return keroseneFlowSlideFromLeftPage<void>(
-            key: state.pageKey,
-            child: privateRouteBuilder(
-              DeferredPage(
-                loadLibrary: receive.loadLibrary,
-                libraryKey: DeferredLibraryKeys.receive,
-                animateReveal: false,
-                builder: (_) => receive.ReceiveAmountEntryScreen(
-                    initialWalletId: state.uri.queryParameters['walletId']),
-              ),
-            ),
-          );
-        },
-      ),
-      GoRoute(
         path: '/onboarding/first-access',
         builder: (context, state) =>
             privateRouteBuilder(const FirstAccessScreen()),
@@ -248,6 +219,19 @@ GoRouter buildMobileGoRouter({
       GoRoute(
         path: '/recovery/app-pin',
         builder: (context, state) => const AppPinRecoveryScreen(),
+      ),
+      GoRoute(
+        path: '/receive',
+        pageBuilder: (context, state) {
+          return keroseneFlowSlideFromLeftPage<void>(
+            key: state.pageKey,
+            child: privateRouteBuilder(
+              receive.ReceiveAmountEntryScreen(
+                initialWalletId: state.uri.queryParameters['walletId'],
+              ),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/onboarding/steps',
@@ -261,9 +245,9 @@ GoRouter buildMobileGoRouter({
   return router;
 }
 
-/// Home stays mounted under send overlays (go-only navigation).
+/// Home stays mounted under send/receive overlays (go-only navigation).
 ///
-/// Performance: pauses home tickers while send is open; ignores the empty shell
+/// Performance: pauses home tickers while send or receive is open; ignores the empty shell
 /// navigator on `/home` so Linux/desktop taps reach the home layer.
 class _HomeFlowShell extends StatelessWidget {
   final Widget overlay;
@@ -287,10 +271,14 @@ class _HomeFlowShell extends StatelessWidget {
             enabled: !overlayActive,
             child: IgnorePointer(
               ignoring: overlayActive,
-              child: DeferredPage(
-                loadLibrary: home.loadLibrary,
-                libraryKey: DeferredLibraryKeys.home,
-                builder: (_) => home.HomeScreen(),
+              child: MediaQuery.removeViewInsets(
+                context: context,
+                removeBottom: true,
+                child: DeferredPage(
+                  loadLibrary: home.loadLibrary,
+                  libraryKey: DeferredLibraryKeys.home,
+                  builder: (_) => home.HomeScreen(),
+                ),
               ),
             ),
           ),

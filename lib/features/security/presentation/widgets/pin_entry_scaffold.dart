@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:kerosene/design_system/components/auth/auth_primary_cta.dart';
 import 'package:kerosene/design_system/foundation/assets/icons/kerosene_icon.dart';
@@ -27,6 +28,7 @@ class PinEntryScaffold extends StatefulWidget {
   final String? confirmLabel;
   final Widget? footer;
   final VoidCallback? onCancel;
+  final Widget? background;
 
   const PinEntryScaffold({
     super.key,
@@ -44,6 +46,7 @@ class PinEntryScaffold extends StatefulWidget {
     this.footer,
     this.enabled = true,
     this.onCancel,
+    this.background,
   });
 
   @override
@@ -152,11 +155,17 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
             _focusNode.requestFocus();
           }
         },
-        child: Scaffold(
-          backgroundColor: mono.background,
-          body: SafeArea(
-            child: Stack(
-              children: [
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (widget.background != null) widget.background!,
+            Scaffold(
+              backgroundColor: widget.background != null
+                  ? Colors.transparent
+                  : mono.background,
+              body: SafeArea(
+                child: Stack(
+                  children: [
                 // Keep the native secure numeric input mounted. Removing it
                 // would also remove keyboard, hardware-key and autofill support.
                 Opacity(
@@ -196,159 +205,138 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
                 ),
                 LayoutBuilder(builder: (context, constraints) {
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: 420,
-                          minHeight: math.max(0, constraints.maxHeight - 96),
+                          minHeight: math.max(0, constraints.maxHeight - 64),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            AuthMotionEntrance(
-                              child: Center(
-                                child: AnimatedContainer(
-                                  duration: KeroseneMotion.duration(
-                                      context, KeroseneMotion.short),
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: mono.surfaceAlt,
-                                    border: Border.all(color: mono.border),
-                                  ),
-                                  child: KeroseneIcon(
-                                    KeroseneIcons.lock,
-                                    size: 26,
-                                    color: widget.error != null
-                                        ? mono.text
-                                        : mono.mutedText,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            AnimatedSwitcher(
-                              duration: KeroseneMotion.duration(
-                                  context, KeroseneMotion.short),
-                              child: Text(
-                                widget.instruction,
-                                key: ValueKey(widget.instruction),
-                                textAlign: TextAlign.center,
-                                style: AppTypography.h1.copyWith(
-                                  color: mono.text,
-                                  fontSize:
-                                      constraints.maxWidth < 380 ? 28 : 30,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.2,
-                                  letterSpacing: -0.6,
-                                ),
-                              ),
-                            ),
-                            if (widget.subtitle != null) ...[
+                        child: IntrinsicHeight(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                               const SizedBox(height: 12),
-                              Text(
-                                widget.subtitle!,
-                                textAlign: TextAlign.center,
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: mono.mutedText,
-                                  fontSize: 14,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 32),
-                            Center(
-                              child: AuthMotionShake(
-                                key: const ValueKey('pin-error-motion'),
-                                triggerKey: widget.error?.hashCode ?? 0,
-                                enabled: widget.error != null,
-                                child: LoadingErrorBorderWrapper(
-                                  busy: widget.busy,
-                                  hasError: widget.error != null,
-                                  child: PinEntryDots(
-                                    length: widget.valueLength,
-                                    maxLength: widget.maxLength,
-                                    dotSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(minHeight: 40),
-                              child: AnimatedSwitcher(
+                              AnimatedSwitcher(
                                 duration: KeroseneMotion.duration(
                                     context, KeroseneMotion.short),
-                                child: widget.busy && widget.busyLabel != null
-                                    ? Semantics(
-                                        key: const ValueKey('pin-working'),
-                                        liveRegion: true,
-                                        child: Text(
-                                          widget.busyLabel!,
-                                          textAlign: TextAlign.center,
-                                          style:
-                                              AppTypography.bodySmall.copyWith(
-                                            color: mono.mutedText,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      )
-                                    : widget.error == null
-                                        ? const SizedBox.shrink()
-                                        : Semantics(
-                                            key: ValueKey(widget.error),
-                                            liveRegion: true,
-                                            child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                KeroseneIcon(
-                                                  KeroseneIcons.error,
-                                                  size: 18,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    widget.error!,
-                                                    textAlign: TextAlign.center,
-                                                    style: AppTypography
-                                                        .bodySmall
-                                                        .copyWith(
-                                                      color: mono.text,
-                                                      fontSize: 14,
-                                                      height: 1.45,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                child: Text(
+                                  widget.instruction,
+                                  key: ValueKey(widget.instruction),
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.h1.copyWith(
+                                    color: mono.text,
+                                    fontSize:
+                                        constraints.maxWidth < 380 ? 26 : 28,
+                                    fontWeight: FontWeight.w300,
+                                    height: 1.25,
+                                    letterSpacing: -0.4,
+                                  ),
+                                ),
+                              ),
+                              if (widget.subtitle != null) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  widget.subtitle!,
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: mono.mutedText,
+                                    fontSize: 14,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              Center(
+                                child: AuthMotionShake(
+                                  key: const ValueKey('pin-error-motion'),
+                                  triggerKey: widget.error?.hashCode ?? 0,
+                                  enabled: widget.error != null,
+                                  child: LoadingErrorBorderWrapper(
+                                    busy: widget.busy,
+                                    hasError: widget.error != null,
+                                    child: PinEntryDots(
+                                      length: widget.valueLength,
+                                      maxLength: widget.maxLength,
+                                      dotSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(minHeight: 40),
+                                child: AnimatedSwitcher(
+                                  duration: KeroseneMotion.duration(
+                                      context, KeroseneMotion.short),
+                                  child: widget.busy && widget.busyLabel != null
+                                      ? Semantics(
+                                          key: const ValueKey('pin-working'),
+                                          liveRegion: true,
+                                          child: Text(
+                                            widget.busyLabel!,
+                                            textAlign: TextAlign.center,
+                                            style:
+                                                AppTypography.bodySmall.copyWith(
+                                              color: mono.mutedText,
+                                              fontSize: 14,
                                             ),
                                           ),
+                                        )
+                                      : widget.error == null
+                                          ? const SizedBox.shrink()
+                                          : Semantics(
+                                              key: ValueKey(widget.error),
+                                              liveRegion: true,
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  KeroseneIcon(
+                                                    KeroseneIcons.error,
+                                                    size: 18,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      widget.error!,
+                                                      textAlign: TextAlign.center,
+                                                      style: AppTypography
+                                                          .bodySmall
+                                                          .copyWith(
+                                                        color: mono.text,
+                                                        fontSize: 14,
+                                                        height: 1.45,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (widget.onConfirm != null)
-                              AuthPrimaryCta(
-                                label: widget.confirmLabel ??
-                                    MaterialLocalizations.of(context)
-                                        .okButtonLabel,
-                                onPressed: widget.enabled && !widget.busy
-                                    ? _confirm
-                                    : null,
-                                haptic: false,
-                                backgroundColor: mono.text,
-                                foregroundColor: mono.background,
-                              ),
-                            if (widget.footer != null) ...[
-                              const SizedBox(height: 16),
-                              widget.footer!,
+                              const Spacer(),
+                              if (widget.onConfirm != null)
+                                AuthPrimaryCta(
+                                  label: widget.confirmLabel ??
+                                      MaterialLocalizations.of(context)
+                                          .okButtonLabel,
+                                  onPressed: widget.enabled && !widget.busy
+                                      ? _confirm
+                                      : null,
+                                  haptic: false,
+                                  backgroundColor: mono.text,
+                                  foregroundColor: mono.background,
+                                ),
+                              if (widget.footer != null) ...[
+                                const SizedBox(height: 16),
+                                widget.footer!,
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -376,8 +364,10 @@ class _PinEntryScaffoldState extends State<PinEntryScaffold> {
             ),
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
   }
 }
 
@@ -396,40 +386,65 @@ class PinEntryDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = maxLength.clamp(4, 8);
-    final spacing = dotSize;
+    final spacing = dotSize * 1.1;
     return Semantics(
       label: context.tr.pinEntryDigitsFilled(length, total),
-      child: AnimatedContainer(
-        duration: KeroseneMotion.duration(context, KeroseneMotion.short),
-        curve: KeroseneMotion.standard,
-        padding: EdgeInsets.symmetric(
-          horizontal: dotSize,
-          vertical: dotSize,
-        ),
-        decoration: BoxDecoration(
-          color: MonochromeColors.of(context).surface,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(total, (index) {
-            final filled = index < length;
-            return AnimatedContainer(
-              duration: KeroseneMotion.duration(context, KeroseneMotion.short),
-              curve: KeroseneMotion.standard,
-              margin: EdgeInsets.only(right: index == total - 1 ? 0 : spacing),
-              width: dotSize,
-              height: dotSize,
-              decoration: BoxDecoration(
-                color: filled
-                    ? MonochromeColors.of(context).text
-                    : MonochromeColors.of(context)
-                        .faintText
-                        .withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(999),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: AnimatedContainer(
+            duration: KeroseneMotion.duration(context, KeroseneMotion.short),
+            curve: KeroseneMotion.standard,
+            padding: EdgeInsets.symmetric(
+              horizontal: dotSize * 1.6,
+              vertical: dotSize * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1.2,
               ),
-            );
-          }),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(total, (index) {
+                final filled = index < length;
+                return AnimatedContainer(
+                  duration:
+                      KeroseneMotion.duration(context, KeroseneMotion.short),
+                  curve: KeroseneMotion.standard,
+                  margin:
+                      EdgeInsets.only(right: index == total - 1 ? 0 : spacing),
+                  width: dotSize,
+                  height: dotSize,
+                  decoration: BoxDecoration(
+                    color: filled
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.28),
+                    shape: BoxShape.circle,
+                    boxShadow: filled
+                        ? [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 8,
+                            ),
+                          ]
+                        : null,
+                  ),
+                );
+              }),
+            ),
+          ),
         ),
       ),
     );
@@ -513,8 +528,8 @@ class _LoadingErrorBorderWrapperState extends State<LoadingErrorBorderWrapper>
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: widget.hasError
-                ? Theme.of(context).colorScheme.onSurface
-                : monoBorderStrongColor,
+                ? Theme.of(context).colorScheme.error
+                : Colors.transparent,
             width: 2,
           ),
         ),

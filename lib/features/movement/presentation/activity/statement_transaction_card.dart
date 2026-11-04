@@ -8,6 +8,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
+import 'package:kerosene/core/utils/app_date_time.dart';
 import 'package:kerosene/design_system/components/feedback/app_notice.dart';
 import 'package:kerosene/core/l10n/l10n_extension.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
@@ -198,6 +200,291 @@ String _homePartyLabel(
           languageCode: Localizations.localeOf(context).languageCode,
         );
   return clean(resolvedParty) ?? clean(presentation.subtitle) ?? '—';
+}
+
+String _trimAmountTrailingZeros(String amount) {
+  final trimmedDecimals = amount.replaceAllMapped(
+    RegExp(r'([.,]\d*?[1-9])0+(?=\s|[^\d]|$)'),
+    (match) => match.group(1)!,
+  );
+  return trimmedDecimals.replaceAllMapped(
+    RegExp(r'[.,]0+(?=\s|[^\d]|$)'),
+    (match) => '',
+  );
+}
+
+String _abbreviateHash(String hash) {
+  final trimmed = hash.trim();
+  if (trimmed.length <= 14) return trimmed;
+  return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 6)}';
+}
+
+bool _looksLikeHashOrAddress(String text) {
+  final clean = text.trim();
+  if (clean.length < 10) return false;
+  final lower = clean.toLowerCase();
+  if (lower.startsWith('bc1') ||
+      lower.startsWith('tb1') ||
+      lower.startsWith('bcrt1') ||
+      lower.startsWith('lnbc') ||
+      lower.startsWith('lntb') ||
+      lower.startsWith('lnbcrt') ||
+      lower.startsWith('1') ||
+      lower.startsWith('3') ||
+      lower.startsWith('2') ||
+      lower.startsWith('0x')) {
+    return true;
+  }
+  if (RegExp(r'^[0-9a-fA-F]{16,}$').hasMatch(clean)) {
+    return true;
+  }
+  return false;
+}
+
+bool _isGenericNetworkWord(String text) {
+  final valLower = text.toLowerCase().trim();
+  if (valLower.isEmpty || valLower == '—') return true;
+  if (RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  ).hasMatch(valLower)) {
+    return true;
+  }
+  return valLower.contains('rede bitcoin') ||
+      valLower.contains('bitcoin network') ||
+      valLower.contains('on-chain') ||
+      valLower.contains('onchain') ||
+      valLower.contains('lightning') ||
+      valLower.contains('endereço externo') ||
+      valLower.contains('external address') ||
+      valLower.contains('link de pagamento') ||
+      valLower.contains('link de cobrança') ||
+      valLower.contains('payment link') ||
+      valLower.contains('pagador') ||
+      valLower.contains('payer') ||
+      valLower.contains('recebimento') ||
+      valLower.contains('carteira receptora') ||
+      valLower.contains('carteira') ||
+      valLower.contains('minha carteira') ||
+      valLower.contains('depósito') ||
+      valLower.contains('deposito') ||
+      valLower == 'destino' ||
+      valLower == 'origem' ||
+      valLower == 'kerosene';
+}
+
+String? _resolvePayerHash(Transaction tx) {
+  // 1. Direct fromAddress if it's a real address or hash
+  final from = tx.fromAddress.trim();
+  if (from.isNotEmpty &&
+      !_isGenericNetworkWord(from) &&
+      (looksLikeOnchainAddress(from) || _looksLikeHashOrAddress(from))) {
+    return _abbreviateHash(from);
+  }
+
+  // 2. Blockchain txid (hash da transação que pagou)
+  final txid = tx.blockchainTxid?.trim();
+  if (txid != null && txid.isNotEmpty && txid != '—') {
+    return _abbreviateHash(txid);
+  }
+
+  // 3. Lightning payment hash
+  final ph = tx.paymentHash?.trim();
+  if (ph != null && ph.isNotEmpty && ph != '—') {
+    return _abbreviateHash(ph);
+  }
+
+  // 4. External reference (txid, hash or address)
+  final ext = tx.externalReference?.trim();
+  if (ext != null &&
+      ext.isNotEmpty &&
+      ext != '—' &&
+      !_isGenericNetworkWord(ext) &&
+      (looksLikeOnchainAddress(ext) || _looksLikeHashOrAddress(ext))) {
+    return _abbreviateHash(ext);
+  }
+
+  // 5. Receiving/deposit address of the link
+  final to = tx.toAddress.trim();
+  if (to.isNotEmpty &&
+      to != '—' &&
+      !_isGenericNetworkWord(to) &&
+      (looksLikeOnchainAddress(to) || _looksLikeHashOrAddress(to))) {
+    return _abbreviateHash(to);
+  }
+
+  return null;
+}
+
+String _resolveDestinationTitle(
+  Transaction tx,
+  String subtitle,
+  String defaultTitle,
+) {
+  // If it's a payment link, prioritize the hash address of who paid
+  if (tx.isPaymentLink) {
+    final directSender = tx.senderDisplayName?.trim();
+    if (directSender != null &&
+        directSender.isNotEmpty &&
+        directSender != '—' &&
+        !_isGenericNetworkWord(directSender) &&
+        looksLikeUsername(directSender)) {
+      return directSender;
+    }
+
+    final payerHash = _resolvePayerHash(tx);
+    if (payerHash != null && payerHash.isNotEmpty) {
+      return payerHash;
+    }
+  }
+
+  final directName =
+      (tx.isCredit ? tx.senderDisplayName : tx.receiverDisplayName)?.trim();
+  if (directName != null &&
+      directName.isNotEmpty &&
+      directName != '—' &&
+      !_isGenericNetworkWord(directName)) {
+    return directName;
+  }
+
+  final label = tx.counterpartyLabel?.trim();
+  if (label != null &&
+      label.isNotEmpty &&
+      label != '—' &&
+      !_isGenericNetworkWord(label)) {
+    return label;
+  }
+
+  var clean = subtitle.trim();
+  final lower = clean.toLowerCase();
+  if (lower.startsWith('para: ')) {
+    clean = clean.substring(6).trim();
+  } else if (lower.startsWith('para ')) {
+    clean = clean.substring(5).trim();
+  } else if (lower.startsWith('de: ')) {
+    clean = clean.substring(4).trim();
+  } else if (lower.startsWith('de ')) {
+    clean = clean.substring(3).trim();
+  } else if (lower.startsWith('to: ')) {
+    clean = clean.substring(4).trim();
+  } else if (lower.startsWith('to ')) {
+    clean = clean.substring(3).trim();
+  } else if (lower.startsWith('from: ')) {
+    clean = clean.substring(6).trim();
+  } else if (lower.startsWith('from ')) {
+    clean = clean.substring(5).trim();
+  }
+
+  if (clean.isNotEmpty &&
+      clean != '—' &&
+      !_isGenericNetworkWord(clean)) {
+    if (_looksLikeHashOrAddress(clean) || looksLikeOnchainAddress(clean)) {
+      return _abbreviateHash(clean);
+    }
+    return clean;
+  }
+
+  final address = (tx.isCredit ? tx.fromAddress : tx.toAddress).trim();
+  if (address.isNotEmpty &&
+      address != '—' &&
+      !_isGenericNetworkWord(address)) {
+    return _abbreviateHash(address);
+  }
+
+  final txid = tx.blockchainTxid?.trim();
+  if (txid != null && txid.isNotEmpty && txid != '—') {
+    return _abbreviateHash(txid);
+  }
+
+  final paymentHash = tx.paymentHash?.trim();
+  if (paymentHash != null && paymentHash.isNotEmpty && paymentHash != '—') {
+    return _abbreviateHash(paymentHash);
+  }
+
+  final ext = tx.externalReference?.trim();
+  if (ext != null &&
+      ext.isNotEmpty &&
+      ext != '—' &&
+      !_isGenericNetworkWord(ext) &&
+      (_looksLikeHashOrAddress(ext) || looksLikeOnchainAddress(ext))) {
+    return _abbreviateHash(ext);
+  }
+
+  if (tx.isCredit) {
+    final toAddr = tx.toAddress.trim();
+    if (toAddr.isNotEmpty &&
+        toAddr != '—' &&
+        !_isGenericNetworkWord(toAddr)) {
+      return _abbreviateHash(toAddr);
+    }
+  }
+
+  final desc = tx.description?.trim();
+  if (desc != null &&
+      desc.isNotEmpty &&
+      desc != '—' &&
+      !_isGenericNetworkWord(desc)) {
+    return desc;
+  }
+
+  return defaultTitle;
+}
+
+String _resolveNetwork(Transaction tx) {
+  if (tx.isLightningEffective || tx.isLightning) {
+    return 'Lightning';
+  }
+  return 'Onchain';
+}
+
+String _formatTimeAndWeekday(BuildContext context, DateTime timestamp) {
+  final local = AppDateTime.inDisplayZone(context, timestamp);
+  final lang = AppDateTime.languageCodeOf(context);
+  final use24 = MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? true;
+  final timePattern = use24 ? 'HH:mm' : 'h:mm a';
+  final timeStr = DateFormat(timePattern, lang).format(local);
+  final weekdayStr = DateFormat('EEEE', lang).format(local);
+  return '$timeStr $weekdayStr';
+}
+
+Widget _buildDualFontText({
+  required String text,
+  required TextStyle letterStyle,
+  required TextStyle numberStyle,
+  TextAlign textAlign = TextAlign.start,
+  int maxLines = 1,
+  TextOverflow overflow = TextOverflow.ellipsis,
+}) {
+  final spans = <TextSpan>[];
+  final regex = RegExp(r'([+-]?\d[\d.,:+/-]*)');
+  var lastIndex = 0;
+
+  for (final match in regex.allMatches(text)) {
+    if (match.start > lastIndex) {
+      spans.add(TextSpan(
+        text: text.substring(lastIndex, match.start),
+        style: letterStyle,
+      ));
+    }
+    spans.add(TextSpan(
+      text: match.group(0),
+      style: numberStyle,
+    ));
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < text.length) {
+    spans.add(TextSpan(
+      text: text.substring(lastIndex),
+      style: letterStyle,
+    ));
+  }
+
+  return Text.rich(
+    TextSpan(children: spans),
+    textAlign: textAlign,
+    maxLines: maxLines,
+    overflow: overflow,
+  );
 }
 
 _HomeStatementSnapshot _resolveHomeSnapshot({
@@ -409,9 +696,7 @@ class _StatementTransactionCardState
         accounts: accounts,
       );
     }
-    final colors = isHome
-        ? resolvedColors
-        : resolvedColors.forHomeSurface(HomeSurfaceTheme.of(context));
+    final colors = resolvedColors.forHomeSurface(HomeSurfaceTheme.of(context));
     final amountLabel = presentation.primaryAmountLabel;
     final title = presentation.title;
     final counterparty = presentation.subtitle;
@@ -457,20 +742,37 @@ class _StatementTransactionCardState
       );
     }
 
-    final a11yLabel = [
-      title,
-      counterparty,
-      amountLabel,
-      timestampLabel,
-      if (expanded) 'expandido',
-    ].where((s) => s.trim().isNotEmpty).join('. ');
+    final destinationTitle = isHome
+        ? _resolveDestinationTitle(transaction, counterparty, title)
+        : title;
+    final homeNetwork = _resolveNetwork(transaction);
+    final homeTimeAndWeekday =
+        _formatTimeAndWeekday(context, transaction.timestamp);
+    final homeAmount = _trimAmountTrailingZeros(amountLabel);
 
-    final radius = BorderRadius.circular(isHome ? 20 : 28);
-    final decoration = BoxDecoration(
-      color: colors.background,
-      borderRadius: radius,
-      border: Border.all(color: colors.border, width: 1),
-    );
+    final a11yLabel = isHome
+        ? [
+            destinationTitle,
+            homeNetwork,
+            homeAmount,
+            homeTimeAndWeekday,
+          ].where((s) => s.trim().isNotEmpty && s != '—').join('. ')
+        : [
+            title,
+            counterparty,
+            amountLabel,
+            timestampLabel,
+            if (expanded) 'expandido',
+          ].where((s) => s.trim().isNotEmpty).join('. ');
+
+    final radius = BorderRadius.circular(isHome ? 0 : 28);
+    final decoration = isHome
+        ? null
+        : BoxDecoration(
+            color: colors.background,
+            borderRadius: radius,
+            border: Border.all(color: colors.border, width: 1),
+          );
 
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +787,7 @@ class _StatementTransactionCardState
                 colors: colors,
                 iconSize: iconSize,
                 axes: presentation.axes,
-                expanded: expanded,
+                expanded: false,
                 pauseWhileScrolling: isHome,
                 originalHomeStyle: true,
               ),
@@ -493,75 +795,96 @@ class _StatementTransactionCardState
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      title,
+                    _buildDualFontText(
+                      text: destinationTitle,
+                      letterStyle: AppTypography.inter(
+                        color: titleColor,
+                        fontSize: 15,
+                        fontWeight: AppTypography.w590,
+                        letterSpacing: -0.2,
+                        height: 1.2,
+                      ),
+                      numberStyle: AppTypography.inter(
+                        color: titleColor,
+                        fontSize: 15,
+                        fontWeight: AppTypography.w590,
+                        letterSpacing: -0.2,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        height: 1.2,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: titleColor,
-                        fontFamily: AppTypography.bodyFontFamily,
-                        fontSize: titleFontSize,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      homeNetwork,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.inter(
+                        color: subtitleColor,
+                        fontSize: 12,
+                        fontWeight: AppTypography.w500,
+                        letterSpacing: 0.1,
+                        height: 1.2,
                       ),
                     ),
-                    if (!isHome || counterparty.trim().isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        counterparty,
-                        maxLines: isHome ? 1 : 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: subtitleColor,
-                          fontFamily: AppTypography.bodyFontFamily,
-                          fontSize: counterpartyFontSize,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              SizedBox(
-                width: 116,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        amountLabel,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: HomeTypography.transactionAmount(
-                          color: amountColor,
-                        ).copyWith(
-                          fontSize: isHome ? 15 : 16,
-                        ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: _buildDualFontText(
+                      text: homeAmount,
+                      letterStyle: AppTypography.inter(
+                        color: amountColor,
+                        fontSize: 15,
+                        fontWeight: AppTypography.w590,
+                        letterSpacing: -0.2,
+                        height: 1.2,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      timestampLabel,
-                      textAlign: TextAlign.right,
+                      numberStyle: AppTypography.inter(
+                        color: amountColor,
+                        fontSize: 15,
+                        fontWeight: AppTypography.w590,
+                        letterSpacing: -0.2,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        height: 1.2,
+                      ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: metaColor,
-                        fontFamily: AppTypography.bodyFontFamily,
-                        fontSize: isHome ? HomeTypography.captionSize : 12,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0,
-                      ),
+                      textAlign: TextAlign.right,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDualFontText(
+                    text: homeTimeAndWeekday,
+                    letterStyle: AppTypography.inter(
+                      color: metaColor,
+                      fontSize: 12,
+                      fontWeight: AppTypography.w400,
+                      letterSpacing: -0.1,
+                      height: 1.2,
+                    ),
+                    numberStyle: AppTypography.inter(
+                      color: metaColor,
+                      fontSize: 12,
+                      fontWeight: AppTypography.w400,
+                      letterSpacing: -0.1,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ],
           )
@@ -680,45 +1003,45 @@ class _StatementTransactionCardState
         _CollapsingDetails(
           expanded: expanded,
           duration: KeroseneMotion.duration(context, KeroseneMotion.medium),
-          detailsBuilder: (context) => isHome
-              ? _HomeQuickExpand(
-                  transaction: transaction,
-                  presentation: presentation,
-                  colors: colors,
-                  wallets: wallets,
-                  accounts: accounts,
-                  displayCurrency: displayCurrency,
-                  btcUsd: btcUsd,
-                  btcEur: btcEur,
-                  btcBrl: btcBrl,
-                  appLocale: money.locale,
-                  btcDecimalPlaces: money.btcDecimalPlaces,
-                  onChanged: _accept,
-                )
-              : _TransactionDetailsTable(
-                  transaction: transaction,
-                  presentation: presentation,
-                  colors: colors,
-                  onChanged: _accept,
-                ),
+          detailsBuilder: (context) => _TransactionDetailsTable(
+            transaction: transaction,
+            presentation: presentation,
+            colors: colors,
+            onChanged: _accept,
+          ),
         ),
         if (!expanded && !isHome) _SeeDetailsLink(transaction: transaction),
       ],
     );
 
+    final effectiveOnTap = onTap ??
+        (isHome
+            ? () {
+                HapticFeedback.selectionClick();
+                TransactionDetailScreen.open(
+                  context,
+                  transaction,
+                  originRect: keroseneOriginRectFromContext(context),
+                );
+              }
+            : null);
+
     return Semantics(
-      button: onTap != null,
+      button: effectiveOnTap != null,
       label: a11yLabel,
       child: Material(
-        color: colors.background,
+        type: isHome ? MaterialType.transparency : MaterialType.canvas,
+        color: isHome ? Colors.transparent : colors.background,
         borderRadius: radius,
-        clipBehavior: Clip.hardEdge,
+        clipBehavior: isHome ? Clip.none : Clip.hardEdge,
         child: InkWell(
-          onTap: onTap,
+          onTap: effectiveOnTap,
           borderRadius: radius,
           child: Ink(
             decoration: decoration,
-            padding: EdgeInsets.all(cardPadding),
+            padding: isHome
+                ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
+                : EdgeInsets.all(cardPadding),
             child: body,
           ),
         ),
@@ -1167,141 +1490,7 @@ class _TransactionDetailsTable extends StatelessWidget {
   }
 }
 
-/// Home expand: curated fields by rail/product + cancel + full dossier link.
-class _HomeQuickExpand extends StatefulWidget {
-  final Transaction transaction;
-  final TransactionPresentation presentation;
-  final TransactionCardColors colors;
-  final List<Wallet> wallets;
-  final List<BitcoinAccount> accounts;
-  final Currency displayCurrency;
-  final double? btcUsd;
-  final double? btcEur;
-  final double? btcBrl;
-  final Locale appLocale;
-  final int btcDecimalPlaces;
 
-  final ValueChanged<Transaction>? onChanged;
-
-  const _HomeQuickExpand({
-    required this.transaction,
-    this.onChanged,
-    required this.presentation,
-    required this.colors,
-    required this.wallets,
-    required this.accounts,
-    required this.displayCurrency,
-    required this.btcUsd,
-    required this.btcEur,
-    required this.btcBrl,
-    required this.appLocale,
-    this.btcDecimalPlaces = 8,
-  });
-
-  @override
-  State<_HomeQuickExpand> createState() => _HomeQuickExpandState();
-}
-
-class _HomeQuickExpandState extends State<_HomeQuickExpand> {
-  List<PresentationField>? _rows;
-
-  @override
-  void didUpdateWidget(covariant _HomeQuickExpand oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _rows = null;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _rows = null;
-  }
-
-  List<PresentationField> get _expandRows {
-    final cached = _rows;
-    if (cached != null) return cached;
-
-    final fromPresentation = widget.presentation.listExpandFields;
-    if (fromPresentation.isNotEmpty) {
-      _rows = fromPresentation;
-      return fromPresentation;
-    }
-
-    final computed = TransactionPresentation.fromTransaction(
-      context,
-      widget.transaction,
-      wallets: widget.wallets,
-      accounts: widget.accounts,
-      displayCurrency: widget.displayCurrency,
-      btcUsd: widget.btcUsd,
-      btcEur: widget.btcEur,
-      btcBrl: widget.btcBrl,
-      appLocale: widget.appLocale,
-      btcDecimalPlaces: widget.btcDecimalPlaces,
-      includeExpandPayload: true,
-    ).listExpandFields;
-    _rows = computed;
-    return computed;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = _expandRows;
-    const dark = false;
-    final labelColor = widget.colors.subtitle;
-    final valueColor = widget.colors.title;
-    final lineColor = widget.colors.divider;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (rows.isNotEmpty) ...[
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: ColoredBox(
-                  color: lineColor,
-                  child: const SizedBox(height: 1, width: double.infinity),
-                ),
-              ),
-            _PresentationFieldRow(
-              field: rows[i],
-              labelColor: labelColor,
-              valueColor: valueColor,
-              dark: dark,
-            ),
-          ],
-          const SizedBox(height: 12),
-        ],
-        Theme(
-          data: Theme.of(context).copyWith(
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.light(
-              primary: valueColor,
-              onSurface: valueColor,
-            ),
-            textTheme: Theme.of(context).textTheme.apply(
-                  bodyColor: valueColor,
-                  displayColor: valueColor,
-                ),
-            outlinedButtonTheme: OutlinedButtonThemeData(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: valueColor,
-                side: BorderSide(color: lineColor),
-              ),
-            ),
-          ),
-          child: ActivityActions(
-            transaction: widget.transaction,
-            onChanged: widget.onChanged,
-          ),
-        ),
-        const SizedBox(height: 4),
-        _SeeDetailsLink(transaction: widget.transaction, dark: dark),
-      ],
-    );
-  }
-}
 
 class _PresentationFieldRow extends StatelessWidget {
   final PresentationField field;
@@ -1685,8 +1874,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 
   void _resumeSpinIfNeeded() {
     final mode = _ringMode(widget.transaction);
-    final needsSpin =
-        mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
+    final needsSpin = mode == _RingMode.spinning;
     if (needsSpin &&
         !_reducedMotion &&
         _spinController != null &&
@@ -1714,8 +1902,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 
   void _syncAnimations() {
     final mode = _ringMode(widget.transaction);
-    final needsSpin =
-        mode == _RingMode.yellowSpin || mode == _RingMode.greenProgress;
+    final needsSpin = mode == _RingMode.spinning;
     if (needsSpin && !_reducedMotion) {
       _spinController ??= AnimationController(
         vsync: this,
@@ -1789,31 +1976,32 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
       return _RingMode.failed;
     }
     if (tx.displayStatus == TransactionStatus.reconciling) {
-      return _RingMode.yellowSpin;
+      return _RingMode.spinning;
     }
-    // Internal / Lightning: solid green when settled (not segmented 6-slice).
+    // Internal / Lightning: fully settled -> none (no ring).
     if (_isInstantRail(tx)) {
-      if (_isConfirmedLike(tx)) return _RingMode.settledSolid;
+      if (_isConfirmedLike(tx)) return _RingMode.none;
       if (tx.displayStatus == TransactionStatus.pending ||
           tx.displayStatus == TransactionStatus.confirming) {
-        return _RingMode.yellowSpin;
+        return _RingMode.spinning;
       }
-      return _RingMode.settledSolid;
+      return _RingMode.none;
     }
     final conf = tx.confirmations;
     final target = tx.onchainConfirmationTarget;
     if (conf >= target) {
-      return _RingMode.settled;
+      // All 6 confirmations completed -> show nothing!
+      return _RingMode.none;
     }
-    if (conf > 0) return _RingMode.greenProgress;
+    if (conf > 0) return _RingMode.progress;
     if (tx.displayStatus == TransactionStatus.pending ||
         tx.displayStatus == TransactionStatus.confirming ||
         tx.displayStatus == TransactionStatus.confirmed ||
         tx.isConfirmed) {
-      // Mempool / early SETTLED with 0 confs — keep spinning, not a fake full ring.
-      return _RingMode.yellowSpin;
+      // Mempool / early SETTLED with 0 confs -> continuous spinning arc.
+      return _RingMode.spinning;
     }
-    return _RingMode.settled;
+    return _RingMode.none;
   }
 
   @override
@@ -1841,7 +2029,7 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
     }
 
     // Rail and direction stay visible while status remains in the ring/text.
-    Widget centerChild = ActivityGlyph(
+    final centerChild = ActivityGlyph(
       key: const ValueKey('icon-glyph'),
       spec: widget.axes != null
           ? ActivityGlyphSpec.fromAxes(widget.axes!)
@@ -1849,29 +2037,10 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
       size: widget.iconSize * 0.72,
       showWell: false,
       iconColor: widget.colors.icon,
-      badgeWellColor: widget.colors.iconWellBorder,
+      badgeWellColor: Colors.black,
       badgeIconColor: widget.colors.icon,
       wellBorder: widget.colors.iconWellBorder,
     );
-
-    if (widget.originalHomeStyle && widget.expanded) {
-      if (mode == _RingMode.failed || tx.isCancelled) {
-        centerChild = KeroseneIcon(KeroseneIcons.closeRounded,
-            size: widget.iconSize * 0.42, color: _red);
-      } else if (mode == _RingMode.settled || mode == _RingMode.settledSolid) {
-        centerChild = KeroseneIcon(KeroseneIcons.checkRounded,
-            size: widget.iconSize * 0.44, color: _green);
-      } else if (!_isInstantRail(tx)) {
-        centerChild = Text('$conf/$target',
-            style: TextStyle(
-              color: conf > 0 ? _green : _yellow,
-              fontFamily: AppTypography.bodyFontFamily,
-              fontWeight: FontWeight.w800,
-              fontSize: widget.iconSize * 0.22,
-              height: 1,
-            ));
-      }
-    }
 
     return SizedBox(
       width: widget.iconSize,
@@ -1907,14 +2076,19 @@ class _ActivityStatusIconState extends State<_ActivityStatusIcon>
 }
 
 enum _RingMode {
-  yellowSpin,
-  greenProgress,
+  /// Mempool / unconfirmed on-chain or pending rail (0 confirmations).
+  /// Shows full subtle track with a continuous spinning arc.
+  spinning,
 
-  /// On-chain fully confirmed — segmented green ring (6 slices).
-  settled,
+  /// In progress (e.g. 1 to 5 confirmations).
+  /// Shows a static background track and a continuous progress arc that fills
+  /// smoothly based on confirmations / target (without segment dividers).
+  progress,
 
-  /// Internal / Lightning confirmed — continuous solid green ring.
-  settledSolid,
+  /// Fully confirmed (all 6 / target met) or instant rail settled:
+  /// Nothing is rendered around the icon.
+  none,
+
   failed,
 }
 
@@ -1943,9 +2117,13 @@ class _RingConfirmationPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (mode == _RingMode.none) {
+      return;
+    }
+
     final origin = Offset(size.width / 2, size.height / 2);
     final radius = (math.min(size.width, size.height) / 2) - 1.5;
-    final strokeWidth = 2.6;
+    const strokeWidth = 2.6;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -1953,7 +2131,7 @@ class _RingConfirmationPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
 
-    if (mode == _RingMode.yellowSpin) {
+    if (mode == _RingMode.spinning) {
       // Soft track + spinning arc (pending / 0 confs).
       paint.color = yellowColor.withValues(alpha: 0.22);
       canvas.drawCircle(origin, radius, paint);
@@ -1966,13 +2144,6 @@ class _RingConfirmationPainter extends CustomPainter {
         false,
         paint,
       );
-      return;
-    }
-
-    if (mode == _RingMode.settledSolid) {
-      // Instant rails: one continuous green ring (not 6 slices).
-      paint.color = greenColor;
-      canvas.drawCircle(origin, radius, paint);
       return;
     }
 
@@ -1990,34 +2161,26 @@ class _RingConfirmationPainter extends CustomPainter {
       return;
     }
 
-    final ringCount = target.clamp(3, 6);
-    const gapRadians = 0.18;
-    final sweep = (2 * math.pi / ringCount) - gapRadians;
-    final startOffset = -math.pi / 2 + gapRadians / 2;
-    final filled = confirmations.clamp(0, ringCount);
+    if (mode == _RingMode.progress) {
+      // Static loading background track (subtle inactive ring).
+      paint.color = inactiveColor.withValues(alpha: 0.45);
+      canvas.drawCircle(origin, radius, paint);
 
-    for (var i = 0; i < ringCount; i++) {
-      if (mode == _RingMode.settled) {
+      // Continuous arc filled proportionally based on confirmations received.
+      final ringCount = target.clamp(1, 6);
+      final fraction = (confirmations / ringCount).clamp(0.0, 1.0);
+      if (fraction > 0) {
         paint.color = greenColor;
-      } else if (i < filled) {
-        paint.color = greenColor;
-      } else if (i == filled && mode == _RingMode.greenProgress) {
-        // Next confirmation segment pulses with the animation clock.
-        final t = (math.sin(loadValue * 2 * math.pi) + 1) / 2;
-        paint.color =
-            Color.lerp(greenColor.withValues(alpha: 0.28), greenColor, t) ??
-                greenColor.withValues(alpha: 0.6);
-      } else {
-        paint.color = inactiveColor.withValues(alpha: 0.55);
+        const start = -math.pi / 2;
+        final sweep = fraction * 2 * math.pi;
+        canvas.drawArc(
+          Rect.fromCircle(center: origin, radius: radius),
+          start,
+          sweep,
+          false,
+          paint,
+        );
       }
-
-      canvas.drawArc(
-        Rect.fromCircle(center: origin, radius: radius),
-        startOffset + i * (2 * math.pi / ringCount),
-        sweep,
-        false,
-        paint,
-      );
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kerosene/core/motion/app_motion.dart';
+import 'package:kerosene/core/performance/app_interaction_busy.dart';
 import 'package:kerosene/features/home/presentation/providers/home_overscroll_provider.dart';
 import 'package:kerosene/features/home/scene/models/home_scene.dart';
 import 'package:kerosene/features/home/scene/providers/scene_provider.dart';
@@ -113,7 +114,8 @@ class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground>
     if (!mounted) return;
     final reduce = KeroseneMotion.reduceMotion(context);
     final enabled = TickerMode.valuesOf(context).enabled;
-    final want = !reduce && enabled;
+    final routeBusy = ref.read(routeTransitionBusyProvider);
+    final want = !reduce && enabled && !routeBusy;
     if (want && !_ticking) {
       _lastTick = null;
       _ticker.start();
@@ -154,6 +156,18 @@ class _SceneAuroraBackgroundState extends ConsumerState<SceneAuroraBackground>
     ref.listen<double>(homeOverscrollProvider, (_, next) {
       _syncPull(next);
     });
+
+    final routeBusy = ref.watch(routeTransitionBusyProvider);
+    final enabled = TickerMode.valuesOf(context).enabled;
+    if (routeBusy || !enabled) {
+      if (_ticking) {
+        _ticker.stop();
+        _ticking = false;
+        _lastTick = null;
+      }
+    } else {
+      _ensureTicking();
+    }
 
     final bg = ref.watch(homeSceneBackgroundProvider);
     final topInset = MediaQuery.paddingOf(context).top;

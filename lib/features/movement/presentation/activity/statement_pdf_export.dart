@@ -27,10 +27,10 @@ Future<Uint8List> buildStatementPdfBytes(
 }) async {
   final tr = localizations ?? lookupAppLocalizations(const Locale('en'));
   final fonts = await Future.wait([
-    rootBundle.load('assets/google_fonts/PlusJakartaSans-Regular.ttf'),
-    rootBundle.load('assets/google_fonts/PlusJakartaSans-SemiBold.ttf'),
-    rootBundle.load('assets/google_fonts/PlayfairDisplay-Medium.ttf'),
-    rootBundle.load('assets/google_fonts/JetBrainsMono-Regular.ttf'),
+    rootBundle.load('assets/fonts/AeonikPro-Regular.ttf'),
+    rootBundle.load('assets/fonts/AeonikPro-Medium.ttf'),
+    rootBundle.load('assets/fonts/AeonikPro-Bold.ttf'),
+    rootBundle.load('assets/fonts/ModeratMono-Regular.ttf'),
   ]);
   return compute(_renderStatementPdf, (
     transactions: List<Transaction>.of(transactions),

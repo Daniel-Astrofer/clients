@@ -34,17 +34,17 @@ export 'financial_surface_provider.dart';
 const double _balanceChangeEpsilon = 0.000000001;
 
 /// Backup poll when realtime WS is healthy and a financial screen is visible.
-/// Assumes kfe→server fan-out can also be Tor-slow — keep a safety net even
-/// while "connected".
-const financialRealtimeFallbackInterval = Duration(seconds: 30);
+/// WS pushes /user/queue/balance, /transactions and /notifications in realtime.
+/// A relaxed fallback prevents Tor circuit exhaustion and 502s on stationary UI.
+const financialRealtimeFallbackInterval = Duration(seconds: 90);
 
 /// Poll while WS is down / reconnecting (only on financial surfaces).
-/// Aggressive under Tor flap so settle still lands via REST.
-const financialRealtimeDisconnectedInterval = Duration(seconds: 6);
+/// Backed off to 25s so Tor circuits and the KFE gateway are not hammered during reconnects.
+const financialRealtimeDisconnectedInterval = Duration(seconds: 25);
 
 /// When user is off financial screens or app is backgrounded, only re-check
 /// the gate this often (no network I/O when still idle).
-const financialRealtimeIdleGateInterval = Duration(seconds: 60);
+const financialRealtimeIdleGateInterval = Duration(seconds: 90);
 
 typedef FinancialRefreshCancel = void Function();
 typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
@@ -118,11 +118,7 @@ class FinancialRealtimeRefreshLoop {
     if (_disposed || !_started || _refreshInFlight) return;
     _cancelScheduledRefresh?.call();
     _cancelScheduledRefresh = null;
-    if (_pollAllowed) {
-      unawaited(_runRefresh());
-    } else {
-      _scheduleNext();
-    }
+    _scheduleNext();
   }
 
   void _scheduleNext() {
@@ -495,15 +491,13 @@ final balanceWebSocketServiceProvider =
       ref.read(financialDirtyProvider.notifier).markDirty();
       return;
     }
-    unawaited(
-        ref.read(sessionNotificationFeedProvider.notifier).reloadFromServer());
-    // Just reconnected: force one full REST catch-up for anything missed
-    // while the socket was down (treat kfe→server as Tor-latent too).
-    _scheduleFinancialRefreshForEvent(
-      ref,
-      scope: FinancialRefreshScope.full,
-      forceFullHistory: true,
-    );
+    // Just reconnected: only catch up if state was marked dirty while offline.
+    if (ref.read(financialDirtyProvider)) {
+      _scheduleFinancialRefreshForEvent(
+        ref,
+        scope: FinancialRefreshScope.light,
+      );
+    }
   }
 
   service.addConnectionListener(onWsConnectivity);

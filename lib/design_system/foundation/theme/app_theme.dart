@@ -245,9 +245,9 @@ class AppTheme {
         selectionColor: onSurface.withValues(alpha: 0.18),
         selectionHandleColor: onSurface,
       ),
-      // Linear-style text theme: Plus Jakarta Sans for body/UI,
-      // Playfair Display for display/hero.
-      textTheme: AppTypography.plusJakartaSansTextTheme(baseTextTheme).copyWith(
+      // Linear-style text theme: Aeonik Pro for body/UI,
+      // Moderat Mono for display/hero.
+      textTheme: AppTypography.aeonikProTextTheme(baseTextTheme).copyWith(
         displayLarge: AppTypography.displayLarge.copyWith(color: onSurface),
         displayMedium: AppTypography.display.copyWith(color: onSurface),
         displaySmall: AppTypography.h2.copyWith(color: onSurface),

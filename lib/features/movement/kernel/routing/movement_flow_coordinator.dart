@@ -86,10 +86,16 @@ class MovementFlowCoordinator extends Notifier<MovementFlowState> {
   }
 
   void setAmountInput(String value) {
-    state = state.copyWith(amountInput: value.trim().isEmpty ? '0' : value);
+    final next = value.trim().isEmpty ? '0' : value;
+    if (state.amountInput == next) return;
+    state = state.copyWith(amountInput: next);
   }
 
   void setSelectedWallet(Wallet wallet) {
+    if (state.selectedWallet?.id == wallet.id &&
+        state.surface == MovementFlowSurface.receive) {
+      return;
+    }
     state = state.copyWith(
       surface: MovementFlowSurface.receive,
       selectedWallet: wallet,

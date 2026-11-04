@@ -9,6 +9,8 @@ import 'package:kerosene/features/financial_accounts/domain/entities/bitcoin_acc
 import 'package:kerosene/features/financial_accounts/presentation/bitcoin_accounts_provider.dart';
 import 'package:kerosene/app/storage/activity_archive_store.dart';
 import 'package:kerosene/features/movement/presentation/activity/transaction_filter_engine.dart';
+import 'package:kerosene/features/movement/presentation/activity/transaction_detail_screen.dart';
+import 'package:kerosene/features/movement/presentation/activity/home_activity_surface.dart';
 import 'home_screen_dependencies.dart';
 import 'home_screen.dart';
 import 'home_screen_surface.dart';
@@ -101,9 +103,6 @@ class HomeTransactionsList extends ConsumerStatefulWidget {
 
 class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     with SingleTickerProviderStateMixin {
-  /// Multiple cards may stay open; expansion only grows downward.
-  final Set<String> _expandedTransactionIds = <String>{};
-
   /// Skeleton → data: one shared cascade for the three Home rows.
   bool _armEntranceReveal = true;
   bool _playEntranceReveal = false;
@@ -201,10 +200,7 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
     final built = <Widget>[
       for (var i = 0; i < filteredTxs.length; i++)
-        _buildTransactionTile(
-          filteredTxs[i],
-          expanded: _expandedTransactionIds.contains(filteredTxs[i].id),
-        ),
+        _buildTransactionTile(filteredTxs[i]),
     ];
     _entranceTileCache = built;
     _entranceTransactions = List.of(filteredTxs);
@@ -216,15 +212,10 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
     _steadyTileCache.removeWhere((key, _) => !live.contains(key));
   }
 
-  Widget _steadyTile(Transaction tx, {required bool expanded}) {
-    // Expanded cards must not come from a separate cache entry — that swaps the
-    // Element and drops collapse animation state. Same ValueKey → in-place update.
-    if (expanded) {
-      return _buildTransactionTile(tx, expanded: true);
-    }
+  Widget _steadyTile(Transaction tx) {
     return _steadyTileCache.putIfAbsent(
       tx,
-      () => _buildTransactionTile(tx, expanded: false),
+      () => _buildTransactionTile(tx),
     );
   }
 
@@ -421,55 +412,26 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
 
     Widget itemBuilder(BuildContext context, int index) {
       final tx = filteredTxs[index];
-      final expanded = _expandedTransactionIds.contains(tx.id);
       final tile = tiles != null && index < tiles.length
           ? tiles[index]
           : animate
-              ? _buildTransactionTile(tx, expanded: expanded)
-              : _steadyTile(tx, expanded: expanded);
+              ? _buildTransactionTile(tx)
+              : _steadyTile(tx);
 
       final cachedTile = RepaintBoundary(child: tile);
 
-      Widget? dateHeader;
-      if (index == 0) {
-        dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-      } else {
-        final previousTx = filteredTxs[index - 1];
-        if (!_isSameDay(
-          tx.timestamp.toLocal(),
-          previousTx.timestamp.toLocal(),
-        )) {
-          dateHeader = _buildDateHeader(tx.timestamp.toLocal());
-        }
-      }
-
       Widget buildContent(double p, Widget child) {
-        final revealed = p <= 0
-            ? const SizedBox.shrink()
-            : Opacity(
-                opacity: p,
-                child: Transform.translate(
-                  offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
-                  child: child,
-                ),
-              );
-
-        if (dateHeader != null) {
-          return Column(
-            key: ValueKey('col_${tx.id}'),
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (index > 0) SizedBox(height: homeSize(AppSpacing.base)),
-              Opacity(opacity: p.clamp(0.0, 1.0), child: dateHeader),
-              SizedBox(height: homeSize(AppSpacing.sm)),
-              revealed,
-            ],
-          );
-        }
+        if (p <= 0) return const SizedBox.shrink();
+        if (p >= 1.0) return KeyedSubtree(key: ValueKey(tx.id), child: child);
         return KeyedSubtree(
           key: ValueKey(tx.id),
-          child: revealed,
+          child: Opacity(
+            opacity: p,
+            child: Transform.translate(
+              offset: Offset((1.0 - p) * -22, (1.0 - p) * 8),
+              child: child,
+            ),
+          ),
         );
       }
 
@@ -486,57 +448,47 @@ class _HomeTransactionsListState extends ConsumerState<HomeTransactionsList>
       return buildContent(1.0, cachedTile);
     }
 
-    return StatementTransactionScrollStack(
-      itemCount: count,
-      itemGap: homeSize(12),
-      itemBuilder: itemBuilder,
-    );
-  }
+    final dividerColor = HomeSurfaceTheme.of(context).surfaceBorder;
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  Widget _buildDateHeader(DateTime date) {
-    final label = AppDateTime.formatDate(context, date);
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 4.0, top: 12.0),
-      child: Text(
-        label,
-        style: HomeTypography.dateHeader(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+    return HomeGlassPanel(
+      borderRadius: BorderRadius.circular(homeSize(HomeRadius.card / 2)),
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < count; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: dividerColor,
+              ),
+            itemBuilder(context, i),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildTransactionTile(Transaction tx, {required bool expanded}) {
-    final amountBtc = (tx.amountSatoshis / 100000000).toStringAsFixed(8);
-    final semanticLabel =
-        '${tx.type.name}. $amountBtc BTC. ${AppDateTime.formatTime(context, tx.timestamp.toLocal())}. ${tx.status.name}';
-
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      excludeSemantics: true,
-      child: StatementTransactionCard(
-        key: ValueKey('home_tx_${tx.id}'),
-        transaction: tx,
-        expanded: expanded,
-        mode: StatementTransactionCardMode.stacked,
-        density: StatementTransactionCardDensity.home,
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() {
-            if (_expandedTransactionIds.contains(tx.id)) {
-              _expandedTransactionIds.remove(tx.id);
-            } else {
-              _expandedTransactionIds.add(tx.id);
-            }
-          });
-        },
-      ),
+  Widget _buildTransactionTile(Transaction tx) {
+    return Builder(
+      builder: (tileContext) {
+        return StatementTransactionCard(
+          key: ValueKey('home_tx_${tx.id}'),
+          transaction: tx,
+          mode: StatementTransactionCardMode.stacked,
+          density: StatementTransactionCardDensity.home,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            TransactionDetailScreen.open(
+              tileContext,
+              tx,
+              originRect: keroseneOriginRectFromContext(tileContext),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -584,25 +536,38 @@ class _TransactionsSkeletonLoadingState
   @override
   Widget build(BuildContext context) {
     final reduceMotion = KeroseneMotion.reduceMotion(context);
+    final dividerColor = HomeSurfaceTheme.of(context).surfaceBorder;
 
-    return AnimatedBuilder(
-      animation: _cascade,
-      builder: (context, _) {
-        final cascade = reduceMotion ? 1.0 : _cascade.value;
+    return HomeGlassPanel(
+      borderRadius: BorderRadius.circular(homeSize(HomeRadius.card / 2)),
+      padding: EdgeInsets.zero,
+      child: AnimatedBuilder(
+        animation: _cascade,
+        builder: (context, _) {
+          final cascade = reduceMotion ? 1.0 : _cascade.value;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var i = 0; i < _rowCount; i++)
-              _cascadeItem(
-                progress: cascade,
-                start: 0.12 + i * 0.22,
-                end: 0.42 + i * 0.22,
-                child: _buildSkeletonRow(i),
-              ),
-          ],
-        );
-      },
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < _rowCount; i++) ...[
+                if (i > 0)
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: dividerColor,
+                  ),
+                _cascadeItem(
+                  progress: cascade,
+                  start: 0.12 + i * 0.22,
+                  end: 0.42 + i * 0.22,
+                  child: _buildSkeletonRow(i),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -635,65 +600,54 @@ class _TransactionsSkeletonLoadingState
     final i = index % titleWidths.length;
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: homeSize(6)),
-      child: Container(
-        padding: EdgeInsets.all(homeSize(16)),
-        decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(homeSize(22)),
-          border: Border.all(
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.04),
+      padding: EdgeInsets.symmetric(
+        horizontal: homeSize(16),
+        vertical: homeSize(14),
+      ),
+      child: Row(
+        children: [
+          _SkeletonBone(
+            width: homeSize(40),
+            height: homeSize(40),
+            borderRadius: homeSize(999),
           ),
-        ),
-        child: Row(
-          children: [
-            _SkeletonBone(
-              width: homeSize(42),
-              height: homeSize(42),
-              borderRadius: homeSize(999),
-            ),
-            SizedBox(width: homeSize(12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SkeletonBone(
-                    width: homeSize(titleWidths[i]),
-                    height: homeSize(14),
-                    borderRadius: homeSize(5),
-                  ),
-                  SizedBox(height: homeSize(AppSpacing.sm)),
-                  _SkeletonBone(
-                    width: homeSize(subtitleWidths[i]),
-                    height: homeSize(11),
-                    borderRadius: homeSize(5),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: homeSize(10)),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+          SizedBox(width: homeSize(12)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _SkeletonBone(
-                  width: homeSize(amountWidths[i]),
-                  height: homeSize(13),
+                  width: homeSize(titleWidths[i]),
+                  height: homeSize(14),
                   borderRadius: homeSize(5),
                 ),
                 SizedBox(height: homeSize(AppSpacing.sm)),
                 _SkeletonBone(
-                  width: homeSize(subAmountWidths[i]),
+                  width: homeSize(subtitleWidths[i]),
                   height: homeSize(11),
                   borderRadius: homeSize(5),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          SizedBox(width: homeSize(10)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _SkeletonBone(
+                width: homeSize(amountWidths[i]),
+                height: homeSize(13),
+                borderRadius: homeSize(5),
+              ),
+              SizedBox(height: homeSize(AppSpacing.sm)),
+              _SkeletonBone(
+                width: homeSize(subAmountWidths[i]),
+                height: homeSize(11),
+                borderRadius: homeSize(5),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

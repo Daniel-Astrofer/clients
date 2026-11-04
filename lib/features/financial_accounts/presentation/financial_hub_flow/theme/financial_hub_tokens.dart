@@ -5,17 +5,17 @@ import 'package:kerosene/design_system/foundation/theme/kerosene_brand_tokens.da
 
 /// Styling tokens for the Financial Hub flow.
 ///
-/// Typography delegates to [AppTypography] (Playfair Display for titles,
-/// Plus Jakarta Sans for body/numbers/descriptions). Color values come from
+/// Typography delegates to [AppTypography] (Moderat Mono for titles,
+/// Aeonik Pro for body/numbers/descriptions). Color values come from
 /// [KeroseneBrandTokens].
 class FinancialHubTokens {
   const FinancialHubTokens._();
 
-  // Typography - Titles (Playfair Display)
+  // Typography - Titles (Aeonik Pro)
   static TextStyle titleH1({
     Color? color,
     double fontSize = 28.0,
-    FontWeight fontWeight = FontWeight.w400,
+    FontWeight fontWeight = FontWeight.w600,
     double letterSpacing = -0.5,
   }) {
     return AppTypography.playfairDisplay(
@@ -40,7 +40,7 @@ class FinancialHubTokens {
     );
   }
 
-  // Typography - Body, Labels and Numbers (Plus Jakarta Sans)
+  // Typography - Body, Labels and Numbers (Aeonik Pro)
   static TextStyle body({
     Color? color,
     double fontSize = 14.0,

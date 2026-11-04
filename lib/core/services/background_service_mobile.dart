@@ -344,8 +344,15 @@ Future<void> onStart(ServiceInstance service) async {
       return out;
     }
 
-    Future<void> pollNotifications() async {
+    // By default, the service is started by the active foreground app.
+    var appInForeground = true;
+
+    Future<void> pollNotifications({bool force = false}) async {
       if (polling || stopping) return;
+      if (appInForeground && !force) {
+        // App is in foreground with active STOMP socket; background REST poll is skipped.
+        return;
+      }
       polling = true;
       String? attemptedToken;
       try {
@@ -359,6 +366,10 @@ Future<void> onStart(ServiceInstance service) async {
         }
         if (!await stillOwned()) return;
         final routing = await BackgroundNetworkBridge.readRouting();
+        if (routing.isOnionApi && !routing.shouldUseSocks) {
+          debugPrint('BackgroundService: SOCKS relay not ready yet for onion; deferring poll.');
+          return;
+        }
         final alertPrefs = await BackgroundNetworkBridge.readAlertPrefs();
         attemptedToken = freshToken;
         final dio = _buildBackgroundDio(
@@ -436,16 +447,18 @@ Future<void> onStart(ServiceInstance service) async {
             await service.stopSelf();
           }
         } else {
-          debugPrint(
-              'BackgroundService: pollNotifications failed (${e.runtimeType}).');
+          final detail = e is DioException
+              ? '${e.response?.statusCode ?? e.type}: ${e.message}'
+              : '${e.runtimeType}';
+          debugPrint('BackgroundService: pollNotifications failed ($detail).');
         }
       } finally {
         polling = false;
       }
     }
 
-    // Always poll notifications (works when REST is reachable without Tor).
-    pollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+    // Poll notifications periodically only when app is backgrounded.
+    pollTimer = Timer.periodic(const Duration(seconds: 90), (_) {
       unawaited(pollNotifications());
     });
     unawaited(pollNotifications());
@@ -466,7 +479,18 @@ Future<void> onStart(ServiceInstance service) async {
 
     // Main isolate can wake an immediate poll after a live WS notification.
     service.on('pollNow').listen((event) {
-      unawaited(pollNotifications());
+      unawaited(pollNotifications(force: true));
+    });
+
+    service.on('appLifecycle').listen((event) {
+      if (event == null) return;
+      final foreground = event['foreground'] == true;
+      appInForeground = foreground;
+      if (foreground) {
+        debugPrint('BackgroundService: foreground active — polling paused (STOMP handling realtime).');
+      } else {
+        debugPrint('BackgroundService: background active — polling resumed.');
+      }
     });
 
     // Mark ids already shown in the main isolate so the next poll does not re-alert.
@@ -505,6 +529,21 @@ Future<void> requestBackgroundNotificationPoll() async {
   } catch (e) {
     if (kDebugMode) {
       debugPrint('BackgroundService: pollNow invoke failed: $e');
+    }
+  }
+}
+
+/// Notifies background isolate whether app is currently foregrounded.
+Future<void> notifyBackgroundAppLifecycle({required bool foreground}) async {
+  if (!_supportsBackgroundService) return;
+  try {
+    final service = FlutterBackgroundService();
+    final running = await service.isRunning();
+    if (!running) return;
+    service.invoke('appLifecycle', {'foreground': foreground});
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('BackgroundService: appLifecycle invoke failed: $e');
     }
   }
 }
