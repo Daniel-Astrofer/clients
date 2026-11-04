@@ -34,17 +34,16 @@ export 'financial_surface_provider.dart';
 const double _balanceChangeEpsilon = 0.000000001;
 
 /// Backup poll when realtime WS is healthy and a financial screen is visible.
-/// WS pushes /user/queue/balance, /transactions and /notifications in realtime.
-/// A relaxed fallback prevents Tor circuit exhaustion and 502s on stationary UI.
-const financialRealtimeFallbackInterval = Duration(seconds: 90);
+/// With 240 FPS architecture, realtime WebSocket is the primary source of truth (0 HTTP polling).
+const financialRealtimeFallbackInterval = Duration(days: 365);
 
 /// Poll while WS is down / reconnecting (only on financial surfaces).
-/// Backed off to 25s so Tor circuits and the KFE gateway are not hammered during reconnects.
-const financialRealtimeDisconnectedInterval = Duration(seconds: 25);
+/// Exactly 5 seconds as specified in the 240 FPS architecture plan.
+const financialRealtimeDisconnectedInterval = Duration(seconds: 5);
 
 /// When user is off financial screens or app is backgrounded, only re-check
 /// the gate this often (no network I/O when still idle).
-const financialRealtimeIdleGateInterval = Duration(seconds: 90);
+const financialRealtimeIdleGateInterval = Duration(minutes: 5);
 
 typedef FinancialRefreshCancel = void Function();
 typedef FinancialRefreshScheduler = FinancialRefreshCancel Function(
@@ -403,13 +402,8 @@ final balanceWebSocketServiceProvider =
         ref.read(notificationBannerProvider.notifier).show(notification);
       }
 
-      // Single coordinator: balance + extrato (full on financial surfaces).
-      // Money notifs assume Tor-latent fan-out — always full history catch-up.
-      _scheduleFinancialRefreshForEvent(
-        ref,
-        scope: FinancialRefreshScope.full,
-        forceFullHistory: isIncoming,
-      );
+      // With 240 FPS architecture, WS pushes the transaction payload directly into memory.
+      // Full HTTP refetches on every notification are bypassed to protect Tor circuits and frame budget.
 
       // Incoming notifications also hydrate the financial projection.
       if (isIncoming) {
